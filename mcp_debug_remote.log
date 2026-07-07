@@ -1,0 +1,77 @@
+2026-07-07T20:16:57.562Z mcp:log Starting Chrome DevTools MCP Server v1.5.0
+2026-07-07T20:16:57.577Z mcp:log Chrome DevTools MCP Server connected
+2026-07-07T20:16:57.787Z mcp:log Watchdog started {
+  "pid": 24719,
+  "parentPid": 24717,
+  "version": "1.5.0",
+  "osType": 2
+}
+2026-07-07T20:16:57.789Z mcp:log Enqueing telemetry event {
+  "mcp_client": 0,
+  "server_start": {
+    "flag_usage": {
+      "auto_connect_present": false,
+      "browser_url_present": true,
+      "ws_endpoint_present": false,
+      "ws_headers_present": false,
+      "headless": false,
+      "executable_path_present": false,
+      "isolated_present": false,
+      "user_data_dir_present": false,
+      "channel_present": false,
+      "log_file_present": true,
+      "viewport_present": false,
+      "proxy_server_present": false,
+      "accept_insecure_certs_present": false,
+      "experimental_page_id_routing_present": false,
+      "experimental_devtools_present": false,
+      "experimental_vision_present": false,
+      "memory_debugging_present": false,
+      "experimental_structured_content_present": false,
+      "experimental_toon_format_present": false,
+      "experimental_include_all_pages_present": false,
+      "experimental_navigation_allowlist_present": false,
+      "experimental_interop_tools_present": false,
+      "experimental_screencast_present": false,
+      "experimental_ffmpeg_path_present": false,
+      "category_experimental_webmcp_present": false,
+      "chrome_arg_present": false,
+      "blocked_url_pattern_present": false,
+      "allowed_url_pattern_present": false,
+      "ignore_default_chrome_arg_present": false,
+      "category_emulation": true,
+      "category_performance": true,
+      "category_network": true,
+      "category_extensions": false,
+      "category_experimental_third_party": false,
+      "performance_crux": true,
+      "usage_statistics": true,
+      "clearcut_endpoint_present": false,
+      "clearcut_force_flush_interval_ms_present": false,
+      "clearcut_include_pid_header_present": false,
+      "screenshot_format_present": false,
+      "screenshot_quality_present": false,
+      "screenshot_max_width_present": false,
+      "screenshot_max_height_present": false,
+      "slim_present": false,
+      "via_cli_present": false,
+      "redact_network_headers": false
+    }
+  },
+  "session_id": "286d598c-d5af-44ac-b187-8213e50f856a",
+  "app_version": "1.5.0",
+  "os_type": 2
+}
+2026-07-07T20:16:57.789Z mcp:log Scheduling flush in 900000
+2026-07-07T20:31:57.801Z mcp:log Sending batch of 1
+2026-07-07T20:31:57.897Z mcp:log Scheduling flush in 900000
+2026-07-07T20:46:57.905Z mcp:log Scheduling flush in 900000
+2026-07-07T21:11:52.956Z mcp:log Scheduling flush in 900000
+2026-07-07T21:26:52.958Z mcp:log Scheduling flush in 900000
+2026-07-07T21:41:52.961Z mcp:log Scheduling flush in 900000
+2026-07-07T21:56:52.969Z mcp:log Scheduling flush in 900000
+2026-07-07T22:11:52.992Z mcp:log Scheduling flush in 900000
+2026-07-07T22:26:53.001Z mcp:log Scheduling flush in 900000
+2026-07-07T22:41:53.013Z mcp:log Scheduling flush in 900000
+2026-07-07T22:56:53.021Z mcp:log Scheduling flush in 900000
+2026-07-07T23:11:53.025Z mcp:log Scheduling flush in 900000

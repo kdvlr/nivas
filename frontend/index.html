@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <meta name="color-scheme" content="light dark" />
+    <link
+      rel="preload"
+      href="/material-symbols-rounded.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <title>Family Dashboard</title>
+    <script>
+      // apply theme before first paint to avoid a flash
+      const a = localStorage.getItem('appearance') || localStorage.getItem('theme') || 'auto'
+      const dark = a === 'dark' || (a !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)
+      if (dark) document.documentElement.classList.add('dark')
+      document.documentElement.dataset.theme =
+        localStorage.getItem('themeStyle') === 'glass' ? 'glass' : 'material'
+      const f = localStorage.getItem('fontFamily')
+      document.documentElement.dataset.font = !f || f === 'google-sans' ? 'outfit' : f
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

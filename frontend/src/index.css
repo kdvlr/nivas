@@ -1,0 +1,476 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: var(--app-font);
+}
+
+/* ---------- App fonts (self-hosted, latin subsets, OFL/Apache licensed) ---------- */
+@font-face {
+  font-family: 'Outfit';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/outfit.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/roboto.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Nunito';
+  font-style: normal;
+  font-weight: 200 1000;
+  font-display: swap;
+  src: url('/fonts/nunito.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Quicksand';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('/fonts/quicksand.woff2') format('woff2');
+}
+
+/* font choice via html[data-font] */
+:root {
+  --app-font: 'Outfit', 'Roboto', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+[data-font='roboto'] {
+  --app-font: 'Roboto', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+[data-font='arial'] {
+  --app-font: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+}
+[data-font='nunito'] {
+  --app-font: 'Nunito', system-ui, -apple-system, sans-serif;
+}
+[data-font='quicksand'] {
+  --app-font: 'Quicksand', system-ui, -apple-system, sans-serif;
+}
+
+/* ---------- Material Symbols (self-hosted variable font) ---------- */
+@font-face {
+  font-family: 'Material Symbols Rounded';
+  font-style: normal;
+  font-weight: 100 700;
+  font-display: block;
+  src: url('/material-symbols-rounded.woff2') format('woff2');
+}
+.msr {
+  font-family: 'Material Symbols Rounded';
+  font-weight: normal;
+  font-style: normal;
+  display: inline-block;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings: 'opsz' 40, 'wght' 400, 'FILL' 0;
+  vertical-align: middle;
+}
+
+/* =============================================================
+   Theme tokens.
+   Three style themes via html[data-theme]: 'material' | 'glass' | 'woodland'
+   Two modes via html.dark
+   ============================================================= */
+
+:root {
+  /* --- Material You (light) — warm cream, no stark white --- */
+  --surface: #f2eee1;
+  --sc-lowest: #faf6ea; /* cards */
+  --sc: #f0ebdc; /* inner tiles */
+  --sc-high: #e7e0cd;
+  --sc-highest: #ddd5bf;
+  --on-surface: #2a2619;
+  --on-surface-var: #6b6350;
+  --outline: #97907a;
+  --outline-var: #d9d1ba;
+  --primary: #00796b;
+  --on-primary: #ffffff;
+  --primary-container: #b4efe1;
+  --on-primary-container: #00332c;
+  --secondary-container: #e2e5cd;
+  --on-secondary-container: #30351c;
+  --tertiary-container: #ffdcc7;
+  --on-tertiary-container: #3a1c00;
+  --shadow-1: 0 1px 2px rgb(60 50 20 / 0.1), 0 1px 3px 1px rgb(60 50 20 / 0.06);
+  --tint-a: rgb(45 212 191 / 0.1);
+  --tint-b: rgb(251 146 60 / 0.09);
+  --tint-c: rgb(96 165 250 / 0.08);
+  --tint-d: rgb(244 114 182 / 0.07);
+
+  /* shapes + card surfaces (overridden by the glass theme) */
+  --shape-card: 1.75rem;
+  --shape-tile: 1.15rem;
+  --shape-btn: 9999px;
+  --shape-input: 1rem;
+  --card-border: 1px solid transparent;
+  --tile-border: 1px solid transparent;
+  --card-blur: none;
+}
+
+.dark {
+  /* --- Material You (dark) --- */
+  --surface: #0e1512;
+  --sc-lowest: #1a221e;
+  --sc: #212a25;
+  --sc-high: #2a342e;
+  --sc-highest: #343f38;
+  --on-surface: #dfe5df;
+  --on-surface-var: #a5b3aa;
+  --outline: #75847b;
+  --outline-var: #3c4841;
+  --primary: #62dbc4;
+  --on-primary: #003730;
+  --primary-container: #0c5347;
+  --on-primary-container: #b4efe1;
+  --secondary-container: #32493c;
+  --on-secondary-container: #d0e8d6;
+  --tertiary-container: #573926;
+  --on-tertiary-container: #ffdcc7;
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.4), 0 1px 3px 1px rgb(0 0 0 / 0.25);
+  --tint-a: rgb(45 212 191 / 0.08);
+  --tint-b: rgb(251 146 60 / 0.07);
+  --tint-c: rgb(96 165 250 / 0.07);
+  --tint-d: rgb(244 114 182 / 0.06);
+}
+
+/* --- Woodland Theme (cream & brown expressive) --- */
+[data-theme='woodland'] {
+  --shape-card: 1.5rem;
+  --shape-tile: 1rem;
+  --shape-btn: 9999px;
+  --shape-input: 1rem;
+  --card-blur: none;
+}
+
+html[data-theme='woodland']:not(.dark) {
+  --surface: #fcf9f2; /* cream */
+  --sc-lowest: #f5f0e1;
+  --sc: #eee7d5;
+  --sc-high: #e5dac4;
+  --sc-highest: #dbccb3;
+  --on-surface: #3e2723; /* deep brown */
+  --on-surface-var: #6d4c41;
+  --outline: #8d6e63;
+  --outline-var: #d7ccc8;
+  --primary: #8d6e63; /* cedar brown */
+  --on-primary: #ffffff;
+  --primary-container: #ede7f6;
+  --on-primary-container: #3e2723;
+  --secondary-container: #d7ccc8;
+  --on-secondary-container: #3e2723;
+  --tertiary-container: #fbe9e7;
+  --on-tertiary-container: #3e2723;
+  --shadow-1: 0 1px 3px rgba(62, 39, 35, 0.12), 0 1px 2px rgba(62, 39, 35, 0.2);
+  --tint-a: rgba(141, 110, 99, 0.08); /* brown */
+  --tint-b: rgba(215, 204, 200, 0.1);
+  --tint-c: rgba(238, 231, 213, 0.1);
+  --tint-d: rgba(121, 85, 72, 0.06);
+}
+
+html[data-theme='woodland'].dark {
+  --surface: #1b1614; /* dark brown-black */
+  --sc-lowest: #2d2421;
+  --sc: #3a2e2a;
+  --sc-high: #483a34;
+  --sc-highest: #55443e;
+  --on-surface: #efebe9;
+  --on-surface-var: #d7ccc8;
+  --outline: #a1887f;
+  --outline-var: #4e342e;
+  --primary: #d7ccc8;
+  --on-primary: #3e2723;
+  --primary-container: #4e342e;
+  --on-primary-container: #d7ccc8;
+  --secondary-container: #3a2e2a;
+  --on-secondary-container: #efebe9;
+  --tertiary-container: #4e342e;
+  --on-tertiary-container: #fbe9e7;
+  --shadow-1: 0 2px 4px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.25);
+  --tint-a: rgba(141, 110, 99, 0.06);
+  --tint-b: rgba(62, 39, 35, 0.08);
+  --tint-c: rgba(121, 85, 72, 0.07);
+  --tint-d: rgba(45, 36, 33, 0.1);
+}
+
+/* --- Liquid Glass theme: sharper corners, translucent blurred panels --- */
+[data-theme='glass'] {
+  --shape-card: 1rem;
+  --shape-tile: 0.7rem;
+  --shape-btn: 0.7rem;
+  --shape-input: 0.7rem;
+  --card-blur: blur(24px) saturate(1.6);
+}
+
+html[data-theme='glass']:not(.dark) {
+  --surface: #edf3f2;
+  --sc-lowest: rgb(255 255 255 / 0.55);
+  --sc: rgb(255 255 255 / 0.5);
+  --sc-high: rgb(255 255 255 / 0.68);
+  --sc-highest: rgb(255 255 255 / 0.8);
+  --outline-var: rgb(120 140 150 / 0.25);
+  --card-border: 1px solid rgb(255 255 255 / 0.65);
+  --tile-border: 1px solid rgb(255 255 255 / 0.55);
+  --shadow-1: 0 8px 32px rgb(60 90 120 / 0.12), inset 0 1px 0 rgb(255 255 255 / 0.7);
+  --tint-a: rgb(45 212 191 / 0.35);
+  --tint-b: rgb(251 146 60 / 0.3);
+  --tint-c: rgb(96 165 250 / 0.32);
+  --tint-d: rgb(244 114 182 / 0.28);
+}
+
+html[data-theme='glass'].dark {
+  --surface: #0c1316;
+  --sc-lowest: rgb(26 36 39 / 0.55);
+  --sc: rgb(255 255 255 / 0.07);
+  --sc-high: rgb(255 255 255 / 0.12);
+  --sc-highest: rgb(255 255 255 / 0.17);
+  --on-surface: #e2eaea;
+  --outline-var: rgb(255 255 255 / 0.14);
+  --card-border: 1px solid rgb(255 255 255 / 0.12);
+  --tile-border: 1px solid rgb(255 255 255 / 0.08);
+  --shadow-1: 0 8px 32px rgb(0 0 0 / 0.45), inset 0 1px 0 rgb(255 255 255 / 0.08);
+  --tint-a: rgb(45 212 191 / 0.14);
+  --tint-b: rgb(251 146 60 / 0.12);
+  --tint-c: rgb(96 165 250 / 0.13);
+  --tint-d: rgb(244 114 182 / 0.11);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+body {
+  font-family: var(--app-font);
+  color: var(--on-surface);
+  background-color: var(--surface);
+  background-image:
+    radial-gradient(42% 55% at 8% 4%, var(--tint-a) 0%, transparent 100%),
+    radial-gradient(38% 48% at 92% 8%, var(--tint-b) 0%, transparent 100%),
+    radial-gradient(45% 52% at 85% 92%, var(--tint-c) 0%, transparent 100%),
+    radial-gradient(40% 55% at 10% 92%, var(--tint-d) 0%, transparent 100%);
+  background-attachment: fixed;
+  transition: background-color 0.25s ease;
+}
+
+/* ---------- shape + surface utilities ---------- */
+
+@utility glass {
+  border-radius: var(--shape-card);
+  background: var(--sc-lowest);
+  border: var(--card-border);
+  backdrop-filter: var(--card-blur);
+  -webkit-backdrop-filter: var(--card-blur);
+  box-shadow: var(--shadow-1);
+}
+
+@utility glass-inset {
+  border-radius: var(--shape-tile);
+  background: var(--sc);
+  border: var(--tile-border);
+}
+
+@utility btn-primary {
+  border-radius: var(--shape-btn);
+  background: var(--primary);
+  color: var(--on-primary);
+  font-weight: 500;
+  box-shadow: var(--shadow-1);
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.15s ease;
+  &:active {
+    transform: scale(0.95);
+    filter: brightness(1.08);
+  }
+  &:disabled {
+    opacity: 0.4;
+  }
+}
+
+@utility btn-sunny {
+  border-radius: var(--shape-btn);
+  background-image: linear-gradient(135deg, #ffb74d 0%, #ff7d84 100%);
+  color: #3a1c00;
+  font-weight: 500;
+  box-shadow: var(--shadow-1);
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  &:active {
+    transform: scale(0.95);
+  }
+  &:disabled {
+    opacity: 0.4;
+  }
+}
+
+@utility btn-glass {
+  border-radius: var(--shape-btn);
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+  font-weight: 500;
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.15s ease;
+  &:active {
+    transform: scale(0.95);
+    filter: brightness(1.05);
+  }
+  &:disabled {
+    opacity: 0.4;
+  }
+}
+
+@utility input-glass {
+  border-radius: var(--shape-input);
+  border: 1.5px solid var(--outline-var);
+  background: var(--sc);
+  outline: none;
+  color: var(--on-surface);
+  &::placeholder {
+    color: var(--on-surface-var);
+    opacity: 0.7;
+  }
+  &:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent);
+  }
+}
+
+@utility text-ink {
+  color: var(--on-surface);
+}
+@utility text-ink-soft {
+  color: var(--on-surface-var);
+}
+@utility text-ink-faint {
+  color: var(--outline);
+}
+@utility surface-tile {
+  background: var(--sc);
+}
+@utility surface-tile-high {
+  background: var(--sc-high);
+}
+
+/* ---------- FullCalendar themed via tokens ---------- */
+.fc {
+  --fc-border-color: var(--outline-var);
+  --fc-page-bg-color: transparent;
+  --fc-today-bg-color: color-mix(in srgb, var(--primary) 10%, transparent);
+  --fc-neutral-text-color: var(--on-surface-var);
+  font-size: 14px;
+  color: var(--on-surface);
+}
+@media (min-width: 1536px) {
+  .fc {
+    font-size: 15px;
+  }
+}
+.fc .fc-timegrid-slot {
+  height: 2.5em;
+}
+.fc .fc-event {
+  border-radius: 10px;
+  border: none;
+  padding: 2px 6px;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.15);
+}
+.fc .fc-col-header-cell-cushion {
+  padding: 8px 4px;
+  font-weight: 500;
+  color: var(--on-surface);
+}
+.fc .fc-toolbar-title {
+  font-size: 1.35rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--on-surface);
+}
+.fc .fc-button {
+  border-radius: var(--shape-btn) !important;
+  padding: 0.55rem 1.15rem !important;
+  font-size: 0.95rem !important;
+  font-weight: 500 !important;
+  border: none !important;
+  background: var(--secondary-container) !important;
+  color: var(--on-secondary-container) !important;
+  box-shadow: none !important;
+}
+.fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc .fc-button-primary:not(:disabled):active {
+  background: var(--primary) !important;
+  color: var(--on-primary) !important;
+}
+.fc .fc-timegrid-now-indicator-line {
+  border-color: #ff7d84;
+  border-width: 2px;
+}
+.fc .fc-timegrid-now-indicator-arrow {
+  border-color: #ff7d84;
+}
+.fc th,
+.fc td {
+  border-color: var(--outline-var) !important;
+}
+.fc .fc-day-other .fc-daygrid-day-top {
+  opacity: 0.4;
+}
+.fc .fc-daygrid-day-number,
+.fc .fc-timegrid-slot-label-cushion,
+.fc .fc-timegrid-axis-cushion {
+  color: var(--on-surface-var);
+}
+
+/* touch-friendly scrollbars off */
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* ---------- Shimmer Effect for Loading States ---------- */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.shimmer-loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer-loading::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.08),
+    transparent
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+.dark .shimmer-loading::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.04),
+    transparent
+  );
+}
