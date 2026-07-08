@@ -9,7 +9,7 @@ import type { CalEvent, ChoreItem, MealDay, ShoppingItem, Task, WeatherData } fr
 const fmtTime = (iso: string) =>
   new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
 
-export default function Home({ menuButton }: { menuButton?: React.ReactNode }) {
+export default function Home() {
   const now = useClock()
   const today = todayISO()
   const { data: events, loading: loadingEvents } = useData<CalEvent[]>(
@@ -75,16 +75,13 @@ export default function Home({ menuButton }: { menuButton?: React.ReactNode }) {
     <div className="flex h-full flex-col gap-3 lg:gap-4">
       {/* header */}
       <header className="glass flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 lg:px-8 lg:py-4">
-        <div className="flex items-center">
-          {menuButton}
-          <div>
-            <p className="text-sm font-medium tracking-widest text-rose-400 uppercase">
-              {family?.name ? `${family.name} Nivas` : 'Nivas'}
-            </p>
-            <h1 className="text-2xl font-medium tracking-tight text-ink lg:text-4xl">
-              {now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-            </h1>
-          </div>
+        <div>
+          <p className="text-sm font-medium tracking-widest text-rose-400 uppercase">
+            {family?.name ? `${family.name} Nivas` : 'Nivas'}
+          </p>
+          <h1 className="text-2xl font-medium tracking-tight text-ink lg:text-4xl">
+            {now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+          </h1>
         </div>
         {weather?.current && (
           <div className="flex items-center gap-3 rounded-xl px-2 lg:px-4">
