@@ -116,45 +116,61 @@ export default function App() {
         <div className="flex h-full flex-col lg:flex-row gap-2 p-2 lg:gap-4 lg:p-4">
           <nav className="glass order-last lg:order-first flex flex-row lg:flex-col w-full lg:w-22 h-14 lg:h-full shrink-0 items-center justify-around lg:justify-start gap-1 lg:gap-4 py-1.5 lg:py-4 px-2 lg:px-0">
             {/* Main Nav Items */}
-            <div className="flex flex-row lg:flex-col items-center justify-around lg:justify-start gap-1 lg:gap-1.5 flex-1 lg:flex-none">
-              {NAV.filter(n => n.id !== 'setup').map((n) => (
-                <a
-                  key={n.id}
-                  href={`#/${n.id}`}
-                  className={`flex w-12 lg:w-18 flex-col items-center gap-0.5 rounded-full py-1 lg:py-2 transition-all duration-200 ${
-                    activeNav === n.id ? n.active : 'text-ink-soft active:surface-tile-high'
-                  }`}
-                >
-                  <Icon name={n.icon} filled={activeNav === n.id} className="text-[1.35rem] lg:text-[2.1rem]" />
-                  <span className="hidden text-[0.7rem] font-medium lg:block">{n.label}</span>
-                </a>
-              ))}
+            <div className="flex flex-row lg:flex-col items-center justify-around lg:justify-start gap-1 lg:gap-1.5 flex-1 lg:flex-none w-full">
+              {NAV.filter(n => n.id !== 'setup').map((n) => {
+                const isActive = activeNav === n.id
+                return (
+                  <a
+                    key={n.id}
+                    href={`#/${n.id}`}
+                    className={`flex flex-col items-center gap-0.5 py-1 lg:py-1.5 transition-all duration-200 group text-center flex-1 lg:flex-none w-12 lg:w-full ${
+                      isActive ? 'text-ink' : 'text-ink-soft hover:text-ink'
+                    }`}
+                  >
+                    <div className={`flex items-center justify-center h-7 w-10 lg:h-8 lg:w-14 rounded-full transition-all duration-200 ${
+                      isActive ? n.active : 'group-hover:bg-slate-300/15 dark:group-hover:bg-slate-700/15 group-active:scale-95'
+                    }`}>
+                      <Icon name={n.icon} filled={isActive} className="text-[1.25rem] lg:text-[1.55rem]" />
+                    </div>
+                    <span className="hidden text-[0.65rem] font-medium lg:block tracking-tight">{n.label}</span>
+                  </a>
+                )
+              })}
             </div>
 
             {/* Bottom/Right Tools (Desktop Only) */}
-            <div className="hidden lg:flex lg:mt-auto flex-col items-center gap-1.5 lg:pb-3">
+            <div className="hidden lg:flex lg:mt-auto flex-col items-center gap-1.5 lg:pb-4 w-full">
               <button
                 onClick={cycleAppearance}
-                className="flex w-12 lg:w-18 flex-col items-center gap-0.5 rounded-full py-1 lg:py-2 text-ink-soft transition-all active:surface-tile-high"
+                className="flex flex-col items-center gap-0.5 py-1 lg:py-1.5 group text-center text-ink-soft hover:text-ink w-full"
                 title="Appearance: follows your device in Auto"
               >
-                <Icon name={APPEARANCE_META[appearance].icon} className="text-[1.2rem] lg:text-[1.8rem]" />
-                <span className="hidden text-[0.65rem] font-medium lg:block">
+                <div className="flex items-center justify-center h-7 w-10 lg:h-8 lg:w-14 rounded-full transition-all duration-200 group-hover:bg-slate-300/15 dark:group-hover:bg-slate-700/15 group-active:scale-95">
+                  <Icon name={APPEARANCE_META[appearance].icon} className="text-[1.25rem] lg:text-[1.55rem]" />
+                </div>
+                <span className="hidden text-[0.65rem] font-medium lg:block tracking-tight">
                   {APPEARANCE_META[appearance].label}
                 </span>
               </button>
-              {NAV.filter(n => n.id === 'setup').map((n) => (
-                <a
-                  key={n.id}
-                  href={`#/${n.id}`}
-                  className={`flex w-12 lg:w-18 flex-col items-center gap-0.5 rounded-full py-1 lg:py-2 transition-all duration-200 ${
-                    activeNav === n.id ? n.active : 'text-ink-soft active:surface-tile-high'
-                  }`}
-                >
-                  <Icon name={n.icon} filled={activeNav === n.id} className="text-[1.35rem] lg:text-[2.1rem]" />
-                  <span className="hidden text-[0.7rem] font-medium lg:block">{n.label}</span>
-                </a>
-              ))}
+              {NAV.filter(n => n.id === 'setup').map((n) => {
+                const isActive = activeNav === n.id
+                return (
+                  <a
+                    key={n.id}
+                    href={`#/${n.id}`}
+                    className={`flex flex-col items-center gap-0.5 py-1 lg:py-1.5 transition-all duration-200 group text-center w-full ${
+                      isActive ? 'text-ink' : 'text-ink-soft hover:text-ink'
+                    }`}
+                  >
+                    <div className={`flex items-center justify-center h-7 w-10 lg:h-8 lg:w-14 rounded-full transition-all duration-200 ${
+                      isActive ? n.active : 'group-hover:bg-slate-300/15 dark:group-hover:bg-slate-700/15 group-active:scale-95'
+                    }`}>
+                      <Icon name={n.icon} filled={isActive} className="text-[1.25rem] lg:text-[1.55rem]" />
+                    </div>
+                    <span className="hidden text-[0.65rem] font-medium lg:block tracking-tight">{n.label}</span>
+                  </a>
+                )
+              })}
             </div>
           </nav>
           <main className="flex min-w-0 flex-1 flex-col overflow-y-auto py-1">
