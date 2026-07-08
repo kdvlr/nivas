@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 import { useData, todayISO, addDaysISO, fmtDate } from '../lib/hooks'
 import type { MealDay, MealSlot, Recipe } from '../lib/types'
@@ -14,10 +14,23 @@ interface Editing {
   recipe_id: number | null
 }
 
+function getVisibleDays() {
+  if (typeof window === 'undefined') return 5
+  return window.innerWidth < 768 ? 3 : 5
+}
+
 export default function Meals() {
+  const [visibleDays, setVisibleDays] = useState(getVisibleDays)
   const [weekStart, setWeekStart] = useState(todayISO())
+
+  useEffect(() => {
+    const handler = () => setVisibleDays(getVisibleDays())
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [])
+
   const { data: days, reload } = useData<MealDay[]>(
-    `/api/meals?start=${weekStart}&days=7`,
+    `/api/meals?start=${weekStart}&days=${visibleDays}`,
     ['meals', 'recipes'],
   )
   const { data: recipes } = useData<Recipe[]>('/api/recipes', ['recipes'])
@@ -77,7 +90,7 @@ export default function Meals() {
         <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink">Meal Plan</h1>
         <div className="ml-auto flex items-center gap-2">
           <button
-            onClick={() => setWeekStart(addDaysISO(weekStart, -7))}
+            onClick={() => setWeekStart(addDaysISO(weekStart, -visibleDays))}
             className="btn-glass px-6 py-3 text-lg"
           >
             ‹
@@ -86,10 +99,10 @@ export default function Meals() {
             onClick={() => setWeekStart(today)}
             className="btn-glass px-6 py-3 text-base"
           >
-            This week
+            {visibleDays === 3 ? 'Today' : 'This week'}
           </button>
           <button
-            onClick={() => setWeekStart(addDaysISO(weekStart, 7))}
+            onClick={() => setWeekStart(addDaysISO(weekStart, visibleDays))}
             className="btn-glass px-6 py-3 text-lg"
           >
             ›
@@ -97,7 +110,9 @@ export default function Meals() {
         </div>
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-7 gap-3 overflow-y-auto pb-4">
+      <div className={`grid min-h-0 flex-1 gap-3 overflow-y-auto pb-4 ${
+        visibleDays === 3 ? 'grid-cols-1' : 'grid-cols-5'
+      }`}>
         {(days ?? []).map((day) => (
           <div
             key={day.date}
