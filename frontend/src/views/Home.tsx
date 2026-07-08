@@ -9,7 +9,7 @@ import type { CalEvent, ChoreItem, MealDay, ShoppingItem, Task, WeatherData } fr
 const fmtTime = (iso: string) =>
   new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
 
-export default function Home() {
+export default function Home({ mobileTools }: { mobileTools?: React.ReactNode }) {
   const now = useClock()
   const today = todayISO()
   const { data: events, loading: loadingEvents } = useData<CalEvent[]>(
@@ -294,6 +294,11 @@ export default function Home() {
           </section>
         </div>
       </div>
+      {mobileTools && (
+        <div className="glass flex lg:hidden h-14 shrink-0 items-center justify-center px-4 py-2 mt-2 mb-4 w-32 mx-auto rounded-full">
+          {mobileTools}
+        </div>
+      )}
     </div>
   )
 }

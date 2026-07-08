@@ -130,9 +130,9 @@ export default function App() {
     <CelebrationProvider>
       <RewardCelebrationProvider>
         <div className="flex h-full flex-col lg:flex-row gap-2 p-2 lg:gap-4 lg:p-4">
-          <nav className="glass order-last lg:order-first flex flex-col w-full lg:w-28 shrink-0 items-center gap-1.5 lg:gap-4 py-2 lg:py-4 px-2 lg:px-0">
+          <nav className="glass order-last lg:order-first flex flex-row lg:flex-col w-full lg:w-28 h-14 lg:h-full shrink-0 items-center justify-around lg:justify-start gap-1 lg:gap-4 py-1.5 lg:py-4 px-2 lg:px-0">
             {/* Main Nav Items */}
-            <div className="flex flex-row lg:flex-col items-center justify-around lg:justify-start gap-1 lg:gap-1.5 flex-1 lg:flex-none w-full lg:w-auto">
+            <div className="flex flex-row lg:flex-col items-center justify-around lg:justify-start gap-1 lg:gap-1.5 flex-1 lg:flex-none">
               {NAV.filter(n => n.id !== 'setup').map((n) => (
                 <a
                   key={n.id}
@@ -172,9 +172,6 @@ export default function App() {
                 </a>
               ))}
             </div>
-
-            {/* Mobile Tools (Row 2) */}
-            {mobileTools}
           </nav>
           <main className="flex min-w-0 flex-1 flex-col overflow-y-auto py-1">
             {!isHome && (
@@ -201,7 +198,7 @@ export default function App() {
                 </div>
               </header>
             )}
-            <View />
+            <View {...(isHome ? { mobileTools } : {})} />
           </main>
         </div>
       </RewardCelebrationProvider>
