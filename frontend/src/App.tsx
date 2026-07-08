@@ -110,7 +110,7 @@ export default function App() {
     <CelebrationProvider>
       <RewardCelebrationProvider>
         <div className="flex h-full flex-col lg:flex-row gap-2 p-2 lg:gap-4 lg:p-4">
-          <nav className="glass order-last lg:order-first flex flex-row lg:flex-col w-full lg:w-28 shrink-0 items-center justify-between lg:justify-start gap-2 lg:gap-4 py-1.5 lg:py-4 px-3 lg:px-0">
+          <nav className="glass order-last lg:order-first flex flex-row lg:flex-col w-full lg:w-28 shrink-0 items-center justify-between lg:justify-start gap-2 lg:gap-4 py-1.5 lg:py-4 px-3 lg:px-0 overflow-x-auto lg:overflow-x-hidden lg:overflow-y-auto">
             {/* Main Nav Items */}
             <div className="flex flex-row lg:flex-col items-center justify-around lg:justify-start gap-1 lg:gap-1.5 flex-1 lg:flex-none">
               {NAV.filter(n => n.id !== 'setup').map((n) => (

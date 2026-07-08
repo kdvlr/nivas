@@ -249,6 +249,8 @@ html,
 body,
 #root {
   height: 100%;
+  width: 100%;
+  overflow-x: hidden;
   overscroll-behavior: none;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
