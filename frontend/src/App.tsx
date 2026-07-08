@@ -106,11 +106,31 @@ export default function App() {
   const now = useClock()
   const isHome = route === 'home'
 
+  const mobileTools = (
+    <div className="flex lg:hidden items-center gap-1.5 shrink-0">
+      <button
+        onClick={cycleAppearance}
+        className="btn-glass p-2 text-ink-soft rounded-full active:scale-95"
+        title="Appearance"
+      >
+        <Icon name={APPEARANCE_META[appearance].icon} className="text-base" />
+      </button>
+      <a
+        href="#/setup"
+        className={`btn-glass p-2 rounded-full active:scale-95 ${
+          activeNav === 'setup' ? 'bg-slate-300 dark:bg-slate-700 text-ink' : 'text-ink-soft'
+        }`}
+      >
+        <Icon name="settings" className="text-base" />
+      </a>
+    </div>
+  )
+
   return (
     <CelebrationProvider>
       <RewardCelebrationProvider>
         <div className="flex h-full flex-col lg:flex-row gap-2 p-2 lg:gap-4 lg:p-4">
-          <nav className="glass order-last lg:order-first flex flex-row lg:flex-col w-full lg:w-28 shrink-0 items-center justify-between lg:justify-start gap-2 lg:gap-4 py-1.5 lg:py-4 px-3 lg:px-0 overflow-x-auto lg:overflow-x-hidden lg:overflow-y-auto">
+          <nav className="glass order-last lg:order-first flex flex-row lg:flex-col w-full lg:w-28 shrink-0 items-center justify-around lg:justify-start gap-1 lg:gap-4 py-1.5 lg:py-4 px-2 lg:px-0">
             {/* Main Nav Items */}
             <div className="flex flex-row lg:flex-col items-center justify-around lg:justify-start gap-1 lg:gap-1.5 flex-1 lg:flex-none">
               {NAV.filter(n => n.id !== 'setup').map((n) => (
@@ -127,8 +147,8 @@ export default function App() {
               ))}
             </div>
 
-            {/* Bottom/Right Tools */}
-            <div className="lg:mt-auto flex flex-row lg:flex-col items-center gap-1 lg:gap-1.5">
+            {/* Bottom/Right Tools (Desktop Only) */}
+            <div className="hidden lg:flex lg:mt-auto flex-col items-center gap-1.5">
               <button
                 onClick={cycleAppearance}
                 className="flex w-12 lg:w-24 flex-col items-center gap-0.5 rounded-full py-1 lg:py-2 text-ink-soft transition-all active:surface-tile-high"
@@ -155,7 +175,7 @@ export default function App() {
           </nav>
           <main className="flex min-w-0 flex-1 flex-col overflow-y-auto py-1">
             {!isHome && (
-              <header className="flex flex-col px-6 py-4 lg:px-8">
+              <header className="flex items-center justify-between px-4 py-3 lg:px-8 lg:py-4">
                 <div className="flex flex-col">
                   <div className="flex items-baseline gap-3">
                     <span className="text-2xl font-normal tabular-nums tracking-tight text-[var(--primary)]">
@@ -176,9 +196,10 @@ export default function App() {
                     </span>
                   </div>
                 </div>
+                {mobileTools}
               </header>
             )}
-            <View />
+            <View {...(isHome ? { mobileTools } : {})} />
           </main>
         </div>
       </RewardCelebrationProvider>
