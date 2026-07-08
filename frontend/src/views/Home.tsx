@@ -103,7 +103,7 @@ export default function Home() {
           </div>
         )}
         <div className="ml-auto flex flex-col items-end">
-          <div className="text-2xl font-normal tabular-nums tracking-tight text-[var(--primary)] lg:text-3.5xl leading-none">
+          <div className="text-3xl font-normal tabular-nums tracking-tight text-[var(--primary)] lg:text-4xl leading-none">
             {now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
           </div>
           <div className="mt-0.5 flex gap-3 text-xs font-semibold text-ink-soft">
