@@ -147,7 +147,7 @@ function RecipeDetail({ id, onBack }: { id: number; onBack: () => void }) {
           <h1 className="text-4xl font-semibold tracking-tight text-ink">{r.title}</h1>
           <button
             onClick={() => setStep(0)}
-            className="mt-4 btn-primary px-8 py-4 text-xl"
+            className="mt-4 btn-primary px-5 py-3 lg:px-8 lg:py-4 text-lg lg:text-xl"
           >
             <Icon name="skillet" /> Cook step-by-step
           </button>
@@ -273,18 +273,18 @@ export default function Recipes() {
         <span className="text-lg font-medium text-ink-soft">{recipes?.length ?? 0} saved</span>
       </div>
 
-      <div className="mb-4 flex gap-3">
+      <div className="mb-4 flex gap-2 lg:gap-3">
         <input
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && saveFromUrl()}
           placeholder="Paste a recipe URL — AI tidies it up ✨"
-          className="flex-1 input-glass px-6 py-4 text-lg"
+          className="flex-1 input-glass px-4 py-2.5 lg:px-6 lg:py-4 text-base lg:text-lg"
         />
         <button
           onClick={saveFromUrl}
           disabled={!url.trim() || saving}
-          className="btn-primary px-10 py-4 text-lg"
+          className="btn-primary px-5 py-2.5 lg:px-10 lg:py-4 text-base lg:text-lg"
         >
           {saving ? 'Reading…' : 'Save recipe'}
         </button>

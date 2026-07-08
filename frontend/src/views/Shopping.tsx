@@ -54,18 +54,18 @@ export default function Shopping() {
         </span>
       </div>
 
-      <div className="mb-6 flex gap-3">
+      <div className="mb-4 lg:mb-6 flex gap-2 lg:gap-3">
         <input
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && add()}
           placeholder="Add an item…"
-          className="flex-1 input-glass px-6 py-4 text-xl"
+          className="flex-1 input-glass px-4 py-2.5 lg:px-6 lg:py-4 text-base lg:text-xl"
         />
         <button
           onClick={add}
           disabled={!newTitle.trim() || busy}
-          className="btn-primary px-10 py-4 text-xl"
+          className="btn-primary px-5 py-2.5 lg:px-10 lg:py-4 text-base lg:text-xl"
         >
           Add
         </button>
@@ -78,7 +78,7 @@ export default function Shopping() {
             <p className="text-2xl font-normal">Shopping list is empty</p>
           </div>
         )}
-        <div className="grid grid-cols-3 gap-3 2xl:grid-cols-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 2xl:grid-cols-4">
           {active.map((item) => (
             <button
               key={item.id}
@@ -104,7 +104,7 @@ export default function Shopping() {
                 Clear All
               </button>
             </div>
-            <div className="grid grid-cols-3 gap-3 2xl:grid-cols-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 2xl:grid-cols-4">
               {done.map((item) => (
                 <button
                   key={item.id}
