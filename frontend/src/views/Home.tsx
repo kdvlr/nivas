@@ -77,7 +77,7 @@ export default function Home() {
       <header className="glass flex flex-wrap items-center gap-x-6 gap-y-2 px-6 py-4 lg:px-8">
         <div>
           <p className="text-sm font-medium tracking-widest text-rose-400 uppercase">
-            {family?.name ? `${family.name} Family` : 'Family Dashboard'}
+            {family?.name ? `${family.name} Nivas` : 'Nivas'}
           </p>
           <h1 className="text-2xl font-medium tracking-tight text-ink lg:text-4xl">
             {now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
