@@ -74,23 +74,23 @@ export default function Home() {
   return (
     <div className="flex h-full flex-col gap-3 lg:gap-4">
       {/* header */}
-      <header className="glass flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 lg:px-8 lg:py-4">
+      <header className="glass flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-1.5 lg:px-8 lg:py-2.5">
         <div>
-          <p className="text-sm font-medium tracking-widest text-rose-400 uppercase">
+          <p className="text-xs font-medium tracking-widest text-rose-400 uppercase">
             {family?.name ? `${family.name} Nivas` : 'Nivas'}
           </p>
-          <h1 className="text-2xl font-medium tracking-tight text-ink lg:text-4xl">
+          <h1 className="text-lg font-medium tracking-tight text-ink lg:text-2xl">
             {now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
           </h1>
         </div>
         {weather?.current && (
-          <div className="flex items-center gap-3 rounded-xl px-2 lg:px-4">
-            <span className="text-4xl lg:text-5xl">{weather.current.icon}</span>
+          <div className="flex items-center gap-2 rounded-xl px-2 lg:px-3">
+            <span className="text-3xl lg:text-4xl">{weather.current.icon}</span>
             <div>
-              <div className="text-2xl font-normal text-ink lg:text-3xl">
+              <div className="text-lg font-normal text-ink lg:text-xl leading-none">
                 {weather.current.temp}°
               </div>
-              <div className="text-xs font-medium text-ink-soft lg:text-sm">
+              <div className="text-[0.7rem] font-medium text-ink-soft lg:text-xs mt-0.5">
                 {weather.current.label}
                 {todayWeather && (
                   <span className="text-ink-faint">
@@ -103,15 +103,15 @@ export default function Home() {
           </div>
         )}
         <div className="ml-auto flex flex-col items-end">
-          <div className="text-3xl font-normal tabular-nums tracking-tight text-[var(--primary)] lg:text-5xl">
+          <div className="text-2xl font-normal tabular-nums tracking-tight text-[var(--primary)] lg:text-3.5xl leading-none">
             {now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
           </div>
-          <div className="mt-1 flex gap-6 text-xl font-semibold text-ink-soft">
+          <div className="mt-0.5 flex gap-3 text-xs font-semibold text-ink-soft">
             <span>
               🇮🇳 {now.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: 'numeric', minute: '2-digit' })}
               {now.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) !== now.toLocaleDateString('en-IN') && (
-                <span className="ml-1 text-base opacity-80">
-                  ({new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })})
+                <span className="ml-1 text-[10px] opacity-80">
+                  ({new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})
                 </span>
               )}
             </span>
