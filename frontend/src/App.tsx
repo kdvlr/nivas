@@ -106,26 +106,6 @@ export default function App() {
   const now = useClock()
   const isHome = route === 'home'
 
-  const mobileTools = (
-    <div className="flex lg:hidden items-center gap-1.5 shrink-0">
-      <button
-        onClick={cycleAppearance}
-        className="btn-glass p-2 text-ink-soft rounded-full active:scale-95"
-        title="Appearance"
-      >
-        <Icon name={APPEARANCE_META[appearance].icon} className="text-base" />
-      </button>
-      <a
-        href="#/setup"
-        className={`btn-glass p-2 rounded-full active:scale-95 ${
-          activeNav === 'setup' ? 'bg-slate-300 dark:bg-slate-700 text-ink' : 'text-ink-soft'
-        }`}
-      >
-        <Icon name="settings" className="text-base" />
-      </a>
-    </div>
-  )
-
   return (
     <CelebrationProvider>
       <RewardCelebrationProvider>
@@ -198,7 +178,7 @@ export default function App() {
                 </div>
               </header>
             )}
-            <View {...(isHome ? { mobileTools } : {})} />
+            <View />
           </main>
         </div>
       </RewardCelebrationProvider>
