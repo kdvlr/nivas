@@ -84,6 +84,8 @@
    ============================================================= */
 
 :root {
+  color-scheme: light;
+  --calendar-icon-filter: invert(0.2);
   /* --- Material You (light) — warm cream, no stark white --- */
   --surface: #f2eee1;
   --sc-lowest: #faf6ea; /* cards */
@@ -119,6 +121,8 @@
 }
 
 .dark {
+  color-scheme: dark;
+  --calendar-icon-filter: invert(0.85);
   /* --- Material You (dark) --- */
   --surface: #0e1512;
   --sc-lowest: #1a221e;
@@ -487,4 +491,19 @@ body {
     rgba(255, 255, 255, 0.04),
     transparent
   );
+}
+
+/* Custom styling for native date input picker indicators */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 4px;
+  filter: var(--calendar-icon-filter);
+  transition: background 0.15s ease;
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+}
+.dark input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  background: rgba(255, 255, 255, 0.15);
 }

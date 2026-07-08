@@ -138,8 +138,20 @@ export function useClock(intervalMs = 1000) {
   return now
 }
 
-export const fmtDate = (d: string | Date) =>
-  new Date(d).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+export const fmtDate = (d: string | Date) => {
+  if (typeof d === 'string' && d.length === 10) {
+    return new Date(d + 'T12:00:00').toLocaleDateString(undefined, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    })
+  }
+  return new Date(d).toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  })
+}
 
 export const todayISO = () => {
   const d = new Date()
