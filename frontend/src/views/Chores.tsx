@@ -151,13 +151,13 @@ export default function Chores() {
               </button>
             )}
           </div>
-          <div className="flex gap-3">
-            <button onClick={() => setDraft(emptyDraft())} className="btn-primary px-6 py-3 text-lg">
+          <div className="flex gap-2 lg:gap-3">
+            <button onClick={() => setDraft(emptyDraft())} className="btn-primary px-4 py-2 lg:px-6 lg:py-3 text-base lg:text-lg">
               <Icon name="add" /> Add
             </button>
             <button
               onClick={() => (location.hash = '#/rewards')}
-              className="btn-sunny px-6 py-3 text-lg"
+              className="btn-sunny px-4 py-2 lg:px-6 lg:py-3 text-base lg:text-lg"
             >
               <Icon name="storefront" /> Rewards
             </button>
@@ -396,12 +396,12 @@ export default function Chores() {
               <button
                 disabled={!draft.title.trim()}
                 onClick={saveDraft}
-                className="btn-primary flex-1 py-4 text-xl disabled:opacity-40"
+                className="btn-primary flex-1 py-2.5 lg:py-4 text-base lg:text-xl disabled:opacity-40"
               >
                 {draft.id ? 'Save changes' : 'Add chore'}
               </button>
               {draft.id && (
-                <button onClick={deleteDraft} className="btn-glass px-8 py-4 text-lg !text-rose-500">
+                <button onClick={deleteDraft} className="btn-glass px-5 lg:px-8 py-2.5 lg:py-4 text-base lg:text-lg !text-rose-500">
                   <Icon name="delete" /> Delete
                 </button>
               )}

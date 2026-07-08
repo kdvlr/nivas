@@ -153,7 +153,7 @@ export default function Calendar() {
       <div className="flex h-full flex-col items-center justify-center gap-6 text-center">
         <span className="text-7xl">📅</span>
         <p className="text-2xl font-medium text-ink-soft">No Google account connected yet.</p>
-        <a href="#/setup" className="btn-primary px-8 py-4 text-xl">
+        <a href="#/setup" className="btn-primary px-5 py-2.5 lg:px-8 lg:py-4 text-base lg:text-xl">
           Go to Setup
         </a>
       </div>
@@ -284,7 +284,7 @@ export default function Calendar() {
               <button
                 disabled={busy || !draft.title.trim()}
                 onClick={save}
-                className="flex-1 btn-primary py-4 text-xl disabled:opacity-40"
+                className="flex-1 btn-primary py-2.5 lg:py-4 text-base lg:text-xl disabled:opacity-40"
               >
                 {busy ? 'Saving…' : 'Save'}
               </button>
@@ -292,7 +292,7 @@ export default function Calendar() {
                 <button
                   disabled={busy}
                   onClick={remove}
-                  className="btn-glass px-8 py-4 text-lg !text-rose-500"
+                  className="btn-glass px-5 lg:px-8 py-2.5 lg:py-4 text-base lg:text-lg !text-rose-500"
                 >
                   Delete
                 </button>
