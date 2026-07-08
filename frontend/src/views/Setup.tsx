@@ -447,7 +447,7 @@ function SetupInner() {
         </Card>
 
         {/* People */}
-        <Card title={<><Icon name="groups" /> Family members</>}>
+        <Card title={<><Icon name="groups" /> Members</>}>
           <div className="flex flex-col gap-3">
             <FamilyNameRow />
             {(people ?? []).map((p, i) => (
@@ -666,13 +666,13 @@ function FamilyNameRow() {
 
   return (
     <label className="flex items-center gap-3 text-base font-medium text-ink-soft">
-      Family name
+      Nivas Name
       <input
         value={value}
         onChange={(e) => setVal(e.target.value)}
         onBlur={save}
         onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-        placeholder="e.g. Davuluri — shown on the Home screen"
+        placeholder="e.g. Davuluri — result: Davuluri Nivas"
         className="input-glass flex-1 px-4 py-2.5 text-base font-normal"
         maxLength={30}
       />
