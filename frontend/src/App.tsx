@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { api } from './lib/api'
 import { CelebrationProvider } from './components/celebrations/CelebrationContext'
 import { RewardCelebrationProvider } from './components/celebrations/RewardCelebrationContext'
 import Icon from './components/Icon'
@@ -58,6 +59,117 @@ export default function App() {
   const [route, setRoute] = useState(currentRoute)
   const [appearance, setAppearanceState] = useState<Appearance>(getAppearance)
   const [style, setStyleState] = useState<ThemeStyle>(getStyle)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [pulling, setPulling] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const [pullDistance, setPullDistance] = useState(0)
+  const mainRef = useRef<HTMLDivElement>(null)
+
+  // Auto-close drawer on route change
+  useEffect(() => {
+    setDrawerOpen(false)
+  }, [route])
+
+  // Swipe drawer gestures
+  useEffect(() => {
+    let startX = 0
+    let startY = 0
+
+    const handleTouchStart = (e: TouchEvent) => {
+      startX = e.touches[0].clientX
+      startY = e.touches[0].clientY
+    }
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (startX === 0) return
+
+      const diffX = e.touches[0].clientX - startX
+      const diffY = e.touches[0].clientY - startY
+
+      if (Math.abs(diffX) > Math.abs(diffY)) {
+        if (!drawerOpen && startX < 40 && diffX > 50) {
+          setDrawerOpen(true)
+          startX = 0
+        } else if (drawerOpen && diffX < -50) {
+          setDrawerOpen(false)
+          startX = 0
+        }
+      }
+    }
+
+    const handleTouchEnd = () => {
+      startX = 0
+      startY = 0
+    }
+
+    window.addEventListener('touchstart', handleTouchStart, { passive: true })
+    window.addEventListener('touchmove', handleTouchMove, { passive: true })
+    window.addEventListener('touchend', handleTouchEnd, { passive: true })
+
+    return () => {
+      window.removeEventListener('touchstart', handleTouchStart)
+      window.removeEventListener('touchmove', handleTouchMove)
+      window.removeEventListener('touchend', handleTouchEnd)
+    }
+  }, [drawerOpen])
+
+  // Pull to refresh gestures
+  useEffect(() => {
+    const main = mainRef.current
+    if (!main) return
+
+    let startY = 0
+    let isAtTop = false
+
+    const touchStart = (e: TouchEvent) => {
+      startY = e.touches[0].clientY
+      isAtTop = main.scrollTop === 0
+    }
+
+    const touchMove = (e: TouchEvent) => {
+      if (!isAtTop) return
+
+      const currentY = e.touches[0].clientY
+      const diffY = currentY - startY
+
+      if (diffY > 0) {
+        if (e.cancelable) e.preventDefault()
+        setPulling(true)
+        const dist = Math.min(100, diffY * 0.4)
+        setPullDistance(dist)
+      }
+    }
+
+    const touchEnd = async () => {
+      if (!pulling) return
+      setPulling(false)
+
+      if (pullDistance > 60) {
+        setRefreshing(true)
+        setPullDistance(50)
+        try {
+          await api.post('/api/setup/sync')
+        } catch {
+          // ignore
+        } finally {
+          setRefreshing(false)
+          setPullDistance(0)
+        }
+      } else {
+        setPullDistance(0)
+      }
+    }
+
+    main.addEventListener('touchstart', touchStart, { passive: true })
+    main.addEventListener('touchmove', touchMove, { passive: false })
+    main.addEventListener('touchend', touchEnd, { passive: true })
+
+    return () => {
+      main.removeEventListener('touchstart', touchStart)
+      main.removeEventListener('touchmove', touchMove)
+      main.removeEventListener('touchend', touchEnd)
+    }
+  }, [pulling, pullDistance])
 
   useEffect(() => {
     startWs()
@@ -106,13 +218,32 @@ export default function App() {
   const now = useClock()
   const isHome = route === 'home'
 
+  const menuButton = (
+    <button
+      onClick={() => setDrawerOpen(true)}
+      className="flex lg:hidden btn-glass p-2.5 text-ink-soft rounded-full active:scale-95 mr-3 shrink-0 items-center justify-center"
+      title="Menu"
+    >
+      <Icon name="menu" className="text-lg" />
+    </button>
+  )
+
   return (
     <CelebrationProvider>
       <RewardCelebrationProvider>
         <div className="flex h-full flex-col lg:flex-row gap-2 p-2 lg:gap-4 lg:p-4">
-          <nav className="glass order-last lg:order-first flex flex-row lg:flex-col w-full lg:w-28 h-14 lg:h-full shrink-0 items-center justify-around lg:justify-start gap-1 lg:gap-4 py-1.5 lg:py-4 px-2 lg:px-0">
+          {drawerOpen && (
+            <div 
+              className="fixed inset-0 bg-black/45 backdrop-blur-sm z-40 lg:hidden transition-all duration-300"
+              onClick={() => setDrawerOpen(false)}
+            />
+          )}
+
+          <nav className={`glass fixed lg:static top-0 left-0 z-50 h-full w-24 lg:w-28 flex flex-col items-center py-4 lg:py-4 px-2 lg:px-0 transition-transform duration-300 ease-in-out ${
+            drawerOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+          }`}>
             {/* Main Nav Items */}
-            <div className="flex flex-row lg:flex-col items-center justify-around lg:justify-start gap-1 lg:gap-1.5 flex-1 lg:flex-none">
+            <div className="flex flex-col items-center gap-1 lg:gap-1.5">
               {NAV.filter(n => n.id !== 'setup').map((n) => (
                 <a
                   key={n.id}
@@ -127,8 +258,8 @@ export default function App() {
               ))}
             </div>
 
-            {/* Bottom/Right Tools (Desktop Only) */}
-            <div className="hidden lg:flex lg:mt-auto flex-col items-center gap-1.5">
+            {/* Bottom/Right Tools */}
+            <div className="mt-auto flex flex-col items-center gap-1.5">
               <button
                 onClick={cycleAppearance}
                 className="flex w-12 lg:w-24 flex-col items-center gap-0.5 rounded-full py-1 lg:py-2 text-ink-soft transition-all active:surface-tile-high"
@@ -153,9 +284,26 @@ export default function App() {
               ))}
             </div>
           </nav>
-          <main className="flex min-w-0 flex-1 flex-col overflow-y-auto py-1">
+          <main ref={mainRef} className="relative flex min-w-0 flex-1 flex-col overflow-y-auto py-1">
+            {pullDistance > 0 && (
+              <div 
+                className="absolute left-1/2 -translate-x-1/2 z-40 bg-white dark:bg-slate-800 shadow-md rounded-full w-10 h-10 flex items-center justify-center transition-all duration-150"
+                style={{ 
+                  top: `${pullDistance - 15}px`,
+                  transform: `translate(-50%, 0) rotate(${pullDistance * 4}deg)`,
+                  opacity: Math.min(1, pullDistance / 50)
+                }}
+              >
+                {refreshing ? (
+                  <Icon name="sync" className="animate-spin text-[var(--primary)]" />
+                ) : (
+                  <Icon name="arrow_downward" className="text-[var(--primary)]" />
+                )}
+              </div>
+            )}
             {!isHome && (
-              <header className="flex flex-col px-6 py-4 lg:px-8">
+              <header className="flex items-center px-4 py-3 lg:px-8 lg:py-4">
+                {menuButton}
                 <div className="flex flex-col">
                   <div className="flex items-baseline gap-3">
                     <span className="text-2xl font-normal tabular-nums tracking-tight text-[var(--primary)]">
@@ -178,7 +326,7 @@ export default function App() {
                 </div>
               </header>
             )}
-            <View />
+            <View {...(isHome ? { menuButton } : {})} />
           </main>
         </div>
       </RewardCelebrationProvider>
