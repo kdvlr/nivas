@@ -106,11 +106,11 @@ export default function Home() {
           <div className="text-3xl font-normal tabular-nums tracking-tight text-[var(--primary)] lg:text-4xl leading-none">
             {now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
           </div>
-          <div className="mt-0.5 flex gap-3 text-xs font-semibold text-ink-soft">
+          <div className="mt-1 flex gap-3 text-sm lg:text-base font-semibold text-ink-soft">
             <span>
               🇮🇳 {now.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: 'numeric', minute: '2-digit' })}
               {now.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) !== now.toLocaleDateString('en-IN') && (
-                <span className="ml-1 text-[10px] opacity-80">
+                <span className="ml-1 text-xs opacity-85">
                   ({new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})
                 </span>
               )}
