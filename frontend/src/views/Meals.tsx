@@ -117,7 +117,7 @@ export default function Meals() {
           <div
             key={day.date}
             className={`flex flex-col gap-3 rounded-xl p-3 ${
-              day.date === today ? 'glass ring-2 ring-[var(--primary)]' : 'glass'
+              day.date === today ? 'glass ring-2 ring-[var(--primary)] ring-inset' : 'glass'
             }`}
           >
             <h2 className="text-center text-lg font-medium text-ink">

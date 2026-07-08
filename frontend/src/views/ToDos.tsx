@@ -136,18 +136,9 @@ export default function ToDos() {
 
   return (
     <div className="flex h-full flex-col px-4 lg:px-8">
-      <div className="mb-4 lg:mb-6 flex flex-col gap-4">
-        <div className="flex items-center justify-between">
+      <div className="mb-4 lg:mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-6">
           <h1 className="text-3xl lg:text-4xl font-semibold tracking-tight text-ink">To-Dos</h1>
-          <button
-            onClick={() => setDraft({ source: 'local', title: '', person: '', due: todayISO() })}
-            className="btn-primary px-4 py-2 lg:px-6 lg:py-3 text-base lg:text-lg"
-          >
-            <Icon name="add" /> Add
-          </button>
-        </div>
-        
-        <div className="flex items-center gap-6">
           <div className="btn-glass flex rounded-full p-1">
             {(['today', 'week'] as const).map((r) => (
               <button
@@ -167,6 +158,12 @@ export default function ToDos() {
             {open} to do{done ? ` · ${done} done 🎉` : ''}
           </span>
         </div>
+        <button
+          onClick={() => setDraft({ source: 'local', title: '', person: '', due: todayISO() })}
+          className="btn-primary px-4 py-2 lg:px-6 lg:py-3 text-base lg:text-lg"
+        >
+          <Icon name="add" /> Add
+        </button>
       </div>
 
       {tasks.length === 0 ? (

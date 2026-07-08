@@ -114,14 +114,14 @@ export default function App() {
     <CelebrationProvider>
       <RewardCelebrationProvider>
         <div className="flex h-full flex-col lg:flex-row gap-2 p-2 lg:gap-4 lg:p-4">
-          <nav className="glass order-last lg:order-first flex flex-row lg:flex-col w-full lg:w-28 h-14 lg:h-full shrink-0 items-center justify-around lg:justify-start gap-1 lg:gap-4 py-1.5 lg:py-4 px-2 lg:px-0">
+          <nav className="glass order-last lg:order-first flex flex-row lg:flex-col w-full lg:w-22 h-14 lg:h-full shrink-0 items-center justify-around lg:justify-start gap-1 lg:gap-4 py-1.5 lg:py-4 px-2 lg:px-0">
             {/* Main Nav Items */}
             <div className="flex flex-row lg:flex-col items-center justify-around lg:justify-start gap-1 lg:gap-1.5 flex-1 lg:flex-none">
               {NAV.filter(n => n.id !== 'setup').map((n) => (
                 <a
                   key={n.id}
                   href={`#/${n.id}`}
-                  className={`flex w-12 lg:w-24 flex-col items-center gap-0.5 rounded-full py-1 lg:py-2 transition-all duration-200 ${
+                  className={`flex w-12 lg:w-18 flex-col items-center gap-0.5 rounded-full py-1 lg:py-2 transition-all duration-200 ${
                     activeNav === n.id ? n.active : 'text-ink-soft active:surface-tile-high'
                   }`}
                 >
@@ -132,10 +132,10 @@ export default function App() {
             </div>
 
             {/* Bottom/Right Tools (Desktop Only) */}
-            <div className="hidden lg:flex lg:mt-auto flex-col items-center gap-1.5">
+            <div className="hidden lg:flex lg:mt-auto flex-col items-center gap-1.5 lg:pb-3">
               <button
                 onClick={cycleAppearance}
-                className="flex w-12 lg:w-24 flex-col items-center gap-0.5 rounded-full py-1 lg:py-2 text-ink-soft transition-all active:surface-tile-high"
+                className="flex w-12 lg:w-18 flex-col items-center gap-0.5 rounded-full py-1 lg:py-2 text-ink-soft transition-all active:surface-tile-high"
                 title="Appearance: follows your device in Auto"
               >
                 <Icon name={APPEARANCE_META[appearance].icon} className="text-[1.2rem] lg:text-[1.8rem]" />
@@ -147,7 +147,7 @@ export default function App() {
                 <a
                   key={n.id}
                   href={`#/${n.id}`}
-                  className={`flex w-12 lg:w-24 flex-col items-center gap-0.5 rounded-full py-1 lg:py-2 transition-all duration-200 ${
+                  className={`flex w-12 lg:w-18 flex-col items-center gap-0.5 rounded-full py-1 lg:py-2 transition-all duration-200 ${
                     activeNav === n.id ? n.active : 'text-ink-soft active:surface-tile-high'
                   }`}
                 >
