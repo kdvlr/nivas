@@ -74,7 +74,7 @@ export default function Home() {
   return (
     <div className="flex h-full flex-col gap-3 lg:gap-4">
       {/* header */}
-      <header className="glass flex flex-wrap items-center gap-x-6 gap-y-2 px-6 py-4 lg:px-8">
+      <header className="glass flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 lg:px-8 lg:py-4">
         <div>
           <p className="text-sm font-medium tracking-widest text-rose-400 uppercase">
             {family?.name ? `${family.name} Nivas` : 'Nivas'}

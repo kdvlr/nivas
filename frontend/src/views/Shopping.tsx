@@ -45,11 +45,11 @@ export default function Shopping() {
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="mb-5 flex items-center gap-4">
-        <h1 className="text-3xl font-medium tracking-tight text-ink">Shopping</h1>
-        <span className="text-lg font-normal text-ink-soft">{active.length} items</span>
-        <span className="ml-auto text-base text-ink-soft">
+    <div className="flex h-full flex-col px-4 lg:px-8">
+      <div className="mb-4 lg:mb-5 flex flex-wrap items-center gap-2 lg:gap-4">
+        <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink">Shopping</h1>
+        <span className="text-base lg:text-lg font-normal text-ink-soft">{active.length} items</span>
+        <span className="ml-auto text-xs lg:text-base text-ink-soft hidden sm:inline">
           synced with Reminders + Alexa
         </span>
       </div>

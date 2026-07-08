@@ -109,28 +109,32 @@ export default function App() {
   return (
     <CelebrationProvider>
       <RewardCelebrationProvider>
-        <div className="flex h-full gap-2 p-2 lg:gap-4 lg:p-4">
-          <nav className="glass flex w-20 shrink-0 flex-col items-center gap-1 overflow-y-auto py-4 lg:w-28 lg:gap-1.5">
-            {NAV.filter(n => n.id !== 'setup').map((n) => (
-              <a
-                key={n.id}
-                href={`#/${n.id}`}
-                className={`flex w-16 flex-col items-center gap-0.5 rounded-full py-2 transition-all duration-200 lg:w-24 ${
-                  activeNav === n.id ? n.active : 'text-ink-soft active:surface-tile-high'
-                }`}
-              >
-                <Icon name={n.icon} filled={activeNav === n.id} className="text-[1.6rem] lg:text-[2.1rem]" />
-                <span className="hidden text-[0.7rem] font-medium lg:block">{n.label}</span>
-              </a>
-            ))}
+        <div className="flex h-full flex-col lg:flex-row gap-2 p-2 lg:gap-4 lg:p-4">
+          <nav className="glass order-last lg:order-first flex flex-row lg:flex-col w-full lg:w-28 shrink-0 items-center justify-between lg:justify-start gap-2 lg:gap-4 py-1.5 lg:py-4 px-3 lg:px-0">
+            {/* Main Nav Items */}
+            <div className="flex flex-row lg:flex-col items-center justify-around lg:justify-start gap-1 lg:gap-1.5 flex-1 lg:flex-none">
+              {NAV.filter(n => n.id !== 'setup').map((n) => (
+                <a
+                  key={n.id}
+                  href={`#/${n.id}`}
+                  className={`flex w-12 lg:w-24 flex-col items-center gap-0.5 rounded-full py-1 lg:py-2 transition-all duration-200 ${
+                    activeNav === n.id ? n.active : 'text-ink-soft active:surface-tile-high'
+                  }`}
+                >
+                  <Icon name={n.icon} filled={activeNav === n.id} className="text-[1.35rem] lg:text-[2.1rem]" />
+                  <span className="hidden text-[0.7rem] font-medium lg:block">{n.label}</span>
+                </a>
+              ))}
+            </div>
 
-            <div className="mt-auto flex flex-col items-center gap-1 lg:gap-1.5">
+            {/* Bottom/Right Tools */}
+            <div className="lg:mt-auto flex flex-row lg:flex-col items-center gap-1 lg:gap-1.5">
               <button
                 onClick={cycleAppearance}
-                className="flex w-16 flex-col items-center gap-0.5 rounded-full py-2 text-ink-soft transition-all active:surface-tile-high lg:w-24"
+                className="flex w-12 lg:w-24 flex-col items-center gap-0.5 rounded-full py-1 lg:py-2 text-ink-soft transition-all active:surface-tile-high"
                 title="Appearance: follows your device in Auto"
               >
-                <Icon name={APPEARANCE_META[appearance].icon} className="text-[1.4rem] lg:text-[1.8rem]" />
+                <Icon name={APPEARANCE_META[appearance].icon} className="text-[1.2rem] lg:text-[1.8rem]" />
                 <span className="hidden text-[0.65rem] font-medium lg:block">
                   {APPEARANCE_META[appearance].label}
                 </span>
@@ -139,11 +143,11 @@ export default function App() {
                 <a
                   key={n.id}
                   href={`#/${n.id}`}
-                  className={`flex w-16 flex-col items-center gap-0.5 rounded-full py-2 transition-all duration-200 lg:w-24 ${
+                  className={`flex w-12 lg:w-24 flex-col items-center gap-0.5 rounded-full py-1 lg:py-2 transition-all duration-200 ${
                     activeNav === n.id ? n.active : 'text-ink-soft active:surface-tile-high'
                   }`}
                 >
-                  <Icon name={n.icon} filled={activeNav === n.id} className="text-[1.6rem] lg:text-[2.1rem]" />
+                  <Icon name={n.icon} filled={activeNav === n.id} className="text-[1.35rem] lg:text-[2.1rem]" />
                   <span className="hidden text-[0.7rem] font-medium lg:block">{n.label}</span>
                 </a>
               ))}

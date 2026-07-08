@@ -163,7 +163,7 @@ export default function Calendar() {
   const weatherByDate = new Map((weather?.daily ?? []).map((d) => [d.date, d]))
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col px-4 lg:px-8">
       <div className="mb-3 flex flex-wrap items-center gap-2">
         {selections.map((s) => (
           <span

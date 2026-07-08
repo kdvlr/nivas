@@ -136,12 +136,12 @@ export default function Chores() {
   const sortedBalances = [...(balances ?? [])].sort((a, b) => b.balance - a.balance)
 
   return (
-    <div className="flex h-full flex-col px-6 lg:px-8">
+    <div className="flex h-full flex-col px-4 lg:px-8">
       {/* Header */}
-      <div className="mb-6 flex flex-col gap-4">
+      <div className="mb-4 lg:mb-6 flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <h1 className="text-4xl font-semibold tracking-tight text-ink">Chores</h1>
+            <h1 className="text-3xl lg:text-4xl font-semibold tracking-tight text-ink">Chores</h1>
             {filterPerson && (
               <button
                 onClick={() => setFilterPerson('')}
@@ -201,7 +201,7 @@ export default function Chores() {
           <p className="text-2xl font-medium">No chores here — time to assign some!</p>
         </div>
       ) : (
-        <div className="grid min-h-0 flex-1 auto-rows-min grid-cols-2 gap-x-6 gap-y-4 overflow-y-auto pb-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        <div className="grid min-h-0 flex-1 auto-rows-min grid-cols-2 gap-x-4 gap-y-3 lg:gap-x-6 lg:gap-y-4 overflow-y-auto pb-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {[...groups.entries()].map(([person, list]) => (
             <section key={person} className="mb-4">
               <h2

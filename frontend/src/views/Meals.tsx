@@ -72,9 +72,9 @@ export default function Meals() {
   const slotLabel = (s: MealSlot | null) => s?.recipe_title || s?.text || ''
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="mb-5 flex items-center gap-4">
-        <h1 className="text-3xl font-semibold tracking-tight text-ink">Meal Plan</h1>
+    <div className="flex h-full flex-col px-4 lg:px-8">
+      <div className="mb-4 lg:mb-5 flex items-center gap-3 lg:gap-4">
+        <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink">Meal Plan</h1>
         <div className="ml-auto flex items-center gap-2">
           <button
             onClick={() => setWeekStart(addDaysISO(weekStart, -7))}
@@ -97,7 +97,7 @@ export default function Meals() {
         </div>
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-7 gap-3 overflow-y-auto pb-4">
+      <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-7 gap-3 overflow-y-auto pb-4">
         {(days ?? []).map((day) => (
           <div
             key={day.date}

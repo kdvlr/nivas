@@ -96,15 +96,15 @@ function RecipeDetail({ id, onBack }: { id: number; onBack: () => void }) {
   }
 
   return (
-    <div className="h-full overflow-y-auto px-6 py-4">
+    <div className="h-full overflow-y-auto px-4 py-3 lg:px-8 lg:py-4">
       <button
         onClick={onBack}
         className="mb-3 btn-glass px-6 py-3 text-lg"
       >
         ‹ All recipes
       </button>
-      <div className="flex gap-8">
-        <div className="w-[20rem] shrink-0">
+      <div className="flex flex-col lg:flex-row gap-4 lg:gap-8">
+        <div className="w-full lg:w-[20rem] shrink-0">
           {r.image_url ? (
             <img src={r.image_url} className="aspect-square w-full rounded-xl object-cover shadow" />
           ) : (
@@ -151,7 +151,7 @@ function RecipeDetail({ id, onBack }: { id: number; onBack: () => void }) {
           >
             <Icon name="skillet" /> Cook step-by-step
           </button>
-          <div className="mt-5 grid grid-cols-2 gap-8">
+          <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
             <section>
               <h2 className="mb-4 text-2xl font-medium">Ingredients</h2>
               <ul className="flex flex-col gap-2">
@@ -267,7 +267,7 @@ export default function Recipes() {
   }
 
   return (
-    <div className="flex h-full flex-col px-6 py-4">
+    <div className="flex h-full flex-col px-4 py-3 lg:px-8 lg:py-4">
       <div className="mb-3 flex items-center gap-4">
         <h1 className="text-3xl font-semibold tracking-tight text-ink">Recipes</h1>
         <span className="text-lg font-medium text-ink-soft">{recipes?.length ?? 0} saved</span>
@@ -297,7 +297,7 @@ export default function Recipes() {
           <p className="text-2xl font-medium">Paste a recipe link above to start your recipe box</p>
         </div>
       ) : (
-        <div className="grid min-h-0 flex-1 auto-rows-min grid-cols-4 gap-5 overflow-y-auto pb-6 2xl:grid-cols-5">
+        <div className="grid min-h-0 flex-1 auto-rows-min grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-5 overflow-y-auto pb-6 xl:grid-cols-5">
           {(recipes ?? []).map((r) => (
             <a
               key={r.id}

@@ -135,10 +135,10 @@ export default function ToDos() {
   const done = completedTasks.length
 
   return (
-    <div className="flex h-full flex-col px-6 lg:px-8">
-      <div className="mb-6 flex flex-col gap-4">
+    <div className="flex h-full flex-col px-4 lg:px-8">
+      <div className="mb-4 lg:mb-6 flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-4xl font-semibold tracking-tight text-ink">To-Dos</h1>
+          <h1 className="text-3xl lg:text-4xl font-semibold tracking-tight text-ink">To-Dos</h1>
           <button
             onClick={() => setDraft({ source: 'local', title: '', person: '', due: todayISO() })}
             className="btn-primary px-6 py-3 text-lg"
@@ -175,7 +175,7 @@ export default function ToDos() {
           <p className="text-2xl font-normal">All clear — no to-dos!</p>
         </div>
       ) : (
-        <div className="grid min-h-0 flex-1 auto-rows-min grid-cols-2 gap-x-6 gap-y-4 overflow-y-auto pb-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        <div className="grid min-h-0 flex-1 auto-rows-min grid-cols-2 gap-x-4 gap-y-3 lg:gap-x-6 lg:gap-y-4 overflow-y-auto pb-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {[...activeGroups.entries()].map(([person, list]) => (
             <section key={person} className="mb-4">
               <h2

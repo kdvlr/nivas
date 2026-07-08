@@ -48,7 +48,7 @@ export default function Rewards() {
   const txns = transactions ?? []
 
   return (
-    <div className="flex h-full flex-col p-6">
+    <div className="flex h-full flex-col px-4 py-3 lg:px-8 lg:py-4">
       {/* Header */}
       <div className="mb-6 flex items-center gap-4">
         <button
