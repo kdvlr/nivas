@@ -22,7 +22,7 @@ interface Draft {
   id?: number
   source: Task['source']
   title: string
-  people: string[]
+  person: string
   due: string
 }
 
@@ -140,7 +140,7 @@ export default function ToDos() {
         <div className="flex items-center justify-between">
           <h1 className="text-4xl font-semibold tracking-tight text-ink">To-Dos</h1>
           <button
-            onClick={() => setDraft({ source: 'local', title: '', people: [], due: todayISO() })}
+            onClick={() => setDraft({ source: 'local', title: '', person: '', due: todayISO() })}
             className="btn-primary px-6 py-3 text-lg"
           >
             <Icon name="add" /> Add
