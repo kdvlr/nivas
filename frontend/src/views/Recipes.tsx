@@ -3,6 +3,7 @@ import Icon from '../components/Icon'
 import { api, ApiError } from '../lib/api'
 import { useData, useVoiceCommands } from '../lib/hooks'
 import type { Recipe } from '../lib/types'
+import Modal from '../components/Modal'
 
 function detailIdFromHash() {
   const m = location.hash.match(/^#\/recipes\/(\d+)/)
