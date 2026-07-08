@@ -36,6 +36,17 @@ class SettingsPut(BaseModel):
     icloud_task_lists: list[str] | None = None
     list_person_map: dict[str, str] | None = None
     family_name: str | None = None
+    secondary_tz: str | None = None
+    secondary_tz_emoji: str | None = None
+
+
+@router.get("/config")
+def get_config(db: Session = Depends(get_db)):
+    return {
+        "family_name": sync.get_setting(db, "family_name", ""),
+        "secondary_tz": sync.get_setting(db, "secondary_tz", "Asia/Kolkata"),
+        "secondary_tz_emoji": sync.get_setting(db, "secondary_tz_emoji", "🇮🇳"),
+    }
 
 
 @router.get("/family-name")
@@ -80,6 +91,8 @@ async def status(db: Session = Depends(get_db)):
             ),
             "icloud_task_lists": sync.get_setting(db, "icloud_task_lists"),
             "list_person_map": sync.get_setting(db, "list_person_map", {}),
+            "secondary_tz": sync.get_setting(db, "secondary_tz", "Asia/Kolkata"),
+            "secondary_tz_emoji": sync.get_setting(db, "secondary_tz_emoji", "🇮🇳"),
         },
     }
 
@@ -129,7 +142,11 @@ async def put_settings(body: SettingsPut, db: Session = Depends(get_db)):
         sync.set_setting(db, "list_person_map", body.list_person_map)
     if body.family_name is not None:
         sync.set_setting(db, "family_name", body.family_name.strip())
-        await manager.broadcast("setup")
+    if body.secondary_tz is not None:
+        sync.set_setting(db, "secondary_tz", body.secondary_tz.strip())
+    if body.secondary_tz_emoji is not None:
+        sync.set_setting(db, "secondary_tz_emoji", body.secondary_tz_emoji.strip())
+    await manager.broadcast("setup")
     return {"ok": True}
 
 

@@ -37,12 +37,20 @@ def week(start: str | None = None, days: int = 7, db: Session = Depends(get_db))
     dates = [(start_d + timedelta(days=i)).isoformat() for i in range(days)]
     rows = db.query(MealPlanEntry).filter(MealPlanEntry.date.in_(dates)).all()
     by_key = {(e.date, e.slot): e for e in rows}
+
+    # Batch fetch all unique recipes referenced in the meal plan entries
+    recipe_ids = {e.recipe_id for e in rows if e.recipe_id is not None}
+    recipes = {}
+    if recipe_ids:
+        recipe_rows = db.query(Recipe).filter(Recipe.id.in_(recipe_ids)).all()
+        recipes = {r.id: r for r in recipe_rows}
+
     out = []
     for d in dates:
         slots = {}
         for slot in SLOTS:
             e = by_key.get((d, slot))
-            recipe = db.get(Recipe, e.recipe_id) if e and e.recipe_id else None
+            recipe = recipes.get(e.recipe_id) if e and e.recipe_id else None
             slots[slot] = _entry_dict(e, recipe) if e else None
         out.append({"date": d, "slots": slots})
     return out

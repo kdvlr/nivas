@@ -24,7 +24,10 @@ export default function Home() {
   const { data: shopping, loading: loadingShopping, reload: reloadShopping } = useData<ShoppingItem[]>('/api/shopping', ['shopping'])
   const { data: meals, loading: loadingMeals } = useData<MealDay[]>(`/api/meals?start=${today}&days=1`, ['meals'])
   const { data: weather } = useData<WeatherData>('/api/weather', [], 15 * 60 * 1000)
-  const { data: family } = useData<{ name: string }>('/api/setup/family-name', ['setup'])
+  const { data: config } = useData<{ family_name: string; secondary_tz: string; secondary_tz_emoji: string }>(
+    '/api/setup/config',
+    ['setup'],
+  )
   const { celebrate } = useCelebration()
 
   const tasks = taskData?.tasks ?? []
@@ -71,13 +74,31 @@ export default function Home() {
     reloadShopping()
   }
 
+  const getTzDateString = (date: Date, timeZone: string) => {
+    try {
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      })
+      const parts = formatter.formatToParts(date)
+      const year = parts.find((p) => p.type === 'year')?.value
+      const month = parts.find((p) => p.type === 'month')?.value
+      const day = parts.find((p) => p.type === 'day')?.value
+      return `${year}-${month}-${day}`
+    } catch (e) {
+      return ''
+    }
+  }
+
   return (
     <div className="flex h-full flex-col gap-3 lg:gap-4">
       {/* header */}
       <header className="glass flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-1.5 lg:px-8 lg:py-2.5">
         <div>
           <p className="text-xs font-medium tracking-widest text-rose-400 uppercase">
-            {family?.name ? `${family.name} Nivas` : 'Nivas'}
+            {config?.family_name ? `${config.family_name} Nivas` : 'Nivas'}
           </p>
           <h1 className="text-lg font-medium tracking-tight text-ink lg:text-2xl">
             {now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
@@ -106,16 +127,49 @@ export default function Home() {
           <div className="text-3xl font-normal tabular-nums tracking-tight text-[var(--primary)] lg:text-4xl leading-none">
             {now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
           </div>
-          <div className="mt-1 flex gap-3 text-sm lg:text-base font-semibold text-ink-soft">
-            <span>
-              🇮🇳 {now.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: 'numeric', minute: '2-digit' })}
-              {now.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) !== now.toLocaleDateString('en-IN') && (
-                <span className="ml-1 text-xs opacity-85">
-                  ({new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})
+          {(() => {
+            const secondaryTz = config?.secondary_tz || 'Asia/Kolkata'
+            const secondaryEmoji = config?.secondary_tz_emoji || '🇮🇳'
+            const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone
+            const localDateStr = getTzDateString(now, localTz)
+            const secondaryDateStr = getTzDateString(now, secondaryTz)
+            const hasDateDiff = localDateStr !== secondaryDateStr && secondaryDateStr !== ''
+
+            let secondaryDateFormatted = ''
+            if (hasDateDiff) {
+              try {
+                secondaryDateFormatted = new Intl.DateTimeFormat('en-US', {
+                  timeZone: secondaryTz,
+                  month: 'short',
+                  day: 'numeric',
+                }).format(now)
+              } catch (e) {}
+            }
+
+            let secondaryTimeFormatted = ''
+            try {
+              secondaryTimeFormatted = now.toLocaleTimeString(undefined, {
+                timeZone: secondaryTz,
+                hour: 'numeric',
+                minute: '2-digit',
+              })
+            } catch (e) {
+              secondaryTimeFormatted = now.toLocaleTimeString()
+            }
+
+            return (
+              <div className="mt-1 flex gap-3 text-sm lg:text-base font-semibold text-ink-soft">
+                <span>
+                  {secondaryEmoji} {secondaryTimeFormatted}
+                  {hasDateDiff && secondaryDateFormatted && (
+                    <span className="ml-1 text-xs opacity-85">
+                      ({secondaryDateFormatted})
+                    </span>
+                  )}
                 </span>
-              )}
-            </span>
-          </div>
+              </div>
+            )
+          })()}
         </div>
       </header>
 

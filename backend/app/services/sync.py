@@ -105,43 +105,50 @@ def sync_icloud() -> bool:
 
 async def sync_alexa() -> bool:
     changed = False
-    with SessionLocal() as db:
-        if (await alexa.status()).get("error") == "not connected" and not get_settings().amazon_email:
-            return False
-        try:
-            lists = await alexa.get_lists()
-        except Exception as e:
-            log.warning("Alexa sync failed: %s", e)
-            sync_status.report("alexa", False, str(e)[:300])
-            return False
+    if (await alexa.status()).get("error") == "not connected" and not get_settings().amazon_email:
+        return False
+    try:
+        lists = await alexa.get_lists()
+    except Exception as e:
+        log.warning("Alexa sync failed: %s", e)
+        sync_status.report("alexa", False, str(e)[:300])
+        return False
 
-        todo = lists.get("todo")
-        if todo:
-            tasks = [
-                SourceTask(
-                    source="alexa",
-                    external_id=f"{todo['id']}:{it['id']}",
-                    title=it["title"],
-                    completed=it["completed"],
-                    list_name="Alexa To-do",
-                )
-                for it in todo["items"]
-            ]
-            changed |= await asyncio.to_thread(sync_tasks, db, "alexa", tasks)
+    def do_tasks_sync(tasks_list) -> bool:
+        with SessionLocal() as db:
+            return sync_tasks(db, "alexa", tasks_list)
 
-        shopping = lists.get("shopping")
-        if shopping:
-            items = [
-                SourceListItem(
-                    source="alexa",
-                    external_id=f"{shopping['id']}:{it['id']}",
-                    title=it["title"],
-                    completed=it["completed"],
-                )
-                for it in shopping["items"]
-            ]
-            changed |= await asyncio.to_thread(sync_shopping, db, "alexa", items)
-        sync_status.report("alexa", True)
+    def do_shopping_sync(shopping_list) -> bool:
+        with SessionLocal() as db:
+            return sync_shopping(db, "alexa", shopping_list)
+
+    todo = lists.get("todo")
+    if todo:
+        tasks = [
+            SourceTask(
+                source="alexa",
+                external_id=f"{todo['id']}:{it['id']}",
+                title=it["title"],
+                completed=it["completed"],
+                list_name="Alexa To-do",
+            )
+            for it in todo["items"]
+        ]
+        changed |= await asyncio.to_thread(do_tasks_sync, tasks)
+
+    shopping = lists.get("shopping")
+    if shopping:
+        items = [
+            SourceListItem(
+                source="alexa",
+                external_id=f"{shopping['id']}:{it['id']}",
+                title=it["title"],
+                completed=it["completed"],
+            )
+            for it in shopping["items"]
+        ]
+        changed |= await asyncio.to_thread(do_shopping_sync, items)
+    sync_status.report("alexa", True)
     return changed
 
 

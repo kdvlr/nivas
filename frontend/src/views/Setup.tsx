@@ -630,6 +630,8 @@ function SetupInner() {
 
         <WeatherCard />
 
+        {status && <TimezoneCard status={status} reload={reload} />}
+
         {/* sync health */}
         <Card title={<><Icon name="monitor_heart" /> Sync health</>}>
           {Object.keys(status?.sync ?? {}).length === 0 ? (
@@ -928,5 +930,164 @@ function ICloudLists({ status, onSaved }: { status: SetupStatus; onSaved: () => 
         </div>
       </div>
     </div>
+  )
+}
+
+function TimezoneCard({ status, reload }: { status: SetupStatus; reload: () => void }) {
+  const currentTz = status.settings.secondary_tz || 'Asia/Kolkata'
+  const currentEmoji = status.settings.secondary_tz_emoji || '🇮🇳'
+
+  const [tz, setTz] = useState(currentTz)
+  const [emoji, setEmoji] = useState(currentEmoji)
+  const [customTz, setCustomTz] = useState('')
+  const [showCustom, setShowCustom] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  const commonTzs = [
+    { value: 'Asia/Kolkata', label: 'India (Asia/Kolkata)' },
+    { value: 'America/New_York', label: 'US Eastern (America/New_York)' },
+    { value: 'America/Chicago', label: 'US Central (America/Chicago)' },
+    { value: 'America/Denver', label: 'US Mountain (America/Denver)' },
+    { value: 'America/Los_Angeles', label: 'US Pacific (America/Los_Angeles)' },
+    { value: 'Europe/London', label: 'United Kingdom (Europe/London)' },
+    { value: 'Europe/Paris', label: 'Central Europe (Europe/Paris)' },
+    { value: 'Asia/Singapore', label: 'Singapore (Asia/Singapore)' },
+    { value: 'Asia/Tokyo', label: 'Japan (Asia/Tokyo)' },
+    { value: 'Australia/Sydney', label: 'Sydney (Australia/Sydney)' },
+  ]
+
+  const flags = ['🇮🇳', '🇺🇸', '🇬🇧', '🇪🇺', '🇯🇵', '🇸🇬', '🇦🇺', '🇨🇦', '🇧🇷', '🇲🇽', '🇿🇦', '🇨🇳', '🇳🇿', '🗺️', '⏰', '🌐']
+
+  const handleSave = async (newTz: string, newEmoji: string) => {
+    setSaving(true)
+    try {
+      await api.put('/api/setup/settings', {
+        secondary_tz: newTz,
+        secondary_tz_emoji: newEmoji,
+      })
+      reload()
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const selectTz = (val: string) => {
+    if (val === 'custom') {
+      setShowCustom(true)
+    } else {
+      setShowCustom(false)
+      setTz(val)
+      handleSave(val, emoji)
+    }
+  }
+
+  const selectEmoji = (val: string) => {
+    setEmoji(val)
+    handleSave(tz, val)
+  }
+
+  const saveCustom = () => {
+    if (!customTz.trim()) return
+    setTz(customTz.trim())
+    handleSave(customTz.trim(), emoji)
+    setShowCustom(false)
+  }
+
+  return (
+    <Card title={<><Icon name="schedule" /> Secondary Time Zone</>}>
+      <p className="mb-4 text-sm text-ink-soft">
+        Configure the secondary timezone displayed in the dashboard header.
+      </p>
+      
+      <div className="flex flex-col gap-5">
+        {/* Timezone Select */}
+        <div className="flex flex-col gap-2">
+          <label className="text-sm font-medium text-ink-soft">Select Time Zone</label>
+          <div className="flex gap-2">
+            <select
+              value={commonTzs.some(c => c.value === tz) ? tz : 'custom'}
+              onChange={(e) => selectTz(e.target.value)}
+              className="flex-1 input-glass px-4 py-2.5 text-base"
+            >
+              {commonTzs.map((c) => (
+                <option key={c.value} value={c.value}>{c.label}</option>
+              ))}
+              <option value="custom">Custom time zone...</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Custom Timezone Input */}
+        {(showCustom || !commonTzs.some(c => c.value === tz)) && (
+          <div className="flex gap-2 items-end">
+            <div className="flex-1 flex flex-col gap-2">
+              <label className="text-sm font-medium text-ink-soft">Custom IANA Time Zone</label>
+              <input
+                value={customTz || tz}
+                onChange={(e) => setCustomTz(e.target.value)}
+                placeholder="e.g. America/Phoenix"
+                className="input-glass px-4 py-2 text-base"
+              />
+            </div>
+            <button
+              onClick={saveCustom}
+              className="btn-primary px-5 py-2.5 text-base h-[46px]"
+            >
+              Apply
+            </button>
+          </div>
+        )}
+
+        {/* Emoji/Flag Picker */}
+        <div className="flex flex-col gap-2">
+          <label className="text-sm font-medium text-ink-soft">Time Zone Flag / Emoji</label>
+          <div className="flex flex-wrap gap-2 p-3 glass-inset rounded-xl">
+            {flags.map((f) => {
+              const isActive = emoji === f
+              return (
+                <button
+                  key={f}
+                  onClick={() => selectEmoji(f)}
+                  className={`flex h-10 w-10 items-center justify-center rounded-xl text-2xl transition-all active:scale-90 ${
+                    isActive
+                      ? 'bg-[var(--primary-container)] text-[var(--on-primary-container)] ring-2 ring-[var(--primary)] scale-110 shadow-md'
+                      : 'hover:bg-slate-300/15 dark:hover:bg-slate-700/15'
+                  }`}
+                >
+                  {f}
+                </button>
+              )
+            })}
+            
+            {/* Custom Emoji Input */}
+            <div className="flex items-center gap-1.5 ml-auto pl-2 border-l border-[var(--outline-var)]">
+              <input
+                value={flags.includes(emoji) ? '' : emoji}
+                onChange={(e) => {
+                  const val = e.target.value.trim()
+                  if (val) selectEmoji(val)
+                }}
+                placeholder="Custom..."
+                className="w-20 input-glass px-2 py-1 text-base text-center"
+                maxLength={4}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Display Preview */}
+        <div className="flex items-center gap-3 p-3 glass rounded-xl text-sm font-medium text-ink-soft">
+          <span className="text-emerald-500 font-semibold flex items-center gap-1">
+            <Icon name="info" className="text-lg" /> Current Config:
+          </span>
+          <span className="text-ink font-semibold flex items-center gap-1">
+            {emoji} {tz}
+          </span>
+          {saving && <span className="ml-auto text-xs text-ink-faint animate-pulse">Saving...</span>}
+        </div>
+      </div>
+    </Card>
   )
 }

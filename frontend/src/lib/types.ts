@@ -85,6 +85,8 @@ export interface SetupStatus {
     icloud_shopping_list: string
     icloud_task_lists: string[] | null
     list_person_map: Record<string, string>
+    secondary_tz?: string
+    secondary_tz_emoji?: string
   }
 }
 

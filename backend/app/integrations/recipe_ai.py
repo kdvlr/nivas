@@ -40,7 +40,32 @@ RECIPE_SCHEMA = {
 }
 
 
+import ipaddress
+import socket
+from urllib.parse import urlparse
+
+def is_safe_url(url: str) -> bool:
+    try:
+        parsed = urlparse(url)
+        if not parsed.hostname:
+            return False
+        port = parsed.port or (443 if parsed.scheme == "https" else 80)
+        # Resolve hostname to all associated IP addresses
+        for info in socket.getaddrinfo(parsed.hostname, port):
+            ip_str = info[4][0]
+            # Strip scope zone index from IPv6 if present
+            ip_str = ip_str.split("%")[0]
+            ip = ipaddress.ip_address(ip_str)
+            if ip.is_loopback or ip.is_private or ip.is_link_local:
+                return False
+        return True
+    except Exception:
+        return False
+
+
 def fetch_html(url: str) -> str:
+    if not is_safe_url(url):
+        raise ValueError("URL points to an unsafe target location (private/local network)")
     resp = httpx.get(
         url, headers={"User-Agent": USER_AGENT}, follow_redirects=True, timeout=30
     )

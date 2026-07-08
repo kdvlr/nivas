@@ -3,7 +3,7 @@ import { api } from './lib/api'
 import { CelebrationProvider } from './components/celebrations/CelebrationContext'
 import { RewardCelebrationProvider } from './components/celebrations/RewardCelebrationContext'
 import Icon from './components/Icon'
-import { useClock } from './lib/hooks'
+import { useClock, useData } from './lib/hooks'
 import {
   getAppearance,
   getStyle,
@@ -55,10 +55,33 @@ const STYLE_META: Record<ThemeStyle, { icon: string; label: string; next: ThemeS
   woodland: { icon: 'forest', label: 'Woodland', next: 'material' },
 }
 
+const getTzDateString = (date: Date, timeZone: string) => {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    })
+    const parts = formatter.formatToParts(date)
+    const year = parts.find((p) => p.type === 'year')?.value
+    const month = parts.find((p) => p.type === 'month')?.value
+    const day = parts.find((p) => p.type === 'day')?.value
+    return `${year}-${month}-${day}`
+  } catch (e) {
+    return ''
+  }
+}
+
 export default function App() {
   const [route, setRoute] = useState(currentRoute)
   const [appearance, setAppearanceState] = useState<Appearance>(getAppearance)
   const [style, setStyleState] = useState<ThemeStyle>(getStyle)
+
+  const { data: config } = useData<{ family_name: string; secondary_tz: string; secondary_tz_emoji: string }>(
+    '/api/setup/config',
+    ['setup'],
+  )
 
 
   useEffect(() => {
@@ -185,16 +208,49 @@ export default function App() {
                       {now.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
                     </span>
                   </div>
-                  <div className={`mt-1 flex gap-6 font-semibold text-ink-soft ${route === 'setup' ? 'text-base' : 'text-lg'}`}>
-                    <span>
-                      🇮🇳 {now.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: 'numeric', minute: '2-digit' })}
-                      {now.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) !== now.toLocaleDateString('en-IN') && (
-                        <span className={`ml-1 opacity-80 ${route === 'setup' ? 'text-xs' : 'text-sm'}`}>
-                          ({new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })})
+                  {(() => {
+                    const secondaryTz = config?.secondary_tz || 'Asia/Kolkata'
+                    const secondaryEmoji = config?.secondary_tz_emoji || '🇮🇳'
+                    const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone
+                    const localDateStr = getTzDateString(now, localTz)
+                    const secondaryDateStr = getTzDateString(now, secondaryTz)
+                    const hasDateDiff = localDateStr !== secondaryDateStr && secondaryDateStr !== ''
+                    
+                    let secondaryDateFormatted = ''
+                    if (hasDateDiff) {
+                      try {
+                        secondaryDateFormatted = new Intl.DateTimeFormat('en-US', {
+                          timeZone: secondaryTz,
+                          month: 'long',
+                          day: 'numeric',
+                        }).format(now)
+                      } catch (e) {}
+                    }
+                    
+                    let secondaryTimeFormatted = ''
+                    try {
+                      secondaryTimeFormatted = now.toLocaleTimeString(undefined, {
+                        timeZone: secondaryTz,
+                        hour: 'numeric',
+                        minute: '2-digit',
+                      })
+                    } catch (e) {
+                      secondaryTimeFormatted = now.toLocaleTimeString()
+                    }
+
+                    return (
+                      <div className={`mt-1 flex gap-6 font-semibold text-ink-soft ${route === 'setup' ? 'text-base' : 'text-lg'}`}>
+                        <span>
+                          {secondaryEmoji} {secondaryTimeFormatted}
+                          {hasDateDiff && secondaryDateFormatted && (
+                            <span className={`ml-1 opacity-80 ${route === 'setup' ? 'text-xs' : 'text-sm'}`}>
+                              ({secondaryDateFormatted})
+                            </span>
+                          )}
                         </span>
-                      )}
-                    </span>
-                  </div>
+                      </div>
+                    )
+                  })()}
                 </div>
               </header>
             )}

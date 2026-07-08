@@ -22,7 +22,11 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     }
     throw new ApiError(resp.status, detail)
   }
-  return resp.json() as Promise<T>
+  if (resp.status === 204) {
+    return {} as T
+  }
+  const text = await resp.text()
+  return (text ? JSON.parse(text) : {}) as T
 }
 
 export const api = {

@@ -2,7 +2,7 @@ import asyncio
 import json
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Response
 from fastapi.responses import RedirectResponse
 from googleapiclient.discovery import build
 from pydantic import BaseModel
@@ -84,17 +84,26 @@ def status(db: Session = Depends(get_db)):
 
 
 @router.get("/auth/start")
-def auth_start():
+def auth_start(response: Response):
     if not gcal.client_config_available():
         raise HTTPException(400, "Google client secret not installed — see Setup instructions")
     flow = gcal.make_flow()
-    url, _state = flow.authorization_url(access_type="offline", prompt="consent")
+    url, state = flow.authorization_url(access_type="offline", prompt="consent")
+    response.set_cookie(
+        key="oauth_state",
+        value=state,
+        httponly=True,
+        max_age=300,
+        samesite="lax",
+    )
     return RedirectResponse(url)
 
 
 @router.get("/auth/callback")
-def auth_callback(code: str, db: Session = Depends(get_db)):
-    flow = gcal.make_flow()
+def auth_callback(code: str, state: str, oauth_state: str | None = Cookie(default=None), db: Session = Depends(get_db)):
+    if not oauth_state or state != oauth_state:
+        raise HTTPException(400, "Invalid OAuth state. Potential CSRF protection trigger.")
+    flow = gcal.make_flow(state=state)
     flow.fetch_token(code=code)
     creds = flow.credentials
     info = build("oauth2", "v2", credentials=creds, cache_discovery=False).userinfo().get().execute()

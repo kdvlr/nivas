@@ -216,7 +216,7 @@ def transaction_history(person: str | None = None, db: Session = Depends(get_db)
 def redemption_history(db: Session = Depends(get_db)):
     rows = (
         db.query(CoinTransaction, RewardItem)
-        .join(RewardItem, CoinTransaction.reference_id == RewardItem.id)
+        .outerjoin(RewardItem, CoinTransaction.reference_id == RewardItem.id)
         .filter(CoinTransaction.reason == "reward_redeemed")
         .order_by(CoinTransaction.created_at.desc())
         .limit(20)
@@ -226,8 +226,8 @@ def redemption_history(db: Session = Depends(get_db)):
         {
             "id": txn.id,
             "person_name": txn.person_name,
-            "reward_title": item.title,
-            "reward_emoji": item.emoji,
+            "reward_title": item.title if item else "Deleted Reward",
+            "reward_emoji": item.emoji if item else "🎁",
             "coins_spent": abs(txn.amount),
             "redeemed_at": txn.created_at.isoformat(),
         }

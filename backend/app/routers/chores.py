@@ -111,6 +111,12 @@ async def patch_chore(chore_id: int, body: ChorePatch, db: Session = Depends(get
                 db.add(txn)
         else:
             row.completed_at = None
+            if row.assigned_to:
+                db.query(CoinTransaction).filter(
+                    CoinTransaction.person_name == row.assigned_to,
+                    CoinTransaction.reason == "chore_completed",
+                    CoinTransaction.reference_id == row.id,
+                ).delete()
     db.commit()
     await manager.broadcast("chores")
     return _chore_dict(row)

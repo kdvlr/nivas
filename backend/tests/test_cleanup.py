@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy import create_engine
@@ -36,8 +36,8 @@ def test_pre_completed_source_items_are_not_imported(db):
 
 
 def test_cleanup_removes_only_old_completed(db):
-    old = datetime.utcnow() - timedelta(days=91)
-    recent = datetime.utcnow() - timedelta(days=5)
+    old = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=91)
+    recent = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=5)
     db.add_all(
         [
             Task(source="local", external_id="a", title="old done", completed=True, completed_at=old),
