@@ -285,6 +285,10 @@ body {
 }
 
 @utility btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   border-radius: var(--shape-btn);
   background: var(--primary);
   color: var(--on-primary);
@@ -301,6 +305,10 @@ body {
 }
 
 @utility btn-sunny {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   border-radius: var(--shape-btn);
   background-image: linear-gradient(135deg, #ffb74d 0%, #ff7d84 100%);
   color: #3a1c00;
@@ -316,6 +324,10 @@ body {
 }
 
 @utility btn-glass {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   border-radius: var(--shape-btn);
   background: var(--secondary-container);
   color: var(--on-secondary-container);
