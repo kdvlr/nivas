@@ -7,8 +7,7 @@ let pingTimer: ReturnType<typeof setInterval> | null = null
 function connect() {
   if (socket) return
   const proto = location.protocol === 'https:' ? 'wss' : 'ws'
-  const baseUrl = import.meta.env.BASE_URL.replace(/\/$/, '') // remove trailing slash
-  socket = new WebSocket(`${proto}://${location.host}${baseUrl}/ws`)
+  socket = new WebSocket(`${proto}://${location.host}/ws`)
   socket.onmessage = (ev) => {
     try {
       const msg = JSON.parse(ev.data)
