@@ -130,9 +130,9 @@ export default function App() {
     <CelebrationProvider>
       <RewardCelebrationProvider>
         <div className="flex h-full flex-col lg:flex-row gap-2 p-2 lg:gap-4 lg:p-4">
-          <nav className="glass order-last lg:order-first flex flex-row lg:flex-col w-full lg:w-28 shrink-0 items-center justify-around lg:justify-start gap-1 lg:gap-4 py-1.5 lg:py-4 px-2 lg:px-0">
+          <nav className="glass order-last lg:order-first flex flex-col w-full lg:w-28 shrink-0 items-center gap-1.5 lg:gap-4 py-2 lg:py-4 px-2 lg:px-0">
             {/* Main Nav Items */}
-            <div className="flex flex-row lg:flex-col items-center justify-around lg:justify-start gap-1 lg:gap-1.5 flex-1 lg:flex-none">
+            <div className="flex flex-row lg:flex-col items-center justify-around lg:justify-start gap-1 lg:gap-1.5 flex-1 lg:flex-none w-full lg:w-auto">
               {NAV.filter(n => n.id !== 'setup').map((n) => (
                 <a
                   key={n.id}
@@ -172,10 +172,13 @@ export default function App() {
                 </a>
               ))}
             </div>
+
+            {/* Mobile Tools (Row 2) */}
+            {mobileTools}
           </nav>
           <main className="flex min-w-0 flex-1 flex-col overflow-y-auto py-1">
             {!isHome && (
-              <header className="flex items-center justify-between px-4 py-3 lg:px-8 lg:py-4">
+              <header className="flex flex-col px-6 py-4 lg:px-8">
                 <div className="flex flex-col">
                   <div className="flex items-baseline gap-3">
                     <span className="text-2xl font-normal tabular-nums tracking-tight text-[var(--primary)]">
@@ -196,10 +199,9 @@ export default function App() {
                     </span>
                   </div>
                 </div>
-                {mobileTools}
               </header>
             )}
-            <View {...(isHome ? { mobileTools } : {})} />
+            <View />
           </main>
         </div>
       </RewardCelebrationProvider>

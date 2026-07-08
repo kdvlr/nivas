@@ -9,7 +9,7 @@ import type { CalEvent, ChoreItem, MealDay, ShoppingItem, Task, WeatherData } fr
 const fmtTime = (iso: string) =>
   new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
 
-export default function Home({ mobileTools }: { mobileTools?: React.ReactNode }) {
+export default function Home() {
   const now = useClock()
   const today = todayISO()
   const { data: events, loading: loadingEvents } = useData<CalEvent[]>(
@@ -102,10 +102,8 @@ export default function Home({ mobileTools }: { mobileTools?: React.ReactNode })
             </div>
           </div>
         )}
-        <div className="ml-auto flex items-center gap-3 lg:gap-4">
-          {mobileTools}
-          <div className="flex flex-col items-end">
-            <div className="text-3xl font-normal tabular-nums tracking-tight text-[var(--primary)] lg:text-5xl">
+        <div className="ml-auto flex flex-col items-end">
+          <div className="text-3xl font-normal tabular-nums tracking-tight text-[var(--primary)] lg:text-5xl">
             {now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
           </div>
           <div className="mt-1 flex gap-6 text-xl font-semibold text-ink-soft">
@@ -118,7 +116,6 @@ export default function Home({ mobileTools }: { mobileTools?: React.ReactNode })
               )}
             </span>
           </div>
-        </div>
         </div>
       </header>
 
