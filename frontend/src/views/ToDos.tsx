@@ -78,7 +78,7 @@ function TaskRow({
 }
 
 export default function ToDos() {
-  const [range, setRange] = useState<'today' | 'week' | 'all'>('today')
+  const [range, setRange] = useState<'week' | 'all'>('week')
   const { data, reload } = useData<TasksResponse>(`/api/tasks?range=${range}`, ['tasks'])
   const { data: people } = useData<Person[]>('/api/setup/people', ['tasks'])
   const [draft, setDraft] = useState<Draft | null>(null)
@@ -140,7 +140,7 @@ export default function ToDos() {
         <div className="flex flex-wrap items-center gap-6">
           <h1 className="text-3xl lg:text-4xl font-semibold tracking-tight text-ink">To-Dos</h1>
           <div className="btn-glass flex rounded-full p-1">
-            {(['today', 'week', 'all'] as const).map((r) => (
+            {(['week', 'all'] as const).map((r) => (
               <button
                 key={r}
                 onClick={() => setRange(r)}
@@ -150,7 +150,7 @@ export default function ToDos() {
                     : 'text-ink-soft hover:text-ink'
                 }`}
               >
-                {r === 'today' ? 'Today' : r === 'week' ? 'This Week' : 'All'}
+                {r === 'week' ? 'This Week' : 'All'}
               </button>
             ))}
           </div>
