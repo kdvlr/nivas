@@ -28,19 +28,23 @@ class AlexaLists:
 
     # ---- auth -------------------------------------------------------------
 
-    async def connect(self) -> dict:
+    async def connect(self, email: str | None = None, password: str | None = None, otp_secret: str | None = None) -> dict:
         s = get_settings()
-        if not s.amazon_email or not s.amazon_password:
+        user = email or s.amazon_email
+        pw = password or s.amazon_password
+        otp = otp_secret or s.amazon_otp_secret
+
+        if not user or not pw:
             return {"connected": False, "error": "no credentials configured"}
         session_dir = s.data_dir / "alexa_session"
         session_dir.mkdir(exist_ok=True)
         try:
             self._login = AlexaLogin(
                 url=s.amazon_url,
-                email=s.amazon_email,
-                password=s.amazon_password,
+                email=user,
+                password=pw,
                 outputpath=lambda name: str(session_dir / name),
-                otp_secret=s.amazon_otp_secret,
+                otp_secret=otp,
             )
             await self._login.login()
             if not self._login.status.get("login_successful"):

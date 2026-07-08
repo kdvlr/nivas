@@ -152,6 +152,9 @@ function SetupInner() {
   const [icPass, setIcPass] = useState('')
   const [icCode, setIcCode] = useState('')
   const [icMsg, setIcMsg] = useState('')
+  const [amzUser, setAmzUser] = useState('')
+  const [amzPass, setAmzPass] = useState('')
+  const [amzOtp, setAmzOtp] = useState('')
   const [alexaMsg, setAlexaMsg] = useState('')
   const [busy, setBusy] = useState('')
   const [newPersonName, setNewPersonName] = useState('')
@@ -190,7 +193,11 @@ function SetupInner() {
     setBusy('alexa')
     setAlexaMsg('')
     try {
-      const r = await api.post<{ connected: boolean; error: string }>('/api/setup/alexa/login')
+      const r = await api.post<{ connected: boolean; error: string }>('/api/setup/alexa/login', {
+        email: amzUser,
+        password: amzPass,
+        otp_secret: amzOtp,
+      })
       setAlexaMsg(r.connected ? 'Connected!' : r.error)
     } finally {
       setBusy('')
@@ -405,12 +412,33 @@ function SetupInner() {
           badge={<Badge ok={!!status?.alexa.connected} label={status?.alexa.connected ? 'connected' : 'not connected'} />}
         >
           <p className="mb-2 text-sm text-ink-soft">
-            Uses the Amazon account from the server's <code>.env</code> ({status?.amazon_configured ? 'configured' : 'not configured'}).
+            Uses the Amazon account to sync shopping and to-do lists.
             Unofficial API — if it stops syncing, tap connect again.
           </p>
+          <div className="mb-3 flex flex-col gap-2">
+            <input
+              value={amzUser}
+              onChange={(e) => setAmzUser(e.target.value)}
+              placeholder="Amazon email"
+              className="input-glass px-4 py-2 text-base"
+            />
+            <input
+              type="password"
+              value={amzPass}
+              onChange={(e) => setAmzPass(e.target.value)}
+              placeholder="Amazon password"
+              className="input-glass px-4 py-2 text-base"
+            />
+            <input
+              value={amzOtp}
+              onChange={(e) => setAmzOtp(e.target.value)}
+              placeholder="OTP Secret (Base32) - optional"
+              className="input-glass px-4 py-2 text-base"
+            />
+          </div>
           <button
             onClick={alexaLogin}
-            disabled={busy === 'alexa' || !status?.amazon_configured}
+            disabled={busy === 'alexa'}
             className="btn-primary px-5 py-2.5 text-base"
           >
             {busy === 'alexa' ? 'Connecting…' : 'Connect Alexa'}

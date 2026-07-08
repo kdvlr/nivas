@@ -6692,3 +6692,236 @@ INFO:     127.0.0.1:51056 - "GET /api/setup/icloud/lists HTTP/1.1" 200 OK
 2026-07-07 18:16:33,260 apscheduler.executors.default INFO Running job "job_icloud (trigger: interval[0:03:00], next run at: 2026-07-07 18:19:33 CDT)" (scheduled at 2026-07-07 18:16:33.260158-05:00)
 INFO:     127.0.0.1:51091 - "GET /api/setup/status HTTP/1.1" 200 OK
 INFO:     127.0.0.1:51094 - "GET /api/setup/icloud/lists HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51127 - "GET /api/setup/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51130 - "GET /api/setup/icloud/lists HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51149 - "GET /api/tasks?range=today HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51148 - "GET /api/calendar/events?start=2026-07-07T00:00:00&end=2026-07-08T00:00:00 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51154 - "GET /api/meals?start=2026-07-07&days=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51153 - "GET /api/shopping HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51150 - "GET /api/chores HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51157 - "GET /api/setup/family-name HTTP/1.1" 200 OK
+2026-07-07 18:17:15,496 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/B1181CB6-3518-45F4-98CA-5EA9C9D6CB32
+2026-07-07 18:17:15,497 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/DB34688B-B0F2-4607-A88E-3F72E90B42F4
+2026-07-07 18:17:15,497 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/91E0ECD7-5BE6-419B-B3A1-1DDF2E288072
+2026-07-07 18:17:15,497 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/F7F511D0-B5C3-4C81-A726-5969364254F9
+2026-07-07 18:17:15,497 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/480CBA6C-72FF-4BD4-8FC4-77121D4EB743
+2026-07-07 18:17:15,497 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/91EB3267-2755-40F1-B15E-7CD3D53DFE40
+2026-07-07 18:17:15,497 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/7CA9BCD2-C5A7-42EB-B757-00F705998A0A
+2026-07-07 18:17:15,497 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/21B9ACD6-C429-47F3-B176-B757251C5FA3
+2026-07-07 18:17:15,497 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/108389DC-DDFD-4D17-8500-9FE6FDB402A3
+2026-07-07 18:17:15,497 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/7D734AE2-3FDA-48CB-897C-D9C53EF58997
+2026-07-07 18:17:15,497 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/0FA2A5EB-5053-4308-83F9-DF439F6C8F77
+2026-07-07 18:17:15,497 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/B44F39D0-C13D-4041-AE9B-89785CDB700E
+2026-07-07 18:17:16,836 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/EF22795B-9E21-4503-BB0E-402A61443766
+2026-07-07 18:17:16,836 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/B693C501-9BC8-45AB-A939-E2848ACB6B27
+2026-07-07 18:17:16,836 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/1C393E13-559C-4404-9CED-5283BC9C2CE5
+2026-07-07 18:17:16,836 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/525AC300-CA52-4C74-A2C2-9612E42EE59F
+2026-07-07 18:17:16,836 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/A98B415E-863E-4C43-9A7E-D47C09CAEBA9
+2026-07-07 18:17:16,836 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/92D06836-41C9-4816-80F4-2F5A8688EF5E
+2026-07-07 18:17:16,836 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/998324F4-80BA-46F3-A170-EF57235AEF43
+2026-07-07 18:17:16,836 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/A8F3D9E9-5972-4084-B6EA-4516A409D7AF
+2026-07-07 18:17:16,836 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/94FA1487-6FEA-4328-9CCF-E64B0ECF93F4
+2026-07-07 18:17:16,836 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/FB7CAD89-7F43-4128-A833-1093329B81C0
+2026-07-07 18:17:16,836 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/6F73A429-3BFD-4E35-BE7B-C385C1961147
+2026-07-07 18:17:16,836 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/8ECDB0CD-EAA3-47F9-9343-09F8FAC7165C
+2026-07-07 18:17:16,837 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/96C41BFF-2E63-4A1F-A065-79D6B37ECABA
+2026-07-07 18:17:16,837 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/A2B91A32-355A-40D4-961D-1B8585564893
+2026-07-07 18:17:17,400 apscheduler.executors.default INFO Job "job_icloud (trigger: interval[0:03:00], next run at: 2026-07-07 18:19:33 CDT)" executed successfully
+2026-07-07 18:17:23,262 apscheduler.executors.default INFO Running job "job_calendar (trigger: interval[0:02:00], next run at: 2026-07-07 18:19:23 CDT)" (scheduled at 2026-07-07 18:17:23.260147-05:00)
+2026-07-07 18:17:23,263 apscheduler.executors.default INFO Job "job_calendar (trigger: interval[0:02:00], next run at: 2026-07-07 18:19:23 CDT)" executed successfully
+INFO:     127.0.0.1:51192 - "GET /api/setup/family-name HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51200 - "GET /api/weather HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51203 - "GET /api/setup/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51210 - "GET /api/setup/icloud/lists HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51207 - "GET /api/rewards/store HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51204 - "GET /api/calendar/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51205 - "GET /api/setup/people HTTP/1.1" 200 OK
+2026-07-07 18:17:43,260 apscheduler.executors.default INFO Running job "job_alexa (trigger: interval[0:05:00], next run at: 2026-07-07 18:22:43 CDT)" (scheduled at 2026-07-07 18:17:43.260165-05:00)
+2026-07-07 18:17:43,261 apscheduler.executors.default INFO Job "job_alexa (trigger: interval[0:05:00], next run at: 2026-07-07 18:22:43 CDT)" executed successfully
+INFO:     127.0.0.1:51249 - "GET /api/setup/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51252 - "GET /api/setup/icloud/lists HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51298 - "GET /api/setup/icloud/lists HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51297 - "GET /api/setup/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51343 - "GET /api/tasks?range=today HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51341 - "GET /api/calendar/events?start=2026-07-07T00:00:00&end=2026-07-08T00:00:00 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51344 - "GET /api/chores HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51350 - "GET /api/shopping HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51349 - "GET /api/meals?start=2026-07-07&days=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51353 - "GET /api/setup/family-name HTTP/1.1" 200 OK
+2026-07-07 18:19:23,260 apscheduler.executors.default INFO Running job "job_calendar (trigger: interval[0:02:00], next run at: 2026-07-07 18:21:23 CDT)" (scheduled at 2026-07-07 18:19:23.260147-05:00)
+2026-07-07 18:19:23,262 apscheduler.executors.default INFO Job "job_calendar (trigger: interval[0:02:00], next run at: 2026-07-07 18:21:23 CDT)" executed successfully
+INFO:     127.0.0.1:51383 - "GET /api/weather HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51386 - "GET /api/setup/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51382 - "GET /api/setup/family-name HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51394 - "GET /api/setup/pin HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51391 - "GET /api/rewards/store HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51387 - "GET /api/calendar/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51390 - "GET /api/setup/people HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51397 - "GET /api/weather HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51400 - "GET /api/setup/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51410 - "GET /api/setup/icloud/lists HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51406 - "GET /api/setup/family-name HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51411 - "GET /api/rewards/store HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51414 - "GET /api/calendar/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51418 - "GET /api/setup/icloud/lists HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51415 - "GET /api/setup/people HTTP/1.1" 200 OK
+2026-07-07 18:19:33,261 apscheduler.executors.default INFO Running job "job_icloud (trigger: interval[0:03:00], next run at: 2026-07-07 18:22:33 CDT)" (scheduled at 2026-07-07 18:19:33.260158-05:00)
+INFO:     127.0.0.1:51457 - "GET /api/setup/icloud/lists HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51455 - "GET /api/setup/status HTTP/1.1" 200 OK
+2026-07-07 18:20:15,138 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/B1181CB6-3518-45F4-98CA-5EA9C9D6CB32
+2026-07-07 18:20:15,138 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/DB34688B-B0F2-4607-A88E-3F72E90B42F4
+2026-07-07 18:20:15,138 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/91E0ECD7-5BE6-419B-B3A1-1DDF2E288072
+2026-07-07 18:20:15,138 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/F7F511D0-B5C3-4C81-A726-5969364254F9
+2026-07-07 18:20:15,138 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/480CBA6C-72FF-4BD4-8FC4-77121D4EB743
+2026-07-07 18:20:15,138 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/91EB3267-2755-40F1-B15E-7CD3D53DFE40
+2026-07-07 18:20:15,138 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/7CA9BCD2-C5A7-42EB-B757-00F705998A0A
+2026-07-07 18:20:15,138 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/21B9ACD6-C429-47F3-B176-B757251C5FA3
+2026-07-07 18:20:15,138 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/108389DC-DDFD-4D17-8500-9FE6FDB402A3
+2026-07-07 18:20:15,138 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/7D734AE2-3FDA-48CB-897C-D9C53EF58997
+2026-07-07 18:20:15,138 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/0FA2A5EB-5053-4308-83F9-DF439F6C8F77
+2026-07-07 18:20:15,138 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/B44F39D0-C13D-4041-AE9B-89785CDB700E
+2026-07-07 18:20:16,463 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/EF22795B-9E21-4503-BB0E-402A61443766
+2026-07-07 18:20:16,463 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/B693C501-9BC8-45AB-A939-E2848ACB6B27
+2026-07-07 18:20:16,463 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/1C393E13-559C-4404-9CED-5283BC9C2CE5
+2026-07-07 18:20:16,463 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/525AC300-CA52-4C74-A2C2-9612E42EE59F
+2026-07-07 18:20:16,463 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/A98B415E-863E-4C43-9A7E-D47C09CAEBA9
+2026-07-07 18:20:16,463 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/92D06836-41C9-4816-80F4-2F5A8688EF5E
+2026-07-07 18:20:16,463 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/998324F4-80BA-46F3-A170-EF57235AEF43
+2026-07-07 18:20:16,463 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/A8F3D9E9-5972-4084-B6EA-4516A409D7AF
+2026-07-07 18:20:16,463 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/94FA1487-6FEA-4328-9CCF-E64B0ECF93F4
+2026-07-07 18:20:16,463 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/FB7CAD89-7F43-4128-A833-1093329B81C0
+2026-07-07 18:20:16,463 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/6F73A429-3BFD-4E35-BE7B-C385C1961147
+2026-07-07 18:20:16,463 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/8ECDB0CD-EAA3-47F9-9343-09F8FAC7165C
+2026-07-07 18:20:16,463 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/96C41BFF-2E63-4A1F-A065-79D6B37ECABA
+2026-07-07 18:20:16,463 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/A2B91A32-355A-40D4-961D-1B8585564893
+2026-07-07 18:20:17,027 apscheduler.executors.default INFO Job "job_icloud (trigger: interval[0:03:00], next run at: 2026-07-07 18:22:33 CDT)" executed successfully
+INFO:     127.0.0.1:51493 - "GET /api/setup/icloud/lists HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51492 - "GET /api/setup/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51529 - "GET /api/weather HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51520 - "GET /api/calendar/events?start=2026-07-07T00:00:00&end=2026-07-08T00:00:00 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51524 - "GET /api/chores HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51523 - "GET /api/tasks?range=today HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51525 - "GET /api/shopping HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51528 - "GET /api/meals?start=2026-07-07&days=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51532 - "GET /api/setup/family-name HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51538 - "GET /api/weather HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51541 - "GET /api/calendar/events?start=2026-07-07T00:00:00&end=2026-07-08T00:00:00 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51548 - "GET /api/shopping HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51553 - "GET /api/setup/family-name HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51551 - "GET /api/meals?start=2026-07-07&days=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51547 - "GET /api/chores HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51546 - "GET /api/tasks?range=today HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51580 - "GET /api/tasks?range=today HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51583 - "GET /api/shopping HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51579 - "GET /api/calendar/events?start=2026-07-07T00:00:00&end=2026-07-08T00:00:00 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51581 - "GET /api/chores HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51587 - "GET /api/meals?start=2026-07-07&days=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51589 - "GET /api/setup/family-name HTTP/1.1" 200 OK
+2026-07-07 18:21:23,262 apscheduler.executors.default INFO Running job "job_calendar (trigger: interval[0:02:00], next run at: 2026-07-07 18:23:23 CDT)" (scheduled at 2026-07-07 18:21:23.260147-05:00)
+2026-07-07 18:21:23,264 apscheduler.executors.default INFO Job "job_calendar (trigger: interval[0:02:00], next run at: 2026-07-07 18:23:23 CDT)" executed successfully
+2026-07-07 18:22:33,262 apscheduler.executors.default INFO Running job "job_icloud (trigger: interval[0:03:00], next run at: 2026-07-07 18:25:33 CDT)" (scheduled at 2026-07-07 18:22:33.260158-05:00)
+2026-07-07 18:22:43,261 apscheduler.executors.default INFO Running job "job_alexa (trigger: interval[0:05:00], next run at: 2026-07-07 18:27:43 CDT)" (scheduled at 2026-07-07 18:22:43.260165-05:00)
+2026-07-07 18:22:43,261 apscheduler.executors.default INFO Job "job_alexa (trigger: interval[0:05:00], next run at: 2026-07-07 18:27:43 CDT)" executed successfully
+INFO:     127.0.0.1:51700 - "GET /api/calendar/events?start=2026-07-07T00:00:00&end=2026-07-08T00:00:00 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51705 - "GET /api/shopping HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51708 - "GET /api/meals?start=2026-07-07&days=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51703 - "GET /api/tasks?range=today HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51704 - "GET /api/chores HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51709 - "GET /api/setup/family-name HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51736 - "GET /api/calendar/events?start=2026-07-07T00:00:00&end=2026-07-08T00:00:00 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51741 - "GET /api/shopping HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51743 - "GET /api/meals?start=2026-07-07&days=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51740 - "GET /api/chores HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51746 - "GET /api/setup/family-name HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51739 - "GET /api/tasks?range=today HTTP/1.1" 200 OK
+2026-07-07 18:23:15,811 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/B1181CB6-3518-45F4-98CA-5EA9C9D6CB32
+2026-07-07 18:23:15,812 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/DB34688B-B0F2-4607-A88E-3F72E90B42F4
+2026-07-07 18:23:15,812 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/91E0ECD7-5BE6-419B-B3A1-1DDF2E288072
+2026-07-07 18:23:15,812 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/F7F511D0-B5C3-4C81-A726-5969364254F9
+2026-07-07 18:23:15,812 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/480CBA6C-72FF-4BD4-8FC4-77121D4EB743
+2026-07-07 18:23:15,812 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/91EB3267-2755-40F1-B15E-7CD3D53DFE40
+2026-07-07 18:23:15,812 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/7CA9BCD2-C5A7-42EB-B757-00F705998A0A
+2026-07-07 18:23:15,812 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/21B9ACD6-C429-47F3-B176-B757251C5FA3
+2026-07-07 18:23:15,812 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/108389DC-DDFD-4D17-8500-9FE6FDB402A3
+2026-07-07 18:23:15,812 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/7D734AE2-3FDA-48CB-897C-D9C53EF58997
+2026-07-07 18:23:15,812 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/0FA2A5EB-5053-4308-83F9-DF439F6C8F77
+2026-07-07 18:23:15,812 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/B44F39D0-C13D-4041-AE9B-89785CDB700E
+2026-07-07 18:23:17,239 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/EF22795B-9E21-4503-BB0E-402A61443766
+2026-07-07 18:23:17,239 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/B693C501-9BC8-45AB-A939-E2848ACB6B27
+2026-07-07 18:23:17,239 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/1C393E13-559C-4404-9CED-5283BC9C2CE5
+2026-07-07 18:23:17,239 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/525AC300-CA52-4C74-A2C2-9612E42EE59F
+2026-07-07 18:23:17,239 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/A98B415E-863E-4C43-9A7E-D47C09CAEBA9
+2026-07-07 18:23:17,239 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/92D06836-41C9-4816-80F4-2F5A8688EF5E
+2026-07-07 18:23:17,239 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/998324F4-80BA-46F3-A170-EF57235AEF43
+2026-07-07 18:23:17,239 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/A8F3D9E9-5972-4084-B6EA-4516A409D7AF
+2026-07-07 18:23:17,239 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/94FA1487-6FEA-4328-9CCF-E64B0ECF93F4
+2026-07-07 18:23:17,239 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/FB7CAD89-7F43-4128-A833-1093329B81C0
+2026-07-07 18:23:17,239 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/6F73A429-3BFD-4E35-BE7B-C385C1961147
+2026-07-07 18:23:17,240 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/8ECDB0CD-EAA3-47F9-9343-09F8FAC7165C
+2026-07-07 18:23:17,240 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/96C41BFF-2E63-4A1F-A065-79D6B37ECABA
+2026-07-07 18:23:17,240 pyicloud.services.reminders.service WARNING Unsupported AlarmTrigger type 'Date' on AlarmTrigger/A2B91A32-355A-40D4-961D-1B8585564893
+2026-07-07 18:23:17,815 apscheduler.executors.default INFO Job "job_icloud (trigger: interval[0:03:00], next run at: 2026-07-07 18:25:33 CDT)" executed successfully
+2026-07-07 18:23:23,261 apscheduler.executors.default INFO Running job "job_calendar (trigger: interval[0:02:00], next run at: 2026-07-07 18:25:23 CDT)" (scheduled at 2026-07-07 18:23:23.260147-05:00)
+2026-07-07 18:23:23,263 apscheduler.executors.default INFO Job "job_calendar (trigger: interval[0:02:00], next run at: 2026-07-07 18:25:23 CDT)" executed successfully
+INFO:     127.0.0.1:51824 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:51823 - "GET /api/weather HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51820 - "GET /api/shopping HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51819 - "GET /api/chores HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51817 - "GET /api/calendar/events?start=2026-07-07T00:00:00&end=2026-07-08T00:00:00 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51818 - "GET /api/tasks?range=today HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51821 - "GET /api/meals?start=2026-07-07&days=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51827 - "GET /api/setup/family-name HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51835 - "GET /api/weather HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51836 - "GET /api/shopping HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51841 - "GET /api/calendar/events?start=2026-07-07T00:00:00&end=2026-07-08T00:00:00 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51843 - "GET /api/tasks?range=today HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51838 - "GET /api/chores HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51845 - "GET /api/meals?start=2026-07-07&days=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51848 - "GET /api/setup/family-name HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51853 - "GET /api/calendar/events?start=2026-07-05T00%3A00%3A00-05%3A00&end=2026-07-12T00%3A00%3A00-05%3A00 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51860 - "GET /api/weather HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51857 - "GET /api/calendar/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51862 - "GET /api/calendar/events?start=2026-07-05T00%3A00%3A00-05%3A00&end=2026-07-12T00%3A00%3A00-05%3A00 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51868 - "GET /api/weather HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51866 - "GET /api/calendar/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51876 - "GET /api/chores HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51878 - "GET /api/setup/people HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51879 - "GET /api/rewards/balances HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51885 - "GET /api/chores HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51884 - "GET /api/setup/people HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51888 - "GET /api/rewards/balances HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51893 - "GET /api/tasks?range=today HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51894 - "GET /api/setup/people HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51900 - "GET /api/setup/people HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51899 - "GET /api/tasks?range=today HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51906 - "GET /api/setup/pin HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51909 - "GET /api/setup/pin HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51921 - "GET /api/weather HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51923 - "GET /api/setup/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51918 - "GET /api/setup/family-name HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51926 - "GET /api/setup/people HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51927 - "GET /api/rewards/store HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51924 - "GET /api/calendar/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51932 - "GET /api/weather HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51938 - "GET /api/setup/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51943 - "GET /api/setup/icloud/lists HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51939 - "GET /api/setup/family-name HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51947 - "GET /api/rewards/store HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51944 - "GET /api/setup/people HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51951 - "GET /api/setup/icloud/lists HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51948 - "GET /api/calendar/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51962 - "GET /api/weather HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51967 - "POST /api/setup/alexa/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51970 - "GET /api/setup/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51975 - "POST /api/setup/alexa/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51978 - "GET /api/setup/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52000 - "GET /api/setup/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52003 - "GET /api/setup/icloud/lists HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52037 - "GET /api/setup/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52040 - "GET /api/setup/icloud/lists HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+2026-07-07 18:25:08,788 apscheduler.scheduler INFO Scheduler has been shut down
+INFO:     Application shutdown complete.
+INFO:     Finished server process [17296]

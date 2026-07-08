@@ -25,6 +25,12 @@ class TwoFACode(BaseModel):
     code: str
 
 
+class AmazonLogin(BaseModel):
+    email: str = ""
+    password: str = ""
+    otp_secret: str = ""
+
+
 class SettingsPut(BaseModel):
     icloud_shopping_list: str | None = None
     icloud_task_lists: list[str] | None = None
@@ -101,8 +107,13 @@ async def icloud_lists():
 
 
 @router.post("/alexa/login")
-async def alexa_login():
-    result = await alexa.connect()
+async def alexa_login(body: AmazonLogin):
+    print(f"DEBUG: alexa_login received email='{body.email}'")
+    result = await alexa.connect(
+        email=body.email or None,
+        password=body.password or None,
+        otp_secret=body.otp_secret or None
+    )
     if result.get("connected"):
         await sync.job_alexa()
     return result
