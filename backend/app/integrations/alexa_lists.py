@@ -49,6 +49,7 @@ class AlexaLists:
             return {"connected": False, "error": "no credentials configured"}
         session_dir = s.data_dir / "alexa_session"
         session_dir.mkdir(exist_ok=True)
+        (session_dir / ".storage").mkdir(exist_ok=True)
         try:
             self._login = AlexaLogin(
                 url=s.amazon_url,
