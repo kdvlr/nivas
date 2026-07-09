@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
-import { M3_EXPRESSIVE_SPRING, M3_STANDARD_SPRING } from '../lib/motion'
+import { PRESS_SPRING, EXPRESSIVE_ENTER } from '../lib/motion'
 import { api } from '../lib/api'
 import { useData } from '../lib/hooks'
 import type { ShoppingItem } from '../lib/types'
@@ -67,7 +67,7 @@ export default function Shopping() {
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          transition={M3_EXPRESSIVE_SPRING}
+          transition={PRESS_SPRING}
           onClick={add}
           disabled={!newTitle.trim() || busy}
           className="btn-primary px-5 py-2.5 lg:px-10 lg:py-4 text-base lg:text-xl cursor-pointer"
@@ -94,7 +94,7 @@ export default function Shopping() {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9, y: 15 }}
-                  transition={M3_STANDARD_SPRING}
+                  transition={EXPRESSIVE_ENTER}
                   className="relative overflow-hidden rounded-xl bg-emerald-500/10 border border-emerald-500/20 shadow-sm"
                 >
                   {/* Swipe indicator background */}
@@ -116,7 +116,7 @@ export default function Shopping() {
                     }}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    transition={M3_EXPRESSIVE_SPRING}
+                    transition={PRESS_SPRING}
                     className="relative flex w-full items-center gap-3 glass p-4 text-left cursor-grab active:cursor-grabbing"
                   >
                     <span
@@ -143,7 +143,7 @@ export default function Shopping() {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  transition={M3_EXPRESSIVE_SPRING}
+                  transition={PRESS_SPRING}
                   onClick={() => setShowClearConfirm(true)}
                   className="text-sm font-medium text-rose-500 cursor-pointer"
                 >
@@ -159,7 +159,7 @@ export default function Shopping() {
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 0.6, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.9 }}
-                      transition={M3_STANDARD_SPRING}
+                      transition={EXPRESSIVE_ENTER}
                       whileHover={{ scale: 1.02, opacity: 0.8 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => toggle(item)}

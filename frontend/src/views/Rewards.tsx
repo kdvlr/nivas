@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { motion } from 'framer-motion'
+import { PRESS_SPRING, EXPRESSIVE_ENTER } from '../lib/motion'
 import CoinIcon from '../components/CoinIcon'
 import Icon from '../components/Icon'
 import { api } from '../lib/api'
@@ -62,9 +64,12 @@ export default function Rewards() {
 
       {/* Coin Balances */}
       <div className="mb-8 flex flex-wrap gap-4">
-        {bals.map((b) => (
-          <div
+        {bals.map((b, i) => (
+          <motion.div
             key={b.person_name}
+            initial={{ opacity: 0, scale: 0.9, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ ...EXPRESSIVE_ENTER, delay: i * 0.05 }}
             className="flex min-w-[200px] flex-col items-center glass-inset p-5"
           >
             <div className="mb-2 flex items-center gap-2">
@@ -79,7 +84,7 @@ export default function Rewards() {
               )}
               {' '}· spent {b.spent}
             </span>
-          </div>
+          </motion.div>
         ))}
       </div>
 
@@ -91,9 +96,13 @@ export default function Rewards() {
             <p className="text-lg text-ink-soft">No rewards set up yet — add some in Setup!</p>
           ) : (
             <div className="flex flex-col gap-4">
-              {items.map((item) => (
-                <div
+              {items.map((item, i) => (
+                <motion.div
                   key={item.id}
+                  initial={{ opacity: 0, scale: 0.9, y: 16 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  transition={{ ...EXPRESSIVE_ENTER, delay: i * 0.06 }}
+                  whileHover={{ scale: 1.02, y: -2 }}
                   className="flex flex-col items-center glass-inset p-5"
                 >
                   <span className="mb-2 text-5xl">{item.emoji}</span>
@@ -104,20 +113,23 @@ export default function Rewards() {
                       const key = `${b.person_name}-${item.id}`
                       const canAfford = b.balance >= item.coin_cost
                       return (
-                        <button
+                        <motion.button
                           key={b.person_name}
+                          whileHover={canAfford ? { scale: 1.08 } : undefined}
+                          whileTap={canAfford ? { scale: 0.92 } : undefined}
+                          transition={PRESS_SPRING}
                           disabled={!canAfford || redeemingId === key}
                           onClick={() => redeem(b.person_name, item.id)}
-                          className="rounded-full px-3 py-1.5 text-sm font-medium text-white transition-all disabled:opacity-30"
+                          className="rounded-full px-3 py-1.5 text-sm font-medium text-white transition-all disabled:opacity-30 cursor-pointer"
                           style={{ background: b.color }}
                           title={canAfford ? `Redeem for ${b.person_name}` : `${b.person_name} needs ${item.coin_cost - b.balance} more coins`}
                         >
                           {b.person_name}
-                        </button>
+                        </motion.button>
                       )
                     })}
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           )}

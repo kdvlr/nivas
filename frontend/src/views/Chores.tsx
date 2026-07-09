@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
-import { M3_EXPRESSIVE_SPRING, M3_STANDARD_SPRING } from '../lib/motion'
+import { PRESS_SPRING, EXPRESSIVE_ENTER } from '../lib/motion'
 import Avatar from '../components/Avatar'
 import CoinIcon from '../components/CoinIcon'
 import Icon from '../components/Icon'
@@ -149,7 +149,7 @@ export default function Chores() {
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
-                transition={M3_STANDARD_SPRING}
+                transition={EXPRESSIVE_ENTER}
                 onClick={() => setFilterPerson('')}
                 className="btn-glass flex items-center gap-1 rounded-full px-4 py-2 text-base cursor-pointer"
               >
@@ -161,7 +161,7 @@ export default function Chores() {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              transition={M3_EXPRESSIVE_SPRING}
+              transition={PRESS_SPRING}
               onClick={() => setDraft(emptyDraft())}
               className="btn-primary px-4 py-2 lg:px-6 lg:py-3 text-base lg:text-lg cursor-pointer"
             >
@@ -170,7 +170,7 @@ export default function Chores() {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              transition={M3_EXPRESSIVE_SPRING}
+              transition={PRESS_SPRING}
               onClick={() => (location.hash = '#/rewards')}
               className="btn-sunny px-4 py-2 lg:px-6 lg:py-3 text-base lg:text-lg cursor-pointer"
             >
@@ -190,7 +190,7 @@ export default function Chores() {
                 key={b.person_name}
                 whileHover={{ scale: 1.05, y: -2 }}
                 whileTap={{ scale: 0.95 }}
-                transition={M3_EXPRESSIVE_SPRING}
+                transition={PRESS_SPRING}
                 onClick={() => setFilterPerson(active ? '' : b.person_name)}
                 className={`glass flex min-w-36 items-center gap-2 p-1.5 text-left cursor-pointer transition-all duration-200 ${
                   active ? 'ring-2 ring-[var(--primary)] shadow-md' : ''
@@ -217,7 +217,7 @@ export default function Chores() {
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={M3_STANDARD_SPRING}
+          transition={EXPRESSIVE_ENTER}
           className="flex flex-1 flex-col items-center justify-center gap-4 text-ink-soft"
         >
           <span className="text-7xl">✨</span>
@@ -247,7 +247,7 @@ export default function Chores() {
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: chore.completed ? 0.6 : 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        transition={M3_STANDARD_SPRING}
+                        transition={EXPRESSIVE_ENTER}
                         whileHover={{ scale: 1.02, y: -2 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => toggle(chore)}

@@ -11,6 +11,8 @@ export type CelebrationName =
   | 'unicorn'
   | 'superhero'
   | 'bubbles'
+  | 'dino'
+  | 'hyperspace'
 
 export interface Celebration {
   name: CelebrationName
@@ -741,6 +743,240 @@ const bubblesRun = (canvas: HTMLCanvasElement) => {
   })
 }
 
+/* ----------------------------------------------------------- dino stampede */
+
+const dinoRun = (canvas: HTMLCanvasElement) => {
+  const ctx = fit(canvas)
+  const W = canvas.width
+  const H = canvas.height
+  const ground = H * 0.8
+  const dust: Spark[] = []
+  const roars: { x: number; y: number; t0: number }[] = []
+  // the big T-rex leads, smaller pals follow
+  const herd = [
+    { emoji: '🦖', size: 170, x: W + 120, speed: W * 0.3, stomp: 5.5, phase: 0 },
+    { emoji: '🦕', size: 130, x: W + 420, speed: W * 0.28, stomp: 5, phase: 1.4 },
+    { emoji: '🦖', size: 100, x: W + 680, speed: W * 0.32, stomp: 6.5, phase: 2.6 },
+    { emoji: '🦕', size: 80, x: W + 900, speed: W * 0.3, stomp: 7, phase: 0.7 },
+  ]
+  const volcanoX = W * 0.82
+  let nextRoar = 0.5
+
+  return loop((dt, t) => {
+    ctx.clearRect(0, 0, W, H)
+
+    // stomp shake: the whole prehistoric world trembles
+    const bigDino = herd[0]
+    const stompBeat = Math.abs(Math.sin(t * bigDino.stomp))
+    const shake = bigDino.x > -200 && bigDino.x < W + 200 ? (1 - stompBeat) * 5 : 0
+    ctx.save()
+    ctx.translate(rand(-shake, shake), rand(-shake, shake))
+
+    // volcano puffing in the distance
+    ctx.font = '150px serif'
+    ctx.textAlign = 'center'
+    ctx.fillText('🌋', volcanoX, ground - 30)
+    if (Math.random() < 0.25) {
+      dust.push({
+        x: volcanoX + rand(-16, 16), y: ground - 165,
+        vx: rand(-25, 25), vy: rand(-90, -40),
+        life: 0, maxLife: rand(1, 2.2),
+        color: pick(['#ff7043', '#ffab40', '#9e9e9e', '#757575']), size: rand(6, 14),
+      })
+    }
+
+    // jungle floor
+    ctx.fillStyle = 'rgba(76, 175, 80, 0.35)'
+    ctx.fillRect(0, ground + 20, W, H - ground)
+    ctx.font = '44px serif'
+    for (let i = 0; i < 7; i++) ctx.fillText('🌿', ((i + 0.5) * W) / 7, ground + 46)
+
+    // the stampede (right to left, hopping on the stomp beat)
+    for (const d of herd) {
+      d.x -= d.speed * dt
+      if (d.x < -220) d.x = W + rand(120, 320)
+      const hop = Math.abs(Math.sin(t * d.stomp + d.phase)) * d.size * 0.16
+      const y = ground - d.size * 0.32 - hop
+      // dust kicks up on each landing
+      if (hop < d.size * 0.02 && Math.random() < 0.7) {
+        for (let i = 0; i < 3; i++)
+          dust.push({
+            x: d.x + rand(-d.size * 0.4, d.size * 0.4), y: ground + 8,
+            vx: rand(-90, 90), vy: rand(-120, -30),
+            life: 0, maxLife: rand(0.4, 0.9),
+            color: pick(['#d7ccc8', '#bcaaa4', '#efebe9']), size: rand(4, 10),
+          })
+      }
+      ctx.save()
+      ctx.translate(d.x, y)
+      ctx.rotate(Math.sin(t * d.stomp + d.phase) * 0.07)
+      ctx.font = `${d.size}px serif`
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(d.emoji, 0, 0)
+      ctx.restore()
+    }
+
+    // comic "RAWR!" bursts
+    if (t >= nextRoar && t < 3.2) {
+      nextRoar = t + rand(0.8, 1.2)
+      roars.push({ x: bigDino.x + rand(-30, 60), y: ground - bigDino.size * 0.8, t0: t })
+    }
+    for (let i = roars.length - 1; i >= 0; i--) {
+      const r = roars[i]
+      const age = t - r.t0
+      if (age > 1.1) { roars.splice(i, 1); continue }
+      const scale = age < 0.2 ? age / 0.2 : 1
+      const alpha = age > 0.8 ? 1 - (age - 0.8) / 0.3 : 1
+      ctx.save()
+      ctx.translate(r.x, r.y)
+      ctx.scale(scale, scale)
+      ctx.rotate(0.12)
+      ctx.globalAlpha = alpha
+      ctx.fillStyle = '#84cc16'
+      ctx.beginPath()
+      for (let k = 0; k < 12; k++) {
+        const ang = (k / 12) * Math.PI * 2
+        const rr = k % 2 === 0 ? 70 : 42
+        ctx.lineTo(Math.cos(ang) * rr, Math.sin(ang) * rr)
+      }
+      ctx.closePath()
+      ctx.fill()
+      ctx.fillStyle = '#14532d'
+      ctx.font = '900 28px system-ui, sans-serif'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText('RAWR!', 0, 0)
+      ctx.restore()
+      ctx.globalAlpha = 1
+    }
+
+    // dust + smoke particles
+    for (let i = dust.length - 1; i >= 0; i--) {
+      const s = dust[i]
+      s.life += dt
+      if (s.life >= s.maxLife) { dust.splice(i, 1); continue }
+      s.x += s.vx * dt
+      s.y += s.vy * dt
+      s.vy -= 20 * dt // dust drifts upward
+      const a = 1 - s.life / s.maxLife
+      ctx.globalAlpha = a * 0.7
+      ctx.fillStyle = s.color
+      ctx.beginPath()
+      ctx.arc(s.x, s.y, s.size * (1 + s.life), 0, Math.PI * 2)
+      ctx.fill()
+      ctx.globalAlpha = 1
+    }
+
+    ctx.restore()
+  })
+}
+
+/* -------------------------------------------------------- hyperspace jump */
+
+interface WarpStar {
+  angle: number
+  dist: number
+  speed: number
+  hue: number
+}
+
+const hyperspaceRun = (canvas: HTMLCanvasElement) => {
+  const ctx = fit(canvas)
+  const W = canvas.width
+  const H = canvas.height
+  const cx = W / 2
+  const cy = H / 2
+  const maxR = Math.hypot(cx, cy)
+  const stars: WarpStar[] = Array.from({ length: 240 }, () => ({
+    angle: rand(0, Math.PI * 2),
+    dist: rand(10, maxR),
+    speed: rand(20, 60),
+    hue: rand(180, 260),
+  }))
+
+  // 0–1.2s: engines charge (ship rumbles, stars drift)
+  // 1.2–2.6s: WARP — stars streak into lines, ship blasts forward
+  // 2.6s+: white flash, ship gone, stars settle
+  return loop((dt, t) => {
+    ctx.fillStyle = 'rgba(4, 6, 26, 0.45)'
+    ctx.fillRect(0, 0, W, H)
+
+    const charging = t < 1.2
+    const warping = t >= 1.2 && t < 2.6
+    const warpP = warping ? Math.min((t - 1.2) / 0.7, 1) : 0
+
+    // starfield: radial warp streaks
+    for (const s of stars) {
+      const boost = charging ? 1 : warping ? 1 + warpP * 55 : 6
+      const prev = s.dist
+      s.dist += s.speed * boost * dt
+      if (s.dist > maxR) {
+        s.dist = rand(5, 40)
+        s.angle = rand(0, Math.PI * 2)
+      }
+      const x1 = cx + Math.cos(s.angle) * prev
+      const y1 = cy + Math.sin(s.angle) * prev
+      const x2 = cx + Math.cos(s.angle) * s.dist
+      const y2 = cy + Math.sin(s.angle) * s.dist
+      const brightness = 0.35 + 0.65 * (s.dist / maxR)
+      ctx.strokeStyle = warping
+        ? `hsla(${s.hue}, 90%, ${60 + warpP * 30}%, ${brightness})`
+        : `rgba(255, 255, 255, ${brightness})`
+      ctx.lineWidth = warping ? 1.5 + warpP * 2.5 : 1.6
+      ctx.lineCap = 'round'
+      ctx.beginPath()
+      ctx.moveTo(x1, y1)
+      ctx.lineTo(x2, y2)
+      ctx.stroke()
+    }
+
+    // the ship
+    if (t < 2.75) {
+      let shipX = cx
+      let shipY = cy + H * 0.08
+      let shipScale = 1
+      if (charging) {
+        // rumbling on the launch pad of space
+        const rumble = t / 1.2
+        shipX += rand(-4, 4) * rumble
+        shipY += rand(-4, 4) * rumble
+        shipScale = 1 + Math.sin(t * 10) * 0.03 * rumble
+      } else {
+        // stretch forward and shrink into the distance
+        const p = (t - 1.2) / 1.55
+        shipY -= p * p * H * 0.1
+        shipScale = 1 - p * 0.75
+      }
+      // engine glow builds while charging
+      const glowR = charging ? 30 + (t / 1.2) * 70 : 100
+      const glow = ctx.createRadialGradient(shipX, shipY, 5, shipX, shipY, glowR)
+      glow.addColorStop(0, `rgba(96, 165, 250, ${charging ? 0.5 * (t / 1.2) : 0.6})`)
+      glow.addColorStop(1, 'rgba(96, 165, 250, 0)')
+      ctx.fillStyle = glow
+      ctx.fillRect(shipX - glowR, shipY - glowR, glowR * 2, glowR * 2)
+
+      ctx.save()
+      ctx.translate(shipX, shipY)
+      ctx.scale(shipScale, shipScale)
+      ctx.font = '130px serif'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText('🛸', 0, 0)
+      ctx.restore()
+    }
+
+    // the jump flash
+    if (t >= 2.55 && t < 3.0) {
+      const f = 1 - Math.abs((t - 2.75) / 0.22)
+      if (f > 0) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${f * 0.85})`
+        ctx.fillRect(0, 0, W, H)
+      }
+    }
+  })
+}
+
 /* ---------------------------------------------------------------- registry */
 
 export const CELEBRATIONS: Celebration[] = [
@@ -791,5 +1027,17 @@ export const CELEBRATIONS: Celebration[] = [
     backdrop: 'rgba(8, 47, 73, 0.55)',
     praise: ['Pop-tastic!', 'Bubbling with pride!', 'You crushed it!'],
     run: bubblesRun,
+  },
+  {
+    name: 'dino',
+    backdrop: 'rgba(20, 40, 16, 0.8)',
+    praise: ['ROAR-some job!', 'Dino-mite!', 'Stomp, stomp, HOORAY!'],
+    run: dinoRun,
+  },
+  {
+    name: 'hyperspace',
+    backdrop: 'rgba(2, 4, 20, 0.94)',
+    praise: ['Warp speed ahead!', 'Light-speed legend!', 'To infinity… and DONE!'],
+    run: hyperspaceRun,
   },
 ]

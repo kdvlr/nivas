@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { M3_EXPRESSIVE_SPRING, M3_STANDARD_SPRING } from './lib/motion'
+import { PRESS_SPRING, EXPRESSIVE_ENTER } from './lib/motion'
 import { api } from './lib/api'
 import { CelebrationProvider } from './components/celebrations/CelebrationContext'
 import { RewardCelebrationProvider } from './components/celebrations/RewardCelebrationContext'
@@ -155,7 +155,7 @@ export default function App() {
                     <motion.div
                       whileHover={{ scale: 1.08 }}
                       whileTap={{ scale: 0.92 }}
-                      transition={M3_EXPRESSIVE_SPRING}
+                      transition={PRESS_SPRING}
                       className={`flex items-center justify-center h-7 w-10 lg:h-8 lg:w-14 rounded-full transition-all duration-200 ${
                         isActive ? n.active : 'group-hover:bg-slate-300/15 dark:group-hover:bg-slate-700/15'
                       }`}
@@ -178,7 +178,7 @@ export default function App() {
                 <motion.div
                   whileHover={{ scale: 1.08 }}
                   whileTap={{ scale: 0.92 }}
-                  transition={M3_EXPRESSIVE_SPRING}
+                  transition={PRESS_SPRING}
                   className="flex items-center justify-center h-7 w-10 lg:h-8 lg:w-14 rounded-full transition-all duration-200 group-hover:bg-slate-300/15 dark:group-hover:bg-slate-700/15"
                 >
                   <Icon name={APPEARANCE_META[appearance].icon} className="text-[1.25rem] lg:text-[1.55rem]" />
@@ -200,7 +200,7 @@ export default function App() {
                     <motion.div
                       whileHover={{ scale: 1.08 }}
                       whileTap={{ scale: 0.92 }}
-                      transition={M3_EXPRESSIVE_SPRING}
+                      transition={PRESS_SPRING}
                       className={`flex items-center justify-center h-7 w-10 lg:h-8 lg:w-14 rounded-full transition-all duration-200 ${
                         isActive ? n.active : 'group-hover:bg-slate-300/15 dark:group-hover:bg-slate-700/15'
                       }`}
@@ -277,7 +277,7 @@ export default function App() {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -12 }}
-                transition={M3_STANDARD_SPRING}
+                transition={EXPRESSIVE_ENTER}
                 className="flex flex-1 flex-col min-h-0"
               >
                 <View />

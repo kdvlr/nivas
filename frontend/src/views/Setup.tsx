@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { M3_EXPRESSIVE_SPRING, M3_STANDARD_SPRING } from '../lib/motion'
+import { SPATIAL_STANDARD_DEFAULT } from '../lib/motion'
 import CoinIcon from '../components/CoinIcon'
 import Icon from '../components/Icon'
 import { api } from '../lib/api'
@@ -39,7 +39,7 @@ function Card({ title, badge, children }: { title: ReactNode; badge?: ReactNode;
     <motion.section
       layout
       whileHover={{ scale: 1.01, y: -2 }}
-      transition={M3_STANDARD_SPRING}
+      transition={SPATIAL_STANDARD_DEFAULT}
       className="glass p-5 shadow-sm"
     >
       <div className="mb-3 flex items-center gap-3">

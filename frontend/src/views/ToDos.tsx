@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
-import { M3_EXPRESSIVE_SPRING, M3_STANDARD_SPRING } from '../lib/motion'
+import { PRESS_SPRING, EXPRESSIVE_ENTER } from '../lib/motion'
 import Icon from '../components/Icon'
 import { api } from '../lib/api'
 import { useData, todayISO, fmtDate } from '../lib/hooks'
@@ -43,7 +43,7 @@ function TaskRow({
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: task.completed ? 0.6 : 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      transition={M3_STANDARD_SPRING}
+      transition={EXPRESSIVE_ENTER}
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       onClick={() => onToggle(task)}
@@ -170,7 +170,7 @@ export default function ToDos() {
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          transition={M3_EXPRESSIVE_SPRING}
+          transition={PRESS_SPRING}
           onClick={() => setDraft({ source: 'local', title: '', person: '', due: todayISO() })}
           className="btn-primary px-4 py-2 lg:px-6 lg:py-3 text-base lg:text-lg cursor-pointer"
         >
@@ -182,7 +182,7 @@ export default function ToDos() {
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={M3_STANDARD_SPRING}
+          transition={EXPRESSIVE_ENTER}
           className="flex flex-1 flex-col items-center justify-center gap-4 text-ink-soft"
         >
           <span className="text-7xl">🎉</span>
