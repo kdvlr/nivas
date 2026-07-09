@@ -95,7 +95,7 @@ export default function Shopping() {
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9, y: 15 }}
                   transition={EXPRESSIVE_ENTER}
-                  className="relative overflow-hidden rounded-xl bg-emerald-500/10 border border-emerald-500/20 shadow-sm"
+                  className="relative overflow-hidden rounded-[var(--shape-card)] bg-emerald-500/10"
                 >
                   {/* Swipe indicator background */}
                   <div className="absolute inset-y-0 left-4 flex items-center text-emerald-600 dark:text-emerald-400">
