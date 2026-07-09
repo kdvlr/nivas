@@ -156,7 +156,7 @@ export default function Shopping() {
         </motion.button>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto pb-6">
+      <div className="min-h-0 flex-1 overflow-y-auto lg:overflow-y-hidden lg:overflow-x-auto pb-6">
         {active.length === 0 && done.length === 0 && (
           <div className="flex h-full flex-col items-center justify-center gap-4 text-ink-soft">
             <span className="text-7xl">🛒</span>
@@ -165,61 +165,61 @@ export default function Shopping() {
         )}
 
         <LayoutGroup>
-          <motion.div layout className="columns-1 sm:columns-2 md:columns-3 2xl:columns-4 gap-3">
-            <AnimatePresence initial={false}>
-              {active.map((item) => (
-                <ActiveShoppingItem key={item.id} item={item} toggle={toggle} />
-              ))}
-            </AnimatePresence>
-          </motion.div>
+          {(active.length > 0 || done.length > 0) && (
+            <div className="columns-1 sm:columns-2 md:columns-3 2xl:columns-4 gap-4 h-auto lg:h-[calc(100vh-245px)] [column-fill:auto]">
+              <AnimatePresence initial={false}>
+                {active.map((item) => (
+                  <ActiveShoppingItem key={item.id} item={item} toggle={toggle} />
+                ))}
+              </AnimatePresence>
 
-          {done.length > 0 && (
-            <>
-              <div className="mb-3 mt-8 flex items-center justify-between">
-                <h2 className="text-xl font-normal text-ink-soft">In the cart</h2>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  transition={PRESS_SPRING}
-                  onClick={() => setShowClearConfirm(true)}
-                  className="text-sm font-medium text-rose-500 cursor-pointer"
-                >
-                  Clear All
-                </motion.button>
-              </div>
-              <motion.div layout className="columns-1 sm:columns-2 md:columns-3 2xl:columns-4 gap-3">
-                <AnimatePresence>
-                  {done.map((item) => (
+              {done.length > 0 && (
+                <>
+                  <div className="mb-3 mt-4 flex items-center justify-between break-inside-avoid">
+                    <h2 className="text-xl font-normal text-ink-soft">In the cart</h2>
                     <motion.button
-                      key={item.id}
-                      layoutId={String(item.id)}
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 0.6, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
-                      transition={EXPRESSIVE_ENTER}
-                      whileHover={{ scale: 1.02, opacity: 0.8 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => toggle(item)}
-                      className="relative flex w-full cursor-pointer items-center gap-3 rounded-xl glass-inset p-2.5 text-left select-none shadow-sm break-inside-avoid mb-3 inline-flex"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      transition={PRESS_SPRING}
+                      onClick={() => setShowClearConfirm(true)}
+                      className="text-sm font-medium text-rose-500 cursor-pointer"
                     >
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-[3px] border-emerald-400 bg-emerald-400 text-white shadow-sm text-sm font-bold">
-                        ✓
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-base font-medium line-through text-ink-soft break-words">
-                          {item.title}
-                        </span>
-                        {item.sources.length > 0 && (
-                          <span className="block text-[0.7rem] text-ink-soft">
-                            {item.sources.map((s) => SOURCE_ICON[s] ?? '').join(' ')}
-                          </span>
-                        )}
-                      </span>
+                      Clear All
                     </motion.button>
-                  ))}
-                </AnimatePresence>
-              </motion.div>
-            </>
+                  </div>
+                  <AnimatePresence>
+                    {done.map((item) => (
+                      <motion.button
+                        key={item.id}
+                        layoutId={String(item.id)}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 0.6, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        transition={EXPRESSIVE_ENTER}
+                        whileHover={{ scale: 1.02, opacity: 0.8 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => toggle(item)}
+                        className="relative flex w-full cursor-pointer items-center gap-3 rounded-xl glass-inset p-2.5 text-left select-none shadow-sm break-inside-avoid mb-3 inline-flex"
+                      >
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-[3px] border-emerald-400 bg-emerald-400 text-white shadow-sm text-sm font-bold">
+                          ✓
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-base font-medium line-through text-ink-soft break-words">
+                            {item.title}
+                          </span>
+                          {item.sources.length > 0 && (
+                            <span className="block text-[0.7rem] text-ink-soft">
+                              {item.sources.map((s) => SOURCE_ICON[s] ?? '').join(' ')}
+                            </span>
+                          )}
+                        </span>
+                      </motion.button>
+                    ))}
+                  </AnimatePresence>
+                </>
+              )}
+            </div>
           )}
         </LayoutGroup>
       </div>
