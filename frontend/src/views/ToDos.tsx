@@ -16,7 +16,7 @@ interface Person {
   color: string
 }
 
-const SOURCE_BADGE: Record<string, string> = { icloud: ' iCloud', local: '' }
+const SOURCE_BADGE: Record<string, string> = { icloud: ' iCloud', alexa: '🔵 Alexa', local: '' }
 
 interface Draft {
   id?: number

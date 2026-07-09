@@ -4,7 +4,7 @@ import { useData } from '../lib/hooks'
 import type { ShoppingItem } from '../lib/types'
 import Modal from '../components/Modal'
 
-const SOURCE_ICON: Record<string, string> = { icloud: '', local: '🖥️' }
+const SOURCE_ICON: Record<string, string> = { icloud: '', alexa: '🔵', local: '🖥️' }
 
 export default function Shopping() {
   const { data: items, reload } = useData<ShoppingItem[]>('/api/shopping', ['shopping'])
