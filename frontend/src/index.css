@@ -270,6 +270,15 @@ html[data-theme='glass'].dark {
   --tint-d: rgb(34 211 238 / 0.11);
 }
 
+/* Kiosk/touch UI: keep scrolling but hide every scrollbar */
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+}
+
 html,
 body,
 #root {

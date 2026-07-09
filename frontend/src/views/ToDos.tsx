@@ -240,7 +240,7 @@ export default function ToDos() {
         </motion.div>
       ) : (
         <LayoutGroup>
-          <motion.div layout className="grid min-h-0 flex-1 auto-rows-min grid-cols-1 gap-x-4 gap-y-3 lg:gap-x-6 lg:gap-y-4 overflow-y-auto pb-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <motion.div layout className="grid min-h-0 flex-1 auto-rows-min grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-x-4 gap-y-3 lg:gap-x-6 lg:gap-y-4 overflow-y-auto pb-4">
             <AnimatePresence initial={false}>
               {[...activeGroups.entries()].map(([person, list]) => (
                 <motion.section key={person} layout className="mb-4">
@@ -257,7 +257,7 @@ export default function ToDos() {
                       {list.length}
                     </span>
                   </h2>
-                  <div className="flex flex-col gap-2">
+                  <div className="grid gap-2 grid-cols-[repeat(auto-fill,minmax(270px,1fr))]">
                     {list.map((t) => (
                       <TaskRow
                         key={`${t.source}-${t.id}`}
