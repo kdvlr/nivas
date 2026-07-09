@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { PRESS_SPRING, EXPRESSIVE_ENTER } from './lib/motion'
+import {
+  PRESS_SPRING,
+  EXPRESSIVE_ENTER,
+  EFFECTS_DEFAULT,
+  SPATIAL_EXPRESSIVE_DEFAULT,
+} from './lib/motion'
 import { api } from './lib/api'
 import { CelebrationProvider } from './components/celebrations/CelebrationContext'
 import { RewardCelebrationProvider } from './components/celebrations/RewardCelebrationContext'
@@ -51,10 +56,61 @@ const APPEARANCE_META: Record<Appearance, { icon: string; label: string; next: A
   dark: { icon: 'dark_mode', label: 'Dark', next: 'auto' },
 }
 
-const STYLE_META: Record<ThemeStyle, { icon: string; label: string; next: ThemeStyle }> = {
-  material: { icon: 'palette', label: 'Material', next: 'glass' },
-  glass: { icon: 'blur_on', label: 'Glass', next: 'woodland' },
-  woodland: { icon: 'forest', label: 'Woodland', next: 'material' },
+const APPEARANCE_OPTIONS: { id: Appearance; icon: string; label: string }[] = [
+  { id: 'auto', icon: 'routine', label: 'Auto' },
+  { id: 'light', icon: 'light_mode', label: 'Light' },
+  { id: 'dark', icon: 'dark_mode', label: 'Dark' },
+]
+
+const STYLE_OPTIONS: { id: ThemeStyle; icon: string; label: string }[] = [
+  { id: 'material', icon: 'palette', label: 'Material' },
+  { id: 'glass', icon: 'blur_on', label: 'Glass' },
+  { id: 'woodland', icon: 'forest', label: 'Woodland' },
+]
+
+/** Segmented control with a spring-animated pill behind the active option. */
+function SegmentedRow<T extends string>({
+  label,
+  options,
+  value,
+  onSelect,
+  pillId,
+}: {
+  label: string
+  options: { id: T; icon: string; label: string }[]
+  value: T
+  onSelect: (v: T) => void
+  pillId: string
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-xs font-semibold uppercase tracking-wider text-ink-soft">{label}</span>
+      <div className="glass-inset flex !rounded-full p-1">
+        {options.map((o) => {
+          const active = o.id === value
+          return (
+            <button
+              key={o.id}
+              onClick={() => onSelect(o.id)}
+              className={`relative flex flex-1 items-center justify-center gap-1.5 rounded-full py-2.5 text-sm font-medium transition-colors duration-200 ${
+                active ? 'text-[var(--on-primary)]' : 'text-ink-soft'
+              }`}
+            >
+              {active && (
+                <motion.span
+                  layoutId={pillId}
+                  transition={SPATIAL_EXPRESSIVE_DEFAULT}
+                  className="absolute inset-0 rounded-full bg-[var(--primary)]"
+                />
+              )}
+              <Icon name={o.icon} filled={active} className="relative z-10 text-lg" />
+              <span className="relative z-10">{o.label}</span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
 }
 
 const getTzDateString = (date: Date, timeZone: string) => {
@@ -79,6 +135,7 @@ export default function App() {
   const [route, setRoute] = useState(currentRoute)
   const [appearance, setAppearanceState] = useState<Appearance>(getAppearance)
   const [style, setStyleState] = useState<ThemeStyle>(getStyle)
+  const [moreOpen, setMoreOpen] = useState(false)
 
   const { data: config } = useData<{ family_name: string; secondary_tz: string; secondary_tz_emoji: string }>(
     '/api/setup/config',
@@ -115,17 +172,22 @@ export default function App() {
     }
   }, [])
 
-  const cycleAppearance = () => {
-    const next = APPEARANCE_META[appearance].next
-    setAppearanceState(next)
-    setAppearance(next)
+  const chooseAppearance = (a: Appearance) => {
+    setAppearanceState(a)
+    setAppearance(a)
   }
 
-  const cycleStyle = () => {
-    const next = STYLE_META[style].next
-    setStyleState(next)
-    setStyle(next)
+  const chooseStyle = (s: ThemeStyle) => {
+    setStyleState(s)
+    setStyle(s)
   }
+
+  const cycleAppearance = () => chooseAppearance(APPEARANCE_META[appearance].next)
+
+  // close the quick-settings sheet whenever navigation happens
+  useEffect(() => {
+    setMoreOpen(false)
+  }, [route])
 
   const View = route === 'rewards' ? Rewards : (NAV.find((n) => n.id === route)?.view ?? Home)
   const activeNav = route === 'rewards' ? 'chores' : route
@@ -166,6 +228,27 @@ export default function App() {
                   </a>
                 )
               })}
+
+              {/* Mobile only: quick-settings sheet trigger (desktop has the sidebar tools) */}
+              <button
+                onClick={() => setMoreOpen(true)}
+                className={`lg:hidden flex flex-col items-center gap-0.5 py-1 transition-all duration-200 group text-center flex-1 w-12 ${
+                  moreOpen || activeNav === 'setup' ? 'text-ink' : 'text-ink-soft hover:text-ink'
+                }`}
+                title="Settings"
+              >
+                <motion.div
+                  whileTap={{ scale: 0.92 }}
+                  transition={PRESS_SPRING}
+                  className={`flex items-center justify-center h-7 w-10 rounded-full transition-all duration-200 ${
+                    moreOpen || activeNav === 'setup'
+                      ? 'bg-slate-300 text-slate-950 dark:bg-slate-700 dark:text-slate-100'
+                      : ''
+                  }`}
+                >
+                  <Icon name="more_horiz" filled={moreOpen || activeNav === 'setup'} className="text-[1.25rem]" />
+                </motion.div>
+              </button>
             </div>
 
             {/* Bottom/Right Tools (Desktop Only) */}
@@ -285,6 +368,58 @@ export default function App() {
             </AnimatePresence>
           </main>
         </div>
+
+        {/* Mobile quick-settings bottom sheet. Stays mounted; springs on/off
+            screen via `animate` (exit-unmount animations proved unreliable
+            with layoutId pills inside the sheet). */}
+        <motion.div
+          initial={false}
+          animate={{ opacity: moreOpen ? 1 : 0 }}
+          transition={EFFECTS_DEFAULT}
+          className={`fixed inset-0 z-40 bg-black/45 backdrop-blur-sm lg:hidden ${moreOpen ? '' : 'pointer-events-none'}`}
+          onClick={() => setMoreOpen(false)}
+        />
+        <motion.div
+          initial={false}
+          animate={{ y: moreOpen ? '0%' : '115%' }}
+          transition={SPATIAL_EXPRESSIVE_DEFAULT}
+          drag={moreOpen ? 'y' : false}
+          dragConstraints={{ top: 0, bottom: 0 }}
+          dragElastic={{ top: 0, bottom: 0.55 }}
+          onDragEnd={(_, info) => {
+            if (info.offset.y > 70 || info.velocity.y > 500) setMoreOpen(false)
+          }}
+          className={`glass fixed inset-x-0 bottom-0 z-40 !rounded-b-none !rounded-t-3xl p-5 pb-[calc(2rem+env(safe-area-inset-bottom))] lg:hidden ${moreOpen ? '' : 'pointer-events-none'}`}
+        >
+          <div className="mx-auto mb-5 h-1.5 w-12 rounded-full bg-[var(--outline-var)]" />
+          <div className="flex flex-col gap-5">
+            <SegmentedRow
+              label="Appearance"
+              pillId="sheet-appearance-pill"
+              options={APPEARANCE_OPTIONS}
+              value={appearance}
+              onSelect={chooseAppearance}
+            />
+            <SegmentedRow
+              label="Theme"
+              pillId="sheet-style-pill"
+              options={STYLE_OPTIONS}
+              value={style}
+              onSelect={chooseStyle}
+            />
+            <motion.a
+              href="#/setup"
+              whileTap={{ scale: 0.97 }}
+              transition={PRESS_SPRING}
+              className="btn-glass flex items-center justify-between !rounded-2xl px-5 py-3.5 text-base"
+            >
+              <span className="flex items-center gap-3">
+                <Icon name="settings" /> All settings
+              </span>
+              <Icon name="chevron_right" />
+            </motion.a>
+          </div>
+        </motion.div>
       </RewardCelebrationProvider>
     </CelebrationProvider>
   )
