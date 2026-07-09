@@ -105,7 +105,7 @@ def sync_tasks(db: Session, source: str, snapshot: list[SourceTask]) -> bool:
     return changed
 
 
-def sync_shopping(db: Session, source: str, snapshot: list[SourceListItem]) -> bool:
+def sync_shopping(db: Session, source: str, snapshot: list[SourceListItem]) -> tuple[bool, list[int]]:
     """Reconcile one source's shopping snapshot into the deduped combined list.
 
     Sources like iCloud keep every completed purchase forever, so the same title
@@ -114,51 +114,68 @@ def sync_shopping(db: Session, source: str, snapshot: list[SourceListItem]) -> b
     import titles that only exist as completed history.
     """
     changed = False
-    agg: dict[str, dict] = {}
+    completed_ids = []
+
+    # Group open items and collect all active external IDs for each normalized title
+    open_refs: dict[str, list[dict]] = {}
+    all_norms = set()
     for item in snapshot:
         norm = normalize_title(item.title)
         if not norm:
             continue
-        a = agg.setdefault(
-            norm, {"title": item.title, "open": False, "external_id": item.external_id}
-        )
+        all_norms.add(norm)
         if not item.completed:
-            a["open"] = True
-            a["external_id"] = item.external_id  # write-backs target the open occurrence
+            open_refs.setdefault(norm, []).append({"source": source, "external_id": item.external_id})
 
-    for norm, a in agg.items():
+    # Now reconcile with the database
+    for norm in all_norms:
         row = db.query(ShoppingItem).filter(ShoppingItem.norm_title == norm).one_or_none()
-        ref = {"source": source, "external_id": a["external_id"]}
+        active_refs = open_refs.get(norm, [])
+        is_open = len(active_refs) > 0
+
         if row is None:
-            if not a["open"]:
+            if not is_open:
                 continue  # completed-only history; don't import
-            db.add(ShoppingItem(title=a["title"], norm_title=norm, completed=False, sources=[ref]))
+            # Find the first occurrences title
+            title = next(item.title for item in snapshot if normalize_title(item.title) == norm)
+            db.add(ShoppingItem(title=title, norm_title=norm, completed=False, sources=active_refs))
             changed = True
             continue
+
+        other_refs = [r for r in row.sources if r["source"] != source]
         had_ref = any(r["source"] == source for r in row.sources)
-        if a["open"] or had_ref:
-            refs = [r for r in row.sources if r["source"] != source] + [ref]
-            if refs != row.sources:
-                row.sources = refs
+
+        if is_open:
+            new_refs = other_refs + active_refs
+            if new_refs != row.sources:
+                row.sources = new_refs
                 changed = True
-        if a["open"] and row.completed:
-            # re-added (or still open) in the source reactivates it everywhere
-            row.completed = False
-            changed = True
-        elif not a["open"] and not row.completed and had_ref:
-            # a linked item was completed on the source side (e.g. checked off on a phone)
-            row.completed = True
-            changed = True
+            if row.completed:
+                row.completed = False
+                changed = True
+        else:
+            # Item is completed or inactive on this source
+            if had_ref:
+                if other_refs != row.sources:
+                    row.sources = other_refs
+                    changed = True
+                if not row.completed:
+                    row.completed = True
+                    completed_ids.append(row.id)
+                    changed = True
 
     # Drop this source's refs from items it no longer contains at all.
-    seen_norms = set(agg)
-    for row in db.query(ShoppingItem).filter(ShoppingItem.norm_title.notin_(seen_norms)).all():
-        refs = [r for r in row.sources if r["source"] != source]
-        if refs != row.sources:
+    for row in db.query(ShoppingItem).filter(ShoppingItem.norm_title.notin_(all_norms)).all():
+        had_ref = any(r["source"] == source for r in row.sources)
+        if had_ref:
+            refs = [r for r in row.sources if r["source"] != source]
             row.sources = refs
             changed = True
-            if not refs:  # gone from every source
+            if not refs:
                 db.delete(row)
+            elif not row.completed:
+                row.completed = True
+                completed_ids.append(row.id)
 
     db.commit()
-    return changed
+    return changed, completed_ids

@@ -57,17 +57,18 @@ def sync_google_calendars() -> bool:
     return changed
 
 
-def sync_icloud() -> bool:
+def sync_icloud() -> tuple[bool, list[int]]:
     changed = False
+    completed_ids = []
     with SessionLocal() as db:
         if icloud.status().get("error") == "no credentials configured":
-            return False
+            return False, []
         try:
             lists = icloud.get_lists()
         except Exception as e:
             log.warning("iCloud sync failed: %s", e)
             sync_status.report("icloud", False, str(e)[:300])
-            return False
+            return False, []
 
         shopping_name = _shopping_list_name(db)
         person_map: dict = get_setting(db, "list_person_map", {}) or {}
@@ -98,9 +99,11 @@ def sync_icloud() -> bool:
             )
             for r in lists.get(shopping_name, [])
         ]
-        changed |= sync_shopping(db, "icloud", shopping)
+        shop_changed, shop_completed = sync_shopping(db, "icloud", shopping)
+        changed |= shop_changed
+        completed_ids.extend(shop_completed)
         sync_status.report("icloud", True)
-    return changed
+    return changed, completed_ids
 
 
 async def sync_alexa() -> bool:
@@ -118,7 +121,7 @@ async def sync_alexa() -> bool:
         with SessionLocal() as db:
             return sync_tasks(db, "alexa", tasks_list)
 
-    def do_shopping_sync(shopping_list) -> bool:
+    def do_shopping_sync(shopping_list) -> tuple[bool, list[int]]:
         with SessionLocal() as db:
             return sync_shopping(db, "alexa", shopping_list)
 
@@ -147,7 +150,14 @@ async def sync_alexa() -> bool:
             )
             for it in shopping["items"]
         ]
-        changed |= await asyncio.to_thread(do_shopping_sync, items)
+        shop_changed, completed_ids = await asyncio.to_thread(do_shopping_sync, items)
+        changed |= shop_changed
+        if completed_ids:
+            with SessionLocal() as db:
+                for item_id in completed_ids:
+                    item = db.get(ShoppingItem, item_id)
+                    if item:
+                        await write_shopping_completion(item, True)
     sync_status.report("alexa", True)
     return changed
 
@@ -249,7 +259,14 @@ async def job_calendar() -> None:
 
 
 async def job_icloud() -> None:
-    if await asyncio.to_thread(sync_icloud):
+    changed, completed_ids = await asyncio.to_thread(sync_icloud)
+    if completed_ids:
+        with SessionLocal() as db:
+            for item_id in completed_ids:
+                item = db.get(ShoppingItem, item_id)
+                if item:
+                    await write_shopping_completion(item, True)
+    if changed:
         await manager.broadcast("tasks")
         await manager.broadcast("shopping")
 

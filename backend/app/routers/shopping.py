@@ -61,9 +61,14 @@ async def add_item(body: ItemCreate, bg: BackgroundTasks, db: Session = Depends(
             sources=[{"source": "local", "external_id": str(uuid.uuid4())}],
         )
         db.add(row)
-    row.completed = False
-    db.commit()
-    bg.add_task(sync.add_shopping_everywhere, title)
+        row.completed = False
+        db.commit()
+        bg.add_task(sync.add_shopping_everywhere, title)
+    elif row.completed:
+        row.completed = False
+        db.commit()
+        bg.add_task(sync.add_shopping_everywhere, title)
+    
     await manager.broadcast("shopping")
     return _item_dict(row)
 
