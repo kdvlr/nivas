@@ -104,7 +104,7 @@ class AlexaLists:
         data = await self._request("post", "/alexashoppinglists/api/v2/lists/fetch", {})
         result: dict[str, dict] = {}
         for lst in data.get("listInfoList", []) if isinstance(data, dict) else []:
-            kind = {"SHOPPING_LIST": "shopping", "TODO": "todo"}.get(lst.get("listType", ""))
+            kind = {"SHOP": "shopping", "TODO": "todo"}.get(lst.get("listType", ""))
             if kind is None or lst.get("listStatus") != "ACTIVE":
                 continue
             items_data = await self._request(
