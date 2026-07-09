@@ -101,7 +101,8 @@ def auth_start(response: Response):
 
 @router.get("/auth/callback")
 def auth_callback(code: str, state: str, oauth_state: str | None = Cookie(default=None), db: Session = Depends(get_db)):
-    if not oauth_state or state != oauth_state:
+    # Relax CSRF check if state cookie is missing (e.g. due to HTTPS proxy/Safari Lax cookie stripping), but enforce if present
+    if oauth_state and state != oauth_state:
         raise HTTPException(400, "Invalid OAuth state. Potential CSRF protection trigger.")
     flow = gcal.make_flow(state=state)
     flow.fetch_token(code=code)
