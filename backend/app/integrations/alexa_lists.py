@@ -14,8 +14,19 @@ unavailable" on the Setup screen rather than crashing the dashboard.
 
 import json
 import logging
+import re
 
 from alexapy import AlexaLogin
+
+# Monkey-patch AlexaLogin to work around Amazon displaying the registration form first
+original_process_page = AlexaLogin._process_page
+
+async def patched_process_page(self, html: str, site: str) -> str | None:
+    if "ap_register_form" in html and "ap_login_form" in html:
+        html = re.sub(r'<form\s+[^>]*id=["\']ap_register_form["\']', '<div id="ap_register_form"', html)
+    return await original_process_page(self, html, site)
+
+AlexaLogin._process_page = patched_process_page
 
 from ..config import get_settings
 
