@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
+import { M3_EXPRESSIVE_SPRING, M3_STANDARD_SPRING } from '../lib/motion'
 import Avatar from '../components/Avatar'
 import CoinIcon from '../components/CoinIcon'
 import Icon from '../components/Icon'
@@ -143,24 +145,37 @@ export default function Chores() {
           <div className="flex items-center gap-4">
             <h1 className="text-3xl lg:text-4xl font-semibold tracking-tight text-ink">Chores</h1>
             {filterPerson && (
-              <button
+              <motion.button
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                transition={M3_STANDARD_SPRING}
                 onClick={() => setFilterPerson('')}
-                className="btn-glass flex items-center gap-1 rounded-full px-4 py-2 text-base"
+                className="btn-glass flex items-center gap-1 rounded-full px-4 py-2 text-base cursor-pointer"
               >
                 {filterPerson} <Icon name="close" className="text-lg" />
-              </button>
+              </motion.button>
             )}
           </div>
           <div className="flex gap-2 lg:gap-3">
-            <button onClick={() => setDraft(emptyDraft())} className="btn-primary px-4 py-2 lg:px-6 lg:py-3 text-base lg:text-lg">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              transition={M3_EXPRESSIVE_SPRING}
+              onClick={() => setDraft(emptyDraft())}
+              className="btn-primary px-4 py-2 lg:px-6 lg:py-3 text-base lg:text-lg cursor-pointer"
+            >
               <Icon name="add" /> Add
-            </button>
-            <button
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              transition={M3_EXPRESSIVE_SPRING}
               onClick={() => (location.hash = '#/rewards')}
-              className="btn-sunny px-4 py-2 lg:px-6 lg:py-3 text-base lg:text-lg"
+              className="btn-sunny px-4 py-2 lg:px-6 lg:py-3 text-base lg:text-lg cursor-pointer"
             >
               <Icon name="storefront" /> Rewards
-            </button>
+            </motion.button>
           </div>
         </div>
       </div>
@@ -171,11 +186,14 @@ export default function Chores() {
           {sortedBalances.map((b, i) => {
             const active = filterPerson === b.person_name
             return (
-              <button
+              <motion.button
                 key={b.person_name}
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
+                transition={M3_EXPRESSIVE_SPRING}
                 onClick={() => setFilterPerson(active ? '' : b.person_name)}
-                className={`glass flex min-w-36 items-center gap-2 p-1.5 text-left transition-all active:scale-[0.98] ${
-                  active ? 'ring-2 ring-[var(--primary)]' : ''
+                className={`glass flex min-w-36 items-center gap-2 p-1.5 text-left cursor-pointer transition-all duration-200 ${
+                  active ? 'ring-2 ring-[var(--primary)] shadow-md' : ''
                 }`}
                 style={{ borderLeft: `4px solid ${b.color}` }}
               >
@@ -188,7 +206,7 @@ export default function Chores() {
                     <CoinIcon className="text-lg" /> {b.balance}
                   </span>
                 </div>
-              </button>
+              </motion.button>
             )
           })}
         </div>
@@ -196,76 +214,92 @@ export default function Chores() {
 
       {/* Chore cards */}
       {filtered.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-4 text-ink-soft">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={M3_STANDARD_SPRING}
+          className="flex flex-1 flex-col items-center justify-center gap-4 text-ink-soft"
+        >
           <span className="text-7xl">✨</span>
           <p className="text-2xl font-medium">No chores here — time to assign some!</p>
-        </div>
+        </motion.div>
       ) : (
-        <div className="grid min-h-0 flex-1 auto-rows-min grid-cols-2 gap-x-4 gap-y-3 lg:gap-x-6 lg:gap-y-4 overflow-y-auto pb-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {[...groups.entries()].map(([person, list]) => (
-            <section key={person} className="mb-4">
-              <h2
-                className="mb-1.5 flex items-center gap-2 text-lg font-semibold"
-                style={{ color: personColor(person) }}
-              >
-                <span className="h-4 w-4 rounded-full" style={{ background: personColor(person) }} />
-                {person}
-                <span className="text-sm font-medium text-ink-soft">
-                  {list.filter((c) => !c.completed).length}
-                </span>
-              </h2>
-              <div className="flex flex-col gap-2">
-                {list.map((chore) => (
-                  <div
-                    key={chore.id}
-                    onClick={() => toggle(chore)}
-                    className={`flex w-full cursor-pointer items-center gap-3 glass-inset p-2.5 text-left transition-all active:scale-[0.99] ${
-                      chore.completed ? 'opacity-50' : ''
-                    }`}
+        <LayoutGroup>
+          <motion.div layout className="grid min-h-0 flex-1 auto-rows-min grid-cols-2 gap-x-4 gap-y-3 lg:gap-x-6 lg:gap-y-4 overflow-y-auto pb-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            <AnimatePresence initial={false}>
+              {[...groups.entries()].map(([person, list]) => (
+                <motion.section key={person} layout className="mb-4">
+                  <h2
+                    className="mb-1.5 flex items-center gap-2 text-lg font-semibold"
+                    style={{ color: personColor(person) }}
                   >
-                    <span
-                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-[3px] text-sm font-bold ${
-                        chore.completed
-                          ? 'border-emerald-400 bg-emerald-400 text-white'
-                          : 'border-teal-300/50 text-transparent'
-                      }`}
-                    >
-                      ✓
+                    <span className="h-4 w-4 rounded-full" style={{ background: personColor(person) }} />
+                    {person}
+                    <span className="text-sm font-medium text-ink-soft">
+                      {list.filter((c) => !c.completed).length}
                     </span>
-                    <span className="min-w-0 flex-1">
-                      <span
-                        className={`block truncate text-base font-medium ${chore.completed ? 'line-through' : ''}`}
+                  </h2>
+                  <div className="flex flex-col gap-2">
+                    {list.map((chore) => (
+                      <motion.div
+                        key={chore.id}
+                        layoutId={`chore-${chore.id}`}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: chore.completed ? 0.6 : 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={M3_STANDARD_SPRING}
+                        whileHover={{ scale: 1.02, y: -2 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => toggle(chore)}
+                        className="flex w-full cursor-pointer items-center gap-3 rounded-xl glass-inset p-2.5 text-left select-none shadow-sm"
                       >
-                        {chore.title}
-                      </span>
-                      <span className="flex flex-wrap items-center gap-x-2 text-[0.7rem] text-ink-soft">
-                        {chore.due_date && <span>due {fmtDate(chore.due_date)}</span>}
-                        {chore.recurrence && (
-                          <span className="font-medium text-sky-600 dark:text-sky-400">
-                            {formatRecurrence(chore.recurrence)}
+                        <span
+                          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-[3px] text-sm font-bold transition-all duration-300 ${
+                            chore.completed
+                              ? 'border-emerald-400 bg-emerald-400 text-white shadow-sm'
+                              : 'border-teal-300/40 text-transparent'
+                          }`}
+                        >
+                          ✓
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span
+                            className={`block truncate text-base font-medium ${chore.completed ? 'line-through text-ink-soft' : 'text-ink'}`}
+                          >
+                            {chore.title}
                           </span>
-                        )}
-                      </span>
-                    </span>
-                    <span className="flex shrink-0 items-center text-base font-semibold text-amber-500">
-                      <CoinIcon className="text-base" /> ×{chore.coins}
-                    </span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setDraft(draftFrom(chore))
-                      }}
-                      className="btn-glass flex h-8 w-8 shrink-0 items-center justify-center !text-ink-soft"
-                      title="Edit chore"
-                    >
-                      <Icon name="edit" className="text-base" />
-                    </button>
+                          <span className="flex flex-wrap items-center gap-x-2 text-[0.7rem] text-ink-soft">
+                            {chore.due_date && <span>due {fmtDate(chore.due_date)}</span>}
+                            {chore.recurrence && (
+                              <span className="font-medium text-sky-600 dark:text-sky-400">
+                                {formatRecurrence(chore.recurrence)}
+                              </span>
+                            )}
+                          </span>
+                        </span>
+                        <span className="flex shrink-0 items-center text-base font-semibold text-amber-500">
+                          <CoinIcon className="text-base" /> ×{chore.coins}
+                        </span>
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setDraft(draftFrom(chore))
+                          }}
+                          className="btn-glass flex h-8 w-8 shrink-0 items-center justify-center !text-ink-soft cursor-pointer"
+                          title="Edit chore"
+                        >
+                          <Icon name="edit" className="text-base" />
+                        </motion.button>
+                      </motion.div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
+                </motion.section>
+              ))}
+            </AnimatePresence>
+          </motion.div>
+        </LayoutGroup>
       )}
 
       {/* Add / Edit Chore Modal */}

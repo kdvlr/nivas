@@ -1,4 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { M3_EXPRESSIVE_SPRING, M3_STANDARD_SPRING } from '../lib/motion'
 import CoinIcon from '../components/CoinIcon'
 import Icon from '../components/Icon'
 import { api } from '../lib/api'
@@ -34,13 +36,18 @@ interface Person {
 
 function Card({ title, badge, children }: { title: ReactNode; badge?: ReactNode; children: ReactNode }) {
   return (
-    <section className="glass p-5">
+    <motion.section
+      layout
+      whileHover={{ scale: 1.01, y: -2 }}
+      transition={M3_STANDARD_SPRING}
+      className="glass p-5 shadow-sm"
+    >
       <div className="mb-3 flex items-center gap-3">
         <h2 className="text-xl font-medium">{title}</h2>
         {badge}
       </div>
       {children}
-    </section>
+    </motion.section>
   )
 }
 

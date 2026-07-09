@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { M3_EXPRESSIVE_SPRING, M3_STANDARD_SPRING } from './lib/motion'
 import { api } from './lib/api'
 import { CelebrationProvider } from './components/celebrations/CelebrationContext'
 import { RewardCelebrationProvider } from './components/celebrations/RewardCelebrationContext'
@@ -150,11 +152,16 @@ export default function App() {
                       isActive ? 'text-ink' : 'text-ink-soft hover:text-ink'
                     }`}
                   >
-                    <div className={`flex items-center justify-center h-7 w-10 lg:h-8 lg:w-14 rounded-full transition-all duration-200 ${
-                      isActive ? n.active : 'group-hover:bg-slate-300/15 dark:group-hover:bg-slate-700/15 group-active:scale-95'
-                    }`}>
+                    <motion.div
+                      whileHover={{ scale: 1.08 }}
+                      whileTap={{ scale: 0.92 }}
+                      transition={M3_EXPRESSIVE_SPRING}
+                      className={`flex items-center justify-center h-7 w-10 lg:h-8 lg:w-14 rounded-full transition-all duration-200 ${
+                        isActive ? n.active : 'group-hover:bg-slate-300/15 dark:group-hover:bg-slate-700/15'
+                      }`}
+                    >
                       <Icon name={n.icon} filled={isActive} className="text-[1.25rem] lg:text-[1.55rem]" />
-                    </div>
+                    </motion.div>
                     <span className="hidden text-[0.65rem] font-medium lg:block tracking-tight">{n.label}</span>
                   </a>
                 )
@@ -165,12 +172,17 @@ export default function App() {
             <div className="hidden lg:flex lg:mt-auto flex-col items-center gap-1.5 lg:pb-4 w-full">
               <button
                 onClick={cycleAppearance}
-                className="flex flex-col items-center gap-0.5 py-1 lg:py-1.5 group text-center text-ink-soft hover:text-ink w-full"
+                className="flex flex-col items-center gap-0.5 py-1 lg:py-1.5 group text-center text-ink-soft hover:text-ink w-full cursor-pointer"
                 title="Appearance: follows your device in Auto"
               >
-                <div className="flex items-center justify-center h-7 w-10 lg:h-8 lg:w-14 rounded-full transition-all duration-200 group-hover:bg-slate-300/15 dark:group-hover:bg-slate-700/15 group-active:scale-95">
+                <motion.div
+                  whileHover={{ scale: 1.08 }}
+                  whileTap={{ scale: 0.92 }}
+                  transition={M3_EXPRESSIVE_SPRING}
+                  className="flex items-center justify-center h-7 w-10 lg:h-8 lg:w-14 rounded-full transition-all duration-200 group-hover:bg-slate-300/15 dark:group-hover:bg-slate-700/15"
+                >
                   <Icon name={APPEARANCE_META[appearance].icon} className="text-[1.25rem] lg:text-[1.55rem]" />
-                </div>
+                </motion.div>
                 <span className="hidden text-[0.65rem] font-medium lg:block tracking-tight">
                   {APPEARANCE_META[appearance].label}
                 </span>
@@ -185,11 +197,16 @@ export default function App() {
                       isActive ? 'text-ink' : 'text-ink-soft hover:text-ink'
                     }`}
                   >
-                    <div className={`flex items-center justify-center h-7 w-10 lg:h-8 lg:w-14 rounded-full transition-all duration-200 ${
-                      isActive ? n.active : 'group-hover:bg-slate-300/15 dark:group-hover:bg-slate-700/15 group-active:scale-95'
-                    }`}>
+                    <motion.div
+                      whileHover={{ scale: 1.08 }}
+                      whileTap={{ scale: 0.92 }}
+                      transition={M3_EXPRESSIVE_SPRING}
+                      className={`flex items-center justify-center h-7 w-10 lg:h-8 lg:w-14 rounded-full transition-all duration-200 ${
+                        isActive ? n.active : 'group-hover:bg-slate-300/15 dark:group-hover:bg-slate-700/15'
+                      }`}
+                    >
                       <Icon name={n.icon} filled={isActive} className="text-[1.25rem] lg:text-[1.55rem]" />
-                    </div>
+                    </motion.div>
                     <span className="hidden text-[0.65rem] font-medium lg:block tracking-tight">{n.label}</span>
                   </a>
                 )
@@ -254,7 +271,18 @@ export default function App() {
                 </div>
               </header>
             )}
-            <View />
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={route}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={M3_STANDARD_SPRING}
+                className="flex flex-1 flex-col min-h-0"
+              >
+                <View />
+              </motion.div>
+            </AnimatePresence>
           </main>
         </div>
       </RewardCelebrationProvider>

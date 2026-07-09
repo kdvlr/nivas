@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
+import { M3_EXPRESSIVE_SPRING, M3_STANDARD_SPRING } from '../lib/motion'
 import { api } from '../lib/api'
 import { useData } from '../lib/hooks'
 import type { ShoppingItem } from '../lib/types'
@@ -60,15 +62,18 @@ export default function Shopping() {
           onChange={(e) => setNewTitle(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && add()}
           placeholder="Add an item…"
-          className="flex-1 input-glass px-4 py-2.5 lg:px-6 lg:py-4 text-base lg:text-xl"
+          className="flex-1 input-glass px-4 py-2.5 lg:px-6 lg:py-4 text-base lg:text-xl focus:outline-none"
         />
-        <button
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          transition={M3_EXPRESSIVE_SPRING}
           onClick={add}
           disabled={!newTitle.trim() || busy}
-          className="btn-primary px-5 py-2.5 lg:px-10 lg:py-4 text-base lg:text-xl"
+          className="btn-primary px-5 py-2.5 lg:px-10 lg:py-4 text-base lg:text-xl cursor-pointer"
         >
           Add
-        </button>
+        </motion.button>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto pb-6">
@@ -78,50 +83,101 @@ export default function Shopping() {
             <p className="text-2xl font-normal">Shopping list is empty</p>
           </div>
         )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 2xl:grid-cols-4">
-          {active.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => toggle(item)}
-              className="flex items-center gap-3 glass-inset p-4 text-left active:scale-[0.98]"
-            >
-              <span className="h-9 w-9 shrink-0 rounded-full border-4 border-teal-300/70" />
-              <span className="min-w-0 flex-1 truncate text-xl font-normal">{item.title}</span>
-              <span className="text-sm">
-                {item.sources.map((s) => SOURCE_ICON[s] ?? '').join(' ')}
-              </span>
-            </button>
-          ))}
-        </div>
-        {done.length > 0 && (
-          <>
-            <div className="mb-3 mt-8 flex items-center justify-between">
-              <h2 className="text-xl font-normal text-ink-soft">In the cart</h2>
-              <button
-                onClick={() => setShowClearConfirm(true)}
-                className="text-sm font-medium text-rose-500 active:opacity-60"
-              >
-                Clear All
-              </button>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 2xl:grid-cols-4">
-              {done.map((item) => (
-                <button
+
+        <LayoutGroup>
+          <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 2xl:grid-cols-4">
+            <AnimatePresence initial={false}>
+              {active.map((item) => (
+                <motion.div
                   key={item.id}
-                  onClick={() => toggle(item)}
-                  className="flex items-center gap-3 rounded-xl glass-inset p-4 text-left opacity-60"
+                  layoutId={String(item.id)}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9, y: 15 }}
+                  transition={M3_STANDARD_SPRING}
+                  className="relative overflow-hidden rounded-xl bg-emerald-500/10 border border-emerald-500/20 shadow-sm"
                 >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-400 text-lg font-normal text-white">
-                    ✓
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-xl font-normal line-through">
-                    {item.title}
-                  </span>
-                </button>
+                  {/* Swipe indicator background */}
+                  <div className="absolute inset-y-0 left-4 flex items-center text-emerald-600 dark:text-emerald-400">
+                    <span className="msr text-2xl font-bold">check_circle</span>
+                  </div>
+                  <div className="absolute inset-y-0 right-4 flex items-center text-emerald-600 dark:text-emerald-400">
+                    <span className="msr text-2xl font-bold">check_circle</span>
+                  </div>
+
+                  <motion.button
+                    drag="x"
+                    dragConstraints={{ left: 0, right: 0 }}
+                    dragElastic={{ left: 0.6, right: 0.6 }}
+                    onDragEnd={async (event, info) => {
+                      if (Math.abs(info.offset.x) > 80) {
+                        await toggle(item)
+                      }
+                    }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={M3_EXPRESSIVE_SPRING}
+                    className="relative flex w-full items-center gap-3 glass p-4 text-left cursor-grab active:cursor-grabbing"
+                  >
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggle(item)
+                      }}
+                      className="h-9 w-9 shrink-0 rounded-full border-4 border-teal-400/40 hover:border-teal-500 hover:bg-teal-500/10 transition-all duration-200 cursor-pointer flex items-center justify-center"
+                    />
+                    <span className="min-w-0 flex-1 truncate text-xl font-normal text-ink">{item.title}</span>
+                    <span className="text-sm">
+                      {item.sources.map((s) => SOURCE_ICON[s] ?? '').join(' ')}
+                    </span>
+                  </motion.button>
+                </motion.div>
               ))}
-            </div>
-          </>
-        )}
+            </AnimatePresence>
+          </motion.div>
+
+          {done.length > 0 && (
+            <>
+              <div className="mb-3 mt-8 flex items-center justify-between">
+                <h2 className="text-xl font-normal text-ink-soft">In the cart</h2>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={M3_EXPRESSIVE_SPRING}
+                  onClick={() => setShowClearConfirm(true)}
+                  className="text-sm font-medium text-rose-500 cursor-pointer"
+                >
+                  Clear All
+                </motion.button>
+              </div>
+              <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 2xl:grid-cols-4">
+                <AnimatePresence>
+                  {done.map((item) => (
+                    <motion.button
+                      key={item.id}
+                      layoutId={String(item.id)}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 0.6, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={M3_STANDARD_SPRING}
+                      whileHover={{ scale: 1.02, opacity: 0.8 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => toggle(item)}
+                      className="flex items-center gap-3 rounded-xl glass-inset p-4 text-left cursor-pointer"
+                    >
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-lg font-normal text-white shadow-sm">
+                        ✓
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-xl font-normal line-through text-ink-soft">
+                        {item.title}
+                      </span>
+                    </motion.button>
+                  ))}
+                </AnimatePresence>
+              </motion.div>
+            </>
+          )}
+        </LayoutGroup>
       </div>
 
       {showClearConfirm && (
@@ -133,14 +189,14 @@ export default function Shopping() {
             <div className="flex gap-4">
               <button
                 onClick={() => setShowClearConfirm(false)}
-                className="btn-glass flex-1 py-4 text-xl"
+                className="btn-glass flex-1 py-4 text-xl cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={clearCompleted}
                 disabled={busy}
-                className="btn-primary flex-1 py-4 text-xl"
+                className="btn-primary flex-1 py-4 text-xl cursor-pointer"
               >
                 {busy ? 'Clearing...' : 'Yes, clear all'}
               </button>
