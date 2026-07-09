@@ -152,10 +152,6 @@ function SetupInner() {
   const [icPass, setIcPass] = useState('')
   const [icCode, setIcCode] = useState('')
   const [icMsg, setIcMsg] = useState('')
-  const [amzUser, setAmzUser] = useState('')
-  const [amzPass, setAmzPass] = useState('')
-  const [amzOtp, setAmzOtp] = useState('')
-  const [alexaMsg, setAlexaMsg] = useState('')
   const [busy, setBusy] = useState('')
   const [newPersonName, setNewPersonName] = useState('')
   const [newRewardEmoji, setNewRewardEmoji] = useState('🎁')
@@ -189,21 +185,7 @@ function SetupInner() {
     }
   }
 
-  const alexaLogin = async () => {
-    setBusy('alexa')
-    setAlexaMsg('')
-    try {
-      const r = await api.post<{ connected: boolean; error: string }>('/api/setup/alexa/login', {
-        email: amzUser,
-        password: amzPass,
-        otp_secret: amzOtp,
-      })
-      setAlexaMsg(r.connected ? 'Connected!' : r.error)
-    } finally {
-      setBusy('')
-      reload()
-    }
-  }
+
 
   const updateSelection = async (id: number, patch: object) => {
     await api.put('/api/calendar/selections', [{ id, ...patch }])
@@ -411,39 +393,14 @@ function SetupInner() {
           title={<><Icon name="graphic_eq" /> Alexa Lists</>}
           badge={<Badge ok={!!status?.alexa.connected} label={status?.alexa.connected ? 'connected' : 'not connected'} />}
         >
-          <p className="mb-2 text-sm text-ink-soft">
-            Uses the Amazon account to sync shopping and to-do lists.
-            Unofficial API — if it stops syncing, tap connect again.
+          <p className="text-sm text-ink-soft">
+            Syncs your shopping and to-do lists from Amazon Alexa. Credentials must be configured in your server's <code>docker-compose.yml</code> file.
           </p>
-          <div className="mb-3 flex flex-col gap-2">
-            <input
-              value={amzUser}
-              onChange={(e) => setAmzUser(e.target.value)}
-              placeholder="Amazon email"
-              className="input-glass px-4 py-2 text-base"
-            />
-            <input
-              type="password"
-              value={amzPass}
-              onChange={(e) => setAmzPass(e.target.value)}
-              placeholder="Amazon password"
-              className="input-glass px-4 py-2 text-base"
-            />
-            <input
-              value={amzOtp}
-              onChange={(e) => setAmzOtp(e.target.value)}
-              placeholder="OTP Secret (Base32) - optional"
-              className="input-glass px-4 py-2 text-base"
-            />
-          </div>
-          <button
-            onClick={alexaLogin}
-            disabled={busy === 'alexa'}
-            className="btn-primary px-5 py-2.5 text-base"
-          >
-            {busy === 'alexa' ? 'Connecting…' : 'Connect Alexa'}
-          </button>
-          {alexaMsg && <p className="mt-2 text-sm font-medium text-ink-soft">{alexaMsg}</p>}
+          {status?.alexa.error && (
+            <p className="mt-2 text-sm font-semibold text-rose-400">
+              Error: {status.alexa.error}
+            </p>
+          )}
         </Card>
 
         {/* People */}
