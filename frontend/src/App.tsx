@@ -210,23 +210,19 @@ export default function App() {
                   <a
                     key={n.id}
                     href={`#/${n.id}`}
-                    className={`flex flex-col items-center gap-0.5 py-1 lg:py-1.5 transition-all duration-200 group text-center flex-1 lg:flex-none w-12 lg:w-full ${
-                      isActive ? 'text-ink' : 'text-ink-soft hover:text-ink'
-                    }`}
+                    className="flex flex-col items-center justify-center transition-all duration-200 group text-center flex-1 lg:flex-none w-12 lg:w-full"
                   >
                     <motion.div
-                      whileHover={{ scale: 1.08 }}
-                      whileTap={{ scale: 0.92 }}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       transition={PRESS_SPRING}
-                      className={`flex items-center justify-center h-7 w-10 lg:h-8 lg:w-14 rounded-full transition-all duration-200 ${
-                        isActive ? n.active : 'group-hover:bg-slate-300/15 dark:group-hover:bg-slate-700/15'
+                      className={`flex flex-col items-center justify-center gap-1 rounded-2xl w-full py-1.5 transition-all duration-200 ${
+                        isActive ? n.active : 'text-ink-soft group-hover:text-ink group-hover:bg-slate-300/15 dark:group-hover:bg-slate-700/15'
                       }`}
                     >
                       <Icon name={n.icon} filled={isActive} className="text-[1.25rem] lg:text-[1.55rem]" />
+                      <span className="hidden text-[0.65rem] font-semibold lg:block tracking-tight leading-none">{n.label}</span>
                     </motion.div>
-                    <span className={`hidden text-[0.65rem] font-semibold lg:block tracking-tight transition-colors duration-200 ${
-                      isActive ? n.activeText : 'text-ink-soft group-hover:text-ink'
-                    }`}>{n.label}</span>
                   </a>
                 )
               })}
@@ -257,20 +253,20 @@ export default function App() {
             <div className="hidden lg:flex lg:mt-auto flex-col items-center gap-1.5 lg:pb-4 w-full">
               <button
                 onClick={cycleAppearance}
-                className="flex flex-col items-center gap-0.5 py-1 lg:py-1.5 group text-center text-ink-soft hover:text-ink w-full cursor-pointer"
+                className="flex flex-col items-center justify-center transition-all duration-200 group text-center w-full cursor-pointer"
                 title="Appearance: follows your device in Auto"
               >
                 <motion.div
-                  whileHover={{ scale: 1.08 }}
-                  whileTap={{ scale: 0.92 }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   transition={PRESS_SPRING}
-                  className="flex items-center justify-center h-7 w-10 lg:h-8 lg:w-14 rounded-full transition-all duration-200 group-hover:bg-slate-300/15 dark:group-hover:bg-slate-700/15"
+                  className="flex flex-col items-center justify-center gap-1 rounded-2xl w-full py-1.5 transition-all duration-200 text-ink-soft group-hover:text-ink group-hover:bg-slate-300/15 dark:group-hover:bg-slate-700/15"
                 >
                   <Icon name={APPEARANCE_META[appearance].icon} className="text-[1.25rem] lg:text-[1.55rem]" />
+                  <span className="hidden text-[0.65rem] font-semibold lg:block tracking-tight leading-none">
+                    {APPEARANCE_META[appearance].label}
+                  </span>
                 </motion.div>
-                <span className="hidden text-[0.65rem] font-medium lg:block tracking-tight">
-                  {APPEARANCE_META[appearance].label}
-                </span>
               </button>
               {NAV.filter(n => n.id === 'setup').map((n) => {
                 const isActive = activeNav === n.id
@@ -278,23 +274,19 @@ export default function App() {
                   <a
                     key={n.id}
                     href={`#/${n.id}`}
-                    className={`flex flex-col items-center gap-0.5 py-1 lg:py-1.5 transition-all duration-200 group text-center w-full ${
-                      isActive ? 'text-ink' : 'text-ink-soft hover:text-ink'
-                    }`}
+                    className="flex flex-col items-center justify-center transition-all duration-200 group text-center w-full"
                   >
                     <motion.div
-                      whileHover={{ scale: 1.08 }}
-                      whileTap={{ scale: 0.92 }}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       transition={PRESS_SPRING}
-                      className={`flex items-center justify-center h-7 w-10 lg:h-8 lg:w-14 rounded-full transition-all duration-200 ${
-                        isActive ? n.active : 'group-hover:bg-slate-300/15 dark:group-hover:bg-slate-700/15'
+                      className={`flex flex-col items-center justify-center gap-1 rounded-2xl w-full py-1.5 transition-all duration-200 ${
+                        isActive ? n.active : 'text-ink-soft group-hover:text-ink group-hover:bg-slate-300/15 dark:group-hover:bg-slate-700/15'
                       }`}
                     >
                       <Icon name={n.icon} filled={isActive} className="text-[1.25rem] lg:text-[1.55rem]" />
+                      <span className="hidden text-[0.65rem] font-semibold lg:block tracking-tight leading-none">{n.label}</span>
                     </motion.div>
-                    <span className={`hidden text-[0.65rem] font-semibold lg:block tracking-tight transition-colors duration-200 ${
-                      isActive ? n.activeText : 'text-ink-soft group-hover:text-ink'
-                    }`}>{n.label}</span>
                   </a>
                 )
               })}
