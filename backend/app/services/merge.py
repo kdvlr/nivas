@@ -105,7 +105,7 @@ def sync_tasks(db: Session, source: str, snapshot: list[SourceTask]) -> bool:
     return changed
 
 
-def sync_shopping(db: Session, source: str, snapshot: list[SourceListItem]) -> tuple[bool, list[int]]:
+def sync_shopping(db: Session, source: str, snapshot: list[SourceListItem]) -> tuple[bool, list[int], list[tuple[str, str]]]:
     """Reconcile one source's shopping snapshot into the deduped combined list.
 
     Sources like iCloud keep every completed purchase forever, so the same title
@@ -115,6 +115,7 @@ def sync_shopping(db: Session, source: str, snapshot: list[SourceListItem]) -> t
     """
     changed = False
     completed_ids = []
+    new_items = []
 
     # Group open items and collect all active external IDs for each normalized title
     open_refs: dict[str, list[dict]] = {}
@@ -140,6 +141,7 @@ def sync_shopping(db: Session, source: str, snapshot: list[SourceListItem]) -> t
             title = next(item.title for item in snapshot if normalize_title(item.title) == norm)
             db.add(ShoppingItem(title=title, norm_title=norm, completed=False, sources=active_refs))
             changed = True
+            new_items.append((title, source))
             continue
 
         other_refs = [r for r in row.sources if r["source"] != source]
@@ -153,6 +155,7 @@ def sync_shopping(db: Session, source: str, snapshot: list[SourceListItem]) -> t
             if row.completed:
                 row.completed = False
                 changed = True
+                new_items.append((row.title, source))
         else:
             # Item is completed or inactive on this source
             if had_ref:
@@ -178,4 +181,4 @@ def sync_shopping(db: Session, source: str, snapshot: list[SourceListItem]) -> t
                 completed_ids.append(row.id)
 
     db.commit()
-    return changed, completed_ids
+    return changed, completed_ids, new_items

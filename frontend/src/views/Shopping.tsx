@@ -58,18 +58,30 @@ function ActiveShoppingItem({
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
         transition={PRESS_SPRING}
-        className="relative flex w-full items-center gap-3 glass p-3 text-left cursor-grab active:cursor-grabbing"
+        className="relative flex w-full items-center gap-3 glass-inset p-2.5 text-left cursor-grab active:cursor-grabbing shadow-sm select-none"
       >
         <span
           onClick={(e) => {
             e.stopPropagation()
             toggle(item)
           }}
-          className="h-7 w-7 shrink-0 rounded-full border-[3px] border-teal-400/40 hover:border-teal-500 hover:bg-teal-500/10 transition-all duration-200 cursor-pointer flex items-center justify-center"
-        />
-        <span className="min-w-0 flex-1 text-base font-normal text-ink break-words">{item.title}</span>
-        <span className="text-sm">
-          {item.sources.map((s) => SOURCE_ICON[s] ?? '').join(' ')}
+          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-[3px] text-sm font-bold transition-all duration-300 ${
+            item.completed
+              ? 'border-emerald-400 bg-emerald-400 text-white shadow-sm'
+              : 'border-teal-300/40 text-transparent hover:border-teal-500'
+          }`}
+        >
+          ✓
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-base font-medium text-ink break-words">
+            {item.title}
+          </span>
+          {item.sources.length > 0 && (
+            <span className="block text-[0.7rem] text-ink-soft">
+              {item.sources.map((s) => SOURCE_ICON[s] ?? '').join(' ')}
+            </span>
+          )}
         </span>
       </motion.button>
     </motion.div>
@@ -188,13 +200,20 @@ export default function Shopping() {
                       whileHover={{ scale: 1.02, opacity: 0.8 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => toggle(item)}
-                      className="flex w-full items-center gap-3 rounded-xl glass-inset p-3 text-left cursor-pointer break-inside-avoid mb-3 inline-flex"
+                      className="relative flex w-full cursor-pointer items-center gap-3 rounded-xl glass-inset p-2.5 text-left select-none shadow-sm break-inside-avoid mb-3 inline-flex"
                     >
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-sm font-normal text-white shadow-sm">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-[3px] border-emerald-400 bg-emerald-400 text-white shadow-sm text-sm font-bold">
                         ✓
                       </span>
-                      <span className="min-w-0 flex-1 text-base font-normal line-through text-ink-soft break-words">
-                        {item.title}
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-base font-medium line-through text-ink-soft break-words">
+                          {item.title}
+                        </span>
+                        {item.sources.length > 0 && (
+                          <span className="block text-[0.7rem] text-ink-soft">
+                            {item.sources.map((s) => SOURCE_ICON[s] ?? '').join(' ')}
+                          </span>
+                        )}
                       </span>
                     </motion.button>
                   ))}
