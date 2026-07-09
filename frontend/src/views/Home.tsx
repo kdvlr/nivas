@@ -27,8 +27,6 @@ const getDayLabel = (isoDate: string, index: number) => {
   return d.toLocaleDateString(undefined, { weekday: 'long' })
 }
 
-const HOUR_HEIGHT = 50
-
 export default function Home() {
   const now = useClock()
   const today = todayISO()
@@ -206,7 +204,7 @@ export default function Home() {
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-3 lg:gap-4">
         {/* Today, Tomorrow, Day after schedule */}
-        <section className={`glass flex min-h-[500px] flex-col p-5 lg:col-span-2 lg:min-h-0 ${loadingEvents ? 'shimmer-loading' : ''}`}>
+        <section className={`glass flex min-h-64 flex-col p-5 lg:col-span-2 lg:min-h-0 ${loadingEvents ? 'shimmer-loading' : ''}`}>
           <a href="#/calendar" className="mb-4 flex items-center gap-3 text-xl font-normal text-ink">
             <Icon name="calendar_month" className="text-2xl" /> Schedule
             <span className="ml-auto text-sm font-medium text-sky-600 dark:text-sky-400">full calendar ›</span>
@@ -214,155 +212,64 @@ export default function Home() {
           {!events || events.length === 0 ? (
             <p className="my-auto text-center text-lg text-ink-faint">Nothing scheduled 🎈</p>
           ) : (
-            <div className="flex flex-col flex-1 min-h-0">
-              {/* Day Headers (Fixed) */}
-              <div className="flex border-b border-ink-faint pb-2 shrink-0">
-                <div className="w-14 shrink-0" />
-                <div className="flex-1 grid grid-cols-3 gap-4">
-                  {daysList.map((dayIso, idx) => (
-                    <div key={dayIso} className="flex flex-col">
-                      <span className="text-sm font-semibold text-ink leading-tight">{getDayLabel(dayIso, idx)}</span>
-                      <span className="text-[0.65rem] font-medium text-ink-soft opacity-85 mt-0.5">
+            <div className="grid min-h-0 flex-1 grid-cols-3 gap-4 overflow-y-auto">
+              {daysList.map((dayIso, idx) => {
+                const dayEvents = eventsByDay.get(dayIso) ?? []
+                const label = getDayLabel(dayIso, idx)
+                return (
+                  <div key={dayIso} className="flex flex-col min-h-0">
+                    <h3 className="mb-3 flex items-baseline gap-2 border-b pb-1.5 border-ink-faint">
+                      <span className="text-base font-semibold text-ink">{label}</span>
+                      <span className="text-[0.7rem] font-medium text-ink-soft opacity-85">
                         {new Date(dayIso + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                       </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Scrollable Hourly Timeline */}
-              <div className="flex-1 min-h-0 overflow-y-auto mt-2 pr-1">
-                <div className="relative flex min-w-[500px]" style={{ height: 12 * HOUR_HEIGHT + 20 }}>
-                  {/* Hour Labels */}
-                  <div className="w-14 shrink-0 relative text-right pr-3 text-[0.7rem] font-bold text-ink-faint tabular-nums pointer-events-none">
-                    {Array.from({ length: 13 }).map((_, i) => {
-                      const hr = 8 + i
-                      const ampm = hr >= 12 ? 'PM' : 'AM'
-                      const displayHr = hr > 12 ? hr - 12 : hr
-                      return (
-                        <div
-                          key={i}
-                          className="absolute right-3 -translate-y-1/2 leading-none"
-                          style={{ top: i * HOUR_HEIGHT }}
-                        >
-                          {displayHr} {ampm}
-                        </div>
-                      )
-                    })}
-                  </div>
-
-                  {/* Day Columns containing Events */}
-                  <div className="flex-1 grid grid-cols-3 gap-4 relative">
-                    {/* Horizontal Hourly Grid Lines */}
-                    {Array.from({ length: 13 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className="absolute left-0 right-0 border-t border-dashed border-ink-faint/30 pointer-events-none"
-                        style={{ top: i * HOUR_HEIGHT }}
-                      />
-                    ))}
-
-                    {daysList.map((dayIso) => {
-                      const dayEvents = eventsByDay.get(dayIso) ?? []
-                      const allDay = dayEvents.filter((e) => e.all_day)
-                      const timed = dayEvents.filter((e) => !e.all_day)
-
-                      return (
-                        <div key={dayIso} className="relative h-full flex flex-col">
-                          {/* All day events at the very top of the column */}
-                          {allDay.length > 0 && (
-                            <div className="absolute top-0 left-0 right-0 z-10 flex flex-col gap-1 bg-surface-lowest/90 backdrop-blur-sm p-1 rounded-lg border border-ink-faint shadow-sm max-h-[80px] overflow-y-auto">
-                              {allDay.map((e) => {
-                                const isFamily = !e.person_name || e.person_name.toLowerCase() === 'family' || e.person_name.toLowerCase() === 'shared'
-                                const bgStyle = isFamily
-                                  ? 'linear-gradient(135deg, #f43f5e, #ec4899, #8b5cf6, #3b82f6, #10b981)'
-                                  : e.color
-                                return (
-                                  <div
-                                    key={e.id}
-                                    className="rounded px-2 py-0.5 text-[0.62rem] font-semibold text-white shadow-sm truncate shrink-0"
-                                    style={{ background: bgStyle }}
-                                    title={e.title}
-                                  >
-                                    All-day: {e.title}
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          )}
-
-                          {/* Timed events container */}
-                          <div className="relative flex-1 h-full">
-                            {timed.map((e) => {
-                              const startDate = new Date(e.start)
-                              const endDate = new Date(e.end)
-                              const startHr = startDate.getHours() + startDate.getMinutes() / 60
-                              const endHr = endDate.getHours() + endDate.getMinutes() / 60
-
-                              const topHr = Math.max(8, Math.min(20, startHr))
-                              const bottomHr = Math.max(8, Math.min(20, endHr))
-
-                              // If ends before 8am or starts after 8pm, skip rendering
-                              if (endHr <= 8 || startHr >= 20) return null
-
-                              const topPx = (topHr - 8) * HOUR_HEIGHT
-                              const heightPx = Math.max(28, (bottomHr - topHr) * HOUR_HEIGHT)
-
-                              const isFamily = !e.person_name || e.person_name.toLowerCase() === 'family' || e.person_name.toLowerCase() === 'shared'
-                              const bgStyle = isFamily
-                                ? 'linear-gradient(135deg, #f43f5e, #ec4899, #8b5cf6, #3b82f6, #10b981)'
-                                : e.color
-
-                              return (
-                                <div
-                                  key={e.id}
-                                  className="absolute left-1 right-1 rounded-xl p-2 text-white shadow-md flex flex-col justify-between overflow-hidden transition-all hover:scale-[1.02] hover:z-20 cursor-pointer"
-                                  style={{
-                                    top: topPx,
-                                    height: heightPx - 2,
-                                    background: bgStyle,
-                                  }}
-                                >
-                                  <div className="min-w-0 flex-1 flex flex-col">
-                                    <div className="text-[0.72rem] font-bold leading-tight truncate">{e.title}</div>
-                                    {heightPx > 45 && (
-                                      <div className="text-[0.58rem] opacity-90 font-medium mt-0.5">
-                                        {fmtTime(e.start)} – {fmtTime(e.end)}
-                                      </div>
-                                    )}
-                                    {heightPx > 60 && e.location && (
-                                      <div className="flex items-center gap-0.5 text-[0.58rem] opacity-85 truncate mt-0.5">
-                                        <Icon name="location_on" className="text-[0.62rem] shrink-0" />
-                                        <span className="truncate">{e.location}</span>
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  {heightPx > 45 && (
-                                    <div className="flex items-center gap-1 rounded-md bg-white/20 px-1.5 py-0.5 self-start text-[0.55rem] font-bold uppercase tracking-wider backdrop-blur-sm mt-1 shrink-0">
-                                      {isFamily ? (
-                                        <>
-                                          <span className="h-1 w-1 rounded-full bg-white animate-pulse" />
-                                          <span>Family</span>
-                                        </>
-                                      ) : (
-                                        <>
-                                          <span className="h-1 w-1 rounded-full bg-white/80" />
-                                          <span>{e.person_name}</span>
-                                        </>
-                                      )}
-                                    </div>
-                                  )}
+                    </h3>
+                    <div className="flex flex-col gap-2 overflow-y-auto pr-1 flex-1">
+                      {dayEvents.length === 0 ? (
+                        <p className="my-auto text-center text-xs text-ink-faint py-8">No events</p>
+                      ) : (
+                        dayEvents.map((e) => {
+                          const isFamily = !e.person_name || e.person_name.toLowerCase() === 'family' || e.person_name.toLowerCase() === 'shared'
+                          const bgStyle = isFamily
+                            ? 'linear-gradient(135deg, #f43f5e, #ec4899, #8b5cf6, #3b82f6, #10b981)'
+                            : e.color
+                          return (
+                            <div
+                              key={e.id}
+                              className="rounded-xl p-3 text-white shadow-md flex flex-col gap-1 transition-transform hover:scale-[1.02]"
+                              style={{ background: bgStyle }}
+                            >
+                              <div className="text-sm font-semibold leading-snug tracking-tight">{e.title}</div>
+                              <div className="text-xs opacity-90 font-medium">
+                                {e.all_day ? 'All day' : `${fmtTime(e.start)} – ${fmtTime(e.end)}`}
+                              </div>
+                              {e.location && (
+                                <div className="flex items-center gap-1 text-[0.7rem] opacity-85 truncate">
+                                  <Icon name="location_on" className="text-[0.75rem] shrink-0" />
+                                  <span className="truncate">{e.location}</span>
                                 </div>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      )
-                    })}
+                              )}
+                              <div className="mt-1 flex items-center gap-1.5 rounded-md bg-white/20 px-2 py-0.5 self-start text-[0.65rem] font-semibold uppercase tracking-wider backdrop-blur-sm">
+                                {isFamily ? (
+                                  <>
+                                    <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                                    <span>Family</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="h-1.5 w-1.5 rounded-full bg-white/80" />
+                                    <span>{e.person_name}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })
+                      )}
+                    </div>
                   </div>
-                </div>
-              </div>
+                )
+              })}
             </div>
           )}
         </section>
