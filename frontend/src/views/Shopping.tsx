@@ -25,7 +25,7 @@ function ActiveShoppingItem({
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9, y: 15 }}
       transition={EXPRESSIVE_ENTER}
-      className="relative overflow-hidden rounded-[var(--shape-card)] bg-transparent"
+      className="relative overflow-hidden rounded-[var(--shape-card)] bg-transparent break-inside-avoid mb-3 w-full inline-block"
     >
       {/* Swipe indicator background - only visible when swiping */}
       <motion.div
@@ -58,16 +58,16 @@ function ActiveShoppingItem({
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
         transition={PRESS_SPRING}
-        className="relative flex w-full items-center gap-3 glass p-4 text-left cursor-grab active:cursor-grabbing"
+        className="relative flex w-full items-center gap-3 glass p-3 text-left cursor-grab active:cursor-grabbing"
       >
         <span
           onClick={(e) => {
             e.stopPropagation()
             toggle(item)
           }}
-          className="h-9 w-9 shrink-0 rounded-full border-4 border-teal-400/40 hover:border-teal-500 hover:bg-teal-500/10 transition-all duration-200 cursor-pointer flex items-center justify-center"
+          className="h-7 w-7 shrink-0 rounded-full border-[3px] border-teal-400/40 hover:border-teal-500 hover:bg-teal-500/10 transition-all duration-200 cursor-pointer flex items-center justify-center"
         />
-        <span className="min-w-0 flex-1 truncate text-xl font-normal text-ink">{item.title}</span>
+        <span className="min-w-0 flex-1 text-base font-normal text-ink break-words">{item.title}</span>
         <span className="text-sm">
           {item.sources.map((s) => SOURCE_ICON[s] ?? '').join(' ')}
         </span>
@@ -153,7 +153,7 @@ export default function Shopping() {
         )}
 
         <LayoutGroup>
-          <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 2xl:grid-cols-4">
+          <motion.div layout className="columns-1 sm:columns-2 md:columns-3 2xl:columns-4 gap-3">
             <AnimatePresence initial={false}>
               {active.map((item) => (
                 <ActiveShoppingItem key={item.id} item={item} toggle={toggle} />
@@ -175,7 +175,7 @@ export default function Shopping() {
                   Clear All
                 </motion.button>
               </div>
-              <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 2xl:grid-cols-4">
+              <motion.div layout className="columns-1 sm:columns-2 md:columns-3 2xl:columns-4 gap-3">
                 <AnimatePresence>
                   {done.map((item) => (
                     <motion.button
@@ -188,12 +188,12 @@ export default function Shopping() {
                       whileHover={{ scale: 1.02, opacity: 0.8 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => toggle(item)}
-                      className="flex items-center gap-3 rounded-xl glass-inset p-4 text-left cursor-pointer"
+                      className="flex w-full items-center gap-3 rounded-xl glass-inset p-3 text-left cursor-pointer break-inside-avoid mb-3 inline-flex"
                     >
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-lg font-normal text-white shadow-sm">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-sm font-normal text-white shadow-sm">
                         ✓
                       </span>
-                      <span className="min-w-0 flex-1 truncate text-xl font-normal line-through text-ink-soft">
+                      <span className="min-w-0 flex-1 text-base font-normal line-through text-ink-soft break-words">
                         {item.title}
                       </span>
                     </motion.button>
