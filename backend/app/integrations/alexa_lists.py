@@ -41,9 +41,9 @@ class AlexaLists:
 
     async def connect(self, email: str | None = None, password: str | None = None, otp_secret: str | None = None) -> dict:
         s = get_settings()
-        user = email or s.amazon_email
-        pw = password or s.amazon_password
-        otp = otp_secret or s.amazon_otp_secret
+        user = (email or s.amazon_email).strip('"\'')
+        pw = (password or s.amazon_password).strip('"\'')
+        otp = (otp_secret or s.amazon_otp_secret).strip('"\'') if (otp_secret or s.amazon_otp_secret) else ""
 
         if not user or not pw:
             return {"connected": False, "error": "no credentials configured"}
