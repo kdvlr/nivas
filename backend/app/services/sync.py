@@ -168,6 +168,8 @@ async def sync_alexa() -> bool:
                     await asyncio.to_thread(icloud.add, title, shopping_name)
                 except Exception as e:
                     log.warning("could not add '%s' to iCloud: %s", title, e)
+            # Trigger an immediate iCloud sync so it matches and gets the iCloud IDs in this cycle!
+            await job_icloud()
     sync_status.report("alexa", True)
     return changed
 
@@ -282,6 +284,8 @@ async def job_icloud() -> None:
                 await alexa.add("shopping", title)
             except Exception as e:
                 log.warning("could not add '%s' to Alexa: %s", title, e)
+        # Trigger an immediate Alexa sync so it matches and gets the Alexa IDs in this cycle!
+        await sync_alexa()
     if changed:
         await manager.broadcast("tasks")
         await manager.broadcast("shopping")
