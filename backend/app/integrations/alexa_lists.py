@@ -86,7 +86,7 @@ class AlexaLists:
 
     async def _request(self, method: str, path: str, data: dict | None = None) -> dict | list:
         login = await self._ensure()
-        url = f"https://alexa.{login.url}{path}"
+        url = f"https://www.{login.url}{path}"
         headers = {"csrf": login.session.cookie_jar.filter_cookies(url).get("csrf").value
                    if login.session.cookie_jar.filter_cookies(url).get("csrf") else "",
                    "Content-Type": "application/json"}
@@ -100,23 +100,25 @@ class AlexaLists:
     # ---- public surface ---------------------------------------------------
 
     async def get_lists(self) -> dict[str, dict]:
-        """{'shopping': {'id':..., 'items':[...]}, 'todo': {...}} — active items only."""
-        data = await self._request("get", "/api/namedLists")
+        """{'shopping': {'id':..., 'items':[...]}, 'todo': {...}} — active/completed items."""
+        data = await self._request("post", "/alexashoppinglists/api/v2/lists/fetch", {})
         result: dict[str, dict] = {}
-        for lst in data.get("lists", []) if isinstance(data, dict) else []:
-            kind = {"SHOPPING_LIST": "shopping", "TO_DO": "todo"}.get(lst.get("type", ""))
-            if kind is None or lst.get("archived"):
+        for lst in data.get("listInfoList", []) if isinstance(data, dict) else []:
+            kind = {"SHOPPING_LIST": "shopping", "TODO": "todo"}.get(lst.get("listType", ""))
+            if kind is None or lst.get("listStatus") != "ACTIVE":
                 continue
-            items_data = await self._request("get", f"/api/namedLists/{lst['itemId']}/items")
+            items_data = await self._request(
+                "post", f"/alexashoppinglists/api/v2/lists/{lst['listId']}/items/fetch?limit=100", {}
+            )
             items = [
                 {
-                    "id": it["id"],
-                    "title": it.get("value", ""),
-                    "completed": bool(it.get("completed")),
+                    "id": it["itemId"],
+                    "title": it.get("itemName", ""),
+                    "completed": it.get("itemStatus") == "COMPLETE",
                 }
-                for it in (items_data.get("list", []) if isinstance(items_data, dict) else [])
+                for it in (items_data.get("itemInfoList", []) if isinstance(items_data, dict) else [])
             ]
-            result[kind] = {"id": lst["itemId"], "items": items}
+            result[kind] = {"id": lst["listId"], "items": items}
         return result
 
     async def add(self, kind: str, title: str) -> bool:
@@ -124,21 +126,45 @@ class AlexaLists:
         lst = lists.get(kind)
         if lst is None:
             return False
-        await self._request("post", f"/api/namedLists/{lst['id']}/item", {"value": title})
+        await self._request(
+            "post",
+            f"/alexashoppinglists/api/v2/lists/{lst['id']}/items",
+            {
+                "items": [
+                    {
+                        "itemType": "KEYWORD",
+                        "itemName": title,
+                    }
+                ]
+            }
+        )
         return True
 
     async def set_completed(self, list_id: str, item_id: str, completed: bool = True) -> bool:
-        items_data = await self._request("get", f"/api/namedLists/{list_id}/items")
+        items_data = await self._request(
+            "post", f"/alexashoppinglists/api/v2/lists/{list_id}/items/fetch?limit=100", {}
+        )
         raw = next(
-            (it for it in (items_data.get("list", []) if isinstance(items_data, dict) else [])
-             if it["id"] == item_id),
+            (it for it in (items_data.get("itemInfoList", []) if isinstance(items_data, dict) else [])
+             if it["itemId"] == item_id),
             None,
         )
         if raw is None:
             return False
-        raw = dict(raw)
-        raw["completed"] = completed
-        await self._request("put", f"/api/namedLists/{list_id}/item/{item_id}", raw)
+        version = raw.get("version", 1)
+        await self._request(
+            "put",
+            f"/alexashoppinglists/api/v2/lists/{list_id}/items/{item_id}?version={version}",
+            {
+                "itemAttributesToUpdate": [
+                    {
+                        "type": "itemStatus",
+                        "value": "COMPLETE" if completed else "ACTIVE",
+                    }
+                ],
+                "itemAttributesToRemove": [],
+            }
+        )
         return True
 
 

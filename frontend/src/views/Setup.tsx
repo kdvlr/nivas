@@ -388,6 +388,21 @@ function SetupInner() {
           )}
         </Card>
 
+        {/* Alexa */}
+        <Card
+          title={<><Icon name="graphic_eq" /> Alexa Lists</>}
+          badge={<Badge ok={!!status?.alexa.connected} label={status?.alexa.connected ? 'connected' : 'not connected'} />}
+        >
+          <p className="text-sm text-ink-soft">
+            Syncs your shopping and to-do lists from Amazon Alexa. Credentials must be configured in your server's <code>docker-compose.yml</code> file.
+          </p>
+          {status?.alexa.error && (
+            <p className="mt-2 text-sm font-semibold text-rose-400">
+              Error: {status.alexa.error}
+            </p>
+          )}
+        </Card>
+
         {/* People */}
         <Card title={<><Icon name="groups" /> Members</>}>
           <div className="flex flex-col gap-3">
