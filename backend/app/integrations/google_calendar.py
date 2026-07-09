@@ -37,6 +37,7 @@ def make_flow(state: str | None = None) -> Flow:
         scopes=SCOPES,
         state=state,
         redirect_uri=redirect_uri(),
+        autogenerate_code_verifier=False,
     )
 
 
