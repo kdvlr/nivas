@@ -203,7 +203,7 @@ export default function App() {
         <div className="flex h-full flex-col lg:flex-row gap-2 p-2 lg:gap-4 lg:p-4">
           <nav className="glass order-last lg:order-first flex flex-row lg:flex-col w-full lg:w-22 h-14 lg:h-full shrink-0 items-center justify-around lg:justify-start gap-1 lg:gap-4 py-1.5 lg:py-4 px-2 lg:px-0">
             {/* Main Nav Items */}
-            <div className="flex flex-row lg:flex-col items-center justify-around lg:justify-start gap-1 lg:gap-1.5 flex-1 lg:flex-none w-full">
+            <div className="flex flex-row lg:flex-col items-center justify-around lg:justify-start gap-1 lg:gap-3 flex-1 lg:flex-none w-full">
               {NAV.filter(n => n.id !== 'setup').map((n) => {
                 const isActive = activeNav === n.id
                 return (
@@ -250,7 +250,7 @@ export default function App() {
             </div>
 
             {/* Bottom/Right Tools (Desktop Only) */}
-            <div className="hidden lg:flex lg:mt-auto flex-col items-center gap-1.5 lg:pb-4 w-full">
+            <div className="hidden lg:flex lg:mt-auto flex-col items-center gap-3 lg:pb-4 w-full">
               <button
                 onClick={cycleAppearance}
                 className="flex flex-col items-center justify-center transition-all duration-200 group text-center w-full cursor-pointer"
