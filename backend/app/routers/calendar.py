@@ -139,7 +139,11 @@ def auth_callback(code: str, state: str, oauth_state: str | None = Cookie(defaul
                 account_id=account.id,
                 calendar_id=cal["id"],
                 name=cal["name"],
-                person_name=email.split("@")[0] if cal["primary"] else "",
+                person_name=(
+                    db.query(Person).filter(Person.name.ilike(email.split("@")[0])).first().name
+                    if db.query(Person).filter(Person.name.ilike(email.split("@")[0])).first()
+                    else email.split("@")[0].capitalize()
+                ) if cal["primary"] else "",
                 color=PALETTE[(n_existing + i) % len(PALETTE)],
                 enabled=cal["primary"],
             )

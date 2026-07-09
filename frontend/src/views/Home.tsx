@@ -9,11 +9,29 @@ import type { CalEvent, ChoreItem, MealDay, ShoppingItem, Task, WeatherData } fr
 const fmtTime = (iso: string) =>
   new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
 
+const getLocalDateString = (iso: string) => {
+  if (!iso.includes('T')) {
+    return iso.slice(0, 10)
+  }
+  const d = new Date(iso)
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const getDayLabel = (isoDate: string, index: number) => {
+  if (index === 0) return 'Today'
+  if (index === 1) return 'Tomorrow'
+  const d = new Date(isoDate + 'T12:00:00')
+  return d.toLocaleDateString(undefined, { weekday: 'long' })
+}
+
 export default function Home() {
   const now = useClock()
   const today = todayISO()
   const { data: events, loading: loadingEvents } = useData<CalEvent[]>(
-    `/api/calendar/events?start=${today}T00:00:00&end=${addDaysISO(today, 1)}T00:00:00`,
+    `/api/calendar/events?start=${today}T00:00:00&end=${addDaysISO(today, 3)}T00:00:00`,
     ['calendar'],
   )
   const { data: taskData, loading: loadingTasks, reload: reloadTasks } = useData<{ tasks: Task[] }>(
@@ -49,15 +67,26 @@ export default function Home() {
   const openChores = useMemo(() => todayChores.filter((c) => !c.completed), [todayChores])
   const todayWeather = weather?.daily.find((d) => d.date === today)
 
-  const byPerson = useMemo(() => {
-    const m = new Map<string, { color: string; events: CalEvent[] }>()
-    for (const e of [...(events ?? [])].sort((a, b) => a.start.localeCompare(b.start))) {
-      const entry = m.get(e.person_name) ?? { color: e.color, events: [] }
-      entry.events.push(e)
-      m.set(e.person_name, entry)
+  const day0 = today
+  const day1 = addDaysISO(today, 1)
+  const day2 = addDaysISO(today, 2)
+  const daysList = [day0, day1, day2]
+
+  const eventsByDay = useMemo(() => {
+    const map = new Map<string, CalEvent[]>()
+    map.set(day0, [])
+    map.set(day1, [])
+    map.set(day2, [])
+
+    const sortedEvents = [...(events ?? [])].sort((a, b) => a.start.localeCompare(b.start))
+    for (const e of sortedEvents) {
+      const dateStr = getLocalDateString(e.start)
+      if (map.has(dateStr)) {
+        map.get(dateStr)!.push(e)
+      }
     }
-    return m
-  }, [events])
+    return map
+  }, [events, day0, day1, day2])
 
   const completeChore = async (c: ChoreItem) => {
     await api.patch(`/api/chores/${c.id}`, { completed: true })
@@ -174,38 +203,73 @@ export default function Home() {
       </header>
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-3 lg:gap-4">
-        {/* today's schedule */}
+        {/* Today, Tomorrow, Day after schedule */}
         <section className={`glass flex min-h-64 flex-col p-5 lg:col-span-2 lg:min-h-0 ${loadingEvents ? 'shimmer-loading' : ''}`}>
           <a href="#/calendar" className="mb-4 flex items-center gap-3 text-xl font-normal text-ink">
-            <Icon name="calendar_month" className="text-2xl" /> Today's Schedule
-            <span className="ml-auto text-sm font-medium text-sky-600 dark:text-sky-400">week view ›</span>
+            <Icon name="calendar_month" className="text-2xl" /> Schedule
+            <span className="ml-auto text-sm font-medium text-sky-600 dark:text-sky-400">full calendar ›</span>
           </a>
-          {byPerson.size === 0 ? (
-            <p className="my-auto text-center text-lg text-ink-faint">Nothing scheduled today 🎈</p>
+          {!events || events.length === 0 ? (
+            <p className="my-auto text-center text-lg text-ink-faint">Nothing scheduled 🎈</p>
           ) : (
-            <div className="grid min-h-0 flex-1 auto-cols-fr grid-flow-col gap-4 overflow-y-auto">
-              {[...byPerson.entries()].map(([person, { color, events: evs }]) => (
-                <div key={person}>
-                  <h3 className="mb-2 flex items-center gap-2 font-normal" style={{ color }}>
-                    <span className="h-3.5 w-3.5 rounded-full" style={{ background: color }} />
-                    {person}
-                  </h3>
-                  <div className="flex flex-col gap-2">
-                    {evs.map((e) => (
-                      <div
-                        key={e.id}
-                        className="rounded-xl p-3 text-white shadow-md"
-                        style={{ background: e.color }}
-                      >
-                        <div className="text-sm font-medium leading-tight">{e.title}</div>
-                        <div className="text-xs opacity-90">
-                          {e.all_day ? 'All day' : `${fmtTime(e.start)} – ${fmtTime(e.end)}`}
-                        </div>
-                      </div>
-                    ))}
+            <div className="grid min-h-0 flex-1 grid-cols-3 gap-4 overflow-y-auto">
+              {daysList.map((dayIso, idx) => {
+                const dayEvents = eventsByDay.get(dayIso) ?? []
+                const label = getDayLabel(dayIso, idx)
+                return (
+                  <div key={dayIso} className="flex flex-col min-h-0">
+                    <h3 className="mb-3 flex items-baseline gap-2 border-b pb-1.5 border-ink-faint">
+                      <span className="text-base font-semibold text-ink">{label}</span>
+                      <span className="text-[0.7rem] font-medium text-ink-soft opacity-85">
+                        {new Date(dayIso + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      </span>
+                    </h3>
+                    <div className="flex flex-col gap-2 overflow-y-auto pr-1 flex-1">
+                      {dayEvents.length === 0 ? (
+                        <p className="my-auto text-center text-xs text-ink-faint py-8">No events</p>
+                      ) : (
+                        dayEvents.map((e) => {
+                          const isFamily = !e.person_name || e.person_name.toLowerCase() === 'family' || e.person_name.toLowerCase() === 'shared'
+                          const bgStyle = isFamily
+                            ? 'linear-gradient(135deg, #f43f5e, #ec4899, #8b5cf6, #3b82f6, #10b981)'
+                            : e.color
+                          return (
+                            <div
+                              key={e.id}
+                              className="rounded-xl p-3 text-white shadow-md flex flex-col gap-1 transition-transform hover:scale-[1.02]"
+                              style={{ background: bgStyle }}
+                            >
+                              <div className="text-sm font-semibold leading-snug tracking-tight">{e.title}</div>
+                              <div className="text-xs opacity-90 font-medium">
+                                {e.all_day ? 'All day' : `${fmtTime(e.start)} – ${fmtTime(e.end)}`}
+                              </div>
+                              {e.location && (
+                                <div className="flex items-center gap-1 text-[0.7rem] opacity-85 truncate">
+                                  <Icon name="location_on" className="text-[0.75rem] shrink-0" />
+                                  <span className="truncate">{e.location}</span>
+                                </div>
+                              )}
+                              <div className="mt-1 flex items-center gap-1.5 rounded-md bg-white/20 px-2 py-0.5 self-start text-[0.65rem] font-semibold uppercase tracking-wider backdrop-blur-sm">
+                                {isFamily ? (
+                                  <>
+                                    <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                                    <span>Family</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="h-1.5 w-1.5 rounded-full bg-white/80" />
+                                    <span>{e.person_name}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </section>
