@@ -18,7 +18,7 @@ scheduler = AsyncIOScheduler()
 
 def start() -> None:
     scheduler.add_job(sync.job_calendar, "interval", minutes=2, id="calendar", coalesce=True)
-    scheduler.add_job(sync.job_icloud, "interval", minutes=3, id="icloud", coalesce=True)
+    scheduler.add_job(sync.job_icloud, "interval", minutes=5, id="icloud", coalesce=True)
     scheduler.add_job(sync.job_alexa, "interval", minutes=5, id="alexa", coalesce=True)
     scheduler.add_job(
         _check_missed_chores, "cron", hour=23, minute=59, id="missed_chores", coalesce=True
