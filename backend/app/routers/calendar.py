@@ -1,6 +1,9 @@
+import os
 import asyncio
 import json
 import logging
+
+os.environ["OAUTHLIB_RELAX_TOKEN_SCOPE"] = "1"
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Response
 from fastapi.responses import RedirectResponse
