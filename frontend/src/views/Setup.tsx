@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { SPATIAL_STANDARD_DEFAULT } from '../lib/motion'
+import { SPATIAL_STANDARD_DEFAULT, STANDARD_ENTER, PRESS_SPRING } from '../lib/motion'
 import CoinIcon from '../components/CoinIcon'
 import Icon from '../components/Icon'
 import { api } from '../lib/api'
@@ -38,8 +38,10 @@ function Card({ title, badge, children }: { title: ReactNode; badge?: ReactNode;
   return (
     <motion.section
       layout
+      initial={{ opacity: 0, y: 16, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
       whileHover={{ scale: 1.01, y: -2 }}
-      transition={SPATIAL_STANDARD_DEFAULT}
+      transition={STANDARD_ENTER}
       className="glass p-5 shadow-sm"
     >
       <div className="mb-3 flex items-center gap-3">
@@ -677,15 +679,18 @@ function AppearanceCard() {
                 ['woodland', 'forest', 'Woodland'],
               ] as [ThemeStyle, string, string][]
             ).map(([s, icon, label]) => (
-              <button
+              <motion.button
                 key={s}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.94 }}
+                transition={PRESS_SPRING}
                 onClick={() => pickStyle(s)}
                 className={`flex items-center gap-2 rounded-xl px-5 py-3 text-base font-medium transition-all ${
                   style === s ? 'bg-[var(--primary)] text-[var(--on-primary)]' : 'glass-inset text-ink-soft'
                 }`}
               >
                 <Icon name={icon} /> {label}
-              </button>
+              </motion.button>
             ))}
           </div>
         </div>
@@ -701,15 +706,18 @@ function AppearanceCard() {
                 ['dark', 'dark_mode', 'Dark'],
               ] as [Appearance, string, string][]
             ).map(([a, icon, label]) => (
-              <button
+              <motion.button
                 key={a}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.94 }}
+                transition={PRESS_SPRING}
                 onClick={() => pickAppearance(a)}
                 className={`flex items-center gap-2 rounded-xl px-5 py-3 text-base font-medium transition-all ${
                   appearance === a ? 'bg-[var(--primary)] text-[var(--on-primary)]' : 'glass-inset text-ink-soft'
                 }`}
               >
                 <Icon name={icon} /> {label}
-              </button>
+              </motion.button>
             ))}
           </div>
         </div>
@@ -717,8 +725,11 @@ function AppearanceCard() {
           <p className="mb-2 text-base font-medium text-ink-soft">Font</p>
           <div className="flex flex-wrap gap-2">
             {FONTS.map((f) => (
-              <button
+              <motion.button
                 key={f.id}
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.95 }}
+                transition={PRESS_SPRING}
                 onClick={() => pickFont(f.id)}
                 style={{ fontFamily: f.stack }}
                 className={`flex flex-col items-start rounded-xl px-5 py-2.5 transition-all ${
@@ -729,7 +740,7 @@ function AppearanceCard() {
                 <span className={`text-xs ${font === f.id ? 'opacity-80' : 'text-ink-soft'}`}>
                   The quick brown fox 123
                 </span>
-              </button>
+              </motion.button>
             ))}
           </div>
         </div>

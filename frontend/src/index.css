@@ -217,36 +217,57 @@ html[data-theme='woodland'].dark {
 }
 
 html[data-theme='glass']:not(.dark) {
-  --surface: #edf3f2;
+  --surface: #e9f1f7;
   --sc-lowest: rgb(255 255 255 / 0.55);
   --sc: rgb(255 255 255 / 0.5);
   --sc-high: rgb(255 255 255 / 0.68);
   --sc-highest: rgb(255 255 255 / 0.8);
-  --outline-var: rgb(120 140 150 / 0.25);
+  --on-surface: #16283a;
+  --on-surface-var: #4d6478;
+  --outline: #7e94a8;
+  --outline-var: rgb(110 140 165 / 0.28);
+  --primary: #007aff; /* liquid-glass blue */
+  --on-primary: #ffffff;
+  --primary-container: #d3e6ff;
+  --on-primary-container: #002a58;
+  --secondary-container: rgb(211 230 255 / 0.75);
+  --on-secondary-container: #1e3a5f;
+  --tertiary-container: #dcedff;
+  --on-tertiary-container: #0b2b4d;
   --card-border: 1px solid rgb(255 255 255 / 0.65);
   --tile-border: 1px solid rgb(255 255 255 / 0.55);
-  --shadow-1: 0 8px 32px rgb(60 90 120 / 0.12), inset 0 1px 0 rgb(255 255 255 / 0.7);
-  --tint-a: rgb(45 212 191 / 0.35);
-  --tint-b: rgb(251 146 60 / 0.3);
-  --tint-c: rgb(96 165 250 / 0.32);
-  --tint-d: rgb(244 114 182 / 0.28);
+  --shadow-1: 0 8px 32px rgb(30 80 140 / 0.14), inset 0 1px 0 rgb(255 255 255 / 0.7);
+  --tint-a: rgb(96 165 250 / 0.38);
+  --tint-b: rgb(56 189 248 / 0.32);
+  --tint-c: rgb(129 140 248 / 0.3);
+  --tint-d: rgb(34 211 238 / 0.28);
 }
 
 html[data-theme='glass'].dark {
-  --surface: #0c1316;
-  --sc-lowest: rgb(26 36 39 / 0.55);
+  --surface: #0a1220;
+  --sc-lowest: rgb(24 36 52 / 0.55);
   --sc: rgb(255 255 255 / 0.07);
   --sc-high: rgb(255 255 255 / 0.12);
   --sc-highest: rgb(255 255 255 / 0.17);
-  --on-surface: #e2eaea;
+  --on-surface: #e2eaf4;
+  --on-surface-var: #a5b8cc;
+  --outline: #7590ab;
   --outline-var: rgb(255 255 255 / 0.14);
+  --primary: #64b1ff; /* liquid-glass blue (dark) */
+  --on-primary: #00325c;
+  --primary-container: #004a86;
+  --on-primary-container: #d3e6ff;
+  --secondary-container: rgb(100 177 255 / 0.16);
+  --on-secondary-container: #cfe3fb;
+  --tertiary-container: rgb(56 189 248 / 0.18);
+  --on-tertiary-container: #d9f0ff;
   --card-border: 1px solid rgb(255 255 255 / 0.12);
   --tile-border: 1px solid rgb(255 255 255 / 0.08);
   --shadow-1: 0 8px 32px rgb(0 0 0 / 0.45), inset 0 1px 0 rgb(255 255 255 / 0.08);
-  --tint-a: rgb(45 212 191 / 0.14);
-  --tint-b: rgb(251 146 60 / 0.12);
-  --tint-c: rgb(96 165 250 / 0.13);
-  --tint-d: rgb(244 114 182 / 0.11);
+  --tint-a: rgb(96 165 250 / 0.16);
+  --tint-b: rgb(56 189 248 / 0.13);
+  --tint-c: rgb(129 140 248 / 0.13);
+  --tint-d: rgb(34 211 238 / 0.11);
 }
 
 html,

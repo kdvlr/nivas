@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
+import { useRef, useState } from 'react'
+import { motion, AnimatePresence, LayoutGroup, useMotionValue, useTransform } from 'framer-motion'
 import { PRESS_SPRING, EXPRESSIVE_ENTER } from '../lib/motion'
 import Avatar from '../components/Avatar'
 import CoinIcon from '../components/CoinIcon'
@@ -60,6 +60,112 @@ const draftFrom = (c: ChoreItem): Draft => ({
     : [],
 })
 
+const SWIPE_THRESHOLD = 80
+
+function ChoreCard({
+  chore,
+  onToggle,
+  onEdit,
+  onDelete,
+}: {
+  chore: ChoreItem
+  onToggle: (c: ChoreItem) => void
+  onEdit: (c: ChoreItem) => void
+  onDelete: (c: ChoreItem) => void
+}) {
+  const x = useMotionValue(0)
+  // action hints fade in as the card slides
+  const editHint = useTransform(x, [0, 60], [0, 1])
+  const deleteHint = useTransform(x, [-60, 0], [1, 0])
+  const suppressClick = useRef(false)
+
+  return (
+    <motion.div
+      layoutId={`chore-${chore.id}`}
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: chore.completed ? 0.6 : 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={EXPRESSIVE_ENTER}
+      className="relative overflow-hidden rounded-xl"
+    >
+      <motion.div
+        style={{ opacity: editHint }}
+        className="absolute inset-0 flex items-center justify-start rounded-xl bg-sky-500/25 pl-4 text-sky-600 dark:text-sky-300"
+      >
+        <Icon name="edit" className="text-2xl" />
+      </motion.div>
+      <motion.div
+        style={{ opacity: deleteHint }}
+        className="absolute inset-0 flex items-center justify-end rounded-xl bg-rose-500/25 pr-4 text-rose-600 dark:text-rose-300"
+      >
+        <Icon name="delete" className="text-2xl" />
+      </motion.div>
+
+      <motion.div
+        style={{ x }}
+        drag="x"
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={{ left: 0.5, right: 0.5 }}
+        onDragEnd={(_, info) => {
+          if (Math.abs(info.offset.x) > 10) {
+            suppressClick.current = true
+            setTimeout(() => (suppressClick.current = false), 250)
+          }
+          if (info.offset.x > SWIPE_THRESHOLD) onEdit(chore)
+          else if (info.offset.x < -SWIPE_THRESHOLD) onDelete(chore)
+        }}
+        whileHover={{ scale: 1.02, y: -2 }}
+        whileTap={{ scale: 0.98 }}
+        transition={PRESS_SPRING}
+        onClick={() => {
+          if (!suppressClick.current) onToggle(chore)
+        }}
+        className="relative flex w-full cursor-pointer items-center gap-3 rounded-xl glass-inset p-2.5 text-left select-none shadow-sm"
+      >
+        <span
+          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-[3px] text-sm font-bold transition-all duration-300 ${
+            chore.completed
+              ? 'border-emerald-400 bg-emerald-400 text-white shadow-sm'
+              : 'border-teal-300/40 text-transparent'
+          }`}
+        >
+          ✓
+        </span>
+        <span className="min-w-0 flex-1">
+          <span
+            className={`block truncate text-base font-medium ${chore.completed ? 'line-through text-ink-soft' : 'text-ink'}`}
+          >
+            {chore.title}
+          </span>
+          <span className="flex flex-wrap items-center gap-x-2 text-[0.7rem] text-ink-soft">
+            {chore.due_date && <span>due {fmtDate(chore.due_date)}</span>}
+            {chore.recurrence && (
+              <span className="font-medium text-sky-600 dark:text-sky-400">
+                {formatRecurrence(chore.recurrence)}
+              </span>
+            )}
+          </span>
+        </span>
+        <span className="flex shrink-0 items-center text-base font-semibold text-amber-500">
+          <CoinIcon className="text-base" /> ×{chore.coins}
+        </span>
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={(e) => {
+            e.stopPropagation()
+            onEdit(chore)
+          }}
+          className="btn-glass flex h-8 w-8 shrink-0 items-center justify-center !text-ink-soft cursor-pointer"
+          title="Edit chore"
+        >
+          <Icon name="edit" className="text-base" />
+        </motion.button>
+      </motion.div>
+    </motion.div>
+  )
+}
+
 export default function Chores() {
   const [draft, setDraft] = useState<Draft | null>(null)
   const [filterPerson, setFilterPerson] = useState('')
@@ -73,6 +179,12 @@ export default function Chores() {
     const completing = !chore.completed
     await api.patch(`/api/chores/${chore.id}`, { completed: completing })
     if (completing) celebrate()
+    reload()
+  }
+
+  const deleteChore = async (chore: ChoreItem) => {
+    if (!confirm(`Delete "${chore.title}"?`)) return
+    await api.del(`/api/chores/${chore.id}`)
     reload()
   }
 
@@ -225,7 +337,7 @@ export default function Chores() {
         </motion.div>
       ) : (
         <LayoutGroup>
-          <motion.div layout className="grid min-h-0 flex-1 auto-rows-min grid-cols-2 gap-x-4 gap-y-3 lg:gap-x-6 lg:gap-y-4 overflow-y-auto pb-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <motion.div layout className="grid min-h-0 flex-1 auto-rows-min grid-cols-1 gap-x-4 gap-y-3 lg:gap-x-6 lg:gap-y-4 overflow-y-auto pb-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             <AnimatePresence initial={false}>
               {[...groups.entries()].map(([person, list]) => (
                 <motion.section key={person} layout className="mb-4">
@@ -241,58 +353,13 @@ export default function Chores() {
                   </h2>
                   <div className="flex flex-col gap-2">
                     {list.map((chore) => (
-                      <motion.div
+                      <ChoreCard
                         key={chore.id}
-                        layoutId={`chore-${chore.id}`}
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: chore.completed ? 0.6 : 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        transition={EXPRESSIVE_ENTER}
-                        whileHover={{ scale: 1.02, y: -2 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => toggle(chore)}
-                        className="flex w-full cursor-pointer items-center gap-3 rounded-xl glass-inset p-2.5 text-left select-none shadow-sm"
-                      >
-                        <span
-                          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-[3px] text-sm font-bold transition-all duration-300 ${
-                            chore.completed
-                              ? 'border-emerald-400 bg-emerald-400 text-white shadow-sm'
-                              : 'border-teal-300/40 text-transparent'
-                          }`}
-                        >
-                          ✓
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span
-                            className={`block truncate text-base font-medium ${chore.completed ? 'line-through text-ink-soft' : 'text-ink'}`}
-                          >
-                            {chore.title}
-                          </span>
-                          <span className="flex flex-wrap items-center gap-x-2 text-[0.7rem] text-ink-soft">
-                            {chore.due_date && <span>due {fmtDate(chore.due_date)}</span>}
-                            {chore.recurrence && (
-                              <span className="font-medium text-sky-600 dark:text-sky-400">
-                                {formatRecurrence(chore.recurrence)}
-                              </span>
-                            )}
-                          </span>
-                        </span>
-                        <span className="flex shrink-0 items-center text-base font-semibold text-amber-500">
-                          <CoinIcon className="text-base" /> ×{chore.coins}
-                        </span>
-                        <motion.button
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setDraft(draftFrom(chore))
-                          }}
-                          className="btn-glass flex h-8 w-8 shrink-0 items-center justify-center !text-ink-soft cursor-pointer"
-                          title="Edit chore"
-                        >
-                          <Icon name="edit" className="text-base" />
-                        </motion.button>
-                      </motion.div>
+                        chore={chore}
+                        onToggle={toggle}
+                        onEdit={(c) => setDraft(draftFrom(c))}
+                        onDelete={deleteChore}
+                      />
                     ))}
                   </div>
                 </motion.section>

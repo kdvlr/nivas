@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
+import { useRef, useState } from 'react'
+import { motion, AnimatePresence, LayoutGroup, useMotionValue, useTransform } from 'framer-motion'
 import { PRESS_SPRING, EXPRESSIVE_ENTER } from '../lib/motion'
 import Icon from '../components/Icon'
 import { api } from '../lib/api'
@@ -28,15 +28,26 @@ interface Draft {
   due: string
 }
 
+const SWIPE_THRESHOLD = 80
+
 function TaskRow({
   task,
   onToggle,
   onEdit,
+  onDelete,
 }: {
   task: Task
   onToggle: (t: Task) => void
   onEdit: (t: Task) => void
+  onDelete: (t: Task) => void
 }) {
+  const canDelete = task.source === 'local'
+  const x = useMotionValue(0)
+  // action hints fade in as the card slides
+  const editHint = useTransform(x, [0, 60], [0, 1])
+  const deleteHint = useTransform(x, [-60, 0], [1, 0])
+  const suppressClick = useRef(false)
+
   return (
     <motion.div
       layoutId={`task-${task.source}-${task.id}`}
@@ -44,11 +55,42 @@ function TaskRow({
       animate={{ opacity: task.completed ? 0.6 : 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
       transition={EXPRESSIVE_ENTER}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      onClick={() => onToggle(task)}
-      className="flex w-full cursor-pointer items-center gap-3 rounded-xl glass-inset p-2.5 text-left select-none"
+      className="relative overflow-hidden rounded-xl"
     >
+      <motion.div
+        style={{ opacity: editHint }}
+        className="absolute inset-0 flex items-center justify-start rounded-xl bg-sky-500/25 pl-4 text-sky-600 dark:text-sky-300"
+      >
+        <Icon name="edit" className="text-2xl" />
+      </motion.div>
+      <motion.div
+        style={{ opacity: deleteHint }}
+        className="absolute inset-0 flex items-center justify-end rounded-xl bg-rose-500/25 pr-4 text-rose-600 dark:text-rose-300"
+      >
+        <Icon name={canDelete ? 'delete' : 'block'} className="text-2xl" />
+      </motion.div>
+
+      <motion.div
+        style={{ x }}
+        drag="x"
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={{ left: canDelete ? 0.5 : 0.15, right: 0.5 }}
+        onDragEnd={(_, info) => {
+          if (Math.abs(info.offset.x) > 10) {
+            suppressClick.current = true
+            setTimeout(() => (suppressClick.current = false), 250)
+          }
+          if (info.offset.x > SWIPE_THRESHOLD) onEdit(task)
+          else if (info.offset.x < -SWIPE_THRESHOLD && canDelete) onDelete(task)
+        }}
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        transition={PRESS_SPRING}
+        onClick={() => {
+          if (!suppressClick.current) onToggle(task)
+        }}
+        className="relative flex w-full cursor-pointer items-center gap-3 rounded-xl glass-inset p-2.5 text-left select-none"
+      >
       <span
         className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-[3px] text-base font-bold transition-all duration-300 ${
           task.completed
@@ -82,6 +124,7 @@ function TaskRow({
       >
         <Icon name="edit" className="text-base" />
       </motion.button>
+      </motion.div>
     </motion.div>
   )
 }
@@ -96,6 +139,13 @@ export default function ToDos() {
 
   const toggle = async (task: Task) => {
     await api.patch(`/api/tasks/${task.id}`, { completed: !task.completed })
+    reload()
+  }
+
+  const deleteTask = async (task: Task) => {
+    if (task.source !== 'local') return
+    if (!confirm(`Delete "${task.title}"?`)) return
+    await api.del(`/api/tasks/${task.id}`)
     reload()
   }
 
@@ -190,7 +240,7 @@ export default function ToDos() {
         </motion.div>
       ) : (
         <LayoutGroup>
-          <motion.div layout className="grid min-h-0 flex-1 auto-rows-min grid-cols-2 gap-x-4 gap-y-3 lg:gap-x-6 lg:gap-y-4 overflow-y-auto pb-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <motion.div layout className="grid min-h-0 flex-1 auto-rows-min grid-cols-1 gap-x-4 gap-y-3 lg:gap-x-6 lg:gap-y-4 overflow-y-auto pb-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             <AnimatePresence initial={false}>
               {[...activeGroups.entries()].map(([person, list]) => (
                 <motion.section key={person} layout className="mb-4">
@@ -213,6 +263,7 @@ export default function ToDos() {
                         key={`${t.source}-${t.id}`}
                         task={t}
                         onToggle={toggle}
+                        onDelete={deleteTask}
                         onEdit={(task) =>
                           setDraft({
                             id: task.id,
@@ -231,12 +282,13 @@ export default function ToDos() {
               {completedTasks.length > 0 && (
                 <motion.section layout className="col-span-full mt-4">
                   <h2 className="mb-4 text-lg font-semibold text-ink-soft">Recently Completed</h2>
-                  <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
                     {completedTasks.map((t) => (
                       <TaskRow
                         key={`${t.source}-${t.id}`}
                         task={t}
                         onToggle={toggle}
+                        onDelete={deleteTask}
                         onEdit={(task) =>
                           setDraft({
                             id: task.id,
