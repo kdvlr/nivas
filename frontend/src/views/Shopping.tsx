@@ -1,12 +1,80 @@
 import { useState } from 'react'
-import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
+import { motion, AnimatePresence, LayoutGroup, useMotionValue, useTransform } from 'framer-motion'
 import { PRESS_SPRING, EXPRESSIVE_ENTER } from '../lib/motion'
 import { api } from '../lib/api'
 import { useData } from '../lib/hooks'
 import type { ShoppingItem } from '../lib/types'
 import Modal from '../components/Modal'
 
-const SOURCE_ICON: Record<string, string> = { icloud: '', alexa: '🔵', local: '🖥️' }
+const SOURCE_ICON: Record<string, string> = { icloud: '🍎', alexa: '🔵', local: '🖥️' }
+
+function ActiveShoppingItem({
+  item,
+  toggle,
+}: {
+  item: ShoppingItem
+  toggle: (item: ShoppingItem) => void
+}) {
+  const x = useMotionValue(0)
+  const bgOpacity = useTransform(x, [-100, -20, 0, 20, 100], [1, 0.2, 0, 0.2, 1])
+
+  return (
+    <motion.div
+      layoutId={String(item.id)}
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9, y: 15 }}
+      transition={EXPRESSIVE_ENTER}
+      className="relative overflow-hidden rounded-[var(--shape-card)] bg-transparent"
+    >
+      {/* Swipe indicator background - only visible when swiping */}
+      <motion.div
+        style={{ opacity: bgOpacity }}
+        className="absolute inset-0 bg-emerald-500/20"
+      />
+      <motion.div
+        style={{ opacity: bgOpacity }}
+        className="absolute inset-y-0 left-4 flex items-center text-emerald-600 dark:text-emerald-400"
+      >
+        <span className="msr text-2xl font-bold">check_circle</span>
+      </motion.div>
+      <motion.div
+        style={{ opacity: bgOpacity }}
+        className="absolute inset-y-0 right-4 flex items-center text-emerald-600 dark:text-emerald-400"
+      >
+        <span className="msr text-2xl font-bold">check_circle</span>
+      </motion.div>
+
+      <motion.button
+        style={{ x }}
+        drag="x"
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={{ left: 0.6, right: 0.6 }}
+        onDragEnd={async (event, info) => {
+          if (Math.abs(info.offset.x) > 80) {
+            await toggle(item)
+          }
+        }}
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        transition={PRESS_SPRING}
+        className="relative flex w-full items-center gap-3 glass p-4 text-left cursor-grab active:cursor-grabbing"
+      >
+        <span
+          onClick={(e) => {
+            e.stopPropagation()
+            toggle(item)
+          }}
+          className="h-9 w-9 shrink-0 rounded-full border-4 border-teal-400/40 hover:border-teal-500 hover:bg-teal-500/10 transition-all duration-200 cursor-pointer flex items-center justify-center"
+        />
+        <span className="min-w-0 flex-1 truncate text-xl font-normal text-ink">{item.title}</span>
+        <span className="text-sm">
+          {item.sources.map((s) => SOURCE_ICON[s] ?? '').join(' ')}
+        </span>
+      </motion.button>
+    </motion.div>
+  )
+}
 
 export default function Shopping() {
   const { data: items, reload } = useData<ShoppingItem[]>('/api/shopping', ['shopping'])
@@ -88,50 +156,7 @@ export default function Shopping() {
           <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 2xl:grid-cols-4">
             <AnimatePresence initial={false}>
               {active.map((item) => (
-                <motion.div
-                  key={item.id}
-                  layoutId={String(item.id)}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9, y: 15 }}
-                  transition={EXPRESSIVE_ENTER}
-                  className="relative overflow-hidden rounded-[var(--shape-card)] bg-emerald-500/10"
-                >
-                  {/* Swipe indicator background */}
-                  <div className="absolute inset-y-0 left-4 flex items-center text-emerald-600 dark:text-emerald-400">
-                    <span className="msr text-2xl font-bold">check_circle</span>
-                  </div>
-                  <div className="absolute inset-y-0 right-4 flex items-center text-emerald-600 dark:text-emerald-400">
-                    <span className="msr text-2xl font-bold">check_circle</span>
-                  </div>
-
-                  <motion.button
-                    drag="x"
-                    dragConstraints={{ left: 0, right: 0 }}
-                    dragElastic={{ left: 0.6, right: 0.6 }}
-                    onDragEnd={async (event, info) => {
-                      if (Math.abs(info.offset.x) > 80) {
-                        await toggle(item)
-                      }
-                    }}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={PRESS_SPRING}
-                    className="relative flex w-full items-center gap-3 glass p-4 text-left cursor-grab active:cursor-grabbing"
-                  >
-                    <span
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        toggle(item)
-                      }}
-                      className="h-9 w-9 shrink-0 rounded-full border-4 border-teal-400/40 hover:border-teal-500 hover:bg-teal-500/10 transition-all duration-200 cursor-pointer flex items-center justify-center"
-                    />
-                    <span className="min-w-0 flex-1 truncate text-xl font-normal text-ink">{item.title}</span>
-                    <span className="text-sm">
-                      {item.sources.map((s) => SOURCE_ICON[s] ?? '').join(' ')}
-                    </span>
-                  </motion.button>
-                </motion.div>
+                <ActiveShoppingItem key={item.id} item={item} toggle={toggle} />
               ))}
             </AnimatePresence>
           </motion.div>

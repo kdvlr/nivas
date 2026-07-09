@@ -32,14 +32,14 @@ import Recipes from './views/Recipes'
 import Setup from './views/Setup'
 
 const NAV = [
-  { id: 'home', label: 'Home', icon: 'home', view: Home, active: 'bg-sky-200 text-sky-950 dark:bg-sky-900 dark:text-sky-100' },
-  { id: 'calendar', label: 'Calendar', icon: 'calendar_month', view: Calendar, active: 'bg-rose-200 text-rose-950 dark:bg-rose-900 dark:text-rose-100' },
-  { id: 'chores', label: 'Chores', icon: 'family_star', view: Chores, active: 'bg-amber-200 text-amber-950 dark:bg-amber-900 dark:text-amber-100' },
-  { id: 'todos', label: 'To-Dos', icon: 'task_alt', view: ToDos, active: 'bg-emerald-200 text-emerald-950 dark:bg-emerald-900 dark:text-emerald-100' },
-  { id: 'shopping', label: 'Shopping', icon: 'shopping_cart', view: Shopping, active: 'bg-orange-200 text-orange-950 dark:bg-orange-900 dark:text-orange-100' },
-  { id: 'meals', label: 'Meals', icon: 'restaurant', view: Meals, active: 'bg-teal-200 text-teal-950 dark:bg-teal-900 dark:text-teal-100' },
-  { id: 'recipes', label: 'Recipes', icon: 'menu_book', view: Recipes, active: 'bg-pink-200 text-pink-950 dark:bg-pink-900 dark:text-pink-100' },
-  { id: 'setup', label: 'Setup', icon: 'settings', view: Setup, active: 'bg-slate-300 text-slate-950 dark:bg-slate-700 dark:text-slate-100' },
+  { id: 'home', label: 'Home', icon: 'home', view: Home, active: 'bg-sky-200 text-sky-950 dark:bg-sky-900 dark:text-sky-100', activeText: 'text-sky-600 dark:text-sky-400' },
+  { id: 'calendar', label: 'Calendar', icon: 'calendar_month', view: Calendar, active: 'bg-rose-200 text-rose-950 dark:bg-rose-900 dark:text-rose-100', activeText: 'text-rose-600 dark:text-rose-400' },
+  { id: 'chores', label: 'Chores', icon: 'family_star', view: Chores, active: 'bg-amber-200 text-amber-950 dark:bg-amber-900 dark:text-amber-100', activeText: 'text-amber-600 dark:text-amber-400' },
+  { id: 'todos', label: 'To-Dos', icon: 'task_alt', view: ToDos, active: 'bg-emerald-200 text-emerald-950 dark:bg-emerald-900 dark:text-emerald-100', activeText: 'text-emerald-600 dark:text-emerald-400' },
+  { id: 'shopping', label: 'Shopping', icon: 'shopping_cart', view: Shopping, active: 'bg-orange-200 text-orange-950 dark:bg-orange-900 dark:text-orange-100', activeText: 'text-orange-600 dark:text-orange-400' },
+  { id: 'meals', label: 'Meals', icon: 'restaurant', view: Meals, active: 'bg-teal-200 text-teal-950 dark:bg-teal-900 dark:text-teal-100', activeText: 'text-teal-600 dark:text-teal-400' },
+  { id: 'recipes', label: 'Recipes', icon: 'menu_book', view: Recipes, active: 'bg-pink-200 text-pink-950 dark:bg-pink-900 dark:text-pink-100', activeText: 'text-pink-600 dark:text-pink-400' },
+  { id: 'setup', label: 'Setup', icon: 'settings', view: Setup, active: 'bg-slate-300 text-slate-950 dark:bg-slate-700 dark:text-slate-100', activeText: 'text-slate-600 dark:text-slate-400' },
 ] as const
 
 const IDLE_RETURN_MS = 5 * 60 * 1000
@@ -224,7 +224,9 @@ export default function App() {
                     >
                       <Icon name={n.icon} filled={isActive} className="text-[1.25rem] lg:text-[1.55rem]" />
                     </motion.div>
-                    <span className="hidden text-[0.65rem] font-medium lg:block tracking-tight">{n.label}</span>
+                    <span className={`hidden text-[0.65rem] font-semibold lg:block tracking-tight transition-colors duration-200 ${
+                      isActive ? n.activeText : 'text-ink-soft group-hover:text-ink'
+                    }`}>{n.label}</span>
                   </a>
                 )
               })}
@@ -290,7 +292,9 @@ export default function App() {
                     >
                       <Icon name={n.icon} filled={isActive} className="text-[1.25rem] lg:text-[1.55rem]" />
                     </motion.div>
-                    <span className="hidden text-[0.65rem] font-medium lg:block tracking-tight">{n.label}</span>
+                    <span className={`hidden text-[0.65rem] font-semibold lg:block tracking-tight transition-colors duration-200 ${
+                      isActive ? n.activeText : 'text-ink-soft group-hover:text-ink'
+                    }`}>{n.label}</span>
                   </a>
                 )
               })}
