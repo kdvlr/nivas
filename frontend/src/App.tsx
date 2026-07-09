@@ -246,7 +246,7 @@ export default function App() {
                       : ''
                   }`}
                 >
-                  <Icon name="more_horiz" filled={moreOpen || activeNav === 'setup'} className="text-[1.25rem]" />
+                  <Icon name="more_vert" filled={moreOpen || activeNav === 'setup'} className="text-[1.25rem]" />
                 </motion.div>
               </button>
             </div>
