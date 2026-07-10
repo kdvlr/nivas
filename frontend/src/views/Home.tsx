@@ -713,13 +713,13 @@ export default function Home() {
   const renderMobileSlide = (id: string, isEmpty: boolean, content: React.ReactNode) => {
     if (isEmpty) {
       return (
-        <div key={id} className="w-full h-auto p-4 shrink-0 flex flex-col">
+        <div key={id} className="w-full h-auto p-4 flex flex-col">
           {content}
         </div>
       )
     }
     return (
-      <div key={id} className="snap-start shrink-0 h-[100dvh] w-full flex flex-col p-4 overflow-hidden">
+      <div key={id} className="min-h-[100dvh] w-full flex flex-col p-4 overflow-hidden">
         {content}
       </div>
     )
@@ -744,9 +744,9 @@ export default function Home() {
       </div>
 
       {/* Mobile view */}
-      <div className="flex lg:hidden h-[100dvh] w-full flex-col overflow-y-scroll snap-y snap-mandatory scroll-smooth pb-16">
+      <div className="flex lg:hidden h-full w-full flex-col overflow-y-auto pb-16">
         {/* Slide 1: Header + Schedule */}
-        <div className="snap-start shrink-0 h-[100dvh] w-full flex flex-col p-4 gap-3 overflow-hidden">
+        <div className="min-h-[100dvh] w-full flex flex-col p-4 gap-3 overflow-hidden">
           {renderHeader()}
           <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
             {renderSchedule(false)}
