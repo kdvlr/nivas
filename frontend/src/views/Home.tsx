@@ -264,442 +264,506 @@ export default function Home() {
     }
   }
 
-  return (
-    <div className="flex h-full flex-col gap-3 lg:gap-4">
-      {/* header */}
-      <header className="glass flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-1.5 lg:px-8 lg:py-2.5">
-        <div>
-          <p className="text-xs font-medium tracking-widest text-rose-400 uppercase">
-            {config?.family_name ? `${config.family_name} Nivas` : 'Nivas'}
-          </p>
-          <h1 className="text-lg font-medium tracking-tight text-ink lg:text-2xl">
-            {now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-          </h1>
-        </div>
-        {weather?.current && (
-          <div className="flex items-center gap-2 rounded-xl px-2 lg:px-3">
-            <span className="text-3xl lg:text-4xl">{weather.current.icon}</span>
-            <div>
-              <div className="text-lg font-normal text-ink lg:text-xl leading-none">
-                {weather.current.temp}°
-              </div>
-              <div className="text-[0.7rem] font-medium text-ink-soft lg:text-xs mt-0.5">
-                {weather.current.label}
-                {todayWeather && (
-                  <span className="text-ink-faint">
-                    {' '}
-                    · H {todayWeather.tmax}° L {todayWeather.tmin}°
-                  </span>
-                )}
-              </div>
+  const renderHeader = () => (
+    <header className="glass flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-1.5 lg:px-8 lg:py-2.5">
+      <div>
+        <p className="text-xs font-medium tracking-widest text-rose-400 uppercase">
+          {config?.family_name ? `${config.family_name} Nivas` : 'Nivas'}
+        </p>
+        <h1 className="text-lg font-medium tracking-tight text-ink lg:text-2xl">
+          {now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+        </h1>
+      </div>
+      {weather?.current && (
+        <div className="flex items-center gap-2 rounded-xl px-2 lg:px-3">
+          <span className="text-3xl lg:text-4xl">{weather.current.icon}</span>
+          <div>
+            <div className="text-lg font-normal text-ink lg:text-xl leading-none">
+              {weather.current.temp}°
+            </div>
+            <div className="text-[0.7rem] font-medium text-ink-soft lg:text-xs mt-0.5">
+              {weather.current.label}
+              {todayWeather && (
+                <span className="text-ink-faint">
+                  {' '}
+                  · H {todayWeather.tmax}° L {todayWeather.tmin}°
+                </span>
+              )}
             </div>
           </div>
-        )}
-        <div className="ml-auto flex flex-col items-end">
-          <div className="text-3xl font-normal tabular-nums tracking-tight text-[var(--primary)] lg:text-4xl leading-none">
-            {now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
-          </div>
-          {(() => {
-            const secondaryTz = config?.secondary_tz || 'Asia/Kolkata'
-            const secondaryEmoji = config?.secondary_tz_emoji || '🇮🇳'
-            const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone
-            const localDateStr = getTzDateString(now, localTz)
-            const secondaryDateStr = getTzDateString(now, secondaryTz)
-            const hasDateDiff = localDateStr !== secondaryDateStr && secondaryDateStr !== ''
-
-            let secondaryDateFormatted = ''
-            if (hasDateDiff) {
-              try {
-                secondaryDateFormatted = new Intl.DateTimeFormat('en-US', {
-                  timeZone: secondaryTz,
-                  month: 'short',
-                  day: 'numeric',
-                }).format(now)
-              } catch (e) {}
-            }
-
-            let secondaryTimeFormatted = ''
-            try {
-              secondaryTimeFormatted = now.toLocaleTimeString(undefined, {
-                timeZone: secondaryTz,
-                hour: 'numeric',
-                minute: '2-digit',
-              })
-            } catch (e) {
-              secondaryTimeFormatted = now.toLocaleTimeString()
-            }
-
-            return (
-              <div className="mt-1 flex gap-3 text-sm lg:text-base font-semibold text-ink-soft">
-                <span>
-                  {secondaryEmoji} {secondaryTimeFormatted}
-                  {hasDateDiff && secondaryDateFormatted && (
-                    <span className="ml-1 text-xs opacity-85">
-                      ({secondaryDateFormatted})
-                    </span>
-                  )}
-                </span>
-              </div>
-            )
-          })()}
         </div>
-      </header>
+      )}
+      <div className="ml-auto flex flex-col items-end">
+        <div className="text-3xl font-normal tabular-nums tracking-tight text-[var(--primary)] lg:text-4xl leading-none">
+          {now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+        </div>
+        {(() => {
+          const secondaryTz = config?.secondary_tz || 'Asia/Kolkata'
+          const secondaryEmoji = config?.secondary_tz_emoji || '🇮🇳'
+          const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone
+          const localDateStr = getTzDateString(now, localTz)
+          const secondaryDateStr = getTzDateString(now, secondaryTz)
+          const hasDateDiff = localDateStr !== secondaryDateStr && secondaryDateStr !== ''
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-3 lg:gap-4">
-        {/* Today, Tomorrow, Day after schedule */}
-        <section className={`glass flex min-h-64 flex-col p-5 lg:col-span-2 lg:min-h-0 ${loadingEvents ? 'shimmer-loading' : ''}`}>
-          <a href="#/calendar" className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xl font-normal text-ink">
-            <Icon name="calendar_month" className="text-2xl" /> Schedule
-            {calendarLegend.length > 0 && (
-              <span className="ml-2.5 flex flex-wrap items-center gap-x-3.5 gap-y-1">
-                {calendarLegend.map(([label, bg]) => (
-                  <span key={label} className="flex items-center gap-1.5 text-sm font-semibold text-ink-soft">
-                    <span className="vivid-dim relative h-3 w-3 rounded-full shadow-sm" style={{ background: bg }} />
-                    {label}
+          let secondaryDateFormatted = ''
+          if (hasDateDiff) {
+            try {
+              secondaryDateFormatted = new Intl.DateTimeFormat('en-US', {
+                timeZone: secondaryTz,
+                month: 'short',
+                day: 'numeric',
+              }).format(now)
+            } catch (e) {}
+          }
+
+          let secondaryTimeFormatted = ''
+          try {
+            secondaryTimeFormatted = now.toLocaleTimeString(undefined, {
+              timeZone: secondaryTz,
+              hour: 'numeric',
+              minute: '2-digit',
+            })
+          } catch (e) {
+            secondaryTimeFormatted = now.toLocaleTimeString()
+          }
+
+          return (
+            <div className="mt-1 flex gap-3 text-sm lg:text-base font-semibold text-ink-soft">
+              <span>
+                {secondaryEmoji} {secondaryTimeFormatted}
+                {hasDateDiff && secondaryDateFormatted && (
+                  <span className="ml-1 text-xs opacity-85">
+                    ({secondaryDateFormatted})
                   </span>
-                ))}
+                )}
               </span>
-            )}
-            <span className="ml-auto text-sm font-medium text-sky-600 dark:text-sky-400">full calendar ›</span>
-          </a>
-          {!events || events.length === 0 ? (
-            <p className="my-auto text-center text-lg text-ink-faint">Nothing scheduled 🎈</p>
-          ) : (
-            <>
-              {/* Desktop timeline view */}
-              <div className="hidden lg:flex min-h-0 flex-1 flex-col">
-                {/* day headers, aligned with the timeline columns */}
-                <div className="grid grid-cols-3 gap-4" style={{ marginLeft: AXIS_GUTTER }}>
-                  {daysList.map((dayIso, idx) => (
-                    <h3 key={dayIso} className="flex items-baseline gap-2 border-b pb-1.5 border-ink-faint">
-                      <span className={`text-base font-semibold ${idx === 0 ? 'text-[var(--primary)]' : 'text-ink'}`}>
-                        {getDayLabel(dayIso, idx)}
-                      </span>
-                      <span className="text-[0.7rem] font-medium text-ink-soft opacity-85">
-                        {new Date(dayIso + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                      </span>
-                    </h3>
+            </div>
+          )
+        })()}
+      </div>
+    </header>
+  )
+
+  const renderSchedule = (isDesktop: boolean) => (
+    <section className={`glass flex min-h-64 flex-col p-5 ${isDesktop ? 'lg:col-span-2 lg:min-h-0' : 'flex-1 min-h-0 overflow-hidden'} ${loadingEvents ? 'shimmer-loading' : ''}`}>
+      <a href="#/calendar" className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xl font-normal text-ink">
+        <Icon name="calendar_month" className="text-2xl" /> Schedule
+        {calendarLegend.length > 0 && (
+          <span className="ml-2.5 flex flex-wrap items-center gap-x-3.5 gap-y-1">
+            {calendarLegend.map(([label, bg]) => (
+              <span key={label} className="flex items-center gap-1.5 text-sm font-semibold text-ink-soft">
+                <span className="vivid-dim relative h-3 w-3 rounded-full shadow-sm" style={{ background: bg }} />
+                {label}
+              </span>
+            ))}
+          </span>
+        )}
+        <span className="ml-auto text-sm font-medium text-sky-600 dark:text-sky-400">full calendar ›</span>
+      </a>
+      {!events || events.length === 0 ? (
+        <p className="my-auto text-center text-lg text-ink-faint">Nothing scheduled 🎈</p>
+      ) : isDesktop ? (
+        /* Desktop timeline view */
+        <div className="flex min-h-0 flex-1 flex-col">
+          {/* day headers, aligned with the timeline columns */}
+          <div className="grid grid-cols-3 gap-4" style={{ marginLeft: AXIS_GUTTER }}>
+            {daysList.map((dayIso, idx) => (
+              <h3 key={dayIso} className="flex items-baseline gap-2 border-b pb-1.5 border-ink-faint">
+                <span className={`text-base font-semibold ${idx === 0 ? 'text-[var(--primary)]' : 'text-ink'}`}>
+                  {getDayLabel(dayIso, idx)}
+                </span>
+                <span className="text-[0.7rem] font-medium text-ink-soft opacity-85">
+                  {new Date(dayIso + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                </span>
+              </h3>
+            ))}
+          </div>
+
+          {/* all-day chip strip */}
+          {timeline.hasAllDay && (
+            <div className="mt-2 grid grid-cols-3 gap-4" style={{ marginLeft: AXIS_GUTTER }}>
+              {daysList.map((dayIso) => (
+                <div key={dayIso} className="flex flex-wrap content-start gap-1">
+                  {(timeline.allDayByDay.get(dayIso) ?? []).map((e) => (
+                    <span
+                      key={e.id}
+                      className="vivid-dim relative max-w-full truncate rounded-full px-2.5 py-1 text-[0.65rem] font-bold text-white shadow"
+                      style={{ background: eventBg(e) }}
+                      title={e.title}
+                    >
+                      {e.title}
+                    </span>
                   ))}
                 </div>
+              ))}
+            </div>
+          )}
 
-                {/* all-day chip strip */}
-                {timeline.hasAllDay && (
-                  <div className="mt-2 grid grid-cols-3 gap-4" style={{ marginLeft: AXIS_GUTTER }}>
-                    {daysList.map((dayIso) => (
-                      <div key={dayIso} className="flex flex-wrap content-start gap-1">
-                        {(timeline.allDayByDay.get(dayIso) ?? []).map((e) => (
-                          <span
-                            key={e.id}
-                            className="vivid-dim relative max-w-full truncate rounded-full px-2.5 py-1 text-[0.65rem] font-bold text-white shadow"
-                            style={{ background: eventBg(e) }}
-                            title={e.title}
-                          >
-                            {e.title}
-                          </span>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* the timeline itself */}
-                <div className="relative mt-2 min-h-[24rem] flex-1 lg:min-h-0">
-                  {/* morning / afternoon / evening bands */}
-                  {DAY_PERIODS.map((p) => {
-                    const from = Math.max(p.from, timeline.axis.start)
-                    const to = Math.min(p.to, timeline.axis.end)
-                    if (to <= from) return null
-                    return (
-                      <div
-                        key={p.label}
-                        className="absolute inset-x-0"
-                        style={{ top: `${axisPct(from)}%`, height: `${axisPct(to) - axisPct(from)}%` }}
-                      >
-                        <div className="absolute inset-y-0 right-0 rounded-lg" style={{ left: AXIS_GUTTER, background: p.tint }} />
-                        {to - from >= 90 && (
-                          <div className="absolute inset-y-0 left-0 flex w-8 flex-col items-center justify-center gap-2 overflow-hidden">
-                            <span className="text-lg leading-none">{p.emoji}</span>
-                            <span className="rotate-180 text-[0.7rem] font-bold uppercase tracking-[0.18em] text-ink-soft [writing-mode:vertical-rl]">
-                              {p.label}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-
-                  {/* hour gridlines + labels */}
-                  {timeline.hours.map((h) => (
-                    <div key={h} className="absolute inset-x-0" style={{ top: `${axisPct(h * 60)}%` }}>
-                      <div className="border-t border-[var(--outline-var)] opacity-80" style={{ marginLeft: AXIS_GUTTER }} />
-                      <span className="absolute right-[calc(100%-86px)] top-0 -translate-y-1/2 pr-1 text-[0.7rem] font-medium tabular-nums text-ink-soft opacity-80">
-                        {fmtHour(h)}
+          {/* the timeline itself */}
+          <div className="relative mt-2 min-h-[24rem] flex-1 lg:min-h-0">
+            {/* morning / afternoon / evening bands */}
+            {DAY_PERIODS.map((p) => {
+              const from = Math.max(p.from, timeline.axis.start)
+              const to = Math.min(p.to, timeline.axis.end)
+              if (to <= from) return null
+              return (
+                <div
+                  key={p.label}
+                  className="absolute inset-x-0"
+                  style={{ top: `${axisPct(from)}%`, height: `${axisPct(to) - axisPct(from)}%` }}
+                >
+                  <div className="absolute inset-y-0 right-0 rounded-lg" style={{ left: AXIS_GUTTER, background: p.tint }} />
+                  {to - from >= 90 && (
+                    <div className="absolute inset-y-0 left-0 flex w-8 flex-col items-center justify-center gap-2 overflow-hidden">
+                      <span className="text-lg leading-none">{p.emoji}</span>
+                      <span className="rotate-180 text-[0.7rem] font-bold uppercase tracking-[0.18em] text-ink-soft [writing-mode:vertical-rl]">
+                        {p.label}
                       </span>
                     </div>
-                  ))}
+                  )}
+                </div>
+              )
+            })}
 
-                  {/* day columns with positioned events */}
-                  <div className="absolute inset-y-0 right-0 grid grid-cols-3 gap-4" style={{ left: AXIS_GUTTER }}>
-                    {daysList.map((dayIso, idx) => {
-                      const placed = timeline.timedByDay.get(dayIso) ?? []
+            {/* hour gridlines + labels */}
+            {timeline.hours.map((h) => (
+              <div key={h} className="absolute inset-x-0" style={{ top: `${axisPct(h * 60)}%` }}>
+                <div className="border-t border-[var(--outline-var)] opacity-80" style={{ marginLeft: AXIS_GUTTER }} />
+                <span className="absolute right-[calc(100%-86px)] top-0 -translate-y-1/2 pr-1 text-[0.7rem] font-medium tabular-nums text-ink-soft opacity-80">
+                  {fmtHour(h)}
+                </span>
+              </div>
+            ))}
+
+            {/* day columns with positioned events */}
+            <div className="absolute inset-y-0 right-0 grid grid-cols-3 gap-4" style={{ left: AXIS_GUTTER }}>
+              {daysList.map((dayIso, idx) => {
+                const placed = timeline.timedByDay.get(dayIso) ?? []
+                return (
+                  <div key={dayIso} className="relative">
+                    {/* today's column gets a soft highlight; dividers separate the days */}
+                    {idx === 0 && (
+                      <div
+                        className="pointer-events-none absolute inset-y-0 -inset-x-1 rounded-lg"
+                        style={{ background: 'color-mix(in srgb, var(--primary) 7%, transparent)' }}
+                      />
+                    )}
+                    {idx > 0 && (
+                      <div className="pointer-events-none absolute inset-y-0 -left-2 w-px" style={{ background: 'var(--outline)', opacity: 0.35 }} />
+                    )}
+                    {placed.length === 0 && (timeline.allDayByDay.get(dayIso) ?? []).length === 0 && (
+                      <p className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-xs text-ink-faint">
+                        No events
+                      </p>
+                    )}
+                    {placed.map((it) => {
+                      const heightPct = ((it.e - it.s) / timeline.spanMin) * 100
                       return (
-                        <div key={dayIso} className="relative">
-                          {/* today's column gets a soft highlight; dividers separate the days */}
-                          {idx === 0 && (
-                            <div
-                              className="pointer-events-none absolute inset-y-0 -inset-x-1 rounded-lg"
-                              style={{ background: 'color-mix(in srgb, var(--primary) 7%, transparent)' }}
-                            />
+                        <div
+                          key={it.ev.id}
+                          className="vivid-dim absolute z-[5] flex flex-col overflow-hidden rounded-lg px-2.5 py-1.5 text-white shadow-md transition-transform hover:z-10 hover:scale-[1.02] cursor-pointer"
+                          style={{
+                            top: `${axisPct(it.s)}%`,
+                            height: `max(${heightPct}%, 2.6rem)`,
+                            left: `calc(${(it.lane / it.cols) * 100}% + 2px)`,
+                            width: `calc(${100 / it.cols}% - 4px)`,
+                            background: eventBg(it.ev),
+                          }}
+                          onClick={() => setSelectedEvent(it.ev)}
+                        >
+                          <div className="hidden lg:block text-[0.7rem] font-bold leading-tight tracking-tight opacity-95 tabular-nums">
+                            {fmtTime(it.ev.start)} – {fmtTime(it.ev.end)}
+                          </div>
+                          <div className="truncate text-sm font-semibold leading-snug tracking-tight">
+                            {it.ev.title}
+                          </div>
+                          {it.ev.location && (it.e - it.s > 60) && (
+                            <div className="flex items-center gap-1 truncate text-[0.7rem] opacity-85">
+                              <Icon name="location_on" className="text-[0.75rem] shrink-0" />
+                              <span className="truncate">{it.ev.location}</span>
+                            </div>
                           )}
-                          {idx > 0 && (
-                            <div className="pointer-events-none absolute inset-y-0 -left-2 w-px" style={{ background: 'var(--outline)', opacity: 0.35 }} />
+                        </div>
+                      )
+                    })}
+                    {/* now line on today */}
+                    {dayIso === today && nowMin >= timeline.axis.start && nowMin <= timeline.axis.end && (
+                      <div className="pointer-events-none absolute inset-x-0 z-20" style={{ top: `${axisPct(nowMin)}%` }}>
+                        <div className="h-[2px] bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.8)]" />
+                        <div className="absolute -left-1 -top-[3px] h-2 w-2 rounded-full bg-rose-500" />
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* Mobile stacked list view */
+        <div className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-4">
+          {daysList.map((dayIso, idx) => {
+            const dayEvents = eventsByDay.get(dayIso) ?? []
+            return (
+              <div key={dayIso} className="flex flex-col gap-2">
+                <h3 className="text-sm font-bold text-ink-soft uppercase tracking-wider border-b border-ink-faint pb-1 flex items-baseline gap-2">
+                  <span>{getDayLabel(dayIso, idx)}</span>
+                  <span className="text-[0.75rem] font-medium opacity-80">
+                    {new Date(dayIso + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                  </span>
+                </h3>
+                {dayEvents.length === 0 ? (
+                  <p className="text-sm text-ink-faint py-1">No events</p>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {dayEvents.map((e) => {
+                      const isFamily = !e.person_name || ['family', 'shared'].includes(e.person_name.toLowerCase())
+                      const bgStyle = isFamily ? FAMILY_GRADIENT : e.color
+                      return (
+                        <div
+                          key={e.id}
+                          className="rounded-xl p-3.5 text-white shadow flex flex-col gap-1 transition-transform active:scale-[0.98] cursor-pointer"
+                          style={{ background: bgStyle }}
+                          onClick={() => setSelectedEvent(e)}
+                        >
+                          {e.all_day ? (
+                            <div className="text-[0.7rem] font-bold uppercase tracking-wider opacity-90 flex items-center gap-1.5 mb-0.5">
+                              <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                              <span>All Day</span>
+                            </div>
+                          ) : (
+                            <div className="text-[0.7rem] font-bold leading-tight tracking-tight opacity-95 tabular-nums">
+                              {fmtTime(e.start)} – {fmtTime(e.end)}
+                            </div>
                           )}
-                          {placed.length === 0 && (timeline.allDayByDay.get(dayIso) ?? []).length === 0 && (
-                            <p className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-xs text-ink-faint">
-                              No events
-                            </p>
-                          )}
-                          {placed.map((it) => {
-                            const heightPct = ((it.e - it.s) / timeline.spanMin) * 100
-                            return (
-                              <div
-                                key={it.ev.id}
-                                className="vivid-dim absolute z-[5] flex flex-col overflow-hidden rounded-lg px-2.5 py-1.5 text-white shadow-md transition-transform hover:z-10 hover:scale-[1.02] cursor-pointer"
-                                style={{
-                                  top: `${axisPct(it.s)}%`,
-                                  height: `max(${heightPct}%, 2.6rem)`,
-                                  left: `calc(${(it.lane / it.cols) * 100}% + 2px)`,
-                                  width: `calc(${100 / it.cols}% - 4px)`,
-                                  background: eventBg(it.ev),
-                                }}
-                                onClick={() => setSelectedEvent(it.ev)}
-                              >
-                                <div className="hidden lg:block text-[0.7rem] font-bold leading-tight tracking-tight opacity-95 tabular-nums">
-                                  {fmtTime(it.ev.start)} – {fmtTime(it.ev.end)}
-                                </div>
-                                <div className="truncate text-sm font-semibold leading-snug tracking-tight">
-                                  {it.ev.title}
-                                </div>
-                                {it.ev.location && (it.e - it.s > 60) && (
-                                  <div className="flex items-center gap-1 truncate text-[0.7rem] opacity-85">
-                                    <Icon name="location_on" className="text-[0.75rem] shrink-0" />
-                                    <span className="truncate">{it.ev.location}</span>
-                                  </div>
-                                )}
-                              </div>
-                            )
-                          })}
-                          {/* now line on today */}
-                          {dayIso === today && nowMin >= timeline.axis.start && nowMin <= timeline.axis.end && (
-                            <div className="pointer-events-none absolute inset-x-0 z-20" style={{ top: `${axisPct(nowMin)}%` }}>
-                              <div className="h-[2px] bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.8)]" />
-                              <div className="absolute -left-1 -top-[3px] h-2 w-2 rounded-full bg-rose-500" />
+                          <div className="text-base font-bold leading-snug tracking-tight">{e.title}</div>
+                          {e.location && (
+                            <div className="flex items-center gap-1.5 text-xs opacity-90 truncate mt-0.5">
+                              <Icon name="location_on" className="text-sm shrink-0" />
+                              <span className="truncate">{e.location}</span>
                             </div>
                           )}
                         </div>
                       )
                     })}
                   </div>
-                </div>
-              </div>
-
-              {/* Mobile stacked list view */}
-              <div className="flex lg:hidden min-h-0 flex-1 flex-col overflow-y-auto gap-4 mt-2 pr-1">
-                {daysList.map((dayIso, idx) => {
-                  const dayEvents = eventsByDay.get(dayIso) ?? []
-                  return (
-                    <div key={dayIso} className="flex flex-col gap-2">
-                      <h3 className="flex items-baseline gap-2 border-b pb-1.5 border-ink-faint">
-                        <span className={`text-base font-semibold ${idx === 0 ? 'text-[var(--primary)]' : 'text-ink'}`}>
-                          {getDayLabel(dayIso, idx)}
-                        </span>
-                        <span className="text-xs font-semibold text-ink-soft opacity-85">
-                          {new Date(dayIso + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                        </span>
-                      </h3>
-                      {dayEvents.length === 0 ? (
-                        <p className="text-xs text-ink-faint py-2 pl-1">No events</p>
-                      ) : (
-                        <div className="flex flex-col gap-2">
-                          {dayEvents.map((e) => {
-                            const isFamily = !e.person_name || e.person_name.toLowerCase() === 'family' || e.person_name.toLowerCase() === 'shared'
-                            const bgStyle = isFamily
-                              ? 'linear-gradient(135deg, #f43f5e, #ec4899, #8b5cf6, #3b82f6, #10b981)'
-                              : e.color
-                            return (
-                              <div
-                                key={e.id}
-                                className="rounded-xl p-3.5 text-white shadow flex flex-col gap-1 transition-transform active:scale-[0.98] cursor-pointer"
-                                style={{ background: bgStyle }}
-                                onClick={() => setSelectedEvent(e)}
-                              >
-                                {e.all_day ? (
-                                  <div className="text-[0.7rem] font-bold uppercase tracking-wider opacity-90 flex items-center gap-1.5 mb-0.5">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
-                                    <span>All Day</span>
-                                  </div>
-                                ) : (
-                                  <div className="text-[0.7rem] font-bold leading-tight tracking-tight opacity-95 tabular-nums">
-                                    {fmtTime(e.start)} – {fmtTime(e.end)}
-                                  </div>
-                                )}
-                                <div className="text-base font-bold leading-snug tracking-tight">{e.title}</div>
-                                {e.location && (
-                                  <div className="flex items-center gap-1.5 text-xs opacity-90 truncate mt-0.5">
-                                    <Icon name="location_on" className="text-sm shrink-0" />
-                                    <span className="truncate">{e.location}</span>
-                                  </div>
-                                )}
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </>
-          )}
-        </section>
-
-        <div className="flex min-h-0 flex-col gap-3 lg:gap-4">
-          {/* chores (coins) — grows in proportion to how much it has to show */}
-          <section
-            className={`glass flex min-h-28 flex-col p-4 ${loadingChores ? 'shimmer-loading' : ''}`}
-            style={{ flexGrow: Math.max(openChores.length, 1) }}
-          >
-            <a href="#/chores" className="mb-2 flex items-center gap-3 text-lg font-normal text-ink">
-              <Icon name="family_star" className="text-2xl" /> Chores
-              <span className="ml-auto text-sm font-medium text-ink-soft">
-                {todayChores.length - openChores.length}/{todayChores.length} done
-              </span>
-            </a>
-            {openChores.length === 0 ? (
-              <p className="my-auto text-center text-lg text-ink-faint">All done! 🎉</p>
-            ) : (
-              <div className="flex min-h-0 flex-col gap-1.5 overflow-y-auto">
-                {openChores.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => completeChore(c)}
-                    className="glass-inset flex shrink-0 items-center gap-2.5 px-2.5 py-1.5 text-left active:surface-tile-high"
-                  >
-                    <span className="h-6 w-6 shrink-0 rounded-full border-[2.5px] border-amber-300" />
-                    <span className="min-w-0 flex-1 truncate text-[0.95rem] font-normal text-ink">
-                      {c.title}
-                    </span>
-                    {c.assigned_to && (
-                      <span className="text-xs font-medium text-ink-soft">{c.assigned_to}</span>
-                    )}
-                    <span className="flex items-center text-xs font-medium text-amber-500">
-                      <CoinIcon />
-                      {c.coins}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </section>
-
-          {/* to-dos — same content-proportional sizing */}
-          <section
-            className={`glass flex min-h-28 flex-col p-4 ${loadingTasks ? 'shimmer-loading' : ''}`}
-            style={{ flexGrow: Math.max(openTasks.length, 1) }}
-          >
-            <a href="#/todos" className="mb-2 flex items-center gap-3 text-lg font-normal text-ink">
-              <Icon name="task_alt" className="text-2xl" /> To-Dos
-              <span className="ml-auto text-sm font-medium text-ink-soft">
-                {openTasks.length} open
-              </span>
-            </a>
-            {openTasks.length === 0 ? (
-              <p className="my-auto text-center text-lg text-ink-faint">Nothing to do 🎉</p>
-            ) : (
-              <div className="flex min-h-0 flex-col gap-1.5 overflow-y-auto">
-                {openTasks.map((t) => (
-                  <button
-                    key={`${t.source}-${t.id}`}
-                    onClick={() => completeTask(t)}
-                    className="glass-inset flex shrink-0 items-center gap-2.5 px-2.5 py-1.5 text-left active:surface-tile-high"
-                  >
-                    <span className="h-6 w-6 shrink-0 rounded-full border-[2.5px] border-emerald-300" />
-                    <span className="min-w-0 flex-1 truncate text-[0.95rem] font-normal text-ink">
-                      {t.title}
-                    </span>
-                    {t.due_date && (
-                      <span className="text-xs font-medium text-ink-soft">
-                        {new Date(t.due_date).toLocaleDateString(undefined, {
-                          month: 'short',
-                          day: 'numeric',
-                        })}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-          </section>
-
-          {/* meals + shopping */}
-          <section className={`glass p-5 ${loadingMeals ? 'shimmer-loading' : ''}`}>
-            <a href="#/meals" className="mb-3 flex items-center gap-3 text-xl font-normal text-ink">
-              <Icon name="restaurant" className="text-2xl" /> Today's Meals
-              <span className="ml-auto text-sm font-medium text-sky-600 dark:text-sky-400">plan ›</span>
-            </a>
-            <div className="grid grid-cols-3 gap-2">
-              {(['breakfast', 'lunch', 'dinner'] as const).map((slot) => {
-                const s = todayMeals?.[slot]
-                const label = s?.recipe_title || s?.text
-                return (
-                  <a
-                    key={slot}
-                    href={s?.recipe_id ? `#/recipes/${s.recipe_id}` : '#/meals'}
-                    className="glass-inset p-2.5 active:surface-tile-high"
-                  >
-                    <div className="text-[0.65rem] font-medium uppercase tracking-wide text-ink-faint">
-                      {slot}
-                    </div>
-                    <div className="mt-0.5 whitespace-pre-line text-sm font-medium leading-tight text-ink">
-                      {label || <span className="text-ink-faint">—</span>}
-                    </div>
-                  </a>
-                )
-              })}
-            </div>
-          </section>
-
-          {/* shopping — a peek at the top of the list (max 5), badge shows the rest */}
-          <section className={`glass flex flex-col p-4 ${loadingShopping ? 'shimmer-loading' : ''}`}>
-            <a href="#/shopping" className="flex items-center gap-3 text-lg font-normal text-ink">
-              <Icon name="shopping_cart" className="text-2xl" /> Shopping
-              <span className="ml-auto rounded-full bg-gradient-to-r from-teal-400 to-sky-500 px-3.5 py-0.5 text-base font-medium text-white shadow-md shadow-teal-400/30">
-                {shoppingCount}
-              </span>
-            </a>
-            {shoppingPeek.length > 0 && (
-              <div className="mt-2 flex flex-col gap-1.5">
-                {shoppingPeek.map((i) => (
-                  <button
-                    key={i.id}
-                    onClick={() => buyItem(i)}
-                    className="glass-inset flex items-center gap-2.5 px-2.5 py-1.5 text-left active:surface-tile-high"
-                  >
-                    <span className="h-5 w-5 shrink-0 rounded-full border-2 border-sky-300" />
-                    <span className="min-w-0 flex-1 truncate text-[0.95rem] font-normal text-ink">
-                      {i.title}
-                    </span>
-                  </button>
-                ))}
-                {shoppingCount > shoppingPeek.length && (
-                  <a href="#/shopping" className="text-center text-xs font-medium text-sky-600 dark:text-sky-400">
-                    +{shoppingCount - shoppingPeek.length} more on the list
-                  </a>
                 )}
               </div>
-            )}
-          </section>
+            )
+          })}
         </div>
+      )}
+    </section>
+  )
+
+  const renderChores = (isDesktop: boolean) => {
+    const isEmpty = openChores.length === 0
+    return (
+      <section
+        className={`glass flex flex-col p-4 ${loadingChores ? 'shimmer-loading' : ''} ${isDesktop ? 'min-h-28' : (isEmpty ? 'h-auto' : 'flex-1 min-h-0 overflow-hidden')}`}
+        style={isDesktop ? { flexGrow: Math.max(openChores.length, 1) } : undefined}
+      >
+        <a href="#/chores" className="mb-2 flex items-center gap-3 text-lg font-normal text-ink">
+          <Icon name="family_star" className="text-2xl" /> Chores
+          <span className="ml-auto text-sm font-medium text-ink-soft">
+            {todayChores.length - openChores.length}/{todayChores.length} done
+          </span>
+        </a>
+        {isEmpty ? (
+          <p className="my-auto text-center text-lg text-ink-faint py-3">All done! 🎉</p>
+        ) : (
+          <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto">
+            {openChores.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => completeChore(c)}
+                className="glass-inset flex shrink-0 items-center gap-2.5 px-2.5 py-1.5 text-left active:surface-tile-high"
+              >
+                <span className="h-6 w-6 shrink-0 rounded-full border-[2.5px] border-amber-300" />
+                <span className="min-w-0 flex-1 truncate text-[0.95rem] font-normal text-ink">
+                  {c.title}
+                </span>
+                {c.assigned_to && (
+                  <span className="text-xs font-medium text-ink-soft">{c.assigned_to}</span>
+                )}
+                <span className="flex items-center text-xs font-medium text-amber-500">
+                  <CoinIcon />
+                  {c.coins}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+    )
+  }
+
+  const renderTasks = (isDesktop: boolean) => {
+    const isEmpty = openTasks.length === 0
+    return (
+      <section
+        className={`glass flex flex-col p-4 ${loadingTasks ? 'shimmer-loading' : ''} ${isDesktop ? 'min-h-28' : (isEmpty ? 'h-auto' : 'flex-1 min-h-0 overflow-hidden')}`}
+        style={isDesktop ? { flexGrow: Math.max(openTasks.length, 1) } : undefined}
+      >
+        <a href="#/todos" className="mb-2 flex items-center gap-3 text-lg font-normal text-ink">
+          <Icon name="task_alt" className="text-2xl" /> To-Dos
+          <span className="ml-auto text-sm font-medium text-ink-soft">
+            {openTasks.length} open
+          </span>
+        </a>
+        {isEmpty ? (
+          <p className="my-auto text-center text-lg text-ink-faint py-3">Nothing to do 🎉</p>
+        ) : (
+          <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto">
+            {openTasks.map((t) => (
+              <button
+                key={`${t.source}-${t.id}`}
+                onClick={() => completeTask(t)}
+                className="glass-inset flex shrink-0 items-center gap-2.5 px-2.5 py-1.5 text-left active:surface-tile-high"
+              >
+                <span className="h-6 w-6 shrink-0 rounded-full border-[2.5px] border-emerald-300" />
+                <span className="min-w-0 flex-1 truncate text-[0.95rem] font-normal text-ink">
+                  {t.title}
+                </span>
+                {t.due_date && (
+                  <span className="text-xs font-medium text-ink-soft">
+                    {new Date(t.due_date).toLocaleDateString(undefined, {
+                      month: 'short',
+                      day: 'numeric',
+                    })}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+    )
+  }
+
+  const renderMeals = (isDesktop: boolean) => {
+    const isEmpty = !todayMeals || (!todayMeals.breakfast && !todayMeals.lunch && !todayMeals.dinner)
+    return (
+      <section className={`glass flex flex-col p-5 ${loadingMeals ? 'shimmer-loading' : ''} ${isDesktop ? '' : (isEmpty ? 'h-auto' : 'flex-1 min-h-0 overflow-hidden')}`}>
+        <a href="#/meals" className="mb-3 flex items-center gap-3 text-xl font-normal text-ink">
+          <Icon name="restaurant" className="text-2xl" /> Today's Meals
+          <span className="ml-auto text-sm font-medium text-sky-600 dark:text-sky-400">plan ›</span>
+        </a>
+        <div className={`grid gap-2 ${isDesktop ? 'grid-cols-3' : 'grid-cols-1 flex-1 overflow-y-auto'}`}>
+          {(['breakfast', 'lunch', 'dinner'] as const).map((slot) => {
+            const s = todayMeals?.[slot]
+            const label = s?.recipe_title || s?.text
+            return (
+              <a
+                key={slot}
+                href={s?.recipe_id ? `#/recipes/${s.recipe_id}` : '#/meals'}
+                className="glass-inset p-2.5 active:surface-tile-high"
+              >
+                <div className="text-[0.65rem] font-medium uppercase tracking-wide text-ink-faint">
+                  {slot}
+                </div>
+                <div className="mt-0.5 whitespace-pre-line text-sm font-medium leading-tight text-ink">
+                  {label || <span className="text-ink-faint">—</span>}
+                </div>
+              </a>
+            )
+          })}
+        </div>
+      </section>
+    )
+  }
+
+  const renderShopping = (isDesktop: boolean) => {
+    const isEmpty = shoppingCount === 0
+    return (
+      <section className={`glass flex flex-col p-4 ${loadingShopping ? 'shimmer-loading' : ''} ${isDesktop ? '' : (isEmpty ? 'h-auto' : 'flex-1 min-h-0 overflow-hidden')}`}>
+        <a href="#/shopping" className="flex items-center gap-3 text-lg font-normal text-ink">
+          <Icon name="shopping_cart" className="text-2xl" /> Shopping
+          <span className="ml-auto rounded-full bg-gradient-to-r from-teal-400 to-sky-500 px-3.5 py-0.5 text-base font-medium text-white shadow-md shadow-teal-400/30">
+            {shoppingCount}
+          </span>
+        </a>
+        {isEmpty ? (
+          <p className="my-auto text-center text-lg text-ink-faint py-3">Nothing on the list 🎉</p>
+        ) : (
+          <div className="mt-2 flex flex-col gap-1.5 overflow-y-auto flex-1">
+            {shoppingPeek.map((i) => (
+              <button
+                key={i.id}
+                onClick={() => buyItem(i)}
+                className="glass-inset flex items-center gap-2.5 px-2.5 py-1.5 text-left active:surface-tile-high"
+              >
+                <span className="h-5 w-5 shrink-0 rounded-full border-2 border-sky-300" />
+                <span className="min-w-0 flex-1 truncate text-[0.95rem] font-normal text-ink">
+                  {i.title}
+                </span>
+              </button>
+            ))}
+            {shoppingCount > shoppingPeek.length && (
+              <a href="#/shopping" className="text-center text-xs font-medium text-sky-600 dark:text-sky-400 mt-1">
+                +{shoppingCount - shoppingPeek.length} more on the list
+              </a>
+            )}
+          </div>
+        )}
+      </section>
+    )
+  }
+
+  const renderMobileSlide = (id: string, isEmpty: boolean, content: React.ReactNode) => {
+    if (isEmpty) {
+      return (
+        <div key={id} className="w-full h-auto p-4 shrink-0 flex flex-col">
+          {content}
+        </div>
+      )
+    }
+    return (
+      <div key={id} className="snap-start shrink-0 h-[100dvh] w-full flex flex-col p-4 overflow-hidden">
+        {content}
+      </div>
+    )
+  }
+
+  return (
+    <div className="h-full w-full overflow-hidden">
+      {/* Desktop view */}
+      <div className="hidden lg:flex h-full flex-col gap-4">
+        {renderHeader()}
+        <div className="grid min-h-0 flex-1 grid-cols-3 gap-4">
+          <div className="col-span-2 flex flex-col min-h-0">
+            {renderSchedule(true)}
+          </div>
+          <div className="flex min-h-0 flex-col gap-4">
+            {renderChores(true)}
+            {renderTasks(true)}
+            {renderMeals(true)}
+            {renderShopping(true)}
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile view */}
+      <div className="flex lg:hidden h-[100dvh] w-full flex-col overflow-y-scroll snap-y snap-mandatory scroll-smooth pb-16">
+        {/* Slide 1: Header + Schedule */}
+        <div className="snap-start shrink-0 h-[100dvh] w-full flex flex-col p-4 gap-3 overflow-hidden">
+          {renderHeader()}
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+            {renderSchedule(false)}
+          </div>
+        </div>
+
+        {/* Slide 2: Chores */}
+        {renderMobileSlide('chores', openChores.length === 0, renderChores(false))}
+
+        {/* Slide 3: Tasks */}
+        {renderMobileSlide('tasks', openTasks.length === 0, renderTasks(false))}
+
+        {/* Slide 4: Meals */}
+        {renderMobileSlide('meals', !todayMeals || (!todayMeals.breakfast && !todayMeals.lunch && !todayMeals.dinner), renderMeals(false))}
+
+        {/* Slide 5: Shopping */}
+        {renderMobileSlide('shopping', shoppingCount === 0, renderShopping(false))}
       </div>
 
       {selectedEvent && (
