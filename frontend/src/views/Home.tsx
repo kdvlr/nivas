@@ -205,14 +205,26 @@ export default function Home() {
 
   // calendar legend: one chip per enabled calendar (family calendars get the gradient)
   const calendarLegend = useMemo(() => {
-    const seen = new Map<string, string>()
+    const order = ['Family', 'Kiran', 'Swati', 'Swara', 'Dhruv']
+    const colors: Record<string, string> = {
+      Family: FAMILY_GRADIENT,
+      Kiran: '#fb923c',
+      Swati: '#38bdf8',
+      Swara: '#c084fc',
+      Dhruv: '#a3e635',
+    }
+
     for (const s of (calStatus?.accounts ?? []).flatMap((a) => a.selections)) {
       if (!s.enabled) continue
       const label = s.person_name || s.name
       const isFamily = !s.person_name || ['family', 'shared'].includes(s.person_name.toLowerCase())
-      if (!seen.has(label)) seen.set(label, isFamily ? FAMILY_GRADIENT : s.color)
+      const key = isFamily ? 'Family' : label
+      if (order.includes(key)) {
+        colors[key] = isFamily ? FAMILY_GRADIENT : s.color
+      }
     }
-    return [...seen.entries()]
+
+    return order.map((name) => [name, colors[name] || '#ccc'])
   }, [calStatus])
 
   const completeChore = async (c: ChoreItem) => {
@@ -335,10 +347,10 @@ export default function Home() {
           <a href="#/calendar" className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xl font-normal text-ink">
             <Icon name="calendar_month" className="text-2xl" /> Schedule
             {calendarLegend.length > 0 && (
-              <span className="ml-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="ml-2.5 flex flex-wrap items-center gap-x-3.5 gap-y-1">
                 {calendarLegend.map(([label, bg]) => (
-                  <span key={label} className="flex items-center gap-1.5 text-xs font-medium text-ink-soft">
-                    <span className="vivid-dim relative h-2.5 w-2.5 rounded-full shadow-sm" style={{ background: bg }} />
+                  <span key={label} className="flex items-center gap-1.5 text-sm font-semibold text-ink-soft">
+                    <span className="vivid-dim relative h-3 w-3 rounded-full shadow-sm" style={{ background: bg }} />
                     {label}
                   </span>
                 ))}
