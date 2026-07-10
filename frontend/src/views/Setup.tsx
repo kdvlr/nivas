@@ -167,6 +167,24 @@ function SetupInner() {
   const [newRewardTitle, setNewRewardTitle] = useState('')
   const [newRewardCost, setNewRewardCost] = useState(5)
 
+  const renderLastUpdated = (integrationName: string) => {
+    const s = status?.sync?.[integrationName]
+    if (!s) return null
+    try {
+      const timeStr = new Date(s.at).toLocaleTimeString(undefined, {
+        hour: 'numeric',
+        minute: '2-digit',
+      })
+      return (
+        <span className="text-xs font-semibold text-ink-soft opacity-75 ml-2">
+          (updated {timeStr})
+        </span>
+      )
+    } catch (e) {
+      return null
+    }
+  }
+
   const icloudLogin = async () => {
     setBusy('icloud')
     setIcMsg('')
@@ -242,7 +260,7 @@ function SetupInner() {
       <div className="grid grid-cols-1 gap-4 pb-8 xl:grid-cols-2 xl:gap-5">
         {/* Google Calendar */}
         <Card
-          title={<><Icon name="calendar_month" /> Google Calendar</>}
+          title={<div className="flex items-center gap-1.5"><Icon name="calendar_month" /> Google Calendar{renderLastUpdated('google')}</div>}
           badge={<Badge ok={(cal?.accounts.length ?? 0) > 0} label={`${cal?.accounts.length ?? 0} account(s)`} />}
         >
           {!cal?.client_config && (
@@ -343,35 +361,16 @@ function SetupInner() {
         </Card>
 
         {/* Sync & Accounts Panel */}
-        <Card title={<><Icon name="cloud_sync" /> Sync & Cloud Integration</>}>
+        <Card title={<><Icon name="cloud_sync" /> iCloud & Alexa Sync</>}>
           <div className="flex flex-col gap-4">
-            {/* Sync health */}
-            <div>
-              <h3 className="text-base font-semibold text-ink mb-2 flex items-center gap-2">
-                <Icon name="monitor_heart" className="text-lg text-[var(--primary)]" />
-                Sync Health
-              </h3>
-              {Object.keys(status?.sync ?? {}).length === 0 ? (
-                <p className="text-sm text-ink-soft">No syncs have run yet.</p>
-              ) : (
-                <div className="flex flex-col gap-1.5 rounded-xl bg-slate-100/50 dark:bg-slate-800/40 p-3.5">
-                  {Object.entries(status?.sync ?? {}).map(([name, s]) => (
-                    <div key={name} className="flex items-center gap-3 text-sm">
-                      <span className={`h-2.5 w-2.5 rounded-full ${s.ok ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
-                      <span className="w-20 font-medium capitalize">{name}</span>
-                      <span className="text-ink-soft">{new Date(s.at).toLocaleTimeString()}</span>
-                      {s.detail && <span className="truncate text-rose-500 ml-2">{s.detail}</span>}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
             {/* iCloud */}
-            <div className="border-t border-[var(--outline-var)] pt-4">
-              <h3 className="text-base font-semibold text-ink mb-3 flex items-center gap-2">
-                <Icon name="cloud" className="text-lg text-[var(--primary)]" />
-                iCloud Reminders
+            <div>
+              <h3 className="text-base font-semibold text-ink mb-3 flex items-center gap-2 flex-wrap">
+                <span className="flex items-center gap-2">
+                  <Icon name="cloud" className="text-lg text-[var(--primary)]" />
+                  iCloud Reminders
+                </span>
+                {renderLastUpdated('icloud')}
                 <Badge
                   ok={!!status?.icloud.connected}
                   label={
@@ -436,9 +435,12 @@ function SetupInner() {
 
             {/* Alexa */}
             <div className="border-t border-[var(--outline-var)] pt-4">
-              <h3 className="text-base font-semibold text-ink mb-2 flex items-center gap-2">
-                <Icon name="graphic_eq" className="text-lg text-[var(--primary)]" />
-                Alexa Lists
+              <h3 className="text-base font-semibold text-ink mb-2 flex items-center gap-2 flex-wrap">
+                <span className="flex items-center gap-2">
+                  <Icon name="graphic_eq" className="text-lg text-[var(--primary)]" />
+                  Alexa Lists
+                </span>
+                {renderLastUpdated('alexa')}
                 <Badge ok={!!status?.alexa.connected} label={status?.alexa.connected ? 'connected' : 'not connected'} />
               </h3>
               <p className="text-sm text-ink-soft leading-relaxed">
@@ -903,15 +905,15 @@ function ICloudLists({ status, onSaved }: { status: SetupStatus; onSaved: () => 
           )}
         </select>
       </label>
-      <div>
-        <p className="mb-2 text-base font-medium text-ink">To-Do lists (synced to the To-Dos view):</p>
-        <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="text-base font-medium text-ink shrink-0">To-Do lists (synced to the To-Dos view):</p>
+        <div className="flex flex-wrap gap-1.5">
           {lists
             .filter((l) => l !== settings.icloud_shopping_list)
             .map((l) => {
               const active = taskLists === null || taskLists.includes(l)
               return (
-                <button
+                <label
                   key={l}
                   onClick={() => {
                     const current = taskLists ?? lists.filter((x) => x !== settings.icloud_shopping_list)
@@ -919,12 +921,20 @@ function ICloudLists({ status, onSaved }: { status: SetupStatus; onSaved: () => 
                       icloud_task_lists: active ? current.filter((x) => x !== l) : [...current, l],
                     })
                   }}
-                  className={`rounded-full px-4 py-2 text-base font-medium ${
-                    active ? 'bg-sky-500 text-white' : 'surface-tile text-ink-soft'
+                  className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold cursor-pointer border select-none transition-all ${
+                    active
+                      ? 'bg-sky-50 border-sky-300 text-sky-800 dark:bg-sky-950/40 dark:border-sky-800 dark:text-sky-300'
+                      : 'bg-transparent border-[var(--outline)] text-ink-soft opacity-70 hover:opacity-100'
                   }`}
                 >
-                  {l}
-                </button>
+                  <input
+                    type="checkbox"
+                    checked={active}
+                    readOnly
+                    className="h-3.5 w-3.5 accent-sky-500 rounded border-slate-300"
+                  />
+                  <span>{l}</span>
+                </label>
               )
             })}
         </div>
