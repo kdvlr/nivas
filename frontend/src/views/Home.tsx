@@ -27,6 +27,100 @@ const getDayLabel = (isoDate: string, index: number) => {
   return d.toLocaleDateString(undefined, { weekday: 'long' })
 }
 
+/* ---------------- schedule timeline ---------------- */
+
+/** left gutter: period strip + hour labels */
+const AXIS_GUTTER = 76
+const MIN_SPAN_MIN = 12 * 60
+
+const isFamilyEvent = (e: CalEvent) =>
+  !e.person_name || e.person_name.toLowerCase() === 'family' || e.person_name.toLowerCase() === 'shared'
+
+const eventBg = (e: CalEvent) =>
+  isFamilyEvent(e)
+    ? 'linear-gradient(135deg, #f43f5e, #ec4899, #8b5cf6, #3b82f6, #10b981)'
+    : e.color
+
+const minutesOfDay = (iso: string) => {
+  const d = new Date(iso)
+  return d.getHours() * 60 + d.getMinutes()
+}
+
+const fmtHour = (h: number) => `${((h + 11) % 12) + 1} ${h % 24 < 12 ? 'AM' : 'PM'}`
+
+const DAY_PERIODS = [
+  { label: 'Morning', emoji: '🌅', from: 0, to: 12 * 60, tint: 'rgba(251, 146, 60, 0.07)' },
+  { label: 'Afternoon', emoji: '☀️', from: 12 * 60, to: 17 * 60, tint: 'rgba(56, 189, 248, 0.07)' },
+  { label: 'Evening', emoji: '🌙', from: 17 * 60, to: 24 * 60, tint: 'rgba(99, 102, 241, 0.09)' },
+]
+
+interface PlacedEvent {
+  ev: CalEvent
+  s: number // minutes-of-day
+  e: number
+  lane: number
+  cols: number
+}
+
+/** Assign overlapping events to side-by-side lanes (per overlap cluster). */
+function layoutDayEvents(events: CalEvent[]): PlacedEvent[] {
+  const items: PlacedEvent[] = events.map((ev) => {
+    const s = minutesOfDay(ev.start)
+    let e = ev.end ? minutesOfDay(ev.end) : s + 60
+    // events spilling past midnight render until the end of their start day
+    if (ev.end && getLocalDateString(ev.end) !== getLocalDateString(ev.start)) e = 24 * 60
+    if (e <= s) e = s + 30
+    return { ev, s, e, lane: 0, cols: 1 }
+  })
+  items.sort((a, b) => a.s - b.s || b.e - a.e)
+
+  const laneEnds: number[] = []
+  let cluster: PlacedEvent[] = []
+  let clusterEnd = -Infinity
+  const closeCluster = () => {
+    for (const it of cluster) it.cols = laneEnds.length
+    cluster = []
+    laneEnds.length = 0
+  }
+  for (const it of items) {
+    if (cluster.length && it.s >= clusterEnd) closeCluster()
+    let lane = laneEnds.findIndex((end) => end <= it.s)
+    if (lane === -1) {
+      lane = laneEnds.length
+      laneEnds.push(0)
+    }
+    laneEnds[lane] = it.e
+    it.lane = lane
+    cluster.push(it)
+    clusterEnd = Math.max(clusterEnd, it.e)
+  }
+  if (cluster.length) closeCluster()
+  return items
+}
+
+/** Axis range fitted to the events, min 12h, snapped to whole hours within one day. */
+function computeAxis(timed: PlacedEvent[]): { start: number; end: number } {
+  if (!timed.length) return { start: 7 * 60, end: 19 * 60 }
+  let start = Math.floor(Math.min(...timed.map((t) => t.s)) / 60) * 60
+  let end = Math.ceil(Math.max(...timed.map((t) => t.e)) / 60) * 60
+  const deficit = MIN_SPAN_MIN - (end - start)
+  if (deficit > 0) {
+    start -= Math.floor(deficit / 2)
+    end += Math.ceil(deficit / 2)
+    if (start < 0) {
+      end = Math.min(end - start, 24 * 60)
+      start = 0
+    }
+    if (end > 24 * 60) {
+      start = Math.max(start - (end - 24 * 60), 0)
+      end = 24 * 60
+    }
+    start = Math.floor(start / 60) * 60
+    end = Math.ceil(end / 60) * 60
+  }
+  return { start, end }
+}
+
 export default function Home() {
   const now = useClock()
   const today = todayISO()
@@ -87,6 +181,28 @@ export default function Home() {
     }
     return map
   }, [events, day0, day1, day2])
+
+  // timeline: timed events placed into lanes per day; all-day events go to a chip strip
+  const timeline = useMemo(() => {
+    const timedByDay = new Map<string, PlacedEvent[]>()
+    const allDayByDay = new Map<string, CalEvent[]>()
+    for (const day of [day0, day1, day2]) {
+      const evs = eventsByDay.get(day) ?? []
+      timedByDay.set(day, layoutDayEvents(evs.filter((e) => !e.all_day)))
+      allDayByDay.set(day, evs.filter((e) => e.all_day))
+    }
+    const allTimed = [...timedByDay.values()].flat()
+    const axis = computeAxis(allTimed)
+    const spanMin = axis.end - axis.start
+    const hourStep = spanMin > 14 * 60 ? 2 : 1
+    const hours: number[] = []
+    for (let h = axis.start / 60; h <= axis.end / 60; h += hourStep) hours.push(h)
+    const hasAllDay = [...allDayByDay.values()].some((l) => l.length > 0)
+    return { timedByDay, allDayByDay, axis, spanMin, hours, hasAllDay }
+  }, [eventsByDay, day0, day1, day2])
+
+  const axisPct = (m: number) => ((m - timeline.axis.start) / timeline.spanMin) * 100
+  const nowMin = now.getHours() * 60 + now.getMinutes()
 
   const completeChore = async (c: ChoreItem) => {
     await api.patch(`/api/chores/${c.id}`, { completed: true })
@@ -212,64 +328,131 @@ export default function Home() {
           {!events || events.length === 0 ? (
             <p className="my-auto text-center text-lg text-ink-faint">Nothing scheduled 🎈</p>
           ) : (
-            <div className="grid min-h-0 flex-1 grid-cols-3 gap-4 overflow-y-auto">
-              {daysList.map((dayIso, idx) => {
-                const dayEvents = eventsByDay.get(dayIso) ?? []
-                const label = getDayLabel(dayIso, idx)
-                return (
-                  <div key={dayIso} className="flex flex-col min-h-0">
-                    <h3 className="mb-3 flex items-baseline gap-2 border-b pb-1.5 border-ink-faint">
-                      <span className="text-base font-semibold text-ink">{label}</span>
-                      <span className="text-[0.7rem] font-medium text-ink-soft opacity-85">
-                        {new Date(dayIso + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                      </span>
-                    </h3>
-                    <div className="flex flex-col gap-2 overflow-y-auto pr-1 flex-1">
-                      {dayEvents.length === 0 ? (
-                        <p className="my-auto text-center text-xs text-ink-faint py-8">No events</p>
-                      ) : (
-                        dayEvents.map((e) => {
-                          const isFamily = !e.person_name || e.person_name.toLowerCase() === 'family' || e.person_name.toLowerCase() === 'shared'
-                          const bgStyle = isFamily
-                            ? 'linear-gradient(135deg, #f43f5e, #ec4899, #8b5cf6, #3b82f6, #10b981)'
-                            : e.color
+            <div className="flex min-h-0 flex-1 flex-col">
+              {/* day headers, aligned with the timeline columns */}
+              <div className="grid grid-cols-3 gap-4" style={{ marginLeft: AXIS_GUTTER }}>
+                {daysList.map((dayIso, idx) => (
+                  <h3 key={dayIso} className="flex items-baseline gap-2 border-b pb-1.5 border-ink-faint">
+                    <span className="text-base font-semibold text-ink">{getDayLabel(dayIso, idx)}</span>
+                    <span className="text-[0.7rem] font-medium text-ink-soft opacity-85">
+                      {new Date(dayIso + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    </span>
+                  </h3>
+                ))}
+              </div>
+
+              {/* all-day chip strip */}
+              {timeline.hasAllDay && (
+                <div className="mt-2 grid grid-cols-3 gap-4" style={{ marginLeft: AXIS_GUTTER }}>
+                  {daysList.map((dayIso) => (
+                    <div key={dayIso} className="flex flex-wrap content-start gap-1">
+                      {(timeline.allDayByDay.get(dayIso) ?? []).map((e) => (
+                        <span
+                          key={e.id}
+                          className="max-w-full truncate rounded-full px-2.5 py-1 text-[0.65rem] font-bold text-white shadow"
+                          style={{ background: eventBg(e) }}
+                          title={e.title}
+                        >
+                          {e.title}
+                        </span>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* the timeline itself */}
+              <div className="relative mt-2 min-h-[24rem] flex-1 lg:min-h-0">
+                {/* morning / afternoon / evening bands */}
+                {DAY_PERIODS.map((p) => {
+                  const from = Math.max(p.from, timeline.axis.start)
+                  const to = Math.min(p.to, timeline.axis.end)
+                  if (to <= from) return null
+                  return (
+                    <div
+                      key={p.label}
+                      className="absolute inset-x-0"
+                      style={{ top: `${axisPct(from)}%`, height: `${axisPct(to) - axisPct(from)}%` }}
+                    >
+                      <div className="absolute inset-y-0 right-0 rounded-lg" style={{ left: AXIS_GUTTER, background: p.tint }} />
+                      {to - from >= 90 && (
+                        <div className="absolute inset-y-0 left-0 flex w-5 flex-col items-center justify-center gap-1.5 overflow-hidden">
+                          <span className="text-xs leading-none">{p.emoji}</span>
+                          <span className="rotate-180 text-[0.55rem] font-semibold uppercase tracking-[0.2em] text-ink-faint [writing-mode:vertical-rl]">
+                            {p.label}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+
+                {/* hour gridlines + labels */}
+                {timeline.hours.map((h) => (
+                  <div key={h} className="absolute inset-x-0" style={{ top: `${axisPct(h * 60)}%` }}>
+                    <div className="border-t border-[var(--outline-var)]" style={{ marginLeft: AXIS_GUTTER }} />
+                    <span className="absolute right-[calc(100%-70px)] top-0 -translate-y-1/2 pr-1 text-[0.65rem] font-medium tabular-nums text-ink-soft">
+                      {fmtHour(h)}
+                    </span>
+                  </div>
+                ))}
+
+                {/* day columns with positioned events */}
+                <div className="absolute inset-y-0 right-0 grid grid-cols-3 gap-4" style={{ left: AXIS_GUTTER }}>
+                  {daysList.map((dayIso) => {
+                    const placed = timeline.timedByDay.get(dayIso) ?? []
+                    return (
+                      <div key={dayIso} className="relative">
+                        {placed.length === 0 && (timeline.allDayByDay.get(dayIso) ?? []).length === 0 && (
+                          <p className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-xs text-ink-faint">
+                            No events
+                          </p>
+                        )}
+                        {placed.map((it) => {
+                          const heightPct = ((it.e - it.s) / timeline.spanMin) * 100
                           return (
                             <div
-                              key={e.id}
-                              className="rounded-xl p-3 text-white shadow-md flex flex-col gap-1 transition-transform hover:scale-[1.02]"
-                              style={{ background: bgStyle }}
+                              key={it.ev.id}
+                              className="absolute z-[5] flex flex-col overflow-hidden rounded-lg px-2.5 py-1.5 text-white shadow-md transition-transform hover:z-10 hover:scale-[1.02]"
+                              style={{
+                                top: `${axisPct(it.s)}%`,
+                                height: `max(${heightPct}%, 2.6rem)`,
+                                left: `calc(${(it.lane / it.cols) * 100}% + 2px)`,
+                                width: `calc(${100 / it.cols}% - 4px)`,
+                                background: eventBg(it.ev),
+                              }}
                             >
-                              <div className="text-sm font-semibold leading-snug tracking-tight">{e.title}</div>
-                              <div className="text-xs opacity-90 font-medium">
-                                {e.all_day ? 'All day' : `${fmtTime(e.start)} – ${fmtTime(e.end)}`}
+                              <div className="text-[0.7rem] font-bold leading-tight tracking-tight opacity-95 tabular-nums">
+                                {fmtTime(it.ev.start)} – {fmtTime(it.ev.end)}
                               </div>
-                              {e.location && (
-                                <div className="flex items-center gap-1 text-[0.7rem] opacity-85 truncate">
+                              <div className="truncate text-sm font-semibold leading-snug tracking-tight">
+                                {it.ev.title}
+                              </div>
+                              {it.ev.location && (
+                                <div className="flex items-center gap-1 truncate text-[0.7rem] opacity-85">
                                   <Icon name="location_on" className="text-[0.75rem] shrink-0" />
-                                  <span className="truncate">{e.location}</span>
+                                  <span className="truncate">{it.ev.location}</span>
                                 </div>
                               )}
-                              <div className="mt-1 flex items-center gap-1.5 rounded-md bg-white/20 px-2 py-0.5 self-start text-[0.65rem] font-semibold uppercase tracking-wider backdrop-blur-sm">
-                                {isFamily ? (
-                                  <>
-                                    <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
-                                    <span>Family</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <span className="h-1.5 w-1.5 rounded-full bg-white/80" />
-                                    <span>{e.person_name}</span>
-                                  </>
-                                )}
+                              <div className="mt-auto flex items-center gap-1.5 self-start rounded-md bg-white/20 px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wider backdrop-blur-sm">
+                                <span className={`h-1.5 w-1.5 rounded-full ${isFamilyEvent(it.ev) ? 'bg-white animate-pulse' : 'bg-white/80'}`} />
+                                <span>{isFamilyEvent(it.ev) ? 'Family' : it.ev.person_name}</span>
                               </div>
                             </div>
                           )
-                        })
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
+                        })}
+                        {/* now line on today */}
+                        {dayIso === today && nowMin >= timeline.axis.start && nowMin <= timeline.axis.end && (
+                          <div className="pointer-events-none absolute inset-x-0 z-20" style={{ top: `${axisPct(nowMin)}%` }}>
+                            <div className="h-[2px] bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.8)]" />
+                            <div className="absolute -left-1 -top-[3px] h-2 w-2 rounded-full bg-rose-500" />
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
             </div>
           )}
         </section>
