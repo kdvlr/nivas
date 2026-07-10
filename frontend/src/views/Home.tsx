@@ -543,19 +543,6 @@ export default function Home() {
                                     <span className="truncate">{e.location}</span>
                                   </div>
                                 )}
-                                <div className="mt-1 flex items-center gap-1.5 rounded-md bg-white/20 px-2 py-0.5 self-start text-xs font-bold uppercase tracking-wider backdrop-blur-sm">
-                                  {isFamily ? (
-                                    <>
-                                      <span className="h-2 w-2 rounded-full bg-white animate-pulse" />
-                                      <span>Family</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <span className="h-2 w-2 rounded-full bg-white/80" />
-                                      <span>{e.person_name}</span>
-                                    </>
-                                  )}
-                                </div>
                               </div>
                             )
                           })}
