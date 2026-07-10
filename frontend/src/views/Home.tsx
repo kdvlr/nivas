@@ -544,7 +544,6 @@ export default function Home() {
                                   </div>
                                 )}
                                 <div className="text-base font-bold leading-snug tracking-tight">{e.title}</div>
-                                {e.all_day && <div className="h-px w-full bg-white/20 my-1" />}
                                 {e.location && (
                                   <div className="flex items-center gap-1.5 text-xs opacity-90 truncate mt-0.5">
                                     <Icon name="location_on" className="text-sm shrink-0" />
