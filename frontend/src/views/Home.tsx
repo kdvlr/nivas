@@ -565,8 +565,8 @@ export default function Home() {
       >
         <a href="#/chores" className="mb-2 flex items-center gap-3 text-lg font-normal text-ink">
           <Icon name="family_star" className="text-2xl" /> Chores
-          <span className="ml-auto text-sm font-medium text-ink-soft">
-            {todayChores.length - openChores.length}/{todayChores.length} done
+          <span className="ml-auto rounded-full bg-amber-100 dark:bg-amber-900/40 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:text-amber-300">
+            {todayChores.length - openChores.length}/{todayChores.length}
           </span>
         </a>
         {isEmpty ? (
@@ -607,8 +607,8 @@ export default function Home() {
       >
         <a href="#/todos" className="mb-2 flex items-center gap-3 text-lg font-normal text-ink">
           <Icon name="task_alt" className="text-2xl" /> To-Dos
-          <span className="ml-auto text-sm font-medium text-ink-soft">
-            {openTasks.length} open
+          <span className="ml-auto rounded-full bg-emerald-100 dark:bg-emerald-900/40 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
+            {openTasks.length}
           </span>
         </a>
         {isEmpty ? (
@@ -679,7 +679,7 @@ export default function Home() {
       <section className={`glass flex flex-col p-4 ${loadingShopping ? 'shimmer-loading' : ''} ${isDesktop ? '' : (isEmpty ? 'h-auto' : 'flex-1 min-h-0 overflow-hidden')}`}>
         <a href="#/shopping" className="flex items-center gap-3 text-lg font-normal text-ink">
           <Icon name="shopping_cart" className="text-2xl" /> Shopping
-          <span className="ml-auto rounded-full bg-gradient-to-r from-teal-400 to-sky-500 px-3.5 py-0.5 text-base font-medium text-white shadow-md shadow-teal-400/30">
+          <span className="ml-auto rounded-full bg-orange-100 dark:bg-orange-900/40 px-2.5 py-0.5 text-xs font-semibold text-orange-800 dark:text-orange-300">
             {shoppingCount}
           </span>
         </a>
