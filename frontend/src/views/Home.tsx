@@ -100,8 +100,10 @@ function layoutDayEvents(events: CalEvent[]): PlacedEvent[] {
 /** Axis range fitted to the events, min 8h, snapped to whole hours within one day. */
 function computeAxis(timed: PlacedEvent[]): { start: number; end: number } {
   if (!timed.length) return { start: 8 * 60, end: 16 * 60 }
-  let start = Math.floor(Math.min(...timed.map((t) => t.s)) / 60) * 60
-  let end = Math.ceil(Math.max(...timed.map((t) => t.e)) / 60) * 60
+  let start = Math.floor((Math.min(...timed.map((t) => t.s)) - 30) / 60) * 60
+  let end = Math.ceil((Math.max(...timed.map((t) => t.e)) + 30) / 60) * 60
+  start = Math.max(start, 0)
+  end = Math.min(end, 24 * 60)
   const deficit = MIN_SPAN_MIN - (end - start)
   if (deficit > 0) {
     start -= Math.floor(deficit / 2)
