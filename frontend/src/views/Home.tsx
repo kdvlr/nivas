@@ -431,8 +431,8 @@ export default function Home() {
                   {/* hour gridlines + labels */}
                   {timeline.hours.map((h) => (
                     <div key={h} className="absolute inset-x-0" style={{ top: `${axisPct(h * 60)}%` }}>
-                      <div className="border-t border-[var(--outline-var)]" style={{ marginLeft: AXIS_GUTTER }} />
-                      <span className="absolute right-[calc(100%-86px)] top-0 -translate-y-1/2 pr-1 text-[0.7rem] font-medium tabular-nums text-ink-soft">
+                      <div className="border-t border-[var(--outline-var)] opacity-80" style={{ marginLeft: AXIS_GUTTER }} />
+                      <span className="absolute right-[calc(100%-86px)] top-0 -translate-y-1/2 pr-1 text-[0.7rem] font-medium tabular-nums text-ink-soft opacity-80">
                         {fmtHour(h)}
                       </span>
                     </div>
