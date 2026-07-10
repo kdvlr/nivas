@@ -731,9 +731,7 @@ export default function Home() {
       <div className="hidden lg:flex h-full flex-col gap-4">
         {renderHeader()}
         <div className="grid min-h-0 flex-1 grid-cols-3 gap-4">
-          <div className="col-span-2 flex flex-col min-h-0">
-            {renderSchedule(true)}
-          </div>
+          {renderSchedule(true)}
           <div className="flex min-h-0 flex-col gap-4">
             {renderChores(true)}
             {renderTasks(true)}
