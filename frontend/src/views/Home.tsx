@@ -533,12 +533,18 @@ export default function Home() {
                                 style={{ background: bgStyle }}
                                 onClick={() => setSelectedEvent(e)}
                               >
-                                {!e.all_day && (
+                                {e.all_day ? (
+                                  <div className="text-[0.7rem] font-bold uppercase tracking-wider opacity-90 flex items-center gap-1.5 mb-0.5">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                                    <span>All Day</span>
+                                  </div>
+                                ) : (
                                   <div className="text-[0.7rem] font-bold leading-tight tracking-tight opacity-95 tabular-nums">
                                     {fmtTime(e.start)} – {fmtTime(e.end)}
                                   </div>
                                 )}
                                 <div className="text-base font-bold leading-snug tracking-tight">{e.title}</div>
+                                {e.all_day && <div className="h-px w-full bg-white/20 my-1" />}
                                 {e.location && (
                                   <div className="flex items-center gap-1.5 text-xs opacity-90 truncate mt-0.5">
                                     <Icon name="location_on" className="text-sm shrink-0" />
