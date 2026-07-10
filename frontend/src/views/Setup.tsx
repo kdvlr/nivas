@@ -166,6 +166,7 @@ function SetupInner() {
   const [newRewardEmoji, setNewRewardEmoji] = useState('🎁')
   const [newRewardTitle, setNewRewardTitle] = useState('')
   const [newRewardCost, setNewRewardCost] = useState(5)
+  const [expandedAccounts, setExpandedAccounts] = useState<Record<number, boolean>>({})
 
   const renderLastUpdated = (integrationName: string) => {
     const s = status?.sync?.[integrationName]
@@ -258,113 +259,134 @@ function SetupInner() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 pb-8 xl:grid-cols-2 xl:gap-5">
-        {/* Google Calendar */}
-        <Card
-          title={<div className="flex items-center gap-1.5"><Icon name="calendar_month" /> Google Calendar{renderLastUpdated('google')}</div>}
-          badge={<Badge ok={(cal?.accounts.length ?? 0) > 0} label={`${cal?.accounts.length ?? 0} account(s)`} />}
-        >
-          {!cal?.client_config && (
-            <p className="mb-3 rounded-xl bg-amber-50 p-3 dark:bg-amber-950/60 text-base text-amber-700 dark:text-amber-300">
-              Install your Google OAuth client file first: drop{' '}
-              <code className="font-medium">google_client_secret.json</code> into the server's{' '}
-              <code className="font-medium">data/credentials/</code> folder (see README), and add{' '}
-              <code className="break-all font-medium">{cal?.redirect_uri}</code> as a redirect URI.
-            </p>
-          )}
-          <a
-            href="/api/calendar/auth/start"
-            className={`inline-block rounded-xl px-6 py-3 text-lg font-medium text-white ${
-              cal?.client_config ? 'bg-sky-500 active:bg-sky-600' : 'pointer-events-none bg-slate-300 dark:bg-slate-700'
-            }`}
-          >
-            <Icon name="add" /> Connect a Google account
-          </a>
-          {(cal?.accounts ?? []).map((a) => (
-            <div key={a.id} className="mt-4 rounded-xl border-2 border-[var(--outline-var)] p-4">
-              <div className="mb-2 flex items-center">
-                <span className="text-lg font-medium">{a.email}</span>
-                <button
-                  onClick={async () => {
-                    if (confirm(`Disconnect ${a.email}?`)) {
-                      await api.del(`/api/calendar/accounts/${a.id}`)
-                      reloadCal()
-                    }
-                  }}
-                  className="ml-auto text-base font-medium text-rose-400"
-                >
-                  disconnect
-                </button>
-              </div>
-              {a.selections.map((s) => {
-                const linkedPerson = (people ?? []).find(
-                  (p) => p.name.toLowerCase() === s.person_name.toLowerCase(),
-                )
+        {/* Integration Panel */}
+        <Card title={<><Icon name="cloud_sync" /> Integration</>}>
+          <div className="flex flex-col gap-4">
+            {/* Google Calendar */}
+            <div>
+              <h3 className="text-base font-semibold text-ink mb-3 flex items-center gap-2">
+                <Icon name="calendar_month" className="text-lg text-[var(--primary)]" />
+                Google Calendar
+              </h3>
+              {!cal?.client_config && (
+                <p className="mb-3 rounded-xl bg-amber-50 p-3 dark:bg-amber-950/60 text-sm text-amber-700 dark:text-amber-300 leading-relaxed">
+                  Install your Google OAuth client file first: drop{' '}
+                  <code className="font-medium">google_client_secret.json</code> into the server's{' '}
+                  <code className="font-medium">data/credentials/</code> folder, and add{' '}
+                  <code className="break-all font-medium">{cal?.redirect_uri}</code> as a redirect URI.
+                </p>
+              )}
+              {(cal?.accounts ?? []).map((a) => {
+                const expanded = !!expandedAccounts[a.id]
                 return (
-                  <div key={s.id} className="flex items-center gap-3 border-t border-[var(--outline-var)] py-2.5">
-                    <input
-                      type="checkbox"
-                      checked={s.enabled}
-                      onChange={(e) => updateSelection(s.id, { enabled: e.target.checked })}
-                      className="h-7 w-7 accent-teal-500"
-                    />
-                    <span
-                      className="h-4 w-4 shrink-0 rounded-full"
-                      style={{ background: linkedPerson ? linkedPerson.color : s.color }}
-                      title="event color"
-                    />
-                    <span className="min-w-0 flex-1 truncate text-base font-medium">{s.name}</span>
-                    <div className="flex max-w-40 flex-wrap gap-1 shrink-0">
-                      {COLORS.map((c) => {
-                        const active = (linkedPerson ? linkedPerson.color : s.color) === c
-                        return (
-                          <button
-                            key={c}
-                            onClick={() => {
-                              const updates: any = { color: c }
-                              if (linkedPerson) {
-                                updates.person_name = ''
-                              }
-                              updateSelection(s.id, updates)
-                            }}
-                            className={`h-5 w-5 rounded-full transition-all active:scale-90 ${
-                              active
-                                ? 'ring-2 ring-slate-700/40 dark:ring-slate-200/60 ring-offset-1 scale-105 shadow-sm'
-                                : 'opacity-70 hover:opacity-100 hover:scale-105'
-                            }`}
-                            style={{ background: c }}
-                            title="select color"
-                          />
-                        )
+                  <div key={a.id} className="rounded-xl border border-[var(--outline-var)] overflow-hidden mb-3">
+                    <div
+                      onClick={() => setExpandedAccounts({
+                        ...expandedAccounts,
+                        [a.id]: !expanded
                       })}
-                    </div>
-                    <select
-                      value={linkedPerson ? linkedPerson.name : ''}
-                      onChange={(e) => updateSelection(s.id, { person_name: e.target.value })}
-                      className="input-glass w-36 px-2 py-1.5 text-base shrink-0"
+                      className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/40 px-3 py-2 cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-800/80 flex-wrap"
                     >
-                      <option value="">— no person —</option>
-                      {(people ?? []).map((p) => (
-                        <option key={p.id} value={p.name}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </select>
+                      <Icon
+                        name={expanded ? 'expand_less' : 'expand_more'}
+                        className="text-ink-soft shrink-0"
+                      />
+                      <span className="font-semibold text-sm text-ink truncate max-w-40 md:max-w-xs shrink-0">{a.email}</span>
+                      <Badge ok={true} label="connected" />
+                      {renderLastUpdated('google')}
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation()
+                          if (confirm(`Disconnect ${a.email}?`)) {
+                            await api.del(`/api/calendar/accounts/${a.id}`)
+                            reloadCal()
+                          }
+                        }}
+                        className="ml-auto flex items-center justify-center h-8 w-8 rounded-full hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-400 hover:text-rose-500 transition-colors"
+                      >
+                        <Icon name="delete" className="text-lg" />
+                      </button>
+                    </div>
+                    {expanded && (
+                      <div className="px-4 pb-3 flex flex-col gap-2 bg-transparent">
+                        {a.selections.map((s) => {
+                          const linkedPerson = (people ?? []).find(
+                            (p) => p.name.toLowerCase() === s.person_name.toLowerCase(),
+                          )
+                          return (
+                            <div key={s.id} className="flex items-center gap-3 border-t border-[var(--outline-var)] py-2.5">
+                              <input
+                                type="checkbox"
+                                checked={s.enabled}
+                                onChange={(e) => updateSelection(s.id, { enabled: e.target.checked })}
+                                className="h-7 w-7 accent-teal-500 shrink-0"
+                              />
+                              <span
+                                className="h-4 w-4 shrink-0 rounded-full"
+                                style={{ background: linkedPerson ? linkedPerson.color : s.color }}
+                                title="event color"
+                              />
+                              <span className="min-w-0 flex-1 truncate text-base font-medium">{s.name}</span>
+                              <div className="flex max-w-40 flex-wrap gap-1 shrink-0">
+                                {COLORS.map((c) => {
+                                  const active = (linkedPerson ? linkedPerson.color : s.color) === c
+                                  return (
+                                    <button
+                                      key={c}
+                                      onClick={() => {
+                                        const updates: any = { color: c }
+                                        if (linkedPerson) {
+                                          updates.person_name = ''
+                                        }
+                                        updateSelection(s.id, updates)
+                                      }}
+                                      className={`h-5 w-5 rounded-full transition-all active:scale-90 ${
+                                        active
+                                          ? 'ring-2 ring-slate-700/40 dark:ring-slate-200/60 ring-offset-1 scale-105 shadow-sm'
+                                          : 'opacity-70 hover:opacity-100 hover:scale-105'
+                                      }`}
+                                      style={{ background: c }}
+                                      title="select color"
+                                    />
+                                  )
+                                })}
+                              </div>
+                              <select
+                                value={linkedPerson ? linkedPerson.name : ''}
+                                onChange={(e) => updateSelection(s.id, { person_name: e.target.value })}
+                                className="input-glass w-36 px-2 py-1.5 text-base shrink-0"
+                              >
+                                <option value="">— no person —</option>
+                                {(people ?? []).map((p) => (
+                                  <option key={p.id} value={p.name}>
+                                    {p.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          )
+                        })}
+                        <p className="mt-2 text-xs text-ink-faint">
+                          Assign a family member to share their color everywhere (calendar, chores). Colors
+                          are set on the Family members card.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )
               })}
-              <p className="mt-2 text-sm text-ink-faint">
-                Assign a family member to share their color everywhere (calendar, chores). Colors
-                are set on the Family members card.
-              </p>
+              <a
+                href="/api/calendar/auth/start"
+                className={`mt-1 inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold text-white transition-all active:scale-95 ${
+                  cal?.client_config ? 'bg-sky-500 hover:bg-sky-600' : 'pointer-events-none bg-slate-300 dark:bg-slate-700'
+                }`}
+              >
+                <Icon name="add" className="text-base" /> Connect Google Account
+              </a>
             </div>
-          ))}
-        </Card>
 
-        {/* Sync & Accounts Panel */}
-        <Card title={<><Icon name="cloud_sync" /> iCloud & Alexa Sync</>}>
-          <div className="flex flex-col gap-4">
             {/* iCloud */}
-            <div>
+            <div className="border-t border-[var(--outline-var)] pt-4">
               <h3 className="text-base font-semibold text-ink mb-3 flex items-center gap-2 flex-wrap">
                 <span className="flex items-center gap-2">
                   <Icon name="cloud" className="text-lg text-[var(--primary)]" />
