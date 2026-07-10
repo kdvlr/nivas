@@ -33,7 +33,7 @@ const getDayLabel = (isoDate: string, index: number) => {
 /** left gutter: period strip + hour labels */
 const AXIS_GUTTER = 92
 const FAMILY_GRADIENT = 'linear-gradient(135deg, #f43f5e, #ec4899, #8b5cf6, #3b82f6, #10b981)'
-const MIN_SPAN_MIN = 12 * 60
+const MIN_SPAN_MIN = 8 * 60
 
 const isFamilyEvent = (e: CalEvent) =>
   !e.person_name || e.person_name.toLowerCase() === 'family' || e.person_name.toLowerCase() === 'shared'
@@ -97,9 +97,9 @@ function layoutDayEvents(events: CalEvent[]): PlacedEvent[] {
   return items
 }
 
-/** Axis range fitted to the events, min 12h, snapped to whole hours within one day. */
+/** Axis range fitted to the events, min 8h, snapped to whole hours within one day. */
 function computeAxis(timed: PlacedEvent[]): { start: number; end: number } {
-  if (!timed.length) return { start: 7 * 60, end: 19 * 60 }
+  if (!timed.length) return { start: 8 * 60, end: 16 * 60 }
   let start = Math.floor(Math.min(...timed.map((t) => t.s)) / 60) * 60
   let end = Math.ceil(Math.max(...timed.map((t) => t.e)) / 60) * 60
   const deficit = MIN_SPAN_MIN - (end - start)
