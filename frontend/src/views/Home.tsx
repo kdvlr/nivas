@@ -361,144 +361,206 @@ export default function Home() {
           {!events || events.length === 0 ? (
             <p className="my-auto text-center text-lg text-ink-faint">Nothing scheduled 🎈</p>
           ) : (
-            <div className="flex min-h-0 flex-1 flex-col">
-              {/* day headers, aligned with the timeline columns */}
-              <div className="grid grid-cols-3 gap-4" style={{ marginLeft: AXIS_GUTTER }}>
-                {daysList.map((dayIso, idx) => (
-                  <h3 key={dayIso} className="flex items-baseline gap-2 border-b pb-1.5 border-ink-faint">
-                    <span className={`text-base font-semibold ${idx === 0 ? 'text-[var(--primary)]' : 'text-ink'}`}>
-                      {getDayLabel(dayIso, idx)}
-                    </span>
-                    <span className="text-[0.7rem] font-medium text-ink-soft opacity-85">
-                      {new Date(dayIso + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                    </span>
-                  </h3>
-                ))}
-              </div>
-
-              {/* all-day chip strip */}
-              {timeline.hasAllDay && (
-                <div className="mt-2 grid grid-cols-3 gap-4" style={{ marginLeft: AXIS_GUTTER }}>
-                  {daysList.map((dayIso) => (
-                    <div key={dayIso} className="flex flex-wrap content-start gap-1">
-                      {(timeline.allDayByDay.get(dayIso) ?? []).map((e) => (
-                        <span
-                          key={e.id}
-                          className="vivid-dim relative max-w-full truncate rounded-full px-2.5 py-1 text-[0.65rem] font-bold text-white shadow"
-                          style={{ background: eventBg(e) }}
-                          title={e.title}
-                        >
-                          {e.title}
-                        </span>
-                      ))}
-                    </div>
+            <>
+              {/* Desktop timeline view */}
+              <div className="hidden lg:flex min-h-0 flex-1 flex-col">
+                {/* day headers, aligned with the timeline columns */}
+                <div className="grid grid-cols-3 gap-4" style={{ marginLeft: AXIS_GUTTER }}>
+                  {daysList.map((dayIso, idx) => (
+                    <h3 key={dayIso} className="flex items-baseline gap-2 border-b pb-1.5 border-ink-faint">
+                      <span className={`text-base font-semibold ${idx === 0 ? 'text-[var(--primary)]' : 'text-ink'}`}>
+                        {getDayLabel(dayIso, idx)}
+                      </span>
+                      <span className="text-[0.7rem] font-medium text-ink-soft opacity-85">
+                        {new Date(dayIso + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      </span>
+                    </h3>
                   ))}
                 </div>
-              )}
 
-              {/* the timeline itself */}
-              <div className="relative mt-2 min-h-[24rem] flex-1 lg:min-h-0">
-                {/* morning / afternoon / evening bands */}
-                {DAY_PERIODS.map((p) => {
-                  const from = Math.max(p.from, timeline.axis.start)
-                  const to = Math.min(p.to, timeline.axis.end)
-                  if (to <= from) return null
-                  return (
-                    <div
-                      key={p.label}
-                      className="absolute inset-x-0"
-                      style={{ top: `${axisPct(from)}%`, height: `${axisPct(to) - axisPct(from)}%` }}
-                    >
-                      <div className="absolute inset-y-0 right-0 rounded-lg" style={{ left: AXIS_GUTTER, background: p.tint }} />
-                      {to - from >= 90 && (
-                        <div className="absolute inset-y-0 left-0 flex w-8 flex-col items-center justify-center gap-2 overflow-hidden">
-                          <span className="text-lg leading-none">{p.emoji}</span>
-                          <span className="rotate-180 text-[0.7rem] font-bold uppercase tracking-[0.18em] text-ink-soft [writing-mode:vertical-rl]">
-                            {p.label}
+                {/* all-day chip strip */}
+                {timeline.hasAllDay && (
+                  <div className="mt-2 grid grid-cols-3 gap-4" style={{ marginLeft: AXIS_GUTTER }}>
+                    {daysList.map((dayIso) => (
+                      <div key={dayIso} className="flex flex-wrap content-start gap-1">
+                        {(timeline.allDayByDay.get(dayIso) ?? []).map((e) => (
+                          <span
+                            key={e.id}
+                            className="vivid-dim relative max-w-full truncate rounded-full px-2.5 py-1 text-[0.65rem] font-bold text-white shadow"
+                            style={{ background: eventBg(e) }}
+                            title={e.title}
+                          >
+                            {e.title}
                           </span>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-
-                {/* hour gridlines + labels */}
-                {timeline.hours.map((h) => (
-                  <div key={h} className="absolute inset-x-0" style={{ top: `${axisPct(h * 60)}%` }}>
-                    <div className="border-t border-[var(--outline-var)]" style={{ marginLeft: AXIS_GUTTER }} />
-                    <span className="absolute right-[calc(100%-86px)] top-0 -translate-y-1/2 pr-1 text-[0.7rem] font-medium tabular-nums text-ink-soft">
-                      {fmtHour(h)}
-                    </span>
+                        ))}
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
 
-                {/* day columns with positioned events */}
-                <div className="absolute inset-y-0 right-0 grid grid-cols-3 gap-4" style={{ left: AXIS_GUTTER }}>
-                  {daysList.map((dayIso, idx) => {
-                    const placed = timeline.timedByDay.get(dayIso) ?? []
+                {/* the timeline itself */}
+                <div className="relative mt-2 min-h-[24rem] flex-1 lg:min-h-0">
+                  {/* morning / afternoon / evening bands */}
+                  {DAY_PERIODS.map((p) => {
+                    const from = Math.max(p.from, timeline.axis.start)
+                    const to = Math.min(p.to, timeline.axis.end)
+                    if (to <= from) return null
                     return (
-                      <div key={dayIso} className="relative">
-                        {/* today's column gets a soft highlight; dividers separate the days */}
-                        {idx === 0 && (
-                          <div
-                            className="pointer-events-none absolute inset-y-0 -inset-x-1 rounded-lg"
-                            style={{ background: 'color-mix(in srgb, var(--primary) 7%, transparent)' }}
-                          />
-                        )}
-                        {idx > 0 && (
-                          <div className="pointer-events-none absolute inset-y-0 -left-2 w-px" style={{ background: 'var(--outline)', opacity: 0.35 }} />
-                        )}
-                        {placed.length === 0 && (timeline.allDayByDay.get(dayIso) ?? []).length === 0 && (
-                          <p className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-xs text-ink-faint">
-                            No events
-                          </p>
-                        )}
-                        {placed.map((it) => {
-                          const heightPct = ((it.e - it.s) / timeline.spanMin) * 100
-                          return (
-                            <div
-                              key={it.ev.id}
-                              className="vivid-dim absolute z-[5] flex flex-col overflow-hidden rounded-lg px-2.5 py-1.5 text-white shadow-md transition-transform hover:z-10 hover:scale-[1.02]"
-                              style={{
-                                top: `${axisPct(it.s)}%`,
-                                height: `max(${heightPct}%, 2.6rem)`,
-                                left: `calc(${(it.lane / it.cols) * 100}% + 2px)`,
-                                width: `calc(${100 / it.cols}% - 4px)`,
-                                background: eventBg(it.ev),
-                              }}
-                            >
-                               <div className="hidden lg:block text-[0.7rem] font-bold leading-tight tracking-tight opacity-95 tabular-nums">
-                                 {fmtTime(it.ev.start)} – {fmtTime(it.ev.end)}
-                               </div>
-                              <div className="truncate text-sm font-semibold leading-snug tracking-tight">
-                                {it.ev.title}
-                              </div>
-                              {it.ev.location && (
-                                <div className="flex items-center gap-1 truncate text-[0.7rem] opacity-85">
-                                  <Icon name="location_on" className="text-[0.75rem] shrink-0" />
-                                  <span className="truncate">{it.ev.location}</span>
-                                </div>
-                              )}
-                              <div className="mt-auto flex items-center gap-1.5 self-start rounded-md bg-white/20 px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wider backdrop-blur-sm">
-                                <span className={`h-1.5 w-1.5 rounded-full ${isFamilyEvent(it.ev) ? 'bg-white animate-pulse' : 'bg-white/80'}`} />
-                                <span>{isFamilyEvent(it.ev) ? 'Family' : it.ev.person_name}</span>
-                              </div>
-                            </div>
-                          )
-                        })}
-                        {/* now line on today */}
-                        {dayIso === today && nowMin >= timeline.axis.start && nowMin <= timeline.axis.end && (
-                          <div className="pointer-events-none absolute inset-x-0 z-20" style={{ top: `${axisPct(nowMin)}%` }}>
-                            <div className="h-[2px] bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.8)]" />
-                            <div className="absolute -left-1 -top-[3px] h-2 w-2 rounded-full bg-rose-500" />
+                      <div
+                        key={p.label}
+                        className="absolute inset-x-0"
+                        style={{ top: `${axisPct(from)}%`, height: `${axisPct(to) - axisPct(from)}%` }}
+                      >
+                        <div className="absolute inset-y-0 right-0 rounded-lg" style={{ left: AXIS_GUTTER, background: p.tint }} />
+                        {to - from >= 90 && (
+                          <div className="absolute inset-y-0 left-0 flex w-8 flex-col items-center justify-center gap-2 overflow-hidden">
+                            <span className="text-lg leading-none">{p.emoji}</span>
+                            <span className="rotate-180 text-[0.7rem] font-bold uppercase tracking-[0.18em] text-ink-soft [writing-mode:vertical-rl]">
+                              {p.label}
+                            </span>
                           </div>
                         )}
                       </div>
                     )
                   })}
+
+                  {/* hour gridlines + labels */}
+                  {timeline.hours.map((h) => (
+                    <div key={h} className="absolute inset-x-0" style={{ top: `${axisPct(h * 60)}%` }}>
+                      <div className="border-t border-[var(--outline-var)]" style={{ marginLeft: AXIS_GUTTER }} />
+                      <span className="absolute right-[calc(100%-86px)] top-0 -translate-y-1/2 pr-1 text-[0.7rem] font-medium tabular-nums text-ink-soft">
+                        {fmtHour(h)}
+                      </span>
+                    </div>
+                  ))}
+
+                  {/* day columns with positioned events */}
+                  <div className="absolute inset-y-0 right-0 grid grid-cols-3 gap-4" style={{ left: AXIS_GUTTER }}>
+                    {daysList.map((dayIso, idx) => {
+                      const placed = timeline.timedByDay.get(dayIso) ?? []
+                      return (
+                        <div key={dayIso} className="relative">
+                          {/* today's column gets a soft highlight; dividers separate the days */}
+                          {idx === 0 && (
+                            <div
+                              className="pointer-events-none absolute inset-y-0 -inset-x-1 rounded-lg"
+                              style={{ background: 'color-mix(in srgb, var(--primary) 7%, transparent)' }}
+                            />
+                          )}
+                          {idx > 0 && (
+                            <div className="pointer-events-none absolute inset-y-0 -left-2 w-px" style={{ background: 'var(--outline)', opacity: 0.35 }} />
+                          )}
+                          {placed.length === 0 && (timeline.allDayByDay.get(dayIso) ?? []).length === 0 && (
+                            <p className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-xs text-ink-faint">
+                              No events
+                            </p>
+                          )}
+                          {placed.map((it) => {
+                            const heightPct = ((it.e - it.s) / timeline.spanMin) * 100
+                            return (
+                              <div
+                                key={it.ev.id}
+                                className="vivid-dim absolute z-[5] flex flex-col overflow-hidden rounded-lg px-2.5 py-1.5 text-white shadow-md transition-transform hover:z-10 hover:scale-[1.02]"
+                                style={{
+                                  top: `${axisPct(it.s)}%`,
+                                  height: `max(${heightPct}%, 2.6rem)`,
+                                  left: `calc(${(it.lane / it.cols) * 100}% + 2px)`,
+                                  width: `calc(${100 / it.cols}% - 4px)`,
+                                  background: eventBg(it.ev),
+                                }}
+                              >
+                                <div className="hidden lg:block text-[0.7rem] font-bold leading-tight tracking-tight opacity-95 tabular-nums">
+                                  {fmtTime(it.ev.start)} – {fmtTime(it.ev.end)}
+                                </div>
+                                <div className="truncate text-sm font-semibold leading-snug tracking-tight">
+                                  {it.ev.title}
+                                </div>
+                                {it.ev.location && (
+                                  <div className="flex items-center gap-1 truncate text-[0.7rem] opacity-85">
+                                    <Icon name="location_on" className="text-[0.75rem] shrink-0" />
+                                    <span className="truncate">{it.ev.location}</span>
+                                  </div>
+                                )}
+                                <div className="mt-auto flex items-center gap-1.5 self-start rounded-md bg-white/20 px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wider backdrop-blur-sm">
+                                  <span className={`h-1.5 w-1.5 rounded-full ${isFamilyEvent(it.ev) ? 'bg-white animate-pulse' : 'bg-white/80'}`} />
+                                  <span>{isFamilyEvent(it.ev) ? 'Family' : it.ev.person_name}</span>
+                                </div>
+                              </div>
+                            )
+                          })}
+                          {/* now line on today */}
+                          {dayIso === today && nowMin >= timeline.axis.start && nowMin <= timeline.axis.end && (
+                            <div className="pointer-events-none absolute inset-x-0 z-20" style={{ top: `${axisPct(nowMin)}%` }}>
+                              <div className="h-[2px] bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.8)]" />
+                              <div className="absolute -left-1 -top-[3px] h-2 w-2 rounded-full bg-rose-500" />
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
               </div>
-            </div>
+
+              {/* Mobile stacked list view */}
+              <div className="flex lg:hidden min-h-0 flex-1 flex-col overflow-y-auto gap-4 mt-2 pr-1">
+                {daysList.map((dayIso, idx) => {
+                  const dayEvents = eventsByDay.get(dayIso) ?? []
+                  return (
+                    <div key={dayIso} className="flex flex-col gap-2">
+                      <h3 className="flex items-baseline gap-2 border-b pb-1.5 border-ink-faint">
+                        <span className={`text-base font-semibold ${idx === 0 ? 'text-[var(--primary)]' : 'text-ink'}`}>
+                          {getDayLabel(dayIso, idx)}
+                        </span>
+                        <span className="text-xs font-semibold text-ink-soft opacity-85">
+                          {new Date(dayIso + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        </span>
+                      </h3>
+                      {dayEvents.length === 0 ? (
+                        <p className="text-xs text-ink-faint py-2 pl-1">No events</p>
+                      ) : (
+                        <div className="flex flex-col gap-2">
+                          {dayEvents.map((e) => {
+                            const isFamily = !e.person_name || e.person_name.toLowerCase() === 'family' || e.person_name.toLowerCase() === 'shared'
+                            const bgStyle = isFamily
+                              ? 'linear-gradient(135deg, #f43f5e, #ec4899, #8b5cf6, #3b82f6, #10b981)'
+                              : e.color
+                            return (
+                              <div
+                                key={e.id}
+                                className="rounded-xl p-3.5 text-white shadow flex flex-col gap-1 transition-transform active:scale-[0.98]"
+                                style={{ background: bgStyle }}
+                              >
+                                <div className="text-base font-bold leading-snug tracking-tight">{e.title}</div>
+                                {e.location && (
+                                  <div className="flex items-center gap-1.5 text-xs opacity-90 truncate mt-0.5">
+                                    <Icon name="location_on" className="text-sm shrink-0" />
+                                    <span className="truncate">{e.location}</span>
+                                  </div>
+                                )}
+                                <div className="mt-1 flex items-center gap-1.5 rounded-md bg-white/20 px-2 py-0.5 self-start text-xs font-bold uppercase tracking-wider backdrop-blur-sm">
+                                  {isFamily ? (
+                                    <>
+                                      <span className="h-2 w-2 rounded-full bg-white animate-pulse" />
+                                      <span>Family</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span className="h-2 w-2 rounded-full bg-white/80" />
+                                      <span>{e.person_name}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </>
           )}
         </section>
 
