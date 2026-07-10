@@ -4,7 +4,7 @@ import CoinIcon from '../components/CoinIcon'
 import Icon from '../components/Icon'
 import { useCelebration } from '../components/celebrations/CelebrationContext'
 import { useClock, useData, todayISO, addDaysISO } from '../lib/hooks'
-import type { CalEvent, ChoreItem, MealDay, ShoppingItem, Task, WeatherData } from '../lib/types'
+import type { CalendarStatus, CalEvent, ChoreItem, MealDay, ShoppingItem, Task, WeatherData } from '../lib/types'
 
 const fmtTime = (iso: string) =>
   new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
@@ -30,16 +30,14 @@ const getDayLabel = (isoDate: string, index: number) => {
 /* ---------------- schedule timeline ---------------- */
 
 /** left gutter: period strip + hour labels */
-const AXIS_GUTTER = 76
+const AXIS_GUTTER = 92
+const FAMILY_GRADIENT = 'linear-gradient(135deg, #f43f5e, #ec4899, #8b5cf6, #3b82f6, #10b981)'
 const MIN_SPAN_MIN = 12 * 60
 
 const isFamilyEvent = (e: CalEvent) =>
   !e.person_name || e.person_name.toLowerCase() === 'family' || e.person_name.toLowerCase() === 'shared'
 
-const eventBg = (e: CalEvent) =>
-  isFamilyEvent(e)
-    ? 'linear-gradient(135deg, #f43f5e, #ec4899, #8b5cf6, #3b82f6, #10b981)'
-    : e.color
+const eventBg = (e: CalEvent) => (isFamilyEvent(e) ? FAMILY_GRADIENT : e.color)
 
 const minutesOfDay = (iso: string) => {
   const d = new Date(iso)
@@ -136,6 +134,7 @@ export default function Home() {
   const { data: shopping, loading: loadingShopping, reload: reloadShopping } = useData<ShoppingItem[]>('/api/shopping', ['shopping'])
   const { data: meals, loading: loadingMeals } = useData<MealDay[]>(`/api/meals?start=${today}&days=1`, ['meals'])
   const { data: weather } = useData<WeatherData>('/api/weather', [], 15 * 60 * 1000)
+  const { data: calStatus } = useData<CalendarStatus>('/api/calendar/status', ['calendar'])
   const { data: config } = useData<{ family_name: string; secondary_tz: string; secondary_tz_emoji: string }>(
     '/api/setup/config',
     ['setup'],
@@ -203,6 +202,18 @@ export default function Home() {
 
   const axisPct = (m: number) => ((m - timeline.axis.start) / timeline.spanMin) * 100
   const nowMin = now.getHours() * 60 + now.getMinutes()
+
+  // calendar legend: one chip per enabled calendar (family calendars get the gradient)
+  const calendarLegend = useMemo(() => {
+    const seen = new Map<string, string>()
+    for (const s of (calStatus?.accounts ?? []).flatMap((a) => a.selections)) {
+      if (!s.enabled) continue
+      const label = s.person_name || s.name
+      const isFamily = !s.person_name || ['family', 'shared'].includes(s.person_name.toLowerCase())
+      if (!seen.has(label)) seen.set(label, isFamily ? FAMILY_GRADIENT : s.color)
+    }
+    return [...seen.entries()]
+  }, [calStatus])
 
   const completeChore = async (c: ChoreItem) => {
     await api.patch(`/api/chores/${c.id}`, { completed: true })
@@ -321,8 +332,18 @@ export default function Home() {
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-3 lg:gap-4">
         {/* Today, Tomorrow, Day after schedule */}
         <section className={`glass flex min-h-64 flex-col p-5 lg:col-span-2 lg:min-h-0 ${loadingEvents ? 'shimmer-loading' : ''}`}>
-          <a href="#/calendar" className="mb-4 flex items-center gap-3 text-xl font-normal text-ink">
+          <a href="#/calendar" className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xl font-normal text-ink">
             <Icon name="calendar_month" className="text-2xl" /> Schedule
+            {calendarLegend.length > 0 && (
+              <span className="ml-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                {calendarLegend.map(([label, bg]) => (
+                  <span key={label} className="flex items-center gap-1.5 text-xs font-medium text-ink-soft">
+                    <span className="h-2.5 w-2.5 rounded-full shadow-sm" style={{ background: bg }} />
+                    {label}
+                  </span>
+                ))}
+              </span>
+            )}
             <span className="ml-auto text-sm font-medium text-sky-600 dark:text-sky-400">full calendar ›</span>
           </a>
           {!events || events.length === 0 ? (
@@ -333,7 +354,9 @@ export default function Home() {
               <div className="grid grid-cols-3 gap-4" style={{ marginLeft: AXIS_GUTTER }}>
                 {daysList.map((dayIso, idx) => (
                   <h3 key={dayIso} className="flex items-baseline gap-2 border-b pb-1.5 border-ink-faint">
-                    <span className="text-base font-semibold text-ink">{getDayLabel(dayIso, idx)}</span>
+                    <span className={`text-base font-semibold ${idx === 0 ? 'text-[var(--primary)]' : 'text-ink'}`}>
+                      {getDayLabel(dayIso, idx)}
+                    </span>
                     <span className="text-[0.7rem] font-medium text-ink-soft opacity-85">
                       {new Date(dayIso + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                     </span>
@@ -376,9 +399,9 @@ export default function Home() {
                     >
                       <div className="absolute inset-y-0 right-0 rounded-lg" style={{ left: AXIS_GUTTER, background: p.tint }} />
                       {to - from >= 90 && (
-                        <div className="absolute inset-y-0 left-0 flex w-5 flex-col items-center justify-center gap-1.5 overflow-hidden">
-                          <span className="text-xs leading-none">{p.emoji}</span>
-                          <span className="rotate-180 text-[0.55rem] font-semibold uppercase tracking-[0.2em] text-ink-faint [writing-mode:vertical-rl]">
+                        <div className="absolute inset-y-0 left-0 flex w-8 flex-col items-center justify-center gap-2 overflow-hidden">
+                          <span className="text-lg leading-none">{p.emoji}</span>
+                          <span className="rotate-180 text-[0.7rem] font-bold uppercase tracking-[0.18em] text-ink-soft [writing-mode:vertical-rl]">
                             {p.label}
                           </span>
                         </div>
@@ -391,7 +414,7 @@ export default function Home() {
                 {timeline.hours.map((h) => (
                   <div key={h} className="absolute inset-x-0" style={{ top: `${axisPct(h * 60)}%` }}>
                     <div className="border-t border-[var(--outline-var)]" style={{ marginLeft: AXIS_GUTTER }} />
-                    <span className="absolute right-[calc(100%-70px)] top-0 -translate-y-1/2 pr-1 text-[0.65rem] font-medium tabular-nums text-ink-soft">
+                    <span className="absolute right-[calc(100%-86px)] top-0 -translate-y-1/2 pr-1 text-[0.7rem] font-medium tabular-nums text-ink-soft">
                       {fmtHour(h)}
                     </span>
                   </div>
@@ -399,10 +422,20 @@ export default function Home() {
 
                 {/* day columns with positioned events */}
                 <div className="absolute inset-y-0 right-0 grid grid-cols-3 gap-4" style={{ left: AXIS_GUTTER }}>
-                  {daysList.map((dayIso) => {
+                  {daysList.map((dayIso, idx) => {
                     const placed = timeline.timedByDay.get(dayIso) ?? []
                     return (
                       <div key={dayIso} className="relative">
+                        {/* today's column gets a soft highlight; dividers separate the days */}
+                        {idx === 0 && (
+                          <div
+                            className="pointer-events-none absolute inset-y-0 -inset-x-1 rounded-lg"
+                            style={{ background: 'color-mix(in srgb, var(--primary) 7%, transparent)' }}
+                          />
+                        )}
+                        {idx > 0 && (
+                          <div className="pointer-events-none absolute inset-y-0 -left-2 w-px" style={{ background: 'var(--outline)', opacity: 0.35 }} />
+                        )}
                         {placed.length === 0 && (timeline.allDayByDay.get(dayIso) ?? []).length === 0 && (
                           <p className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-xs text-ink-faint">
                             No events
