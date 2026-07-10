@@ -264,6 +264,7 @@ export default function Home() {
     <div className="flex h-full flex-col gap-3 lg:gap-4">
       {/* header */}
       <header className="glass flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-1.5 lg:px-8 lg:py-2.5">
+        <img src="/favicon.png" className="h-10 w-10 object-contain rounded-lg shadow-sm shrink-0" alt="Logo" />
         <div>
           <p className="text-xs font-medium tracking-widest text-rose-400 uppercase">
             {config?.family_name ? `${config.family_name} Nivas` : 'Nivas'}

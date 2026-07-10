@@ -202,6 +202,11 @@ export default function App() {
       <RewardCelebrationProvider>
         <div className="flex h-full flex-col lg:flex-row gap-2 p-2 lg:gap-4 lg:p-4">
           <nav className="glass order-last lg:order-first flex flex-row lg:flex-col w-full lg:w-22 h-14 lg:h-full shrink-0 items-center justify-around lg:justify-start gap-1 lg:gap-4 py-1.5 lg:py-4 px-2 lg:px-0">
+            {/* Logo (Desktop Only) */}
+            <div className="hidden lg:flex items-center justify-center mb-1 shrink-0">
+              <img src="/favicon.png" className="h-10 w-10 object-contain rounded-lg shadow-sm" alt="Logo" />
+            </div>
+
             {/* Main Nav Items */}
             <div className="flex flex-row lg:flex-col items-center justify-around lg:justify-start gap-1 lg:gap-3 flex-1 lg:flex-none w-full">
               {NAV.filter(n => n.id !== 'setup').map((n) => {
