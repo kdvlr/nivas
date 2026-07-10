@@ -1,7 +1,8 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { api } from '../lib/api'
 import CoinIcon from '../components/CoinIcon'
 import Icon from '../components/Icon'
+import Modal from '../components/Modal'
 import { useCelebration } from '../components/celebrations/CelebrationContext'
 import { useClock, useData, todayISO, addDaysISO } from '../lib/hooks'
 import type { CalendarStatus, CalEvent, ChoreItem, MealDay, ShoppingItem, Task, WeatherData } from '../lib/types'
@@ -120,6 +121,7 @@ function computeAxis(timed: PlacedEvent[]): { start: number; end: number } {
 }
 
 export default function Home() {
+  const [selectedEvent, setSelectedEvent] = useState<CalEvent | null>(null)
   const now = useClock()
   const today = todayISO()
   const { data: events, loading: loadingEvents } = useData<CalEvent[]>(
@@ -460,7 +462,7 @@ export default function Home() {
                             return (
                               <div
                                 key={it.ev.id}
-                                className="vivid-dim absolute z-[5] flex flex-col overflow-hidden rounded-lg px-2.5 py-1.5 text-white shadow-md transition-transform hover:z-10 hover:scale-[1.02]"
+                                className="vivid-dim absolute z-[5] flex flex-col overflow-hidden rounded-lg px-2.5 py-1.5 text-white shadow-md transition-transform hover:z-10 hover:scale-[1.02] cursor-pointer"
                                 style={{
                                   top: `${axisPct(it.s)}%`,
                                   height: `max(${heightPct}%, 2.6rem)`,
@@ -468,6 +470,7 @@ export default function Home() {
                                   width: `calc(${100 / it.cols}% - 4px)`,
                                   background: eventBg(it.ev),
                                 }}
+                                onClick={() => setSelectedEvent(it.ev)}
                               >
                                 <div className="hidden lg:block text-[0.7rem] font-bold leading-tight tracking-tight opacity-95 tabular-nums">
                                   {fmtTime(it.ev.start)} – {fmtTime(it.ev.end)}
@@ -475,7 +478,7 @@ export default function Home() {
                                 <div className="truncate text-sm font-semibold leading-snug tracking-tight">
                                   {it.ev.title}
                                 </div>
-                                {it.ev.location && (
+                                {it.ev.location && (it.e - it.s > 60) && (
                                   <div className="flex items-center gap-1 truncate text-[0.7rem] opacity-85">
                                     <Icon name="location_on" className="text-[0.75rem] shrink-0" />
                                     <span className="truncate">{it.ev.location}</span>
@@ -524,8 +527,9 @@ export default function Home() {
                             return (
                               <div
                                 key={e.id}
-                                className="rounded-xl p-3.5 text-white shadow flex flex-col gap-1 transition-transform active:scale-[0.98]"
+                                className="rounded-xl p-3.5 text-white shadow flex flex-col gap-1 transition-transform active:scale-[0.98] cursor-pointer"
                                 style={{ background: bgStyle }}
+                                onClick={() => setSelectedEvent(e)}
                               >
                                 {!e.all_day && (
                                   <div className="text-[0.7rem] font-bold leading-tight tracking-tight opacity-95 tabular-nums">
@@ -690,6 +694,82 @@ export default function Home() {
           </section>
         </div>
       </div>
+
+      {selectedEvent && (
+        <Modal
+          title={selectedEvent.title}
+          onClose={() => setSelectedEvent(null)}
+        >
+          <div className="flex flex-col gap-4 text-ink">
+            <div className="flex items-center gap-2.5 text-base font-semibold text-ink-soft">
+              <Icon name="schedule" className="text-xl text-[var(--primary)]" />
+              <span>
+                {selectedEvent.all_day ? (
+                  'All Day'
+                ) : (
+                  <>
+                    {new Date(selectedEvent.start).toLocaleDateString(undefined, {
+                      weekday: 'long',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
+                    <span className="mx-1.5 text-ink-faint">·</span>
+                    {fmtTime(selectedEvent.start)} – {fmtTime(selectedEvent.end)}
+                  </>
+                )}
+              </span>
+            </div>
+
+            {selectedEvent.location && (
+              <div className="flex items-center gap-2.5 text-base text-ink-soft">
+                <Icon name="location_on" className="text-xl text-[var(--primary)] shrink-0" />
+                {selectedEvent.location.startsWith('http') ? (
+                  <a
+                    href={selectedEvent.location}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="truncate text-sky-600 dark:text-sky-400 hover:underline font-medium"
+                  >
+                    {selectedEvent.location}
+                  </a>
+                ) : (
+                  <span className="truncate">{selectedEvent.location}</span>
+                )}
+              </div>
+            )}
+
+            {selectedEvent.description && (
+              <div className="flex gap-2.5 text-base text-ink-soft border-t border-ink-faint pt-3 mt-1">
+                <Icon name="notes" className="text-xl text-[var(--primary)] shrink-0 mt-0.5" />
+                <div className="whitespace-pre-wrap leading-relaxed text-sm break-words flex-1">
+                  {selectedEvent.description}
+                </div>
+              </div>
+            )}
+
+            <div className="mt-2 flex items-center gap-2 rounded-lg bg-slate-100 dark:bg-slate-800/60 px-3 py-2 text-xs font-semibold self-start text-ink-soft">
+              <span
+                className="h-2.5 w-2.5 rounded-full"
+                style={{
+                  background:
+                    !selectedEvent.person_name ||
+                    selectedEvent.person_name.toLowerCase() === 'family' ||
+                    selectedEvent.person_name.toLowerCase() === 'shared'
+                      ? 'linear-gradient(135deg, #f43f5e, #ec4899, #8b5cf6, #3b82f6, #10b981)'
+                      : selectedEvent.color,
+                }}
+              />
+              <span>
+                {!selectedEvent.person_name ||
+                selectedEvent.person_name.toLowerCase() === 'family' ||
+                selectedEvent.person_name.toLowerCase() === 'shared'
+                  ? 'Family Calendar'
+                  : `${selectedEvent.person_name}'s Calendar`}
+              </span>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   )
 }
