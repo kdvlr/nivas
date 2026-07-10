@@ -347,7 +347,7 @@ export default function Home() {
           <a href="#/calendar" className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xl font-normal text-ink">
             <Icon name="calendar_month" className="text-2xl" /> Schedule
             {calendarLegend.length > 0 && (
-              <span className="ml-2.5 hidden md:flex flex-wrap items-center gap-x-3.5 gap-y-1">
+              <span className="ml-2.5 flex flex-wrap items-center gap-x-3.5 gap-y-1">
                 {calendarLegend.map(([label, bg]) => (
                   <span key={label} className="flex items-center gap-1.5 text-sm font-semibold text-ink-soft">
                     <span className="vivid-dim relative h-3 w-3 rounded-full shadow-sm" style={{ background: bg }} />
