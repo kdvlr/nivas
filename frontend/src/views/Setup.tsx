@@ -291,14 +291,38 @@ function SetupInner() {
                     />
                     <span
                       className="h-4 w-4 shrink-0 rounded-full"
-                      style={{ background: s.color }}
+                      style={{ background: linkedPerson ? linkedPerson.color : s.color }}
                       title="event color"
                     />
                     <span className="min-w-0 flex-1 truncate text-base font-medium">{s.name}</span>
+                    <div className="flex max-w-40 flex-wrap gap-1 shrink-0">
+                      {COLORS.map((c) => {
+                        const active = (linkedPerson ? linkedPerson.color : s.color) === c
+                        return (
+                          <button
+                            key={c}
+                            onClick={() => {
+                              const updates: any = { color: c }
+                              if (linkedPerson) {
+                                updates.person_name = ''
+                              }
+                              updateSelection(s.id, updates)
+                            }}
+                            className={`h-5 w-5 rounded-full transition-all active:scale-90 ${
+                              active
+                                ? 'ring-2 ring-slate-700/40 dark:ring-slate-200/60 ring-offset-1 scale-105 shadow-sm'
+                                : 'opacity-70 hover:opacity-100 hover:scale-105'
+                            }`}
+                            style={{ background: c }}
+                            title="select color"
+                          />
+                        )
+                      })}
+                    </div>
                     <select
                       value={linkedPerson ? linkedPerson.name : ''}
                       onChange={(e) => updateSelection(s.id, { person_name: e.target.value })}
-                      className="input-glass w-36 px-2 py-1.5 text-base"
+                      className="input-glass w-36 px-2 py-1.5 text-base shrink-0"
                     >
                       <option value="">— no person —</option>
                       {(people ?? []).map((p) => (
@@ -307,18 +331,6 @@ function SetupInner() {
                         </option>
                       ))}
                     </select>
-                    {!linkedPerson && (
-                      <div className="flex max-w-40 flex-wrap gap-1">
-                        {COLORS.slice(0, 8).map((c) => (
-                          <button
-                            key={c}
-                            onClick={() => updateSelection(s.id, { color: c })}
-                            className={`h-6 w-6 rounded-full ${s.color === c ? 'ring-2 ring-slate-700/40 dark:ring-slate-200/60 ring-offset-1' : ''}`}
-                            style={{ background: c }}
-                          />
-                        ))}
-                      </div>
-                    )}
                   </div>
                 )
               })}
