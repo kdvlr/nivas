@@ -411,6 +411,24 @@ body {
 }
 
 /* ---------- FullCalendar themed via tokens ---------- */
+/* Vivid color surfaces (event cards, chips): in dark mode a translucent
+   near-black scrim keeps the hue but pulls the brightness down, while the
+   white text on top stays at full contrast. */
+/* note: the element must already be positioned (relative/absolute) */
+.dark .vivid-dim::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgb(3 7 18 / 0.34);
+  pointer-events: none;
+}
+
+/* FullCalendar events get the same treatment in dark mode */
+.dark .fc .fc-event {
+  filter: brightness(0.78) saturate(0.92);
+}
+
 .fc {
   --fc-border-color: var(--outline-var);
   --fc-page-bg-color: transparent;

@@ -338,7 +338,7 @@ export default function Home() {
               <span className="ml-2 flex flex-wrap items-center gap-x-3 gap-y-1">
                 {calendarLegend.map(([label, bg]) => (
                   <span key={label} className="flex items-center gap-1.5 text-xs font-medium text-ink-soft">
-                    <span className="h-2.5 w-2.5 rounded-full shadow-sm" style={{ background: bg }} />
+                    <span className="vivid-dim relative h-2.5 w-2.5 rounded-full shadow-sm" style={{ background: bg }} />
                     {label}
                   </span>
                 ))}
@@ -372,7 +372,7 @@ export default function Home() {
                       {(timeline.allDayByDay.get(dayIso) ?? []).map((e) => (
                         <span
                           key={e.id}
-                          className="max-w-full truncate rounded-full px-2.5 py-1 text-[0.65rem] font-bold text-white shadow"
+                          className="vivid-dim relative max-w-full truncate rounded-full px-2.5 py-1 text-[0.65rem] font-bold text-white shadow"
                           style={{ background: eventBg(e) }}
                           title={e.title}
                         >
@@ -446,7 +446,7 @@ export default function Home() {
                           return (
                             <div
                               key={it.ev.id}
-                              className="absolute z-[5] flex flex-col overflow-hidden rounded-lg px-2.5 py-1.5 text-white shadow-md transition-transform hover:z-10 hover:scale-[1.02]"
+                              className="vivid-dim absolute z-[5] flex flex-col overflow-hidden rounded-lg px-2.5 py-1.5 text-white shadow-md transition-transform hover:z-10 hover:scale-[1.02]"
                               style={{
                                 top: `${axisPct(it.s)}%`,
                                 height: `max(${heightPct}%, 2.6rem)`,
