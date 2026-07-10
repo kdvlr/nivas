@@ -197,7 +197,7 @@ export default function Home() {
     const allTimed = [...timedByDay.values()].flat()
     const axis = computeAxis(allTimed)
     const spanMin = axis.end - axis.start
-    const hourStep = spanMin > 14 * 60 ? 2 : 1
+    const hourStep = 1
     const hours: number[] = []
     for (let h = axis.start / 60; h <= axis.end / 60; h += hourStep) hours.push(h)
     const hasAllDay = [...allDayByDay.values()].some((l) => l.length > 0)
