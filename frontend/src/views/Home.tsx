@@ -481,10 +481,6 @@ export default function Home() {
                                     <span className="truncate">{it.ev.location}</span>
                                   </div>
                                 )}
-                                <div className="mt-auto flex items-center gap-1.5 self-start rounded-md bg-white/20 px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wider backdrop-blur-sm">
-                                  <span className={`h-1.5 w-1.5 rounded-full ${isFamilyEvent(it.ev) ? 'bg-white animate-pulse' : 'bg-white/80'}`} />
-                                  <span>{isFamilyEvent(it.ev) ? 'Family' : it.ev.person_name}</span>
-                                </div>
                               </div>
                             )
                           })}
