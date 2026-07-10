@@ -342,86 +342,115 @@ function SetupInner() {
           ))}
         </Card>
 
-        {/* iCloud */}
-        <Card
-          title={<><Icon name="cloud" /> iCloud Reminders</>}
-          badge={
-            <Badge
-              ok={!!status?.icloud.connected}
-              label={
-                status?.icloud.connected
-                  ? 'connected'
-                  : status?.icloud.needs_2fa
-                    ? '2FA needed'
-                    : 'not connected'
-              }
-            />
-          }
-        >
-          {!status?.icloud.connected && (
-            <div className="flex flex-col gap-3">
-              {!status?.icloud_configured && (
-                <>
-                  <input
-                    value={icUser}
-                    onChange={(e) => setIcUser(e.target.value)}
-                    placeholder="Apple ID email"
-                    className="input-glass px-4 py-3 text-lg"
-                  />
-                  <input
-                    value={icPass}
-                    onChange={(e) => setIcPass(e.target.value)}
-                    type="password"
-                    placeholder="Password (or app-specific password)"
-                    className="input-glass px-4 py-3 text-lg"
-                  />
-                </>
-              )}
-              <button
-                onClick={icloudLogin}
-                disabled={busy === 'icloud'}
-                className="btn-primary py-3 text-lg"
-              >
-                {busy === 'icloud' ? 'Connecting…' : 'Sign in to iCloud'}
-              </button>
-              {status?.icloud.needs_2fa && (
-                <div className="flex gap-2">
-                  <input
-                    value={icCode}
-                    onChange={(e) => setIcCode(e.target.value)}
-                    placeholder="2FA code"
-                    inputMode="numeric"
-                    className="flex-1 input-glass px-4 py-3 text-lg tracking-widest"
-                  />
-                  <button
-                    onClick={icloud2fa}
-                    className="btn-primary px-6 py-3 text-lg"
-                  >
-                    Verify
-                  </button>
+        {/* Sync & Accounts Panel */}
+        <Card title={<><Icon name="cloud_sync" /> Sync & Cloud Integration</>}>
+          <div className="flex flex-col gap-4">
+            {/* Sync health */}
+            <div>
+              <h3 className="text-base font-semibold text-ink mb-2 flex items-center gap-2">
+                <Icon name="monitor_heart" className="text-lg text-[var(--primary)]" />
+                Sync Health
+              </h3>
+              {Object.keys(status?.sync ?? {}).length === 0 ? (
+                <p className="text-sm text-ink-soft">No syncs have run yet.</p>
+              ) : (
+                <div className="flex flex-col gap-1.5 rounded-xl bg-slate-100/50 dark:bg-slate-800/40 p-3.5">
+                  {Object.entries(status?.sync ?? {}).map(([name, s]) => (
+                    <div key={name} className="flex items-center gap-3 text-sm">
+                      <span className={`h-2.5 w-2.5 rounded-full ${s.ok ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
+                      <span className="w-20 font-medium capitalize">{name}</span>
+                      <span className="text-ink-soft">{new Date(s.at).toLocaleTimeString()}</span>
+                      {s.detail && <span className="truncate text-rose-500 ml-2">{s.detail}</span>}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
-          )}
-          {icMsg && <p className="mt-2 text-base font-medium text-ink-soft">{icMsg}</p>}
-          {status?.icloud.connected && (
-            <ICloudLists status={status} onSaved={reload} />
-          )}
-        </Card>
 
-        {/* Alexa */}
-        <Card
-          title={<><Icon name="graphic_eq" /> Alexa Lists</>}
-          badge={<Badge ok={!!status?.alexa.connected} label={status?.alexa.connected ? 'connected' : 'not connected'} />}
-        >
-          <p className="text-sm text-ink-soft">
-            Syncs your shopping and to-do lists from Amazon Alexa. Credentials must be configured in your server's <code>docker-compose.yml</code> file.
-          </p>
-          {status?.alexa.error && (
-            <p className="mt-2 text-sm font-semibold text-rose-400">
-              Error: {status.alexa.error}
-            </p>
-          )}
+            {/* iCloud */}
+            <div className="border-t border-[var(--outline-var)] pt-4">
+              <h3 className="text-base font-semibold text-ink mb-3 flex items-center gap-2">
+                <Icon name="cloud" className="text-lg text-[var(--primary)]" />
+                iCloud Reminders
+                <Badge
+                  ok={!!status?.icloud.connected}
+                  label={
+                    status?.icloud.connected
+                      ? 'connected'
+                      : status?.icloud.needs_2fa
+                        ? '2FA needed'
+                        : 'not connected'
+                  }
+                />
+              </h3>
+              {!status?.icloud.connected && (
+                <div className="flex flex-col gap-3">
+                  {!status?.icloud_configured && (
+                    <>
+                      <input
+                        value={icUser}
+                        onChange={(e) => setIcUser(e.target.value)}
+                        placeholder="Apple ID email"
+                        className="input-glass px-4 py-2.5 text-base"
+                      />
+                      <input
+                        value={icPass}
+                        onChange={(e) => setIcPass(e.target.value)}
+                        type="password"
+                        placeholder="Password (or app-specific password)"
+                        className="input-glass px-4 py-2.5 text-base"
+                      />
+                    </>
+                  )}
+                  <button
+                    onClick={icloudLogin}
+                    disabled={busy === 'icloud'}
+                    className="btn-primary py-2.5 text-base"
+                  >
+                    {busy === 'icloud' ? 'Connecting…' : 'Sign in to iCloud'}
+                  </button>
+                  {status?.icloud.needs_2fa && (
+                    <div className="flex gap-2">
+                      <input
+                        value={icCode}
+                        onChange={(e) => setIcCode(e.target.value)}
+                        placeholder="2FA code"
+                        inputMode="numeric"
+                        className="flex-1 input-glass px-4 py-2.5 text-base tracking-widest text-center font-semibold"
+                      />
+                      <button
+                        onClick={icloud2fa}
+                        className="btn-primary px-6 py-2.5 text-base"
+                      >
+                        Verify
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+              {icMsg && <p className="mt-2 text-sm font-medium text-ink-soft">{icMsg}</p>}
+              {status?.icloud.connected && (
+                <ICloudLists status={status} onSaved={reload} />
+              )}
+            </div>
+
+            {/* Alexa */}
+            <div className="border-t border-[var(--outline-var)] pt-4">
+              <h3 className="text-base font-semibold text-ink mb-2 flex items-center gap-2">
+                <Icon name="graphic_eq" className="text-lg text-[var(--primary)]" />
+                Alexa Lists
+                <Badge ok={!!status?.alexa.connected} label={status?.alexa.connected ? 'connected' : 'not connected'} />
+              </h3>
+              <p className="text-sm text-ink-soft leading-relaxed">
+                Syncs your shopping and to-do lists from Amazon Alexa. Credentials must be configured in your server's <code>docker-compose.yml</code> file.
+              </p>
+              {status?.alexa.error && (
+                <p className="mt-2 text-sm font-semibold text-rose-400">
+                  Error: {status.alexa.error}
+                </p>
+              )}
+            </div>
+          </div>
         </Card>
 
         {/* People */}
@@ -610,23 +639,7 @@ function SetupInner() {
 
         {status && <TimezoneCard status={status} reload={reload} />}
 
-        {/* sync health */}
-        <Card title={<><Icon name="monitor_heart" /> Sync health</>}>
-          {Object.keys(status?.sync ?? {}).length === 0 ? (
-            <p className="text-sm text-ink-soft">No syncs have run yet.</p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {Object.entries(status?.sync ?? {}).map(([name, s]) => (
-                <div key={name} className="flex items-center gap-3 text-sm">
-                  <span className={`h-2.5 w-2.5 rounded-full ${s.ok ? 'bg-emerald-400' : 'bg-rose-400'}`} />
-                  <span className="w-20 font-medium capitalize">{name}</span>
-                  <span className="text-ink-soft">{new Date(s.at).toLocaleTimeString()}</span>
-                  {s.detail && <span className="truncate text-rose-500">{s.detail}</span>}
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
+
       </div>
     </div>
   )
