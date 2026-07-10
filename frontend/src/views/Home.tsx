@@ -531,6 +531,11 @@ export default function Home() {
                                 className="rounded-xl p-3.5 text-white shadow flex flex-col gap-1 transition-transform active:scale-[0.98]"
                                 style={{ background: bgStyle }}
                               >
+                                {!e.all_day && (
+                                  <div className="text-[0.7rem] font-bold leading-tight tracking-tight opacity-95 tabular-nums">
+                                    {fmtTime(e.start)} – {fmtTime(e.end)}
+                                  </div>
+                                )}
                                 <div className="text-base font-bold leading-snug tracking-tight">{e.title}</div>
                                 {e.location && (
                                   <div className="flex items-center gap-1.5 text-xs opacity-90 truncate mt-0.5">
