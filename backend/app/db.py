@@ -34,6 +34,18 @@ def init_db() -> None:
             )
         except Exception:
             pass  # column already exists
+        try:
+            conn.execute(
+                text("ALTER TABLE calendar_events ADD COLUMN description VARCHAR DEFAULT ''")
+            )
+        except Exception:
+            pass
+        try:
+            conn.execute(
+                text("ALTER TABLE calendar_events ADD COLUMN location VARCHAR DEFAULT ''")
+            )
+        except Exception:
+            pass
 
 
 def get_db() -> Generator[Session, None, None]:

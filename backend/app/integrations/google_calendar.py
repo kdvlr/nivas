@@ -113,6 +113,7 @@ def sync_selection(db: Session, selection: CalendarSelection) -> bool:
                     "end": end,
                     "all_day": all_day,
                     "location": ev.get("location", ""),
+                    "description": ev.get("description", ""),
                 }
                 if any(getattr(row, k) != v for k, v in new.items()):
                     for k, v in new.items():
@@ -133,7 +134,9 @@ def sync_selection(db: Session, selection: CalendarSelection) -> bool:
     return changed
 
 
-def _to_google_body(title: str, start: str, end: str, all_day: bool) -> dict:
+def _to_google_body(
+    title: str, start: str, end: str, all_day: bool, description: str = "", location: str = ""
+) -> dict:
     tz = get_settings().tz
     if all_day:
         times = {"start": {"date": start[:10]}, "end": {"date": end[:10]}}
@@ -142,16 +145,31 @@ def _to_google_body(title: str, start: str, end: str, all_day: bool) -> dict:
             "start": {"dateTime": start, "timeZone": tz},
             "end": {"dateTime": end, "timeZone": tz},
         }
-    return {"summary": title, **times}
+    return {
+        "summary": title,
+        "description": description,
+        "location": location,
+        **times,
+    }
 
 
 def create_event(
-    db: Session, selection: CalendarSelection, title: str, start: str, end: str, all_day: bool
+    db: Session,
+    selection: CalendarSelection,
+    title: str,
+    start: str,
+    end: str,
+    all_day: bool,
+    description: str = "",
+    location: str = "",
 ) -> CalendarEvent:
     svc = service_for(selection.account, db)
     ev = (
         svc.events()
-        .insert(calendarId=selection.calendar_id, body=_to_google_body(title, start, end, all_day))
+        .insert(
+            calendarId=selection.calendar_id,
+            body=_to_google_body(title, start, end, all_day, description, location),
+        )
         .execute()
     )
     start_s, end_s, all_day_s = _event_times(ev)
@@ -162,6 +180,8 @@ def create_event(
         start=start_s,
         end=end_s,
         all_day=all_day_s,
+        description=ev.get("description", description),
+        location=ev.get("location", location),
     )
     db.add(row)
     db.commit()
@@ -175,6 +195,8 @@ def update_event(
     start: str | None = None,
     end: str | None = None,
     all_day: bool | None = None,
+    description: str | None = None,
+    location: str | None = None,
 ) -> CalendarEvent:
     selection = event.selection
     svc = service_for(selection.account, db)
@@ -182,12 +204,21 @@ def update_event(
     new_start = start if start is not None else event.start
     new_end = end if end is not None else event.end
     new_all_day = all_day if all_day is not None else event.all_day
+    new_description = description if description is not None else event.description
+    new_location = location if location is not None else event.location
     svc.events().patch(
         calendarId=selection.calendar_id,
         eventId=event.external_id,
-        body=_to_google_body(new_title, new_start, new_end, new_all_day),
+        body=_to_google_body(
+            new_title, new_start, new_end, new_all_day, new_description, new_location
+        ),
     ).execute()
-    event.title, event.start, event.end, event.all_day = new_title, new_start, new_end, new_all_day
+    event.title = new_title
+    event.start = new_start
+    event.end = new_end
+    event.all_day = new_all_day
+    event.description = new_description
+    event.location = new_location
     db.commit()
     return event
 

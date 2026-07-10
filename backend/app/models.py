@@ -63,6 +63,7 @@ class CalendarEvent(Base):
     end: Mapped[str] = mapped_column(String)
     all_day: Mapped[bool] = mapped_column(Boolean, default=False)
     location: Mapped[str] = mapped_column(String, default="")
+    description: Mapped[str] = mapped_column(String, default="")
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
     selection: Mapped[CalendarSelection] = relationship(back_populates="events")

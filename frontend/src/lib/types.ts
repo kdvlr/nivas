@@ -6,6 +6,7 @@ export interface CalEvent {
   end: string
   all_day: boolean
   location: string
+  description: string
   color: string
   person_name: string
 }

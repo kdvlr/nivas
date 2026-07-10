@@ -19,6 +19,8 @@ interface Draft {
   start: string
   end: string
   all_day: boolean
+  location: string
+  description: string
 }
 
 const toLocalInput = (d: Date) => {
@@ -64,7 +66,12 @@ export default function Calendar() {
             end: e.end,
             allDay: e.all_day,
             backgroundColor: e.color,
-            extendedProps: { person: e.person_name, selection_id: e.selection_id },
+            extendedProps: {
+              person: e.person_name,
+              selection_id: e.selection_id,
+              location: e.location || '',
+              description: e.description || '',
+            },
           })),
         )
       } catch (e) {
@@ -96,6 +103,8 @@ export default function Calendar() {
       start: toLocalInput(arg.start),
       end: toLocalInput(arg.end),
       all_day: arg.allDay,
+      location: '',
+      description: '',
     })
     calRef.current?.getApi().unselect()
   }
@@ -109,6 +118,8 @@ export default function Calendar() {
       start: ev.start ? toLocalInput(ev.start) : '',
       end: ev.end ? toLocalInput(ev.end) : (ev.start ? toLocalInput(ev.start) : ''),
       all_day: ev.allDay,
+      location: ev.extendedProps.location || '',
+      description: ev.extendedProps.description || '',
     })
   }
 
@@ -121,6 +132,8 @@ export default function Calendar() {
       start: draft.all_day ? draft.start.slice(0, 10) : new Date(draft.start).toISOString(),
       end: draft.all_day ? draft.end.slice(0, 10) : new Date(draft.end).toISOString(),
       all_day: draft.all_day,
+      location: draft.location.trim(),
+      description: draft.description.trim(),
     }
     try {
       if (draft.id) await api.patch(`/api/calendar/events/${draft.id}`, body)
@@ -233,6 +246,19 @@ export default function Calendar() {
               onChange={(e) => setDraft({ ...draft, title: e.target.value })}
               placeholder="What's happening?"
               className="input-glass px-5 py-4 text-xl"
+            />
+            <input
+              value={draft.location}
+              onChange={(e) => setDraft({ ...draft, location: e.target.value })}
+              placeholder="Add location"
+              className="input-glass px-5 py-3.5 text-base"
+            />
+            <textarea
+              value={draft.description}
+              onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+              placeholder="Add description"
+              rows={3}
+              className="input-glass px-5 py-3.5 text-base resize-none"
             />
             {!draft.id && (
               <div className="flex flex-wrap gap-2">

@@ -43,6 +43,8 @@ class EventCreate(BaseModel):
     start: str
     end: str
     all_day: bool = False
+    description: str = ""
+    location: str = ""
 
 
 class EventUpdate(BaseModel):
@@ -50,6 +52,8 @@ class EventUpdate(BaseModel):
     start: str | None = None
     end: str | None = None
     all_day: bool | None = None
+    description: str | None = None
+    location: str | None = None
 
 
 def _selection_dict(sel: CalendarSelection, person_colors: dict[str, str] | None = None) -> dict:
@@ -197,6 +201,7 @@ def events(start: str, end: str, db: Session = Depends(get_db)):
             "end": e.end,
             "all_day": e.all_day,
             "location": e.location,
+            "description": e.description,
             "color": colors.get(e.selection.person_name.lower(), e.selection.color)
             if e.selection.person_name
             else e.selection.color,
@@ -212,7 +217,16 @@ async def create_event(body: EventCreate, db: Session = Depends(get_db)):
     if sel is None:
         raise HTTPException(404, "calendar not found")
     try:
-        row = gcal.create_event(db, sel, body.title, body.start, body.end, body.all_day)
+        row = gcal.create_event(
+            db,
+            sel,
+            body.title,
+            body.start,
+            body.end,
+            body.all_day,
+            body.description,
+            body.location,
+        )
     except Exception as e:
         log.warning("create event failed: %s", e)
         raise HTTPException(502, f"Google Calendar error: {e}")
@@ -226,7 +240,16 @@ async def update_event(event_id: int, body: EventUpdate, db: Session = Depends(g
     if row is None:
         raise HTTPException(404)
     try:
-        gcal.update_event(db, row, body.title, body.start, body.end, body.all_day)
+        gcal.update_event(
+            db,
+            row,
+            body.title,
+            body.start,
+            body.end,
+            body.all_day,
+            body.description,
+            body.location,
+        )
     except Exception as e:
         log.warning("update event failed: %s", e)
         raise HTTPException(502, f"Google Calendar error: {e}")
