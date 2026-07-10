@@ -467,9 +467,9 @@ export default function Home() {
                                 background: eventBg(it.ev),
                               }}
                             >
-                              <div className="text-[0.7rem] font-bold leading-tight tracking-tight opacity-95 tabular-nums">
-                                {fmtTime(it.ev.start)} – {fmtTime(it.ev.end)}
-                              </div>
+                               <div className="hidden lg:block text-[0.7rem] font-bold leading-tight tracking-tight opacity-95 tabular-nums">
+                                 {fmtTime(it.ev.start)} – {fmtTime(it.ev.end)}
+                               </div>
                               <div className="truncate text-sm font-semibold leading-snug tracking-tight">
                                 {it.ev.title}
                               </div>
