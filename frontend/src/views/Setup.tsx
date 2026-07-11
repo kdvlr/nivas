@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { SPATIAL_STANDARD_DEFAULT, STANDARD_ENTER, PRESS_SPRING } from '../lib/motion'
+import Avatar from '../components/Avatar'
 import CoinIcon from '../components/CoinIcon'
 import Icon from '../components/Icon'
 import { api } from '../lib/api'
@@ -32,7 +33,17 @@ interface Person {
   id: number
   name: string
   color: string
+  avatar?: string
 }
+
+const SECTIONS = [
+  { id: 'integrations', icon: 'cloud_sync', label: 'Integrations' },
+  { id: 'family', icon: 'groups', label: 'Family' },
+  { id: 'looks', icon: 'palette', label: 'Look & Feel' },
+  { id: 'general', icon: 'tune', label: 'General' },
+] as const
+
+type SectionId = (typeof SECTIONS)[number]['id']
 
 function Card({ title, badge, children }: { title: ReactNode; badge?: ReactNode; children: ReactNode }) {
   return (
@@ -167,6 +178,8 @@ function SetupInner() {
   const [newRewardTitle, setNewRewardTitle] = useState('')
   const [newRewardCost, setNewRewardCost] = useState(5)
   const [expandedAccounts, setExpandedAccounts] = useState<Record<number, boolean>>({})
+  const [section, setSection] = useState<SectionId>('integrations')
+  const [colorEditing, setColorEditing] = useState<number | null>(null)
 
   const renderLastUpdated = (integrationName: string) => {
     const s = status?.sync?.[integrationName]
@@ -247,8 +260,8 @@ function SetupInner() {
   }
 
   return (
-    <div className="h-full overflow-y-auto p-4 lg:p-6">
-      <div className="mb-4 lg:mb-5 flex flex-wrap items-center gap-3 lg:gap-4">
+    <div className="flex h-full flex-col p-4 lg:p-6">
+      <div className="mb-4 flex flex-wrap items-center gap-3 lg:gap-4">
         <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink">Setup</h1>
         <button
           onClick={() => api.post('/api/setup/sync')}
@@ -258,8 +271,38 @@ function SetupInner() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 pb-8 xl:grid-cols-2 xl:gap-5">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row lg:gap-6">
+        {/* section rail — vertical on wide screens, chips on narrow */}
+        <nav className="flex shrink-0 gap-2 overflow-x-auto pb-1 lg:w-52 lg:flex-col lg:justify-start lg:overflow-visible lg:pb-0">
+          {SECTIONS.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => setSection(s.id)}
+              className={`flex shrink-0 items-center gap-2.5 rounded-xl px-4 py-2.5 text-base font-medium transition-colors lg:w-full lg:px-4 lg:py-3 ${
+                section === s.id
+                  ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-sm'
+                  : 'glass-inset text-ink-soft active:surface-tile-high'
+              }`}
+            >
+              <Icon name={s.icon} className="text-xl" filled={section === s.id} />
+              {s.label}
+            </button>
+          ))}
+        </nav>
+
+        {/* section content */}
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={section}
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={STANDARD_ENTER}
+              className="flex max-w-4xl flex-col gap-4 pb-8"
+            >
         {/* Integration Panel */}
+        {section === 'integrations' && (
         <Card title={<><Icon name="cloud_sync" /> Integration</>}>
           <div className="flex flex-col gap-4">
             {/* Google Calendar */}
@@ -476,48 +519,72 @@ function SetupInner() {
             </div>
           </div>
         </Card>
+        )}
 
         {/* People */}
+        {section === 'family' && (
         <Card title={<><Icon name="groups" /> Members</>}>
           <div className="flex flex-col gap-3">
             <FamilyNameRow />
             {(people ?? []).map((p, i) => (
-              <div key={p.id} className="flex items-center gap-3">
-                <span className="flex-1 text-lg font-medium">{p.name}</span>
-                <div className="flex gap-1">
-                  {COLORS.map((c) => {
-                    const active = p.color === c
-                    return (
-                      <button
-                        key={c}
-                        onClick={() => {
-                          const next = [...(people ?? [])]
-                          next[i] = { ...p, color: c }
-                          savePeople(next)
-                        }}
-                        className={`group relative flex h-8 w-8 items-center justify-center rounded-full transition-all active:scale-90 ${
-                          active 
-                            ? 'ring-2 ring-white dark:ring-white scale-110 shadow-lg z-10' 
-                            : 'hover:scale-105 opacity-80 hover:opacity-100'
-                        }`}
-                        style={{ background: c }}
-                      >
-                        {active && (
-                          <Icon 
-                            name="check" 
-                            className="text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)] text-lg" 
-                          />
-                        )}
-                      </button>
-                    )
-                  })}
+              <div key={p.id} className="glass-inset px-3 py-2">
+                <div className="flex items-center gap-3">
+                  <Avatar name={p.name} color={p.color} src={p.avatar} size={38} />
+                  <span className="min-w-0 flex-1 truncate text-base font-medium">{p.name}</span>
+                  <button
+                    onClick={() => setColorEditing(colorEditing === p.id ? null : p.id)}
+                    className="btn-glass flex items-center gap-2 px-3 py-1.5 text-sm"
+                  >
+                    <span className="h-4 w-4 rounded-full" style={{ background: p.color }} />
+                    Color
+                    <Icon name={colorEditing === p.id ? 'expand_less' : 'expand_more'} className="text-base" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (confirm(`Remove ${p.name}?`)) savePeople((people ?? []).filter((x) => x.id !== p.id))
+                    }}
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-rose-400 active:surface-tile-high"
+                    title={`Remove ${p.name}`}
+                  >
+                    <Icon name="delete" className="text-lg" />
+                  </button>
                 </div>
-                <button
-                  onClick={() => savePeople((people ?? []).filter((x) => x.id !== p.id))}
-                  className="text-rose-400"
-                >
-                  ✕
-                </button>
+                <AnimatePresence initial={false}>
+                  {colorEditing === p.id && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={SPATIAL_STANDARD_DEFAULT}
+                      className="overflow-hidden"
+                    >
+                      <div className="flex flex-wrap gap-1.5 pb-1 pt-3">
+                        {COLORS.map((c) => {
+                          const active = p.color === c
+                          return (
+                            <button
+                              key={c}
+                              onClick={() => {
+                                const next = [...(people ?? [])]
+                                next[i] = { ...p, color: c }
+                                savePeople(next)
+                                setColorEditing(null)
+                              }}
+                              className={`flex h-8 w-8 items-center justify-center rounded-full transition-all active:scale-90 ${
+                                active ? 'scale-110 shadow-md ring-2 ring-white' : 'opacity-80 active:opacity-100'
+                              }`}
+                              style={{ background: c }}
+                            >
+                              {active && (
+                                <Icon name="check" className="text-lg text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]" />
+                              )}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             ))}
             <div className="flex gap-2">
@@ -543,8 +610,10 @@ function SetupInner() {
             </div>
           </div>
         </Card>
+        )}
 
-        {/* Gemini + celebrations */}
+        {/* Gemini */}
+        {section === 'integrations' && (
         <Card
           title={<><Icon name="auto_awesome" /> Recipe AI</>}
           badge={<Badge ok={!!status?.gemini_configured} label={status?.gemini_configured ? status.gemini_model : 'no API key'} />}
@@ -555,8 +624,10 @@ function SetupInner() {
             recipe site isn't supported by the built-in scraper.
           </p>
         </Card>
+        )}
 
         {/* Rewards Store */}
+        {section === 'family' && (
         <Card title={<><Icon name="storefront" /> Rewards Store</>}>
           <div className="flex flex-col gap-3">
             {(rewardItems ?? []).map((item) => (
@@ -604,7 +675,11 @@ function SetupInner() {
             </div>
           </div>
         </Card>
+        )}
 
+        {section === 'looks' && <AppearanceCard />}
+
+        {section === 'looks' && (
         <Card title={<><Icon name="celebration" /> Celebration preview</>}>
           <p className="mb-2 text-sm text-ink-soft">One of these plays whenever a chore or to-do is completed.</p>
           <div className="flex flex-wrap gap-2">
@@ -629,7 +704,9 @@ function SetupInner() {
             </button>
           </div>
         </Card>
+        )}
 
+        {section === 'looks' && (
         <Card title={<><Icon name="redeem" /> Reward animation preview</>}>
           <p className="mb-2 text-sm text-ink-soft">
             These play when someone redeems a reward from the store.
@@ -656,14 +733,14 @@ function SetupInner() {
             </button>
           </div>
         </Card>
+        )}
 
-        <AppearanceCard />
+        {section === 'general' && <WeatherCard />}
 
-        <WeatherCard />
-
-        {status && <TimezoneCard status={status} reload={reload} />}
-
-
+        {section === 'general' && status && <TimezoneCard status={status} reload={reload} />}
+            </motion.div>
+          </AnimatePresence>
+        </div>
       </div>
     </div>
   )
