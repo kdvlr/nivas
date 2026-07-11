@@ -46,6 +46,10 @@ def init_db() -> None:
             )
         except Exception:
             pass
+        try:
+            conn.execute(text("ALTER TABLE people ADD COLUMN avatar_emoji VARCHAR DEFAULT ''"))
+        except Exception:
+            pass
 
 
 def get_db() -> Generator[Session, None, None]:

@@ -57,6 +57,7 @@ def family_name(db: Session = Depends(get_db)):
 class PersonPut(BaseModel):
     name: str
     color: str
+    avatar_emoji: str = ""
 
 
 class PinVerify(BaseModel):
@@ -156,7 +157,13 @@ def get_people(db: Session = Depends(get_db)):
 
     avatars = person_avatars(db)
     return [
-        {"id": p.id, "name": p.name, "color": p.color, "avatar": avatars.get(p.name.lower(), "")}
+        {
+            "id": p.id,
+            "name": p.name,
+            "color": p.color,
+            "avatar_emoji": p.avatar_emoji or "",
+            "avatar": avatars.get(p.name.lower(), ""),
+        }
         for p in db.query(Person).all()
     ]
 
@@ -166,7 +173,7 @@ async def put_people(people: list[PersonPut], db: Session = Depends(get_db)):
     db.query(Person).delete()
     for p in people:
         if p.name.strip():
-            db.add(Person(name=p.name.strip(), color=p.color))
+            db.add(Person(name=p.name.strip(), color=p.color, avatar_emoji=p.avatar_emoji or ""))
     db.commit()
     await manager.broadcast("tasks")
     await manager.broadcast("chores")

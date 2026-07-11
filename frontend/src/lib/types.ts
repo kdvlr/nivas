@@ -150,6 +150,7 @@ export interface CoinBalance {
   person_name: string
   color: string
   avatar: string
+  avatar_emoji?: string
   earned: number
   lost: number
   spent: number

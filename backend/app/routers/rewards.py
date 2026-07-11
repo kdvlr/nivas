@@ -93,6 +93,7 @@ def get_balances(db: Session = Depends(get_db)):
             {
                 "person_name": p.name,
                 "color": p.color,
+                "avatar_emoji": p.avatar_emoji or "",
                 "avatar": avatars.get(p.name.lower(), ""),
                 **breakdown,
             }

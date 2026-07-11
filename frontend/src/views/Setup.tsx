@@ -34,7 +34,17 @@ interface Person {
   name: string
   color: string
   avatar?: string
+  avatar_emoji?: string
 }
+
+// Kid-friendly display-picture options.
+const AVATAR_EMOJIS = [
+  '🦄', '🐶', '🐱', '🦊', '🐰', '🐼', '🐨', '🐯', '🦁', '🐸',
+  '🐵', '🐧', '🐤', '🦉', '🦋', '🐢', '🐙', '🦖', '🦕', '🐝',
+  '🐬', '🦈', '🐴', '🐷', '🐮', '🐳', '🦩', '🦜', '🐞', '🦦',
+  '⚽', '🏀', '🎨', '🎸', '🎮', '🚀', '🌈', '⭐', '🌸', '🍀',
+  '🍦', '🍕', '🍩', '🎈', '👑', '🦸', '🧚', '🤖', '👽', '🐲',
+]
 
 const SECTIONS = [
   { id: 'integrations', icon: 'cloud_sync', label: 'Integrations' },
@@ -186,13 +196,19 @@ function SetupInner() {
     const s = status?.sync?.[integrationName]
     if (!s) return null
     try {
-      const timeStr = new Date(s.at).toLocaleTimeString(undefined, {
-        hour: 'numeric',
-        minute: '2-digit',
-      })
+      const when = new Date(s.at)
+      const time = when.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+      // include the date when the last sync wasn't today, so a stale sync
+      // (e.g. a broken integration) doesn't masquerade as fresh
+      const isToday = when.toDateString() === new Date().toDateString()
+      const label = isToday
+        ? time
+        : `${when.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}, ${time}`
       return (
-        <span className="text-xs font-semibold text-ink-soft opacity-75 ml-2">
-          (updated {timeStr})
+        <span
+          className={`ml-2 text-xs font-semibold opacity-75 ${isToday ? 'text-ink-soft' : 'text-amber-600 dark:text-amber-400'}`}
+        >
+          (updated {label})
         </span>
       )
     } catch (e) {
@@ -235,7 +251,10 @@ function SetupInner() {
   }
 
   const savePeople = async (list: Person[]) => {
-    await api.put('/api/setup/people', list.map((p) => ({ name: p.name, color: p.color })))
+    await api.put(
+      '/api/setup/people',
+      list.map((p) => ({ name: p.name, color: p.color, avatar_emoji: p.avatar_emoji ?? '' })),
+    )
     reloadPeople()
   }
 
@@ -558,14 +577,14 @@ function SetupInner() {
             {(people ?? []).map((p, i) => (
               <div key={p.id} className="glass-inset px-3 py-2">
                 <div className="flex items-center gap-3">
-                  <Avatar name={p.name} color={p.color} src={p.avatar} size={38} />
+                  <Avatar name={p.name} color={p.color} src={p.avatar} emoji={p.avatar_emoji} size={38} />
                   <span className="min-w-0 flex-1 truncate text-base font-medium">{p.name}</span>
                   <button
                     onClick={() => setColorEditing(colorEditing === p.id ? null : p.id)}
                     className="btn-glass flex items-center gap-2 px-3 py-1.5 text-sm"
                   >
                     <span className="h-4 w-4 rounded-full" style={{ background: p.color }} />
-                    Color
+                    Picture
                     <Icon name={colorEditing === p.id ? 'expand_less' : 'expand_more'} className="text-base" />
                   </button>
                   <button
@@ -587,7 +606,46 @@ function SetupInner() {
                       transition={SPATIAL_STANDARD_DEFAULT}
                       className="overflow-hidden"
                     >
-                      <div className="flex flex-wrap gap-1.5 pb-1 pt-3">
+                      {/* Display picture: pick an emoji (or "None" for a colored initial) */}
+                      <p className="pt-3 text-xs font-semibold uppercase tracking-wide text-ink-soft">Picture</p>
+                      <div className="flex flex-wrap gap-1.5 pt-2">
+                        <button
+                          onClick={() => {
+                            const next = [...(people ?? [])]
+                            next[i] = { ...p, avatar_emoji: '' }
+                            savePeople(next)
+                          }}
+                          className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold text-white transition-all active:scale-90 ${
+                            !p.avatar_emoji ? 'ring-2 ring-white' : 'opacity-80'
+                          }`}
+                          style={{ background: p.color }}
+                          title="Use initial"
+                        >
+                          {p.name.charAt(0).toUpperCase()}
+                        </button>
+                        {AVATAR_EMOJIS.map((em) => {
+                          const active = p.avatar_emoji === em
+                          return (
+                            <button
+                              key={em}
+                              onClick={() => {
+                                const next = [...(people ?? [])]
+                                next[i] = { ...p, avatar_emoji: em }
+                                savePeople(next)
+                              }}
+                              className={`flex h-9 w-9 items-center justify-center rounded-full text-xl transition-all active:scale-90 ${
+                                active ? 'scale-110 shadow-md ring-2 ring-[var(--primary)]' : 'surface-tile opacity-90 hover:opacity-100'
+                              }`}
+                              style={active ? { background: p.color } : undefined}
+                            >
+                              {em}
+                            </button>
+                          )
+                        })}
+                      </div>
+                      {/* Color: also tints their calendar, chores, and coin chips */}
+                      <p className="pt-4 text-xs font-semibold uppercase tracking-wide text-ink-soft">Color</p>
+                      <div className="flex flex-wrap gap-1.5 pb-1 pt-2">
                         {COLORS.map((c) => {
                           const active = p.color === c
                           return (
@@ -597,7 +655,6 @@ function SetupInner() {
                                 const next = [...(people ?? [])]
                                 next[i] = { ...p, color: c }
                                 savePeople(next)
-                                setColorEditing(null)
                               }}
                               className={`flex h-8 w-8 items-center justify-center rounded-full transition-all active:scale-90 ${
                                 active ? 'scale-110 shadow-md ring-2 ring-white' : 'opacity-80 active:opacity-100'

@@ -309,7 +309,7 @@ export default function Chores() {
                 }`}
                 style={{ borderLeft: `4px solid ${b.color}` }}
               >
-                <Avatar name={b.person_name} color={b.color} src={b.avatar} size={36} />
+                <Avatar name={b.person_name} color={b.color} src={b.avatar} emoji={b.avatar_emoji} size={36} />
                 <div className="flex min-w-0 flex-col">
                   <span className="truncate text-sm font-semibold leading-tight" style={{ color: b.color }}>
                     {b.person_name}
