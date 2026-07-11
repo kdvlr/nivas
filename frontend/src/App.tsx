@@ -12,6 +12,7 @@ import { RewardCelebrationProvider } from './components/celebrations/RewardCeleb
 import Icon from './components/Icon'
 import { useClock, useData } from './lib/hooks'
 import {
+  applyTheme,
   getAppearance,
   getStyle,
   setAppearance,
@@ -144,6 +145,7 @@ export default function App() {
 
 
   useEffect(() => {
+    applyTheme()
     startWs()
     const unwatch = watchSystemTheme() // follow OS light/dark while in auto
     const onHash = () => setRoute(currentRoute())

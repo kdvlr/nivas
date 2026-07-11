@@ -28,8 +28,9 @@
       const a = localStorage.getItem('appearance') || localStorage.getItem('theme') || 'auto'
       const dark = a === 'dark' || (a !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)
       if (dark) document.documentElement.classList.add('dark')
+      const style = localStorage.getItem('themeStyle')
       document.documentElement.dataset.theme =
-        localStorage.getItem('themeStyle') === 'glass' ? 'glass' : 'material'
+        style === 'glass' || style === 'woodland' ? style : 'material'
       const f = localStorage.getItem('fontFamily')
       document.documentElement.dataset.font = !f || f === 'google-sans' ? 'outfit' : f
     </script>
