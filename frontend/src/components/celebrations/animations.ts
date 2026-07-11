@@ -238,7 +238,7 @@ const rocketRun = (canvas: HTMLCanvasElement) => {
     ctx.save()
     ctx.translate(x, y)
     ctx.rotate(-Math.PI / 4)
-    ctx.font = '110px serif'
+    ctx.fillStyle = '#ffffff'; ctx.font = '110px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Android Emoji", sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText('🚀', 0, 0)
@@ -328,7 +328,7 @@ const flowersRun = (canvas: HTMLCanvasElement) => {
       const bloomP = Math.max(0, (grow - 0.55) / 0.45)
       if (bloomP > 0) {
         const bounce = bloomP < 1 ? 1 + Math.sin(bloomP * Math.PI) * 0.25 : 1
-        ctx.font = `${f.size * bloomP * bounce}px serif`
+        ctx.fillStyle = '#ffffff'; ctx.font = `${f.size * bloomP * bounce}px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Android Emoji', sans-serif`
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
         ctx.fillText(f.emoji, f.x + swayX, f.base - stemH - (f.size * bloomP) / 3)
@@ -404,7 +404,7 @@ const sparkleRun = (canvas: HTMLCanvasElement) => {
       ctx.save()
       ctx.translate(f.x, f.y)
       ctx.rotate(Math.sin(t * 2 + f.wobble) * 0.25 * f.spin)
-      ctx.font = `${f.size}px serif`
+      ctx.fillStyle = '#ffffff'; ctx.font = `${f.size}px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Android Emoji', sans-serif`
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText(f.emoji, 0, 0)
@@ -528,7 +528,7 @@ const unicornRun = (canvas: HTMLCanvasElement) => {
     ctx.translate(x, y)
     ctx.scale(-1, 1)
     ctx.rotate(Math.sin(t * 9) * 0.06)
-    ctx.font = '130px serif'
+    ctx.fillStyle = '#ffffff'; ctx.font = '130px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Android Emoji", sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText('🦄', 0, 0)
@@ -557,7 +557,7 @@ const superheroRun = (canvas: HTMLCanvasElement) => {
       c.x -= 60 * dt
       if (c.x < -120) c.x = W + 120
       ctx.globalAlpha = 0.5
-      ctx.font = `${c.s}px serif`
+      ctx.fillStyle = '#ffffff'; ctx.font = `${c.s}px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Android Emoji', sans-serif`
       ctx.textAlign = 'center'
       ctx.fillText('☁️', c.x, c.y)
       ctx.globalAlpha = 1
@@ -640,7 +640,7 @@ const superheroRun = (canvas: HTMLCanvasElement) => {
     ctx.translate(x, y)
     if (dir === -1) ctx.scale(-1, 1)
     ctx.rotate(0.5)
-    ctx.font = '120px serif'
+    ctx.fillStyle = '#ffffff'; ctx.font = '120px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Android Emoji", sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText('🦸', 0, 0)
@@ -722,7 +722,7 @@ const bubblesRun = (canvas: HTMLCanvasElement) => {
       ctx.fill()
       // little surprise riding inside some bubbles
       if (b.emoji) {
-        ctx.font = `${b.r * 0.9}px serif`
+        ctx.fillStyle = '#ffffff'; ctx.font = `${b.r * 0.9}px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Android Emoji', sans-serif`
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
         ctx.fillText(b.emoji, b.x, b.y + b.r * 0.05)
@@ -776,7 +776,7 @@ const dinoRun = (canvas: HTMLCanvasElement) => {
     ctx.translate(rand(-shake, shake), rand(-shake, shake))
 
     // volcano puffing in the distance
-    ctx.font = '150px serif'
+    ctx.fillStyle = '#ffffff'; ctx.font = '150px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Android Emoji", sans-serif'
     ctx.textAlign = 'center'
     ctx.fillText('🌋', volcanoX, ground - 30)
     if (Math.random() < 0.25) {
@@ -791,7 +791,7 @@ const dinoRun = (canvas: HTMLCanvasElement) => {
     // jungle floor
     ctx.fillStyle = 'rgba(76, 175, 80, 0.35)'
     ctx.fillRect(0, ground + 20, W, H - ground)
-    ctx.font = '44px serif'
+    ctx.fillStyle = '#ffffff'; ctx.font = '44px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Android Emoji", sans-serif'
     for (let i = 0; i < 7; i++) ctx.fillText('🌿', ((i + 0.5) * W) / 7, ground + 46)
 
     // the stampede (right to left, hopping on the stomp beat)
@@ -813,7 +813,7 @@ const dinoRun = (canvas: HTMLCanvasElement) => {
       ctx.save()
       ctx.translate(d.x, y)
       ctx.rotate(Math.sin(t * d.stomp + d.phase) * 0.07)
-      ctx.font = `${d.size}px serif`
+      ctx.fillStyle = '#ffffff'; ctx.font = `${d.size}px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Android Emoji', sans-serif`
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText(d.emoji, 0, 0)
@@ -962,7 +962,7 @@ const hyperspaceRun = (canvas: HTMLCanvasElement) => {
       ctx.save()
       ctx.translate(shipX, shipY)
       ctx.scale(shipScale, shipScale)
-      ctx.font = '130px serif'
+      ctx.fillStyle = '#ffffff'; ctx.font = '130px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Android Emoji", sans-serif'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText('🛸', 0, 0)

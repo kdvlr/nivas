@@ -172,7 +172,7 @@ const fairyRun = (canvas: HTMLCanvasElement) => {
       // Fairy emoji
       ctx.save()
       ctx.translate(fairyX, fairyY)
-      ctx.font = `${100 * fairyScale}px serif`
+      ctx.fillStyle = '#ffffff'; ctx.font = `${100 * fairyScale}px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Android Emoji', sans-serif`
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText('🧚', 0, 0)
@@ -207,7 +207,7 @@ const fairyRun = (canvas: HTMLCanvasElement) => {
         ctx.stroke()
 
         // Wand star tip
-        ctx.font = '28px serif'
+        ctx.fillStyle = '#ffffff'; ctx.font = '28px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Android Emoji", sans-serif'
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
         ctx.fillText('⭐', wandTipX, wandTipY)
@@ -383,7 +383,7 @@ const treasureRun = (canvas: HTMLCanvasElement) => {
       ctx.save()
       ctx.translate(g.x, g.y)
       ctx.rotate(g.rot)
-      ctx.font = `${g.size}px serif`
+      ctx.fillStyle = '#ffffff'; ctx.font = `${g.size}px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Android Emoji', sans-serif`
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText(g.emoji, 0, 0)
@@ -500,7 +500,7 @@ const candyRun = (canvas: HTMLCanvasElement) => {
       ctx.translate(tr.x, tr.y)
       ctx.rotate(tr.landed ? tr.rot : tr.rot)
       ctx.scale(1, scaleY)
-      ctx.font = `${tr.size}px serif`
+      ctx.fillStyle = '#ffffff'; ctx.font = `${tr.size}px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Android Emoji', sans-serif`
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText(tr.emoji, 0, 0)
@@ -548,7 +548,7 @@ const puppiesRun = (canvas: HTMLCanvasElement) => {
       b.vy += 720 * dt
       if (b.y > ground && b.vy > 0) b.vy *= -0.75
       if (b.x < 30 || b.x > W - 30) b.vx *= -1
-      ctx.font = `${b.size}px serif`
+      ctx.fillStyle = '#ffffff'; ctx.font = `${b.size}px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Android Emoji', sans-serif`
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText(b.emoji, b.x, b.y)
@@ -565,7 +565,7 @@ const puppiesRun = (canvas: HTMLCanvasElement) => {
       ctx.translate(p.x, y)
       ctx.scale(1, 1) // facing left is default for these emojis usually, or we flip if they face right
       ctx.rotate(tilt)
-      ctx.font = `${p.size}px serif`
+      ctx.fillStyle = '#ffffff'; ctx.font = `${p.size}px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Android Emoji', sans-serif`
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText(p.emoji, 0, 0)
@@ -588,7 +588,7 @@ const puppiesRun = (canvas: HTMLCanvasElement) => {
       h.x += h.vx * dt
       h.y += h.vy * dt
       ctx.globalAlpha = 1 - h.life / h.maxLife
-      ctx.font = `${h.size}px serif`
+      ctx.fillStyle = '#ffffff'; ctx.font = `${h.size}px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Android Emoji', sans-serif`
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText(h.color, h.x, h.y)
@@ -627,7 +627,7 @@ const racecarRun = (canvas: HTMLCanvasElement) => {
     sky.addColorStop(1, 'rgba(251, 146, 60, 0.3)')
     ctx.fillStyle = sky
     ctx.fillRect(0, 0, W, roadY)
-    ctx.font = '30px serif'
+    ctx.fillStyle = '#ffffff'; ctx.font = '30px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Android Emoji", sans-serif'
     for (let i = 0; i < 14; i++) {
       const bounce = Math.abs(Math.sin(t * 4 + i)) * 10 // slowed bounce
       ctx.fillText(i % 2 ? '🙌' : '🎉', (i + 0.3) * (W / 14), roadY - 18 - bounce)
@@ -687,13 +687,13 @@ const racecarRun = (canvas: HTMLCanvasElement) => {
       ctx.save()
       ctx.translate(W / 2 - 130, roadY - 60)
       ctx.rotate(Math.sin(t * 7) * 0.2)
-      ctx.font = '64px serif'
+      ctx.fillStyle = '#ffffff'; ctx.font = '64px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Android Emoji", sans-serif'
       ctx.fillText('🏁', 0, 0)
       ctx.restore()
       ctx.save()
       ctx.translate(W / 2 + 130, roadY - 60)
       ctx.rotate(-Math.sin(t * 7) * 0.2)
-      ctx.font = '64px serif'
+      ctx.fillStyle = '#ffffff'; ctx.font = '64px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Android Emoji", sans-serif'
       ctx.fillText('🏁', 0, 0)
       ctx.restore()
       if (prog >= 1) {
@@ -702,7 +702,7 @@ const racecarRun = (canvas: HTMLCanvasElement) => {
         ctx.save()
         ctx.translate(W / 2, roadY - 130)
         ctx.scale(pop * bounce, pop * bounce)
-        ctx.font = '96px serif'
+        ctx.fillStyle = '#ffffff'; ctx.font = '96px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Android Emoji", sans-serif'
         ctx.textAlign = 'center'
         ctx.fillText('🏆', 0, 0)
         ctx.restore()
@@ -756,7 +756,7 @@ const racecarRun = (canvas: HTMLCanvasElement) => {
     ctx.translate(carX, carY)
     if (dir === 1) ctx.scale(-1, 1)
     if (moving) ctx.translate(rand(-2, 2), rand(-1.5, 1.5))
-    ctx.font = `${carSize}px serif`
+    ctx.fillStyle = '#ffffff'; ctx.font = `${carSize}px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Android Emoji', sans-serif`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText('🏎️', 0, 0)
@@ -803,11 +803,11 @@ const dinoEggRun = (canvas: HTMLCanvasElement) => {
     ctx.clearRect(0, 0, W, H)
 
     // jungle backdrop
-    ctx.font = '60px serif'
+    ctx.fillStyle = '#ffffff'; ctx.font = '60px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Android Emoji", sans-serif'
     ctx.textAlign = 'center'
     ctx.fillText('🌴', W * 0.12, H * 0.75)
     ctx.fillText('🌴', W * 0.88, H * 0.72)
-    ctx.font = '44px serif'
+    ctx.fillStyle = '#ffffff'; ctx.font = '44px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Android Emoji", sans-serif'
     ctx.fillText('🌿', W * 0.22, H * 0.82)
     ctx.fillText('🌿', W * 0.78, H * 0.84)
 
@@ -914,7 +914,7 @@ const dinoEggRun = (canvas: HTMLCanvasElement) => {
       ctx.save()
       ctx.translate(cx, eggY - eggR * 0.3 + bob)
       ctx.scale(popP * overshoot, popP * overshoot)
-      ctx.font = `${eggR * 2}px serif`
+      ctx.fillStyle = '#ffffff'; ctx.font = `${eggR * 2}px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Android Emoji', sans-serif`
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText('🦕', 0, 0)
@@ -1062,7 +1062,7 @@ const ufoRun = (canvas: HTMLCanvasElement) => {
       ctx.save()
       ctx.translate(cx, giftY)
       ctx.rotate(Math.sin(spin) * 0.3)
-      ctx.font = '80px serif'
+      ctx.fillStyle = '#ffffff'; ctx.font = '80px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Android Emoji", sans-serif'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText('🎁', 0, 0)
@@ -1082,13 +1082,13 @@ const ufoRun = (canvas: HTMLCanvasElement) => {
     }
     // opened gift with prize
     if (popped) {
-      ctx.font = '80px serif'
+      ctx.fillStyle = '#ffffff'; ctx.font = '80px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Android Emoji", sans-serif'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText('🎉', cx, groundY - 46)
       const since = t - 3.4
       const rise = Math.min(since / 0.5, 1)
-      ctx.font = `${40 + rise * 30}px serif`
+      ctx.fillStyle = '#ffffff'; ctx.font = `${40 + rise * 30}px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Android Emoji', sans-serif`
       ctx.fillText('⭐', cx, groundY - 90 - rise * 60)
     }
 
@@ -1096,7 +1096,7 @@ const ufoRun = (canvas: HTMLCanvasElement) => {
     ctx.save()
     ctx.translate(ufoX, ufoY)
     ctx.rotate(Math.sin(t * 3) * 0.05)
-    ctx.font = '110px serif'
+    ctx.fillStyle = '#ffffff'; ctx.font = '110px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Android Emoji", sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText('🛸', 0, 0)
@@ -1135,7 +1135,7 @@ const dragonRun = (canvas: HTMLCanvasElement) => {
     ctx.clearRect(0, 0, W, H)
 
     // castle in the corner for fantasy vibes
-    ctx.font = '90px serif'
+    ctx.fillStyle = '#ffffff'; ctx.font = '90px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Android Emoji", sans-serif'
     ctx.textAlign = 'center'
     ctx.fillText('🏰', W * 0.88, H * 0.85)
 
@@ -1207,7 +1207,7 @@ const dragonRun = (canvas: HTMLCanvasElement) => {
     ctx.translate(x, y)
     if (dir === 1) ctx.scale(-1, 1)
     ctx.rotate(flap)
-    ctx.font = '150px serif'
+    ctx.fillStyle = '#ffffff'; ctx.font = '150px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Android Emoji", sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText('🐉', 0, 0)
@@ -1299,7 +1299,7 @@ const robotRun = (canvas: HTMLCanvasElement) => {
       ctx.save()
       ctx.translate(b.x, floorY - b.size * 0.45 - bounce)
       ctx.rotate(spinBeat ? ((t % 2) / 2) * Math.PI * 2 : tilt)
-      ctx.font = `${b.size}px serif`
+      ctx.fillStyle = '#ffffff'; ctx.font = `${b.size}px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Android Emoji', sans-serif`
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText('🤖', 0, 0)
@@ -1319,7 +1319,7 @@ const robotRun = (canvas: HTMLCanvasElement) => {
       n.y += n.vy * dt
       n.x += Math.sin(t * 3 + n.wobble) * 40 * dt
       if (n.y < -60) { notes.splice(i, 1); continue }
-      ctx.font = `${n.size}px serif`
+      ctx.fillStyle = '#ffffff'; ctx.font = `${n.size}px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Android Emoji', sans-serif`
       ctx.textAlign = 'center'
       ctx.fillText(n.emoji, n.x, n.y)
     }
@@ -1346,7 +1346,7 @@ const pirateRun = (canvas: HTMLCanvasElement) => {
     ctx.beginPath()
     ctx.ellipse(W * 0.85, seaY + 24, 130, 34, 0, 0, Math.PI * 2)
     ctx.fill()
-    ctx.font = '70px serif'
+    ctx.fillStyle = '#ffffff'; ctx.font = '70px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Android Emoji", sans-serif'
     ctx.textAlign = 'center'
     ctx.fillText('🌴', W * 0.88, seaY - 12)
     ctx.strokeStyle = '#dc2626'
@@ -1365,7 +1365,7 @@ const pirateRun = (canvas: HTMLCanvasElement) => {
     ctx.save()
     ctx.translate(px, py)
     if (Math.cos(t * 1.2) > 0) ctx.scale(-1, 1)
-    ctx.font = '54px serif'
+    ctx.fillStyle = '#ffffff'; ctx.font = '54px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Android Emoji", sans-serif'
     ctx.textAlign = 'center'
     ctx.fillText('🦜', 0, 0)
     ctx.restore()
@@ -1380,11 +1380,11 @@ const pirateRun = (canvas: HTMLCanvasElement) => {
     ctx.save()
     ctx.translate(shipX, seaY - 30 + bob)
     ctx.rotate(rock)
-    ctx.font = '150px serif'
+    ctx.fillStyle = '#ffffff'; ctx.font = '150px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Android Emoji", sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText('⛵', 0, 0)
-    ctx.font = '44px serif'
+    ctx.fillStyle = '#ffffff'; ctx.font = '44px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Android Emoji", sans-serif'
     ctx.fillText('🏴‍☠️', 8, -86)
     ctx.restore()
 
