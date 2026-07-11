@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import type { PinFailAnimation } from './pin-fail-animations'
 
 const DURATION_MS = 3200
@@ -28,9 +29,9 @@ export default function PinFailOverlay({
     }
   }, [anim])
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50"
+      className="fixed inset-0 z-50 overflow-hidden"
       style={{ background: anim.backdrop }}
       onClick={() => onDoneRef.current()}
     >
@@ -43,6 +44,7 @@ export default function PinFailOverlay({
           {tauntRef.current}
         </span>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
