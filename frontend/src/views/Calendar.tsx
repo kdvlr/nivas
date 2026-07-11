@@ -56,7 +56,7 @@ export default function Calendar() {
   // shrinks to [earliest .. latest] (anchored near the top, min 6h) and each
   // slot's pixel height is computed so the whole window fits the pane without
   // scrolling — on any screen size. Falls back to a daytime band when empty.
-  const MIN_SPAN = 6 * 60
+  const MIN_SPAN = 8 * 60
   const wrapRef = useRef<HTMLDivElement>(null)
   const appliedRangeRef = useRef('')
 
