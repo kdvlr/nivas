@@ -7,7 +7,7 @@ unless the source itself changed after our completion.
 """
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
@@ -48,13 +48,15 @@ def sync_tasks(db: Session, source: str, snapshot: list[SourceTask]) -> bool:
     """Reconcile one source's task snapshot. Returns True if anything changed."""
     changed = False
     seen_ids = set()
+    # Load every existing row for this source once, keyed by external_id, instead
+    # of a SELECT per snapshot item (snapshots can be hundreds of items).
+    existing = {
+        row.external_id: row
+        for row in db.query(Task).filter(Task.source == source).all()
+    }
     for st in snapshot:
         seen_ids.add(st.external_id)
-        row = (
-            db.query(Task)
-            .filter(Task.source == source, Task.external_id == st.external_id)
-            .one_or_none()
-        )
+        row = existing.get(st.external_id)
         if row is None:
             # Never import items that were already completed before we first saw
             # them — keeps years of old completed reminders out of the dashboard.
@@ -91,15 +93,12 @@ def sync_tasks(db: Session, source: str, snapshot: list[SourceTask]) -> bool:
             row.completed_at = datetime.now(timezone.utc) if st.completed else None
             changed = True
 
-    # Items no longer present in the source were deleted there.
-    stale = (
-        db.query(Task)
-        .filter(Task.source == source, Task.external_id.notin_(seen_ids))
-        .all()
-    )
-    for row in stale:
-        db.delete(row)
-        changed = True
+    # Items no longer present in the source were deleted there. Use the rows we
+    # already loaded rather than a NOT IN query with hundreds of bound params.
+    for ext_id, row in existing.items():
+        if ext_id not in seen_ids:
+            db.delete(row)
+            changed = True
 
     db.commit()
     return changed
@@ -117,28 +116,37 @@ def sync_shopping(db: Session, source: str, snapshot: list[SourceListItem]) -> t
     completed_ids = []
     new_items = []
 
-    # Group open items and collect all active external IDs for each normalized title
+    # Single pass over the snapshot: normalize each title once, remember a display
+    # title per norm, and collect open external IDs. (Normalizing runs 3 regexes,
+    # so the old per-new-item `next(... normalize_title ...)` rescan was O(n²).)
     open_refs: dict[str, list[dict]] = {}
-    all_norms = set()
+    title_for_norm: dict[str, str] = {}
+    all_norms: set[str] = set()
     for item in snapshot:
         norm = normalize_title(item.title)
         if not norm:
             continue
         all_norms.add(norm)
+        title_for_norm.setdefault(norm, item.title)
         if not item.completed:
             open_refs.setdefault(norm, []).append({"source": source, "external_id": item.external_id})
 
+    # Load all matching rows in one query rather than a SELECT per norm.
+    rows_by_norm = {
+        row.norm_title: row
+        for row in db.query(ShoppingItem).filter(ShoppingItem.norm_title.in_(all_norms)).all()
+    } if all_norms else {}
+
     # Now reconcile with the database
     for norm in all_norms:
-        row = db.query(ShoppingItem).filter(ShoppingItem.norm_title == norm).one_or_none()
+        row = rows_by_norm.get(norm)
         active_refs = open_refs.get(norm, [])
         is_open = len(active_refs) > 0
 
         if row is None:
             if not is_open:
                 continue  # completed-only history; don't import
-            # Find the first occurrences title
-            title = next(item.title for item in snapshot if normalize_title(item.title) == norm)
+            title = title_for_norm[norm]
             db.add(ShoppingItem(title=title, norm_title=norm, completed=False, sources=active_refs))
             changed = True
             new_items.append((title, source))

@@ -108,7 +108,15 @@ def sync_icloud() -> tuple[bool, list[int], list[tuple[str, str]]]:
     return changed, completed_ids, new_items
 
 
-async def sync_alexa() -> bool:
+async def sync_alexa(propagate: bool = True) -> bool:
+    """Pull Alexa lists into the DB.
+
+    ``propagate`` guards the iCloud<->Alexa cross-sync: a top-level run may push
+    freshly-added items to iCloud and re-pull so both sides get matching IDs in
+    one cycle, but that re-pull is called with ``propagate=False`` so it cannot
+    bounce back here — bounding the cross-sync to a single hop instead of an
+    unbounded ping-pong when an add() silently fails.
+    """
     changed = False
     if (await alexa.status()).get("error") == "not connected" and not get_settings().amazon_email:
         return False
@@ -160,7 +168,7 @@ async def sync_alexa() -> bool:
                     item = db.get(ShoppingItem, item_id)
                     if item:
                         await write_shopping_completion(item, True)
-        if new_items:
+        if new_items and propagate:
             with SessionLocal() as db:
                 shopping_name = _shopping_list_name(db)
             for title, src in new_items:
@@ -168,8 +176,9 @@ async def sync_alexa() -> bool:
                     await asyncio.to_thread(icloud.add, title, shopping_name)
                 except Exception as e:
                     log.warning("could not add '%s' to iCloud: %s", title, e)
-            # Trigger an immediate iCloud sync so it matches and gets the iCloud IDs in this cycle!
-            await job_icloud()
+            # Re-pull iCloud so it matches and gets the iCloud IDs this cycle.
+            # propagate=False: this must not bounce back into sync_alexa.
+            await job_icloud(propagate=False)
     sync_status.report("alexa", True)
     return changed
 
@@ -270,7 +279,7 @@ async def job_calendar() -> None:
         await manager.broadcast("calendar")
 
 
-async def job_icloud() -> None:
+async def job_icloud(propagate: bool = True) -> None:
     changed, completed_ids, new_items = await asyncio.to_thread(sync_icloud)
     if completed_ids:
         with SessionLocal() as db:
@@ -278,14 +287,15 @@ async def job_icloud() -> None:
                 item = db.get(ShoppingItem, item_id)
                 if item:
                     await write_shopping_completion(item, True)
-    if new_items:
+    if new_items and propagate:
         for title, src in new_items:
             try:
                 await alexa.add("shopping", title)
             except Exception as e:
                 log.warning("could not add '%s' to Alexa: %s", title, e)
-        # Trigger an immediate Alexa sync so it matches and gets the Alexa IDs in this cycle!
-        await sync_alexa()
+        # Re-pull Alexa so it matches and gets the Alexa IDs this cycle.
+        # propagate=False: this must not bounce back into job_icloud.
+        await sync_alexa(propagate=False)
     if changed:
         await manager.broadcast("tasks")
         await manager.broadcast("shopping")

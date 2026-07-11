@@ -9,7 +9,7 @@ from fastapi import APIRouter, Cookie, Depends, HTTPException, Response
 from fastapi.responses import RedirectResponse
 from googleapiclient.discovery import build
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from ..db import get_db
 from ..integrations import google_calendar as gcal
@@ -132,7 +132,12 @@ def auth_callback(code: str, state: str, oauth_state: str | None = Cookie(defaul
         account.token_json = json.dumps(new)
     db.commit()
 
-    # pre-populate this account's calendar list; primary enabled by default
+    # pre-populate this account's calendar list; primary enabled by default.
+    # Match the local part of the email to a family member (once), so the primary
+    # calendar links to that person; otherwise fall back to the capitalized name.
+    local_part = email.split("@")[0]
+    matched = db.query(Person).filter(Person.name.ilike(local_part)).first()
+    primary_person = matched.name if matched else local_part.capitalize()
     existing = {s.calendar_id for s in account.selections}
     n_existing = db.query(CalendarSelection).count()
     for i, cal in enumerate(gcal.list_calendars(account, db)):
@@ -143,11 +148,7 @@ def auth_callback(code: str, state: str, oauth_state: str | None = Cookie(defaul
                 account_id=account.id,
                 calendar_id=cal["id"],
                 name=cal["name"],
-                person_name=(
-                    db.query(Person).filter(Person.name.ilike(email.split("@")[0])).first().name
-                    if db.query(Person).filter(Person.name.ilike(email.split("@")[0])).first()
-                    else email.split("@")[0].capitalize()
-                ) if cal["primary"] else "",
+                person_name=primary_person if cal["primary"] else "",
                 color=PALETTE[(n_existing + i) % len(PALETTE)],
                 enabled=cal["primary"],
             )
@@ -188,6 +189,7 @@ def events(start: str, end: str, db: Session = Depends(get_db)):
     rows = (
         db.query(CalendarEvent)
         .join(CalendarSelection)
+        .options(joinedload(CalendarEvent.selection))  # avoid a lazy load per event
         .filter(CalendarSelection.enabled, CalendarEvent.start < end, CalendarEvent.end > start)
         .all()
     )
