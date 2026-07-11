@@ -158,11 +158,11 @@
 }
 
 html[data-theme='woodland']:not(.dark) {
-  --surface: #fcf9f2; /* cream */
-  --sc-lowest: #f5f0e1;
-  --sc: #eee7d5;
-  --sc-high: #e5dac4;
-  --sc-highest: #dbccb3;
+  --surface: #EFEFEF; /* Louis Vuitton light grey */
+  --sc-lowest: #ffffff; /* crisp white card backgrounds */
+  --sc: #e5e2da; /* elegant warm-grey/taupe container */
+  --sc-high: #d7d3c8;
+  --sc-highest: #c9c4b7;
   --on-surface: #3e2723; /* deep brown */
   --on-surface-var: #6d4c41;
   --outline: #8d6e63;
