@@ -393,20 +393,26 @@ export default function Home() {
           {/* all-day chip strip */}
           {timeline.hasAllDay && (
             <div className="mt-2 grid grid-cols-3 gap-4" style={{ marginLeft: AXIS_GUTTER }}>
-              {daysList.map((dayIso) => (
-                <div key={dayIso} className="flex flex-wrap content-start gap-1">
-                  {(timeline.allDayByDay.get(dayIso) ?? []).map((e) => (
-                    <span
-                      key={e.id}
-                      className="vivid-dim relative max-w-full truncate rounded-full px-2.5 py-1 text-[0.65rem] font-bold text-white shadow"
-                      style={{ background: eventBg(e) }}
-                      title={e.title}
-                    >
-                      {e.title}
-                    </span>
-                  ))}
-                </div>
-              ))}
+              {daysList.map((dayIso) => {
+                const allDay = timeline.allDayByDay.get(dayIso) ?? []
+                const single = allDay.length === 1
+                return (
+                  <div key={dayIso} className="flex flex-wrap content-start gap-1">
+                    {allDay.map((e) => (
+                      <span
+                        key={e.id}
+                        className={`vivid-dim relative truncate rounded-full py-1 text-[0.65rem] font-bold text-white shadow ${
+                          single ? 'w-full px-3 text-center' : 'max-w-full px-2.5'
+                        }`}
+                        style={{ background: eventBg(e) }}
+                        title={e.title}
+                      >
+                        {e.title}
+                      </span>
+                    ))}
+                  </div>
+                )
+              })}
             </div>
           )}
 
