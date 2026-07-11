@@ -156,7 +156,7 @@ export default function Setup() {
     api
       .get<{ required: boolean }>('/api/setup/pin')
       .then((r) => {
-        if (!r.required || sessionStorage.getItem('setup_unlocked') === '1') setPinState('open')
+        if (!r.required) setPinState('open')
         else setPinState('locked')
       })
       .catch(() => setPinState('open'))
@@ -167,7 +167,6 @@ export default function Setup() {
     return (
       <PinPad
         onUnlock={() => {
-          sessionStorage.setItem('setup_unlocked', '1')
           setPinState('open')
         }}
       />
