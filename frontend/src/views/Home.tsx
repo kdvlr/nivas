@@ -404,13 +404,11 @@ export default function Home() {
                 const allDay = timeline.allDayByDay.get(dayIso) ?? []
                 const single = allDay.length === 1
                 return (
-                  <div key={dayIso} className="flex flex-wrap content-start gap-1">
+                  <div key={dayIso} className="flex w-full items-center gap-1.5">
                     {allDay.map((e) => (
                       <span
                         key={e.id}
-                        className={`vivid-dim relative truncate rounded-full py-1 text-[0.65rem] font-bold text-white shadow ${
-                          single ? 'w-full px-3 text-center' : 'max-w-full px-2.5'
-                        }`}
+                        className="vivid-dim relative truncate rounded-full px-3 py-1 text-[0.65rem] font-bold text-white shadow text-center flex-1 min-w-0"
                         style={{ background: eventBg(e) }}
                         title={e.title}
                       >
