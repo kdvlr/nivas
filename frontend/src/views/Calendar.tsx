@@ -265,9 +265,11 @@ export default function Calendar() {
                   {weekday} {arg.view.type !== 'dayGridMonth' ? dayNum : ''}
                 </span>
                 {w && arg.view.type !== 'dayGridMonth' && (
-                  <span className="flex items-center gap-1 text-xs font-medium text-ink-soft">
-                    <span className="text-base leading-none">{w.icon}</span>
-                    {w.tmax}°<span className="text-ink-faint">/{w.tmin}°</span>
+                  <span className="flex items-center gap-1.5 text-[0.7rem] font-semibold text-ink-soft">
+                    <span className="text-sm leading-none">{w.icon}</span>
+                    <span>
+                      {w.label} · {w.tmax}°<span className="text-ink-faint">/{w.tmin}°</span>
+                    </span>
                   </span>
                 )}
               </div>
