@@ -58,7 +58,8 @@ const emoji = (
   ctx.translate(x, y)
   if (flipX) ctx.scale(-1, 1)
   ctx.rotate(rot)
-  ctx.font = `${size}px serif`
+  ctx.fillStyle = '#ffffff'
+  ctx.font = `${size}px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Android Emoji', sans-serif`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillText(glyph, 0, 0)
@@ -384,7 +385,8 @@ const crabsRun = (canvas: HTMLCanvasElement) => {
       ctx.save()
       ctx.translate(c.x, c.y + Math.abs(Math.sin(t * 10 + c.phase)) * -10)
       ctx.scale(pinch, 1)
-      ctx.font = `${c.size}px serif`
+      ctx.fillStyle = '#ffffff'
+      ctx.font = `${c.size}px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Android Emoji', sans-serif`
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText('🦀', 0, 0)
@@ -581,7 +583,8 @@ const vaultRun = (canvas: HTMLCanvasElement) => {
     ctx.save()
     ctx.translate(W / 2, ly)
     ctx.scale(1 / squash, squash)
-    ctx.font = '190px serif'
+    ctx.fillStyle = '#ffffff'
+    ctx.font = "190px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Android Emoji', sans-serif"
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText('🔒', 0, 0)
