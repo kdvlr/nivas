@@ -178,6 +178,7 @@ function SetupInner() {
   const [newRewardTitle, setNewRewardTitle] = useState('')
   const [newRewardCost, setNewRewardCost] = useState(5)
   const [expandedAccounts, setExpandedAccounts] = useState<Record<number, boolean>>({})
+  const [calendarColorEditing, setCalendarColorEditing] = useState<number | null>(null)
   const [section, setSection] = useState<SectionId>('integrations')
   const [colorEditing, setColorEditing] = useState<number | null>(null)
 
@@ -364,36 +365,64 @@ function SetupInner() {
                                 onChange={(e) => updateSelection(s.id, { enabled: e.target.checked })}
                                 className="h-7 w-7 accent-teal-500 shrink-0"
                               />
-                              <span
-                                className="h-4 w-4 shrink-0 rounded-full"
-                                style={{ background: linkedPerson ? linkedPerson.color : s.color }}
-                                title="event color"
-                              />
+                              {!linkedPerson && (
+                                <span
+                                  className="h-4 w-4 shrink-0 rounded-full"
+                                  style={{ background: s.color }}
+                                  title="event color"
+                                />
+                              )}
                               <span className="min-w-0 flex-1 truncate text-base font-medium">{s.name}</span>
-                              <div className="flex max-w-40 flex-wrap gap-1 shrink-0">
-                                {COLORS.map((c) => {
-                                  const active = (linkedPerson ? linkedPerson.color : s.color) === c
-                                  return (
-                                    <button
-                                      key={c}
-                                      onClick={() => {
-                                        const updates: any = { color: c }
-                                        if (linkedPerson) {
-                                          updates.person_name = ''
-                                        }
-                                        updateSelection(s.id, updates)
-                                      }}
-                                      className={`h-5 w-5 rounded-full transition-all active:scale-90 ${
-                                        active
-                                          ? 'ring-2 ring-slate-700/40 dark:ring-slate-200/60 ring-offset-1 scale-105 shadow-sm'
-                                          : 'opacity-70 hover:opacity-100 hover:scale-105'
-                                      }`}
-                                      style={{ background: c }}
-                                      title="select color"
-                                    />
-                                  )
-                                })}
-                              </div>
+                              {!linkedPerson && (
+                                <div className="relative shrink-0">
+                                  <button
+                                    onClick={() => setCalendarColorEditing(calendarColorEditing === s.id ? null : s.id)}
+                                    className="btn-glass flex items-center gap-2 px-3 py-1.5 text-sm"
+                                  >
+                                    <span className="h-4 w-4 rounded-full" style={{ background: s.color }} />
+                                    Color
+                                    <Icon name={calendarColorEditing === s.id ? 'expand_less' : 'expand_more'} className="text-base" />
+                                  </button>
+                                  <AnimatePresence>
+                                    {calendarColorEditing === s.id && (
+                                      <>
+                                        <div
+                                          className="fixed inset-0 z-40"
+                                          onClick={() => setCalendarColorEditing(null)}
+                                        />
+                                        <motion.div
+                                          initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                                          exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                                          transition={SPATIAL_STANDARD_DEFAULT}
+                                          className="absolute right-0 top-full mt-1.5 z-50 rounded-2xl glass p-3 shadow-xl w-60 flex flex-wrap gap-1.5"
+                                        >
+                                          {COLORS.map((c) => {
+                                            const active = s.color === c
+                                            return (
+                                              <button
+                                                key={c}
+                                                onClick={() => {
+                                                  updateSelection(s.id, { color: c })
+                                                  setCalendarColorEditing(null)
+                                                }}
+                                                className={`flex h-8 w-8 items-center justify-center rounded-full transition-all active:scale-90 ${
+                                                  active ? 'scale-110 shadow-md ring-2 ring-white' : 'opacity-80 hover:opacity-100 hover:scale-105'
+                                                }`}
+                                                style={{ background: c }}
+                                              >
+                                                {active && (
+                                                  <Icon name="check" className="text-lg text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]" />
+                                                )}
+                                              </button>
+                                            )
+                                          })}
+                                        </motion.div>
+                                      </>
+                                    )}
+                                  </AnimatePresence>
+                                </div>
+                              )}
                               <select
                                 value={linkedPerson ? linkedPerson.name : ''}
                                 onChange={(e) => updateSelection(s.id, { person_name: e.target.value })}
