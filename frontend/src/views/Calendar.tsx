@@ -325,7 +325,7 @@ export default function Calendar() {
                   <span className="flex items-center gap-1.5 text-[0.75rem] font-semibold text-ink-soft">
                     <span className="text-sm leading-none">{w.icon}</span>
                     <span>
-                      {w.label} · {w.tmax}°<span className="text-ink-faint">/{w.tmin}°</span>
+                      {w.label} · {w.tmax}° <span className="text-ink-faint">/ {w.tmin}°</span>
                     </span>
                   </span>
                 )}
