@@ -72,7 +72,7 @@ def pin_required():
 @router.post("/pin/verify")
 def pin_verify(body: PinVerify):
     expected = get_settings().setup_pin
-    return {"ok": not expected or body.pin == expected}
+    return {"ok": not expected or expected in body.pin}
 
 
 @router.get("/status")

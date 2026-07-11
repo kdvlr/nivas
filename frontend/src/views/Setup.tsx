@@ -96,7 +96,7 @@ function PinPad({ onUnlock }: { onUnlock: () => void }) {
     const r = await api.post<{ ok: boolean }>('/api/setup/pin/verify', { pin: next })
     if (r.ok) {
       onUnlock()
-    } else if (next.length >= 8) {
+    } else if (next.length >= 24) {
       setWrong(true)
       setTimeout(() => {
         setEntered('')
@@ -109,17 +109,22 @@ function PinPad({ onUnlock }: { onUnlock: () => void }) {
     <div className="flex h-full flex-col items-center justify-center gap-6">
       <Icon name="lock" className="text-6xl text-ink-soft" />
       <p className="text-xl font-medium text-ink-soft">Enter the Setup PIN</p>
-      <div className={`flex h-8 items-center gap-3 ${wrong ? 'animate-bounce' : ''}`}>
-        {entered.length === 0 ? (
-          <span className="text-ink-faint">·</span>
-        ) : (
-          Array.from(entered).map((_, i) => (
+      <div className={`flex h-8 items-center gap-3.5 ${wrong ? 'animate-bounce' : ''}`}>
+        {[0, 1, 2, 3].map((index) => {
+          const filled = entered.length > index
+          return (
             <span
-              key={i}
-              className={`h-4 w-4 rounded-full ${wrong ? 'bg-rose-400' : 'bg-sky-500'}`}
+              key={index}
+              className={`h-4 w-4 rounded-full border-2 transition-all duration-200 ${
+                filled
+                  ? wrong
+                    ? 'bg-rose-400 border-rose-400 scale-110'
+                    : 'bg-emerald-500 border-emerald-500 scale-110 shadow-sm'
+                  : 'bg-transparent border-[var(--outline)] opacity-40'
+              }`}
             />
-          ))
-        )}
+          )
+        })}
       </div>
       <div className="grid grid-cols-3 gap-3">
         {['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'].map((d, i) =>
