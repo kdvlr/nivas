@@ -23,6 +23,8 @@ import {
 import { CELEBRATIONS } from '../components/celebrations/animations'
 import { useRewardCelebration } from '../components/celebrations/RewardCelebrationContext'
 import { REWARD_ANIMATIONS } from '../components/celebrations/reward-animations'
+import { PIN_FAIL_ANIMATIONS, type PinFailAnimation } from '../components/celebrations/pin-fail-animations'
+import PinFailOverlay from '../components/celebrations/PinFailOverlay'
 
 const COLORS = [
   '#f87171', '#fb923c', '#fbbf24', '#facc15', '#a3e635', '#4ade80', '#34d399', '#2dd4bf',
@@ -89,6 +91,8 @@ function Badge({ ok, label }: { ok: boolean; label: string }) {
 function PinPad({ onUnlock }: { onUnlock: () => void }) {
   const [entered, setEntered] = useState('')
   const [wrong, setWrong] = useState(false)
+  const [fail, setFail] = useState<PinFailAnimation | null>(null)
+  const lastFailRef = useRef<string | null>(null)
   const unlockTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -118,6 +122,11 @@ function PinPad({ onUnlock }: { onUnlock: () => void }) {
       }, 1000)
     } else if (next.length >= 24) {
       setWrong(true)
+      // play a random "denied!" animation (never the same one twice in a row)
+      const pool = PIN_FAIL_ANIMATIONS.filter((a) => a.name !== lastFailRef.current)
+      const chosen = pool[Math.floor(Math.random() * pool.length)]
+      lastFailRef.current = chosen.name
+      setFail(chosen)
       setTimeout(() => {
         setEntered('')
         setWrong(false)
@@ -165,6 +174,7 @@ function PinPad({ onUnlock }: { onUnlock: () => void }) {
         Forgot the PIN? Edit <code>SETUP_PIN</code> in the server's <code>.env</code> and restart
         the dashboard.
       </p>
+      {fail && <PinFailOverlay key={fail.name} anim={fail} onDone={() => setFail(null)} />}
     </div>
   )
 }
@@ -828,6 +838,8 @@ function SetupInner() {
         </Card>
         )}
 
+        {section === 'looks' && <PinFailPreviewCard />}
+
         {section === 'general' && <WeatherCard />}
 
         {section === 'general' && status && <TimezoneCard status={status} reload={reload} />}
@@ -836,6 +848,33 @@ function SetupInner() {
         </div>
       </div>
     </div>
+  )
+}
+
+function PinFailPreviewCard() {
+  const [fail, setFail] = useState<PinFailAnimation | null>(null)
+
+  return (
+    <Card title={<><Icon name="gpp_bad" /> Wrong-PIN preview</>}>
+      <p className="mb-2 text-sm text-ink-soft">
+        One of these {PIN_FAIL_ANIMATIONS.length} plays when someone enters the wrong Setup PIN.
+        Tap to try.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {PIN_FAIL_ANIMATIONS.map((a) => (
+          <button key={a.name} onClick={() => setFail(a)} className="btn-glass px-4 py-2 text-sm">
+            {a.emoji} {a.label}
+          </button>
+        ))}
+        <button
+          onClick={() => setFail(PIN_FAIL_ANIMATIONS[Math.floor(Math.random() * PIN_FAIL_ANIMATIONS.length)])}
+          className="btn-primary px-5 py-2 text-sm"
+        >
+          Surprise me!
+        </button>
+      </div>
+      {fail && <PinFailOverlay key={fail.name} anim={fail} onDone={() => setFail(null)} />}
+    </Card>
   )
 }
 
