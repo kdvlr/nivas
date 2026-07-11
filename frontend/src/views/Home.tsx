@@ -385,8 +385,8 @@ export default function Home() {
                     {new Date(dayIso + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                   </span>
                   {dayWeather && (
-                    <span className="mt-0.5 flex w-full items-center gap-1.5 text-[0.7rem] font-semibold text-ink-soft">
-                      <span className="text-sm leading-none">{dayWeather.icon}</span>
+                    <span className="mt-0.5 flex w-full items-center gap-1.5 text-[0.82rem] font-semibold text-ink-soft">
+                      <span className="text-base leading-none">{dayWeather.icon}</span>
                       <span>
                         {dayWeather.label} · {dayWeather.tmax}° / {dayWeather.tmin}°
                       </span>
@@ -529,8 +529,8 @@ export default function Home() {
                     {new Date(dayIso + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                   </span>
                   {dayWeather && (
-                    <span className="ml-auto flex items-center gap-1.5 text-[0.7rem] font-semibold normal-case">
-                      <span className="text-sm leading-none">{dayWeather.icon}</span>
+                    <span className="ml-auto flex items-center gap-1.5 text-[0.82rem] font-semibold normal-case">
+                      <span className="text-base leading-none">{dayWeather.icon}</span>
                       <span>
                         {dayWeather.label} · {dayWeather.tmax}° / {dayWeather.tmin}°
                       </span>
