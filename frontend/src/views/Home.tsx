@@ -751,9 +751,9 @@ export default function Home() {
   }
 
   return (
-    <div className="h-full w-full overflow-hidden">
+    <div className="h-full w-full lg:overflow-visible overflow-hidden">
       {/* Desktop view */}
-      <div className="hidden lg:flex h-full flex-col gap-4 pb-4">
+      <div className="hidden lg:flex h-full flex-col gap-4">
         {renderHeader()}
         <div className="grid min-h-0 flex-1 grid-cols-3 gap-4">
           {renderSchedule(true)}
