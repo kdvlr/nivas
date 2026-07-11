@@ -373,7 +373,7 @@ const crabsRun = (canvas: HTMLCanvasElement) => {
     ctx.clearRect(0, 0, W, H)
 
     // sandy floor
-    ctx.fillStyle = 'rgba(250, 204, 21, 0.15)'
+    ctx.fillStyle = 'rgba(220, 150, 30, 0.22)'
     ctx.fillRect(0, H * 0.68, W, H * 0.32)
 
     for (const c of crabs) {
@@ -646,7 +646,7 @@ export const PIN_FAIL_ANIMATIONS: PinFailAnimation[] = [
     name: 'crabs',
     emoji: '🦀',
     label: 'Nope crabs',
-    backdrop: 'rgba(35, 15, 10, 0.85)',
+    backdrop: 'rgba(18, 7, 3, 0.98)',
     taunts: ['Nope nope nope nope!', 'The crabs are not convinced.'],
     run: crabsRun,
   },
