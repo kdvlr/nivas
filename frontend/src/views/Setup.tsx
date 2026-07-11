@@ -20,9 +20,9 @@ import {
   type FontChoice,
   type ThemeStyle,
 } from '../lib/theme'
-import type { CelebrationName } from '../components/celebrations/animations'
+import { CELEBRATIONS } from '../components/celebrations/animations'
 import { useRewardCelebration } from '../components/celebrations/RewardCelebrationContext'
-import type { RewardAnimationName } from '../components/celebrations/reward-animations'
+import { REWARD_ANIMATIONS } from '../components/celebrations/reward-animations'
 
 const COLORS = [
   '#f87171', '#fb923c', '#fbbf24', '#facc15', '#a3e635', '#4ade80', '#34d399', '#2dd4bf',
@@ -710,22 +710,13 @@ function SetupInner() {
 
         {section === 'looks' && (
         <Card title={<><Icon name="celebration" /> Celebration preview</>}>
-          <p className="mb-2 text-sm text-ink-soft">One of these plays whenever a chore or to-do is completed.</p>
+          <p className="mb-2 text-sm text-ink-soft">
+            One of these {CELEBRATIONS.length} plays whenever a chore or to-do is completed. Tap to try.
+          </p>
           <div className="flex flex-wrap gap-2">
-            {(
-              [
-                ['confetti', '🎊'],
-                ['fireworks', '🎆'],
-                ['rocket', '🚀'],
-                ['flowers', '🌸'],
-                ['sparkle', '🧚'],
-                ['unicorn', '🦄'],
-                ['superhero', '🦸'],
-                ['bubbles', '🫧'],
-              ] as [CelebrationName, string][]
-            ).map(([n, e]) => (
-              <button key={n} onClick={() => celebrate(n)} className="btn-glass px-4 py-2 text-sm capitalize">
-                {e} {n}
+            {CELEBRATIONS.map((c) => (
+              <button key={c.name} onClick={() => celebrate(c.name)} className="btn-glass px-4 py-2 text-sm">
+                {c.emoji} {c.label}
               </button>
             ))}
             <button onClick={() => celebrate()} className="btn-primary px-5 py-2 text-sm">
@@ -738,20 +729,12 @@ function SetupInner() {
         {section === 'looks' && (
         <Card title={<><Icon name="redeem" /> Reward animation preview</>}>
           <p className="mb-2 text-sm text-ink-soft">
-            These play when someone redeems a reward from the store.
+            One of these {REWARD_ANIMATIONS.length} plays when someone redeems a reward. Tap to try.
           </p>
           <div className="flex flex-wrap gap-2">
-            {(
-              [
-                ['fairy', '🧚 Fairy wish'],
-                ['treasure', '💰 Treasure chest'],
-                ['candy', '🍭 Sweet treats'],
-                ['puppies', '🐶 Puppy party'],
-                ['racecar', '🏎️ Victory lap'],
-              ] as [RewardAnimationName, string][]
-            ).map(([n, label]) => (
-              <button key={n} onClick={() => celebrateReward(n)} className="btn-glass px-4 py-2 text-sm">
-                {label}
+            {REWARD_ANIMATIONS.map((a) => (
+              <button key={a.name} onClick={() => celebrateReward(a.name)} className="btn-glass px-4 py-2 text-sm">
+                {a.emoji} {a.label}
               </button>
             ))}
             <button

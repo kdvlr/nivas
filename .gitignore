@@ -13,3 +13,6 @@ frontend/dist/
 data/
 .env
 credentials/*.json
+
+# macOS
+.DS_Store

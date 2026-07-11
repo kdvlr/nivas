@@ -14,6 +14,9 @@ export type RewardAnimationName =
 
 export interface RewardAnimation {
   name: RewardAnimationName
+  /** emoji + short label for the Setup preview picker */
+  emoji: string
+  label: string
   backdrop: string
   praise: string[]
   run: (canvas: HTMLCanvasElement) => () => void
@@ -1468,60 +1471,80 @@ const pirateRun = (canvas: HTMLCanvasElement) => {
 export const REWARD_ANIMATIONS: RewardAnimation[] = [
   {
     name: 'fairy',
+    emoji: '🧚',
+    label: 'Fairy wish',
     backdrop: 'rgba(30, 10, 60, 0.88)',
     praise: ['Wish granted!', 'Magic is real!', 'You earned this!'],
     run: fairyRun,
   },
   {
     name: 'treasure',
+    emoji: '💰',
+    label: 'Treasure chest',
     backdrop: 'rgba(20, 12, 45, 0.88)',
     praise: ['Treasure unlocked!', 'You struck gold!', 'Riches for royalty!'],
     run: treasureRun,
   },
   {
     name: 'candy',
+    emoji: '🍭',
+    label: 'Sweet treats',
     backdrop: 'rgba(80, 30, 70, 0.55)',
     praise: ['Sweet reward!', 'Treat yourself!', 'How sweet it is!'],
     run: candyRun,
   },
   {
     name: 'puppies',
+    emoji: '🐶',
+    label: 'Puppy party',
     backdrop: 'rgba(15, 60, 45, 0.55)',
     praise: ['Puppy party!', 'Pawsome job!', 'You earned all the love!'],
     run: puppiesRun,
   },
   {
     name: 'racecar',
+    emoji: '🏎️',
+    label: 'Victory lap',
     backdrop: 'rgba(15, 23, 42, 0.82)',
     praise: ['Victory lap!', 'Vroom vroom, champ!', 'Pole position!'],
     run: racecarRun,
   },
   {
     name: 'dinoegg',
+    emoji: '🦕',
+    label: 'Dino egg',
     backdrop: 'rgba(22, 46, 18, 0.85)',
     praise: ['A baby dino hatched!', 'RAWR-some reward!', 'Dino-mite!'],
     run: dinoEggRun,
   },
   {
     name: 'ufo',
+    emoji: '🛸',
+    label: 'UFO delivery',
     backdrop: 'rgba(6, 10, 34, 0.92)',
     praise: ['Special delivery from space!', 'The aliens approve!', 'Out of this world!'],
     run: ufoRun,
   },
   {
     name: 'dragon',
+    emoji: '🐉',
+    label: 'Dragon',
     backdrop: 'rgba(40, 18, 60, 0.8)',
     praise: ['Dragon-approved!', 'Legendary!', 'Rainbow fire for you!'],
     run: dragonRun,
   },
   {
     name: 'robot',
+    emoji: '🤖',
+    label: 'Robot party',
     backdrop: 'rgba(10, 12, 32, 0.9)',
     praise: ['Robot dance party!', 'Beep boop, you rock!', 'Maximum awesome detected!'],
     run: robotRun,
   },
   {
     name: 'pirate',
+    emoji: '🏴‍☠️',
+    label: 'Pirate treasure',
     backdrop: 'rgba(7, 30, 55, 0.85)',
     praise: ['Ahoy, treasure earned!', 'Shiver me timbers!', 'X marks YOUR spot!'],
     run: pirateRun,
