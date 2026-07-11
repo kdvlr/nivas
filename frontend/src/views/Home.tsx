@@ -368,7 +368,7 @@ export default function Home() {
           {/* day headers, aligned with the timeline columns */}
           <div className="grid grid-cols-3 gap-4" style={{ marginLeft: AXIS_GUTTER }}>
             {daysList.map((dayIso, idx) => {
-              const dayWeather = weather?.daily.find((d) => d.date === dayIso)
+              const dayWeather = weather?.daily?.find((d) => d.date === dayIso)
               return (
                 <h3 key={dayIso} className="flex items-center gap-2 border-b pb-1.5 border-ink-faint flex-wrap">
                   <span className={`text-base font-semibold ${idx === 0 ? 'text-[var(--primary)]' : 'text-ink'}`}>
@@ -513,7 +513,7 @@ export default function Home() {
         <div className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-4">
           {daysList.map((dayIso, idx) => {
             const dayEvents = eventsByDay.get(dayIso) ?? []
-            const dayWeather = weather?.daily.find((d) => d.date === dayIso)
+            const dayWeather = weather?.daily?.find((d) => d.date === dayIso)
             return (
               <div key={dayIso} className="flex flex-col gap-2">
                 <h3 className="text-sm font-bold text-ink-soft uppercase tracking-wider border-b border-ink-faint pb-1 flex items-center gap-2">
