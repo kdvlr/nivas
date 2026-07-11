@@ -102,11 +102,27 @@ export interface WeatherDay extends WeatherInfo {
   date: string
   tmax: number
   tmin: number
+  precip?: number
+  sunrise?: string
+  sunset?: string
+}
+
+export interface WeatherHour extends WeatherInfo {
+  time: string
+  temp: number
+  precip: number
 }
 
 export interface WeatherData {
   configured: boolean
-  current: (WeatherInfo & { temp: number }) | null
+  unit?: string
+  current: (WeatherInfo & {
+    temp: number
+    feels_like?: number
+    humidity?: number
+    wind?: number
+  }) | null
+  hourly?: WeatherHour[]
   daily: WeatherDay[]
 }
 

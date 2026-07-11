@@ -3,6 +3,7 @@ import { api } from '../lib/api'
 import CoinIcon from '../components/CoinIcon'
 import Icon from '../components/Icon'
 import Modal from '../components/Modal'
+import WeatherModal from '../components/WeatherModal'
 import { useCelebration } from '../components/celebrations/CelebrationContext'
 import { useClock, useData, todayISO, addDaysISO } from '../lib/hooks'
 import type { CalendarStatus, CalEvent, ChoreItem, MealDay, ShoppingItem, Task, WeatherData } from '../lib/types'
@@ -124,6 +125,7 @@ function computeAxis(timed: PlacedEvent[]): { start: number; end: number } {
 
 export default function Home() {
   const [selectedEvent, setSelectedEvent] = useState<CalEvent | null>(null)
+  const [weatherOpen, setWeatherOpen] = useState(false)
   const now = useClock()
   const today = todayISO()
   const { data: events, loading: loadingEvents } = useData<CalEvent[]>(
@@ -275,9 +277,13 @@ export default function Home() {
         </h1>
       </div>
       {weather?.current && (
-        <div className="flex items-center gap-2 rounded-xl px-2 lg:px-3">
+        <button
+          onClick={() => setWeatherOpen(true)}
+          className="flex items-center gap-2 rounded-xl px-2 py-1 transition-transform active:scale-95 lg:px-3"
+          title="Weather details"
+        >
           <span className="text-3xl lg:text-4xl">{weather.current.icon}</span>
-          <div>
+          <div className="text-left">
             <div className="text-lg font-normal text-ink lg:text-xl leading-none">
               {weather.current.temp}°
             </div>
@@ -291,7 +297,8 @@ export default function Home() {
               )}
             </div>
           </div>
-        </div>
+          <Icon name="chevron_right" className="text-lg text-ink-faint" />
+        </button>
       )}
       <div className="ml-auto flex flex-col items-end">
         <div className="text-3xl font-normal tabular-nums tracking-tight text-[var(--primary)] lg:text-4xl leading-none">
@@ -430,14 +437,6 @@ export default function Home() {
                   style={{ top: `${axisPct(from)}%`, height: `${axisPct(to) - axisPct(from)}%` }}
                 >
                   <div className="absolute inset-y-0 right-0 rounded-lg" style={{ left: AXIS_GUTTER, background: p.tint }} />
-                  {to - from >= 90 && (
-                    <div className="absolute inset-y-0 left-0 flex w-8 flex-col items-center justify-center gap-2 overflow-hidden">
-                      <span className="text-lg leading-none">{p.emoji}</span>
-                      <span className="rotate-180 text-[0.7rem] font-bold uppercase tracking-[0.18em] text-ink-soft [writing-mode:vertical-rl]">
-                        {p.label}
-                      </span>
-                    </div>
-                  )}
                 </div>
               )
             })}
@@ -789,6 +788,10 @@ export default function Home() {
         {/* Slide 5: Shopping */}
         {renderMobileSlide('shopping', shoppingCount === 0, renderShopping(false))}
       </div>
+
+      {weatherOpen && weather?.configured && (
+        <WeatherModal weather={weather} onClose={() => setWeatherOpen(false)} />
+      )}
 
       {selectedEvent && (
         <Modal

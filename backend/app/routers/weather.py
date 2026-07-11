@@ -87,8 +87,9 @@ async def weather(db: Session = Depends(get_db)):
     params = {
         "latitude": loc["lat"],
         "longitude": loc["lon"],
-        "current": "temperature_2m,weather_code",
-        "daily": "weather_code,temperature_2m_max,temperature_2m_min",
+        "current": "temperature_2m,weather_code,relative_humidity_2m,apparent_temperature,wind_speed_10m",
+        "hourly": "temperature_2m,weather_code,precipitation_probability",
+        "daily": "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset",
         "temperature_unit": loc.get("unit", "fahrenheit"),
         "timezone": get_settings().tz,
         "forecast_days": 14,
@@ -105,17 +106,42 @@ async def weather(db: Session = Depends(get_db)):
 
     cur = raw.get("current", {})
     daily_raw = raw.get("daily", {})
+    hourly_raw = raw.get("hourly", {})
+    unit = loc.get("unit", "fahrenheit")
+
+    # next 24 hourly entries starting from the current hour
+    now_iso = cur.get("time", "")
+    times = hourly_raw.get("time", [])
+    start_i = next((i for i, t in enumerate(times) if t >= now_iso), 0) if now_iso else 0
+    hourly = [
+        {
+            "time": times[i],
+            "temp": round(hourly_raw["temperature_2m"][i]),
+            "precip": int(hourly_raw.get("precipitation_probability", [0] * len(times))[i] or 0),
+            **_describe(int(hourly_raw["weather_code"][i])),
+        }
+        for i in range(start_i, min(start_i + 24, len(times)))
+    ]
+
     data = {
         "configured": True,
+        "unit": unit,
         "current": {
             "temp": round(cur.get("temperature_2m", 0)),
+            "feels_like": round(cur.get("apparent_temperature", cur.get("temperature_2m", 0))),
+            "humidity": int(cur.get("relative_humidity_2m", 0) or 0),
+            "wind": round(cur.get("wind_speed_10m", 0) or 0),
             **_describe(int(cur.get("weather_code", 0))),
         },
+        "hourly": hourly,
         "daily": [
             {
                 "date": d,
                 "tmax": round(daily_raw["temperature_2m_max"][i]),
                 "tmin": round(daily_raw["temperature_2m_min"][i]),
+                "precip": int(daily_raw.get("precipitation_probability_max", [0] * len(daily_raw["time"]))[i] or 0),
+                "sunrise": daily_raw.get("sunrise", [""] * len(daily_raw["time"]))[i],
+                "sunset": daily_raw.get("sunset", [""] * len(daily_raw["time"]))[i],
                 **_describe(int(daily_raw["weather_code"][i])),
             }
             for i, d in enumerate(daily_raw.get("time", []))
