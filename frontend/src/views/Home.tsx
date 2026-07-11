@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { api } from '../lib/api'
 import CoinIcon from '../components/CoinIcon'
 import Icon from '../components/Icon'
@@ -126,6 +127,8 @@ function computeAxis(timed: PlacedEvent[]): { start: number; end: number } {
 export default function Home() {
   const [selectedEvent, setSelectedEvent] = useState<CalEvent | null>(null)
   const [weatherOpen, setWeatherOpen] = useState(false)
+  const [completingIds, setCompletingIds] = useState<string[]>([])
+  const [removedIds, setRemovedIds] = useState<string[]>([])
   const now = useClock()
   const today = todayISO()
   const { data: events, loading: loadingEvents } = useData<CalEvent[]>(
@@ -147,11 +150,24 @@ export default function Home() {
   )
   const { celebrate } = useCelebration()
 
+  // Reset completing/removed tracking when data reloads
+  useEffect(() => {
+    setCompletingIds([])
+    setRemovedIds([])
+  }, [events, taskData, chores, shopping])
+
   const tasks = taskData?.tasks ?? []
-  const openTasks = useMemo(() => tasks.filter((t) => !t.completed), [tasks])
+  const openTasks = useMemo(() => {
+    const list = tasks.filter((t) => !t.completed)
+    return list.filter((t) => !removedIds.includes(`task-${t.source}-${t.id}`))
+  }, [tasks, removedIds])
+
   const shoppingOpen = useMemo(() => (shopping ?? []).filter((i) => !i.completed), [shopping])
   const shoppingCount = shoppingOpen.length
-  const shoppingPeek = shoppingOpen.slice(0, 5)
+  const shoppingPeek = useMemo(() => {
+    const active = shoppingOpen.filter((i) => !removedIds.includes(`shop-${i.id}`))
+    return active.slice(0, 5)
+  }, [shoppingOpen, removedIds])
   const todayMeals = meals?.[0]?.slots
 
   // chores relevant today (one-offs due/overdue + recurring scheduled today)
@@ -163,7 +179,10 @@ export default function Home() {
     return !c.due_date || c.due_date <= today
   }
   const todayChores = useMemo(() => (chores ?? []).filter(choreDueToday), [chores, dow, today])
-  const openChores = useMemo(() => todayChores.filter((c) => !c.completed), [todayChores])
+  const openChores = useMemo(() => {
+    const list = todayChores.filter((c) => !c.completed)
+    return list.filter((c) => !removedIds.includes(`chore-${c.id}`))
+  }, [todayChores, removedIds])
   const todayWeather = weather?.daily.find((d) => d.date === today)
 
   const day0 = today
@@ -234,16 +253,37 @@ export default function Home() {
   }, [calStatus])
 
   const completeChore = async (c: ChoreItem) => {
+    const itemId = `chore-${c.id}`
+    if (completingIds.includes(itemId)) return
+    setCompletingIds((prev) => [...prev, itemId])
+    setTimeout(() => {
+      setRemovedIds((prev) => [...prev, itemId])
+    }, 250)
+
     await api.patch(`/api/chores/${c.id}`, { completed: true })
     celebrate()
     reloadChores()
   }
   // no celebration for to-dos on the home screen — they're grown-up chores
   const completeTask = async (t: Task) => {
+    const itemId = `task-${t.source}-${t.id}`
+    if (completingIds.includes(itemId)) return
+    setCompletingIds((prev) => [...prev, itemId])
+    setTimeout(() => {
+      setRemovedIds((prev) => [...prev, itemId])
+    }, 250)
+
     await api.patch(`/api/tasks/${t.id}`, { completed: true })
     reloadTasks()
   }
   const buyItem = async (i: ShoppingItem) => {
+    const itemId = `shop-${i.id}`
+    if (completingIds.includes(itemId)) return
+    setCompletingIds((prev) => [...prev, itemId])
+    setTimeout(() => {
+      setRemovedIds((prev) => [...prev, itemId])
+    }, 250)
+
     await api.patch(`/api/shopping/${i.id}`, { completed: true })
     reloadShopping()
   }
@@ -596,25 +636,50 @@ export default function Home() {
           <p className="my-auto text-center text-lg text-ink-faint py-3">All done! 🎉</p>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto">
-            {openChores.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => completeChore(c)}
-                className="glass-inset flex shrink-0 items-center gap-2.5 px-2.5 py-1.5 text-left active:surface-tile-high"
-              >
-                <span className="h-6 w-6 shrink-0 rounded-full border-[2.5px] border-amber-300" />
-                <span className="min-w-0 flex-1 truncate text-[0.95rem] font-normal text-ink">
-                  {c.title}
-                </span>
-                {c.assigned_to && (
-                  <span className="text-xs font-medium text-ink-soft">{c.assigned_to}</span>
-                )}
-                <span className="flex items-center text-xs font-medium text-amber-500">
-                  <CoinIcon />
-                  {c.coins}
-                </span>
-              </button>
-            ))}
+            <AnimatePresence initial={false}>
+              {openChores.map((c) => (
+                <motion.button
+                  key={c.id}
+                  layout
+                  initial={{ opacity: 1, height: 'auto' }}
+                  exit={{
+                    opacity: 0,
+                    height: 0,
+                    paddingTop: 0,
+                    paddingBottom: 0,
+                    marginTop: 0,
+                    marginBottom: 0,
+                    overflow: 'hidden',
+                    transition: { duration: 0.25, ease: 'easeInOut' }
+                  }}
+                  onClick={() => completeChore(c)}
+                  className="glass-inset flex shrink-0 items-center gap-2.5 px-2.5 py-1.5 text-left active:surface-tile-high"
+                >
+                  <div className="h-6 w-6 shrink-0 rounded-full border-[2.5px] border-amber-300 flex items-center justify-center overflow-hidden relative">
+                    {completingIds.includes(`chore-${c.id}`) && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                        className="absolute inset-0 bg-amber-500 flex items-center justify-center"
+                      >
+                        <Icon name="check" className="text-white text-xs font-bold" />
+                      </motion.div>
+                    )}
+                  </div>
+                  <span className="min-w-0 flex-1 truncate text-[0.95rem] font-normal text-ink">
+                    {c.title}
+                  </span>
+                  {c.assigned_to && (
+                    <span className="text-xs font-medium text-ink-soft">{c.assigned_to}</span>
+                  )}
+                  <span className="flex items-center text-xs font-medium text-amber-500">
+                    <CoinIcon />
+                    {c.coins}
+                  </span>
+                </motion.button>
+              ))}
+            </AnimatePresence>
           </div>
         )}
       </section>
@@ -638,26 +703,51 @@ export default function Home() {
           <p className="my-auto text-center text-lg text-ink-faint py-3">Nothing to do 🎉</p>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto">
-            {openTasks.map((t) => (
-              <button
-                key={`${t.source}-${t.id}`}
-                onClick={() => completeTask(t)}
-                className="glass-inset flex shrink-0 items-center gap-2.5 px-2.5 py-1.5 text-left active:surface-tile-high"
-              >
-                <span className="h-6 w-6 shrink-0 rounded-full border-[2.5px] border-emerald-300" />
-                <span className="min-w-0 flex-1 truncate text-[0.95rem] font-normal text-ink">
-                  {t.title}
-                </span>
-                {t.due_date && (
-                  <span className="text-xs font-medium text-ink-soft">
-                    {new Date(t.due_date).toLocaleDateString(undefined, {
-                      month: 'short',
-                      day: 'numeric',
-                    })}
+            <AnimatePresence initial={false}>
+              {openTasks.map((t) => (
+                <motion.button
+                  key={`${t.source}-${t.id}`}
+                  layout
+                  initial={{ opacity: 1, height: 'auto' }}
+                  exit={{
+                    opacity: 0,
+                    height: 0,
+                    paddingTop: 0,
+                    paddingBottom: 0,
+                    marginTop: 0,
+                    marginBottom: 0,
+                    overflow: 'hidden',
+                    transition: { duration: 0.25, ease: 'easeInOut' }
+                  }}
+                  onClick={() => completeTask(t)}
+                  className="glass-inset flex shrink-0 items-center gap-2.5 px-2.5 py-1.5 text-left active:surface-tile-high"
+                >
+                  <div className="h-6 w-6 shrink-0 rounded-full border-[2.5px] border-emerald-300 flex items-center justify-center overflow-hidden relative">
+                    {completingIds.includes(`task-${t.source}-${t.id}`) && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                        className="absolute inset-0 bg-emerald-500 flex items-center justify-center"
+                      >
+                        <Icon name="check" className="text-white text-xs font-bold" />
+                      </motion.div>
+                    )}
+                  </div>
+                  <span className="min-w-0 flex-1 truncate text-[0.95rem] font-normal text-ink">
+                    {t.title}
                   </span>
-                )}
-              </button>
-            ))}
+                  {t.due_date && (
+                    <span className="text-xs font-medium text-ink-soft">
+                      {new Date(t.due_date).toLocaleDateString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </span>
+                  )}
+                </motion.button>
+              ))}
+            </AnimatePresence>
           </div>
         )}
       </section>
@@ -710,18 +800,43 @@ export default function Home() {
           <p className="my-auto text-center text-lg text-ink-faint py-3">Nothing on the list 🎉</p>
         ) : (
           <div className="mt-2 flex flex-col gap-1.5 overflow-y-auto flex-1">
-            {shoppingPeek.map((i) => (
-              <button
-                key={i.id}
-                onClick={() => buyItem(i)}
-                className="glass-inset flex items-center gap-2.5 px-2.5 py-1.5 text-left active:surface-tile-high"
-              >
-                <span className="h-5 w-5 shrink-0 rounded-full border-2 border-sky-300" />
-                <span className="min-w-0 flex-1 truncate text-[0.95rem] font-normal text-ink">
-                  {i.title}
-                </span>
-              </button>
-            ))}
+            <AnimatePresence initial={false}>
+              {shoppingPeek.map((i) => (
+                <motion.button
+                  key={i.id}
+                  layout
+                  initial={{ opacity: 1, height: 'auto' }}
+                  exit={{
+                    opacity: 0,
+                    height: 0,
+                    paddingTop: 0,
+                    paddingBottom: 0,
+                    marginTop: 0,
+                    marginBottom: 0,
+                    overflow: 'hidden',
+                    transition: { duration: 0.25, ease: 'easeInOut' }
+                  }}
+                  onClick={() => buyItem(i)}
+                  className="glass-inset flex items-center gap-2.5 px-2.5 py-1.5 text-left active:surface-tile-high"
+                >
+                  <div className="h-5 w-5 shrink-0 rounded-full border-2 border-sky-300 flex items-center justify-center overflow-hidden relative">
+                    {completingIds.includes(`shop-${i.id}`) && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                        className="absolute inset-0 bg-sky-500 flex items-center justify-center"
+                      >
+                        <Icon name="check" className="text-white text-[10px] font-bold" />
+                      </motion.div>
+                    )}
+                  </div>
+                  <span className="min-w-0 flex-1 truncate text-[0.95rem] font-normal text-ink">
+                    {i.title}
+                  </span>
+                </motion.button>
+              ))}
+            </AnimatePresence>
             {shoppingCount > shoppingPeek.length && (
               <a href="#/shopping" className="text-center text-xs font-medium text-sky-600 dark:text-sky-400 mt-1">
                 +{shoppingCount - shoppingPeek.length} more on the list
