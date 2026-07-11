@@ -56,7 +56,7 @@ export default function Calendar() {
   // shrinks to [earliest .. latest] (anchored near the top, min 6h) and each
   // slot's pixel height is computed so the whole window fits the pane without
   // scrolling — on any screen size. Falls back to a daytime band when empty.
-  const MIN_SPAN = 8 * 60
+  const MIN_SPAN = 12 * 60
   const wrapRef = useRef<HTMLDivElement>(null)
   const appliedRangeRef = useRef('')
 
@@ -369,9 +369,8 @@ export default function Calendar() {
                   <button
                     key={s.id}
                     onClick={() => setDraft({ ...draft, selection_id: s.id })}
-                    className={`rounded-full px-5 py-2.5 text-lg font-medium text-white ${
-                      draft.selection_id === s.id ? 'ring-4 ring-slate-700/40 dark:ring-slate-200/60' : 'opacity-50'
-                    }`}
+                    className={`rounded-full px-5 py-2.5 text-lg font-medium text-white ${draft.selection_id === s.id ? 'ring-4 ring-slate-700/40 dark:ring-slate-200/60' : 'opacity-50'
+                      }`}
                     style={{ background: s.color }}
                   >
                     {s.person_name || s.name}
