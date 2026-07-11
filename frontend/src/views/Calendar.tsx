@@ -53,10 +53,11 @@ export default function Calendar() {
   useEffect(() => onRefresh(['calendar'], refetch), [refetch])
 
   // Fit the visible hours to the events of the currently-shown days: the axis
-  // shrinks to [earliest .. latest] (padded, min 6h) and rows expand to fill the
-  // pane, so every event is visible without scrolling and the grid adapts to the
-  // screen height. Falls back to a daytime band when a day has no timed events.
+  // shrinks to [earliest .. latest] (anchored near the top, min 6h) and each
+  // slot's pixel height is computed so the whole window fits the pane without
+  // scrolling — on any screen size. Falls back to a daytime band when empty.
   const MIN_SPAN = 6 * 60
+  const wrapRef = useRef<HTMLDivElement>(null)
   const appliedRangeRef = useRef('')
 
   const fitSlotRange = useCallback(() => {
@@ -77,34 +78,75 @@ export default function Calendar() {
     let start: number
     let end: number
     if (earliest === Infinity) {
-      start = 8 * 60 // no events today → sensible daytime band
+      start = 8 * 60 // no events → sensible daytime band
       end = 18 * 60
     } else {
-      start = Math.max(0, Math.floor((earliest - 30) / 60) * 60)
-      end = Math.min(24 * 60, Math.ceil((latest + 30) / 60) * 60)
-      if (end - start < MIN_SPAN) {
-        start = Math.max(0, start - Math.floor((MIN_SPAN - (end - start)) / 2))
-        end = Math.min(24 * 60, start + MIN_SPAN)
-        start = Math.max(0, end - MIN_SPAN)
-      }
+      // ~1h of breathing room above the first event, keeping it near the top
+      start = Math.max(0, Math.floor(earliest / 60) * 60 - 60)
+      end = Math.min(24 * 60, Math.ceil(latest / 60) * 60 + 60)
+      // reach the minimum span by extending downward first (don't re-center)
+      if (end - start < MIN_SPAN) end = Math.min(24 * 60, start + MIN_SPAN)
+      if (end - start < MIN_SPAN) start = Math.max(0, end - MIN_SPAN)
     }
 
     const key = `${start}-${end}`
-    if (key === appliedRangeRef.current) return
-    appliedRangeRef.current = key
-    const fmt = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:00:00`
-    api.setOption('slotMinTime', fmt(start))
-    api.setOption('slotMaxTime', fmt(end))
+    if (key !== appliedRangeRef.current) {
+      appliedRangeRef.current = key
+      const fmt = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:00:00`
+      api.setOption('slotMinTime', fmt(start))
+      api.setOption('slotMaxTime', fmt(end))
+    }
   }, [MIN_SPAN])
+
+  // Size each 30-min slot so the whole fitted window fills the scroller exactly
+  // (expandRows only grows rows; this lets a wide window shrink to fit too).
+  const fitHeights = useCallback(() => {
+    const wrap = wrapRef.current
+    if (!wrap) return
+    const slotTable = wrap.querySelector('.fc-timegrid-slots')
+    const scroller = slotTable?.closest('.fc-scroller') as HTMLElement | null
+    const rows = wrap.querySelectorAll('.fc-timegrid-slots tr').length
+    if (!scroller || !rows) return
+    const avail = scroller.clientHeight
+    if (avail < 40) return
+    // Size each slot so all rows fill the scroller exactly (floor => the total is
+    // never taller than the pane, so it never scrolls; the few leftover px are a
+    // negligible gap at the bottom). No expandRows, so this height is authoritative.
+    const h = Math.max(7, Math.floor(avail / rows))
+    wrap.style.setProperty('--fc-slot-h', `${h}px`)
+  }, [])
+
+  // FullCalendar's flex layout can take a couple of frames to settle after a
+  // re-render, so measure across a few beats rather than a single rAF.
+  const scheduleFit = useCallback(() => {
+    requestAnimationFrame(fitHeights)
+    setTimeout(fitHeights, 80)
+    setTimeout(fitHeights, 250)
+  }, [fitHeights])
+
+  const refit = useCallback(() => {
+    fitSlotRange()
+    scheduleFit()
+  }, [fitSlotRange, scheduleFit])
+
+  // keep it fitted as the container resizes (screen rotates, pane changes)
+  useEffect(() => {
+    const wrap = wrapRef.current
+    if (!wrap) return
+    const ro = new ResizeObserver(() => fitHeights())
+    ro.observe(wrap)
+    return () => ro.disconnect()
+  }, [fitHeights])
 
   // reset so navigating to a new week/day re-fits even if the event set matches
   const onDatesSet = useCallback(() => {
     appliedRangeRef.current = ''
-  }, [])
+    scheduleFit()
+  }, [scheduleFit])
 
   const onEventsSet = useCallback(() => {
-    fitSlotRange()
-  }, [fitSlotRange])
+    refit()
+  }, [refit])
 
   const fetchEvents = useCallback(
     async (info: { startStr: string; endStr: string }, ok: (evs: object[]) => void, fail: (e: Error) => void) => {
@@ -243,7 +285,7 @@ export default function Calendar() {
         ))}
         {error && <span className="ml-auto font-medium text-rose-500">{error}</span>}
       </div>
-      <div className="glass min-h-0 flex-1 p-3 lg:p-4">
+      <div ref={wrapRef} className="glass min-h-0 flex-1 p-3 lg:p-4">
         <FullCalendar
           ref={calRef}
           plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
@@ -254,7 +296,6 @@ export default function Calendar() {
             right: 'timeGridDay,timeGridWeek,dayGridMonth',
           }}
           height="100%"
-          expandRows
           nowIndicator
           editable
           selectable
@@ -265,6 +306,9 @@ export default function Calendar() {
           slotMinTime="08:00:00"
           slotMaxTime="18:00:00"
           scrollTime="00:00:00"
+          slotDuration="01:00:00"
+          slotLabelInterval="01:00:00"
+          snapDuration="00:15:00"
           datesSet={onDatesSet}
           eventsSet={onEventsSet}
           allDaySlot

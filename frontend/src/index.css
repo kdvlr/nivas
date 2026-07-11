@@ -443,7 +443,10 @@ body {
   }
 }
 .fc .fc-timegrid-slot {
-  height: 2.5em;
+  /* slot height is computed per-view to fit the fitted window into the pane
+     (see Calendar.tsx fitHeights); falls back to a sane default. !important
+     beats FullCalendar's runtime-injected stylesheet. */
+  height: var(--fc-slot-h, 2.5em) !important;
 }
 .fc .fc-event {
   border-radius: 10px;
