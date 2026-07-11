@@ -367,16 +367,25 @@ export default function Home() {
         <div className="flex min-h-0 flex-1 flex-col">
           {/* day headers, aligned with the timeline columns */}
           <div className="grid grid-cols-3 gap-4" style={{ marginLeft: AXIS_GUTTER }}>
-            {daysList.map((dayIso, idx) => (
-              <h3 key={dayIso} className="flex items-baseline gap-2 border-b pb-1.5 border-ink-faint">
-                <span className={`text-base font-semibold ${idx === 0 ? 'text-[var(--primary)]' : 'text-ink'}`}>
-                  {getDayLabel(dayIso, idx)}
-                </span>
-                <span className="text-[0.7rem] font-medium text-ink-soft opacity-85">
-                  {new Date(dayIso + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                </span>
-              </h3>
-            ))}
+            {daysList.map((dayIso, idx) => {
+              const dayWeather = weather?.daily.find((d) => d.date === dayIso)
+              return (
+                <h3 key={dayIso} className="flex items-center gap-2 border-b pb-1.5 border-ink-faint flex-wrap">
+                  <span className={`text-base font-semibold ${idx === 0 ? 'text-[var(--primary)]' : 'text-ink'}`}>
+                    {getDayLabel(dayIso, idx)}
+                  </span>
+                  <span className="text-[0.7rem] font-medium text-ink-soft opacity-85">
+                    {new Date(dayIso + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                  </span>
+                  {dayWeather && (
+                    <span className="ml-auto flex items-center gap-1 text-[0.75rem] font-semibold text-ink-soft" title={dayWeather.label}>
+                      <span>{dayWeather.icon}</span>
+                      <span>{dayWeather.tmax}° / {dayWeather.tmin}°</span>
+                    </span>
+                  )}
+                </h3>
+              )
+            })}
           </div>
 
           {/* all-day chip strip */}
@@ -504,13 +513,20 @@ export default function Home() {
         <div className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-4">
           {daysList.map((dayIso, idx) => {
             const dayEvents = eventsByDay.get(dayIso) ?? []
+            const dayWeather = weather?.daily.find((d) => d.date === dayIso)
             return (
               <div key={dayIso} className="flex flex-col gap-2">
-                <h3 className="text-sm font-bold text-ink-soft uppercase tracking-wider border-b border-ink-faint pb-1 flex items-baseline gap-2">
+                <h3 className="text-sm font-bold text-ink-soft uppercase tracking-wider border-b border-ink-faint pb-1 flex items-center gap-2">
                   <span>{getDayLabel(dayIso, idx)}</span>
                   <span className="text-[0.75rem] font-medium opacity-80">
                     {new Date(dayIso + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                   </span>
+                  {dayWeather && (
+                    <span className="ml-auto flex items-center gap-1 text-[0.75rem] font-semibold normal-case">
+                      <span>{dayWeather.icon}</span>
+                      <span>{dayWeather.tmax}° / {dayWeather.tmin}°</span>
+                    </span>
+                  )}
                 </h3>
                 {dayEvents.length === 0 ? (
                   <p className="text-sm text-ink-faint py-1">No events</p>

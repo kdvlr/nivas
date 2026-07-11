@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     amazon_otp_secret: str = ""
     amazon_url: str = "amazon.com"
 
-    data_dir: Path = Path("./data")
+    data_dir: Path = Path("/data") if Path("/data").is_dir() else Path("./data")
     base_url: str = "http://localhost:8000"
 
     # PIN required to open the Setup screen ("" = no PIN). Reset by editing .env.
