@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { SPATIAL_STANDARD_DEFAULT, STANDARD_ENTER, PRESS_SPRING } from '../lib/motion'
 import Avatar from '../components/Avatar'
@@ -89,13 +89,33 @@ function Badge({ ok, label }: { ok: boolean; label: string }) {
 function PinPad({ onUnlock }: { onUnlock: () => void }) {
   const [entered, setEntered] = useState('')
   const [wrong, setWrong] = useState(false)
+  const unlockTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const press = async (d: string) => {
-    const next = entered + d
+  useEffect(() => {
+    return () => {
+      if (unlockTimeoutRef.current) {
+        clearTimeout(unlockTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  const press = async (next: string) => {
+    // Clear any pending unlock timer since input has changed
+    if (unlockTimeoutRef.current) {
+      clearTimeout(unlockTimeoutRef.current)
+      unlockTimeoutRef.current = null
+    }
+
     setEntered(next)
+
+    if (next === '') return
+
     const r = await api.post<{ ok: boolean }>('/api/setup/pin/verify', { pin: next })
     if (r.ok) {
-      onUnlock()
+      // Debounce unlock by 1 second to allow typing decoy digits at the end
+      unlockTimeoutRef.current = setTimeout(() => {
+        onUnlock()
+      }, 1000)
     } else if (next.length >= 24) {
       setWrong(true)
       setTimeout(() => {
@@ -133,7 +153,7 @@ function PinPad({ onUnlock }: { onUnlock: () => void }) {
           ) : (
             <button
               key={i}
-              onClick={() => (d === '⌫' ? setEntered(entered.slice(0, -1)) : press(d))}
+              onClick={() => press(d === '⌫' ? entered.slice(0, -1) : entered + d)}
               className="btn-glass h-20 w-20 text-3xl"
             >
               {d}
