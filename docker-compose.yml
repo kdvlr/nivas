@@ -10,7 +10,5 @@ services:
     environment:
       DATA_DIR: /data
     volumes:
-      - dashboard-data:/data
-
-volumes:
-  dashboard-data:
+      # Bind mount so all data lives beside this compose file (backup-friendly).
+      - ./data:/data
