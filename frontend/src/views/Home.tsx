@@ -107,19 +107,19 @@ function computeAxis(timed: PlacedEvent[]): { start: number; end: number } {
   end = Math.min(end, 24 * 60)
   const deficit = MIN_SPAN_MIN - (end - start)
   if (deficit > 0) {
-    start -= Math.floor(deficit / 2)
-    end += Math.ceil(deficit / 2)
-    if (start < 0) {
-      end = Math.min(end - start, 24 * 60)
-      start = 0
+    const earliest = Math.min(...timed.map((t) => t.s))
+    if (earliest < 12 * 60) {
+      // morning: keep the top edge, grow downward
+      end = Math.min(24 * 60, start + MIN_SPAN_MIN)
+      if (end - start < MIN_SPAN_MIN) start = Math.max(0, end - MIN_SPAN_MIN)
+    } else {
+      // afternoon / evening: keep the bottom edge, grow upward
+      start = Math.max(0, end - MIN_SPAN_MIN)
+      if (end - start < MIN_SPAN_MIN) end = Math.min(24 * 60, start + MIN_SPAN_MIN)
     }
-    if (end > 24 * 60) {
-      start = Math.max(start - (end - 24 * 60), 0)
-      end = 24 * 60
-    }
-    start = Math.floor(start / 60) * 60
-    end = Math.ceil(end / 60) * 60
   }
+  start = Math.floor(start / 60) * 60
+  end = Math.ceil(end / 60) * 60
   return { start, end }
 }
 
