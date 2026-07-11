@@ -258,7 +258,7 @@ export default function Home() {
     setCompletingIds((prev) => [...prev, itemId])
     setTimeout(() => {
       setRemovedIds((prev) => [...prev, itemId])
-    }, 250)
+    }, 450)
 
     await api.patch(`/api/chores/${c.id}`, { completed: true })
     celebrate()
@@ -271,7 +271,7 @@ export default function Home() {
     setCompletingIds((prev) => [...prev, itemId])
     setTimeout(() => {
       setRemovedIds((prev) => [...prev, itemId])
-    }, 250)
+    }, 450)
 
     await api.patch(`/api/tasks/${t.id}`, { completed: true })
     reloadTasks()
@@ -282,7 +282,7 @@ export default function Home() {
     setCompletingIds((prev) => [...prev, itemId])
     setTimeout(() => {
       setRemovedIds((prev) => [...prev, itemId])
-    }, 250)
+    }, 450)
 
     await api.patch(`/api/shopping/${i.id}`, { completed: true })
     reloadShopping()
@@ -650,7 +650,7 @@ export default function Home() {
                     marginTop: 0,
                     marginBottom: 0,
                     overflow: 'hidden',
-                    transition: { duration: 0.25, ease: 'easeInOut' }
+                    transition: { duration: 0.45, ease: 'easeInOut' }
                   }}
                   onClick={() => completeChore(c)}
                   className="glass-inset flex shrink-0 items-center gap-2.5 px-2.5 py-1.5 text-left active:surface-tile-high"
@@ -717,7 +717,7 @@ export default function Home() {
                     marginTop: 0,
                     marginBottom: 0,
                     overflow: 'hidden',
-                    transition: { duration: 0.25, ease: 'easeInOut' }
+                    transition: { duration: 0.45, ease: 'easeInOut' }
                   }}
                   onClick={() => completeTask(t)}
                   className="glass-inset flex shrink-0 items-center gap-2.5 px-2.5 py-1.5 text-left active:surface-tile-high"
@@ -814,7 +814,7 @@ export default function Home() {
                     marginTop: 0,
                     marginBottom: 0,
                     overflow: 'hidden',
-                    transition: { duration: 0.25, ease: 'easeInOut' }
+                    transition: { duration: 0.45, ease: 'easeInOut' }
                   }}
                   onClick={() => buyItem(i)}
                   className="glass-inset flex items-center gap-2.5 px-2.5 py-1.5 text-left active:surface-tile-high"
