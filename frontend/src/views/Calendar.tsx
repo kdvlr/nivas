@@ -52,13 +52,14 @@ export default function Calendar() {
   const refetch = useCallback(() => calRef.current?.getApi().refetchEvents(), [])
   useEffect(() => onRefresh(['calendar'], refetch), [refetch])
 
-  // Auto-scroll a time-grid view so the earliest event of the visible days sits
-  // near the top, expanding to at least an 8h window. The axis itself stays the
-  // full day (00:00–24:00) so the user can still scroll up to midnight / noon.
-  const rangeKeyRef = useRef('')
-  const needsScrollRef = useRef(true)
+  // Fit the visible hours to the events of the currently-shown days: the axis
+  // shrinks to [earliest .. latest] (padded, min 6h) and rows expand to fill the
+  // pane, so every event is visible without scrolling and the grid adapts to the
+  // screen height. Falls back to a daytime band when a day has no timed events.
+  const MIN_SPAN = 6 * 60
+  const appliedRangeRef = useRef('')
 
-  const autoScroll = useCallback(() => {
+  const fitSlotRange = useCallback(() => {
     const api = calRef.current?.getApi()
     if (!api || !api.view.type.startsWith('timeGrid')) return
     const { activeStart, activeEnd } = api.view
@@ -67,32 +68,43 @@ export default function Calendar() {
     for (const e of api.getEvents()) {
       if (e.allDay || !e.start || e.start < activeStart || e.start >= activeEnd) continue
       const s = e.start.getHours() * 60 + e.start.getMinutes()
-      const en = e.end ? e.end.getHours() * 60 + e.end.getMinutes() : s + 60
+      let en = e.end ? e.end.getHours() * 60 + e.end.getMinutes() : s + 60
+      if (en <= s) en = 24 * 60 // spills past midnight
       earliest = Math.min(earliest, s)
       latest = Math.max(latest, en)
     }
-    if (earliest === Infinity) {
-      earliest = 8 * 60 // no events → default to an 8am start
-      latest = 16 * 60
-    }
-    // keep at least an 8h window in view; nudge the start up if we're near midnight
-    if (latest - earliest < 8 * 60) earliest = Math.max(0, latest - 8 * 60)
-    const startHour = Math.max(0, Math.floor(earliest / 60))
-    api.scrollToTime({ hours: startHour, minutes: 0, seconds: 0, milliseconds: 0 })
-  }, [])
 
-  const onDatesSet = useCallback((arg: { startStr: string }) => {
-    if (arg.startStr !== rangeKeyRef.current) {
-      rangeKeyRef.current = arg.startStr
-      needsScrollRef.current = true // re-scroll once the new range's events arrive
+    let start: number
+    let end: number
+    if (earliest === Infinity) {
+      start = 8 * 60 // no events today → sensible daytime band
+      end = 18 * 60
+    } else {
+      start = Math.max(0, Math.floor((earliest - 30) / 60) * 60)
+      end = Math.min(24 * 60, Math.ceil((latest + 30) / 60) * 60)
+      if (end - start < MIN_SPAN) {
+        start = Math.max(0, start - Math.floor((MIN_SPAN - (end - start)) / 2))
+        end = Math.min(24 * 60, start + MIN_SPAN)
+        start = Math.max(0, end - MIN_SPAN)
+      }
     }
+
+    const key = `${start}-${end}`
+    if (key === appliedRangeRef.current) return
+    appliedRangeRef.current = key
+    const fmt = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:00:00`
+    api.setOption('slotMinTime', fmt(start))
+    api.setOption('slotMaxTime', fmt(end))
+  }, [MIN_SPAN])
+
+  // reset so navigating to a new week/day re-fits even if the event set matches
+  const onDatesSet = useCallback(() => {
+    appliedRangeRef.current = ''
   }, [])
 
   const onEventsSet = useCallback(() => {
-    if (!needsScrollRef.current) return
-    needsScrollRef.current = false
-    autoScroll()
-  }, [autoScroll])
+    fitSlotRange()
+  }, [fitSlotRange])
 
   const fetchEvents = useCallback(
     async (info: { startStr: string; endStr: string }, ok: (evs: object[]) => void, fail: (e: Error) => void) => {
@@ -242,6 +254,7 @@ export default function Calendar() {
             right: 'timeGridDay,timeGridWeek,dayGridMonth',
           }}
           height="100%"
+          expandRows
           nowIndicator
           editable
           selectable
@@ -249,9 +262,9 @@ export default function Calendar() {
           longPressDelay={200}
           selectLongPressDelay={300}
           eventLongPressDelay={200}
-          slotMinTime="00:00:00"
-          slotMaxTime="24:00:00"
-          scrollTime="08:00:00"
+          slotMinTime="08:00:00"
+          slotMaxTime="18:00:00"
+          scrollTime="00:00:00"
           datesSet={onDatesSet}
           eventsSet={onEventsSet}
           allDaySlot
