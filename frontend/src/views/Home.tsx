@@ -33,7 +33,7 @@ const getDayLabel = (isoDate: string, index: number) => {
 
 /** left gutter: period strip + hour labels */
 const AXIS_GUTTER = 92
-const FAMILY_GRADIENT = 'linear-gradient(135deg, #f43f5e, #ec4899, #8b5cf6, #3b82f6, #10b981)'
+const FAMILY_GRADIENT = 'linear-gradient(115deg, #ef4444, #f97316, #eab308, #22c55e, #3b82f6, #a855f7)'
 const MIN_SPAN_MIN = 8 * 60
 
 const isFamilyEvent = (e: CalEvent) =>
@@ -851,7 +851,7 @@ export default function Home() {
                     !selectedEvent.person_name ||
                     selectedEvent.person_name.toLowerCase() === 'family' ||
                     selectedEvent.person_name.toLowerCase() === 'shared'
-                      ? 'linear-gradient(135deg, #f43f5e, #ec4899, #8b5cf6, #3b82f6, #10b981)'
+                      ? 'linear-gradient(115deg, #ef4444, #f97316, #eab308, #22c55e, #3b82f6, #a855f7)'
                       : selectedEvent.color,
                 }}
               />
