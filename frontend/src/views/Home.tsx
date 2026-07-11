@@ -185,34 +185,6 @@ export default function Home() {
     return map
   }, [events, day0, day1, day2])
 
-  const getDayRangeStr = (dayIso: string) => {
-    const dayEvents = eventsByDay.get(dayIso) ?? []
-    const timed = dayEvents.filter((e) => !e.all_day)
-    if (timed.length === 0) return null
-
-    // Sort to find earliest start
-    const sortedStart = [...timed].sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
-    const earliest = sortedStart[0]
-
-    // Sort to find latest end
-    const sortedEnd = [...timed].sort((a, b) => {
-      const aEnd = a.end ? new Date(a.end).getTime() : new Date(a.start).getTime()
-      const bEnd = b.end ? new Date(b.end).getTime() : new Date(b.start).getTime()
-      return aEnd - bEnd
-    })
-    const latest = sortedEnd[sortedEnd.length - 1]
-
-    const startStr = new Date(earliest.start).toLocaleTimeString(undefined, {
-      hour: 'numeric',
-      minute: '2-digit',
-    })
-    const endStr = new Date(latest.end || latest.start).toLocaleTimeString(undefined, {
-      hour: 'numeric',
-      minute: '2-digit',
-    })
-    return `${startStr} – ${endStr}`
-  }
-
   // timeline: timed events placed into lanes per day; all-day events go to a chip strip
   const timeline = useMemo(() => {
     const timedByDay = new Map<string, PlacedEvent[]>()
@@ -397,7 +369,6 @@ export default function Home() {
           <div className="grid grid-cols-3 gap-4" style={{ marginLeft: AXIS_GUTTER }}>
             {daysList.map((dayIso, idx) => {
               const dayWeather = weather?.daily?.find((d) => d.date === dayIso)
-              const rangeStr = getDayRangeStr(dayIso)
               return (
                 <h3 key={dayIso} className="flex items-center gap-2 border-b pb-1.5 border-ink-faint flex-wrap">
                   <span className={`text-base font-semibold ${idx === 0 ? 'text-[var(--primary)]' : 'text-ink'}`}>
@@ -407,15 +378,11 @@ export default function Home() {
                     {new Date(dayIso + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                   </span>
                   {dayWeather && (
-                    <span className="ml-auto flex items-center gap-1 text-[0.75rem] font-semibold text-ink-soft" title={dayWeather.label}>
-                      <span>{dayWeather.icon}</span>
-                      <span>{dayWeather.tmax}° / {dayWeather.tmin}°</span>
-                    </span>
-                  )}
-                  {rangeStr && (
-                    <span className="w-full mt-0.5 text-[0.7rem] font-semibold text-ink-soft opacity-75 flex items-center gap-1">
-                      <Icon name="schedule" className="text-xs" />
-                      {rangeStr}
+                    <span className="mt-0.5 flex w-full items-center gap-1.5 text-sm font-semibold text-ink-soft">
+                      <span className="text-xl leading-none">{dayWeather.icon}</span>
+                      <span>
+                        {dayWeather.label} · {dayWeather.tmax}° / {dayWeather.tmin}°
+                      </span>
                     </span>
                   )}
                 </h3>
@@ -549,7 +516,6 @@ export default function Home() {
           {daysList.map((dayIso, idx) => {
             const dayEvents = eventsByDay.get(dayIso) ?? []
             const dayWeather = weather?.daily?.find((d) => d.date === dayIso)
-            const rangeStr = getDayRangeStr(dayIso)
             return (
               <div key={dayIso} className="flex flex-col gap-2">
                 <h3 className="text-sm font-bold text-ink-soft uppercase tracking-wider border-b border-ink-faint pb-1 flex flex-wrap items-center gap-2">
@@ -558,15 +524,11 @@ export default function Home() {
                     {new Date(dayIso + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                   </span>
                   {dayWeather && (
-                    <span className="ml-auto flex items-center gap-1 text-[0.75rem] font-semibold normal-case">
-                      <span>{dayWeather.icon}</span>
-                      <span>{dayWeather.tmax}° / {dayWeather.tmin}°</span>
-                    </span>
-                  )}
-                  {rangeStr && (
-                    <span className="w-full mt-0.5 text-[0.7rem] font-semibold text-ink-soft opacity-75 normal-case flex items-center gap-1">
-                      <Icon name="schedule" className="text-[10px]" />
-                      {rangeStr}
+                    <span className="ml-auto flex items-center gap-1.5 text-sm font-semibold normal-case">
+                      <span className="text-xl leading-none">{dayWeather.icon}</span>
+                      <span>
+                        {dayWeather.label} · {dayWeather.tmax}° / {dayWeather.tmin}°
+                      </span>
                     </span>
                   )}
                 </h3>
