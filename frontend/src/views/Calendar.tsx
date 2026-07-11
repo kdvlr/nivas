@@ -81,12 +81,22 @@ export default function Calendar() {
       start = 8 * 60 // no events → sensible daytime band
       end = 18 * 60
     } else {
-      // ~1h of breathing room above the first event, keeping it near the top
+      // ~1h of breathing room around the events
       start = Math.max(0, Math.floor(earliest / 60) * 60 - 60)
       end = Math.min(24 * 60, Math.ceil(latest / 60) * 60 + 60)
-      // reach the minimum span by extending downward first (don't re-center)
-      if (end - start < MIN_SPAN) end = Math.min(24 * 60, start + MIN_SPAN)
-      if (end - start < MIN_SPAN) start = Math.max(0, end - MIN_SPAN)
+      // reach the minimum span by extending toward the far end of the day, so a
+      // morning event sits near the top and an evening event near the bottom
+      if (end - start < MIN_SPAN) {
+        if (earliest < 12 * 60) {
+          // morning: keep the top edge, grow downward
+          end = Math.min(24 * 60, start + MIN_SPAN)
+          if (end - start < MIN_SPAN) start = Math.max(0, end - MIN_SPAN)
+        } else {
+          // afternoon / evening: keep the bottom edge, grow upward
+          start = Math.max(0, end - MIN_SPAN)
+          if (end - start < MIN_SPAN) end = Math.min(24 * 60, start + MIN_SPAN)
+        }
+      }
     }
 
     const key = `${start}-${end}`
