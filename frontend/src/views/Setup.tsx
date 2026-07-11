@@ -94,20 +94,44 @@ function PinPad({ onUnlock }: { onUnlock: () => void }) {
   const [fail, setFail] = useState<PinFailAnimation | null>(null)
   const lastFailRef = useRef<string | null>(null)
   const unlockTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const failTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     return () => {
       if (unlockTimeoutRef.current) {
         clearTimeout(unlockTimeoutRef.current)
       }
+      if (failTimeoutRef.current) {
+        clearTimeout(failTimeoutRef.current)
+      }
     }
   }, [])
 
+  const triggerFailure = () => {
+    if (failTimeoutRef.current) {
+      clearTimeout(failTimeoutRef.current)
+      failTimeoutRef.current = null
+    }
+    setWrong(true)
+    const pool = PIN_FAIL_ANIMATIONS.filter((a) => a.name !== lastFailRef.current)
+    const chosen = pool[Math.floor(Math.random() * pool.length)]
+    lastFailRef.current = chosen.name
+    setFail(chosen)
+    setTimeout(() => {
+      setEntered('')
+      setWrong(false)
+    }, 500)
+  }
+
   const press = async (next: string) => {
-    // Clear any pending unlock timer since input has changed
+    // Clear any pending timers
     if (unlockTimeoutRef.current) {
       clearTimeout(unlockTimeoutRef.current)
       unlockTimeoutRef.current = null
+    }
+    if (failTimeoutRef.current) {
+      clearTimeout(failTimeoutRef.current)
+      failTimeoutRef.current = null
     }
 
     setEntered(next)
@@ -120,25 +144,23 @@ function PinPad({ onUnlock }: { onUnlock: () => void }) {
       unlockTimeoutRef.current = setTimeout(() => {
         onUnlock()
       }, 1000)
-    } else if (next.length >= 24) {
-      setWrong(true)
-      // play a random "denied!" animation (never the same one twice in a row)
-      const pool = PIN_FAIL_ANIMATIONS.filter((a) => a.name !== lastFailRef.current)
-      const chosen = pool[Math.floor(Math.random() * pool.length)]
-      lastFailRef.current = chosen.name
-      setFail(chosen)
-      setTimeout(() => {
-        setEntered('')
-        setWrong(false)
-      }, 500)
+    } else {
+      if (next.length >= 24) {
+        triggerFailure()
+      } else if (next.length >= 4) {
+        // Debounce wrong PIN feedback by 1.5s to let the user finish entering decoy numbers
+        failTimeoutRef.current = setTimeout(() => {
+          triggerFailure()
+        }, 1500)
+      }
     }
   }
 
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-6">
+    <div className={`flex h-full flex-col items-center justify-center gap-6 ${wrong ? 'animate-shake' : ''}`}>
       <Icon name="lock" className="text-6xl text-ink-soft" />
       <p className="text-xl font-medium text-ink-soft">Enter the Setup PIN</p>
-      <div className={`flex h-8 items-center gap-3.5 ${wrong ? 'animate-bounce' : ''}`}>
+      <div className="flex h-8 items-center gap-3.5">
         {[0, 1, 2, 3].map((index) => {
           const filled = entered.length > index
           return (
