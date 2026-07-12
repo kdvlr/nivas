@@ -182,7 +182,7 @@ const LightboxLivePhoto = ({ item }: { item: MediaItem }) => {
   )
 }
 
-export default function Photos() {
+export default function Photos({ onStartSlideshow }: { onStartSlideshow?: () => void }) {
   const { data: media, reload, loading } = useData<MediaItem[]>('/api/photos', ['photos'])
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null)
 
@@ -234,13 +234,25 @@ export default function Photos() {
           </p>
         </div>
 
-        <button
-          onClick={reload}
-          disabled={loading}
-          className="flex items-center justify-center p-3 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all active:scale-95"
-        >
-          <Icon name="refresh" className={loading ? 'animate-spin' : ''} />
-        </button>
+        <div className="flex items-center gap-3">
+          {onStartSlideshow && media && media.length > 0 && (
+            <button
+              onClick={onStartSlideshow}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 font-semibold text-sm transition-all active:scale-95 shadow-sm border border-indigo-200/50 dark:border-indigo-800/30"
+            >
+              <Icon name="play_circle" className="text-lg" />
+              <span>Slideshow</span>
+            </button>
+          )}
+
+          <button
+            onClick={reload}
+            disabled={loading}
+            className="flex items-center justify-center p-3 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all active:scale-95"
+          >
+            <Icon name="refresh" className={loading ? 'animate-spin' : ''} />
+          </button>
+        </div>
       </div>
 
       {/* Loading state */}

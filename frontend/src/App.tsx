@@ -175,8 +175,8 @@ export default function App() {
 
   // Screensaver + kiosk return to home timers
   useEffect(() => {
-    const SLIDESHOW_TRIGGER_MS = 3 * 60 * 1000
-    const IDLE_RETURN_MS = 5 * 60 * 1000
+    const IDLE_RETURN_MS = 3 * 60 * 1000              // 3 minutes of inactivity to go Home
+    const SLIDESHOW_TRIGGER_MS = (3 * 60 + 30) * 1000  // 30s later (3m30s total) to start screensaver
     
     let slideshowTimer = setTimeout(startSlideshow, SLIDESHOW_TRIGGER_MS)
     let homeTimer = setTimeout(goHome, IDLE_RETURN_MS)
@@ -398,7 +398,7 @@ export default function App() {
                 transition={EXPRESSIVE_ENTER}
                 className="flex flex-1 flex-col min-h-0"
               >
-                <View />
+                <View onStartSlideshow={() => setSlideshowActive(true)} />
               </motion.div>
             </AnimatePresence>
           </main>
