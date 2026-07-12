@@ -134,7 +134,7 @@ def geocode_worker(db_session_factory, file_paths):
             with GEOCODE_LOCK:
                 PENDING_GEOCODES.discard(rel_str)
 
-def sync_photos_dir(db: Session, background_tasks: BackgroundTasks = None):
+def sync_photos_dir(db: Session):
     """
     Delta-syncs filesystem changes with the SQLite database.
     """
@@ -227,7 +227,7 @@ def sync_photos_dir(db: Session, background_tasks: BackgroundTasks = None):
         db.commit()
         
     # Launch background geocode threads if requested
-    if pending_geocodes and background_tasks:
+    if pending_geocodes:
         with GEOCODE_LOCK:
             new_pending = []
             for path in pending_geocodes:
@@ -235,7 +235,8 @@ def sync_photos_dir(db: Session, background_tasks: BackgroundTasks = None):
                     PENDING_GEOCODES.add(path)
                     new_pending.append(path)
             if new_pending:
-                background_tasks.add_task(geocode_worker, SessionLocal, new_pending)
+                t = threading.Thread(target=geocode_worker, args=(SessionLocal, new_pending), daemon=True)
+                t.start()
 
 def sync_photos_dir_background(db_session_factory):
     """
@@ -243,13 +244,7 @@ def sync_photos_dir_background(db_session_factory):
     """
     db = db_session_factory()
     try:
-        # Create a transient background tasks list to delegate geocoding tasks
-        bt = BackgroundTasks()
-        sync_photos_dir(db, bt)
-        # Execute any queued geocoding workers
-        if bt.tasks:
-            for task in bt.tasks:
-                task[0](*task[1], **task[2])
+        sync_photos_dir(db)
     except Exception as e:
         print(f"Background photos synchronization failed: {e}")
     finally:
@@ -257,8 +252,14 @@ def sync_photos_dir_background(db_session_factory):
 
 @router.get("")
 def get_photos(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    # Trigger delta scan asynchronously so this API responds instantly (under 1ms)
-    background_tasks.add_task(sync_photos_dir_background, SessionLocal)
+    # Check if the database has any records
+    db_count = db.query(PhotoMetadata).count()
+    if db_count == 0:
+        # First-time scan: run synchronously so the user doesn't see a blank screen
+        sync_photos_dir(db)
+    else:
+        # Subsequent scans: run delta check in background, return cached records instantly
+        background_tasks.add_task(sync_photos_dir_background, SessionLocal)
     
     # Query all cached photo metadata directly from the SQLite database
     cached_records = db.query(PhotoMetadata).all()
