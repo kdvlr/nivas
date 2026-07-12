@@ -49,8 +49,8 @@ const PhotoInfoCard = ({ item }: { item: MediaItem }) => {
         </div>
       )}
       {item.date_taken && (
-        <div className="flex items-center gap-1.5 text-xs text-white/70 font-medium">
-          <Icon name="calendar_today" className="text-[11px] text-indigo-300" />
+        <div className="flex items-center gap-1.5 text-sm text-white/90 font-medium">
+          <Icon name="calendar_today" className="text-xs text-indigo-300" />
           <span>{formatDate(item.date_taken)}</span>
         </div>
       )}
