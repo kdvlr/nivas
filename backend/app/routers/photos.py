@@ -1,14 +1,16 @@
 import random
 import urllib.parse
 import struct
+import threading
+import time
 from pathlib import Path
 from datetime import datetime
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, BackgroundTasks
 from sqlalchemy.orm import Session
 from PIL import Image
 import httpx
 
-from ..db import get_db
+from ..db import get_db, SessionLocal
 from ..models import PhotoMetadata
 
 router = APIRouter(prefix="/api/photos", tags=["photos"])
@@ -17,6 +19,10 @@ PHOTOS_DIR = Path("/photos")
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 VIDEO_EXTENSIONS = {".mp4", ".webm", ".mov", ".ogg"}
+
+# Thread-safe geocode processing tracker
+GEOCODE_LOCK = threading.Lock()
+PENDING_GEOCODES = set()
 
 def to_decimal(value):
     if not value or len(value) < 3:
@@ -49,12 +55,12 @@ def get_exif_metadata(file_path):
                     except ValueError:
                         pass
                 
-                # GPS Info Sub-IFD marker
+                # GPS Info
                 gps_info = exif.get_ifd(34853)
                 if gps_info:
-                    lat_ref = gps_info.get(1)  # N or S
+                    lat_ref = gps_info.get(1)
                     latitude = gps_info.get(2)
-                    lon_ref = gps_info.get(3)  # E or W
+                    lon_ref = gps_info.get(3)
                     longitude = gps_info.get(4)
                     
                     if latitude and lat_ref and longitude and lon_ref:
@@ -83,7 +89,6 @@ def fetch_location_name(lat: float, lon: float) -> str | None:
                 data = r.json()
                 address = data.get("address", {})
                 
-                # Format a user-friendly city/state/country string
                 city = address.get("city") or address.get("town") or address.get("village") or address.get("suburb") or address.get("county")
                 state = address.get("state")
                 country = address.get("country")
@@ -97,11 +102,41 @@ def fetch_location_name(lat: float, lon: float) -> str | None:
                 elif country:
                     return country
     except Exception as e:
-        print(f"Nominatim reverse geocoding failed: {e}")
+        print(f"Nominatim geocoding failed: {e}")
     return None
 
+def geocode_worker(db_session_factory, file_paths):
+    """
+    Background worker thread resolving geocodes sequentially with a delay to comply with TOS.
+    """
+    for rel_str in file_paths:
+        time.sleep(1.2)
+        
+        db = db_session_factory()
+        try:
+            cached = db.query(PhotoMetadata).filter(PhotoMetadata.file_path == rel_str).first()
+            if cached and cached.latitude is not None and cached.longitude is not None:
+                location = fetch_location_name(cached.latitude, cached.longitude)
+                # Save location name or reset to None on failure to trigger retry later
+                cached.location_name = location
+                db.commit()
+        except Exception as e:
+            print(f"Background geocoding failed for {rel_str}: {e}")
+            try:
+                db.rollback()
+                cached = db.query(PhotoMetadata).filter(PhotoMetadata.file_path == rel_str).first()
+                if cached:
+                    cached.location_name = None
+                    db.commit()
+            except Exception:
+                pass
+        finally:
+            db.close()
+            with GEOCODE_LOCK:
+                PENDING_GEOCODES.discard(rel_str)
+
 @router.get("")
-def get_photos(db: Session = Depends(get_db)):
+def get_photos(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     if not PHOTOS_DIR.exists() or not PHOTOS_DIR.is_dir():
         return []
         
@@ -130,6 +165,8 @@ def get_photos(db: Session = Depends(get_db)):
     cached_records = db.query(PhotoMetadata).all()
     cache_dict = {rec.file_path: rec for rec in cached_records}
     
+    pending_geocodes = []
+    
     for file_path, rel_str in image_files:
         stat = file_path.stat()
         file_size = stat.st_size
@@ -138,6 +175,11 @@ def get_photos(db: Session = Depends(get_db)):
         cached = cache_dict.get(rel_str)
         
         if cached and cached.file_size == file_size and cached.last_modified == last_modified:
+            # Use cached metadata
+            location_display = None
+            if cached.location_name and cached.location_name != "Resolving...":
+                location_display = cached.location_name
+                
             image_map[rel_str.lower()] = {
                 "rel_path": Path(rel_str),
                 "name": file_path.name,
@@ -145,18 +187,21 @@ def get_photos(db: Session = Depends(get_db)):
                 "height": cached.height,
                 "orientation": cached.orientation,
                 "date_taken": cached.date_taken,
-                "location_name": cached.location_name
+                "location_name": location_display
             }
+            
+            # Queue for background resolution if coordinates exist but location name is not set
+            if cached.latitude is not None and cached.longitude is not None and cached.location_name is None:
+                with GEOCODE_LOCK:
+                    if rel_str not in PENDING_GEOCODES:
+                        PENDING_GEOCODES.add(rel_str)
+                        pending_geocodes.append(rel_str)
+                        cached.location_name = "Resolving..."
         else:
-            # Parse photo dimensions and EXIF metadata
+            # Parse photo dimensions and EXIF metadata (only reads headers - fast!)
             width, height, date_taken, lat, lon = get_exif_metadata(file_path)
             orientation = "portrait" if height > width else "landscape"
             
-            # Lookup human readable location name if coordinates are embedded
-            location_name = None
-            if lat is not None and lon is not None:
-                location_name = fetch_location_name(lat, lon)
-                
             if not cached:
                 cached = PhotoMetadata(file_path=rel_str)
                 db.add(cached)
@@ -167,9 +212,18 @@ def get_photos(db: Session = Depends(get_db)):
             cached.date_taken = date_taken
             cached.latitude = lat
             cached.longitude = lon
-            cached.location_name = location_name
             cached.file_size = file_size
             cached.last_modified = last_modified
+            
+            # Queue for background resolution if coordinates exist
+            if lat is not None and lon is not None:
+                with GEOCODE_LOCK:
+                    if rel_str not in PENDING_GEOCODES:
+                        PENDING_GEOCODES.add(rel_str)
+                        pending_geocodes.append(rel_str)
+                        cached.location_name = "Resolving..."
+            else:
+                cached.location_name = None
             
             db.flush()
             
@@ -180,9 +234,13 @@ def get_photos(db: Session = Depends(get_db)):
                 "height": height,
                 "orientation": orientation,
                 "date_taken": date_taken,
-                "location_name": location_name
+                "location_name": None
             }
             
+    if pending_geocodes:
+        db.flush()
+        background_tasks.add_task(geocode_worker, SessionLocal, pending_geocodes)
+        
     if db.new or db.dirty:
         db.commit()
 
