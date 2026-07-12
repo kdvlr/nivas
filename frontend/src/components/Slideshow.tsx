@@ -144,51 +144,26 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
 
   return (
     <div
-      className="fixed inset-0 z-[100] bg-neutral-980 overflow-hidden cursor-none select-none flex items-center justify-center"
+      className="fixed inset-0 z-[100] bg-black overflow-hidden cursor-none select-none"
       onClick={onDismiss}
       onTouchStart={onDismiss}
     >
-      {/* Blurred background image for premium ambient glow */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={`bg_${activeSlide.id}`}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.22 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 2.0 }}
-          className="absolute inset-0 z-0 overflow-hidden pointer-events-none"
-        >
-          <img
-            src={bgPhotoUrl}
-            alt=""
-            className="w-full h-full object-cover filter blur-[80px] scale-[1.15] brightness-75"
-          />
-        </motion.div>
-      </AnimatePresence>
-
-      {/* Dark overlay for contrast */}
-      <div className="absolute inset-0 bg-black/40 z-0 pointer-events-none" />
-
       {/* Main Slideshow Frame */}
       <AnimatePresence mode="popLayout">
         <motion.div
           key={activeSlide.id}
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.96 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
           transition={{ duration: 1.8, ease: 'easeInOut' }}
-          className="z-10 flex items-center justify-center"
+          className="absolute inset-0 z-10 w-full h-full"
         >
           {activeSlide.type === 'single' ? (
             (() => {
               const item = activeSlide.items[0]
-              const aspect = item.width && item.height ? `${item.width} / ${item.height}` : '16/9'
               
               return (
-                <div
-                  style={{ aspectRatio: aspect }}
-                  className="max-h-[92vh] max-w-[92vw] rounded-[36px] overflow-hidden border-[12px] border-neutral-900/90 dark:border-neutral-950/90 bg-neutral-950 shadow-[0_30px_70px_rgba(0,0,0,0.85)] relative"
-                >
+                <div className="w-full h-full relative">
                   {item.type === 'image' && (
                     <motion.img
                       src={item.url}
@@ -230,79 +205,61 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
               )
             })()
           ) : (
-            // Two vertical portrait photos side-by-side
-            (() => {
-              const item1 = activeSlide.items[0]
-              const item2 = activeSlide.items[1]
-              
-              const aspect1 = item1.width && item1.height ? item1.width / item1.height : 0.75
-              const aspect2 = item2.width && item2.height ? item2.width / item2.height : 0.75
-              
-              // Add a small spacer fraction (~0.04) to account for the inner 16px gap
-              const combinedAspect = aspect1 + aspect2 + 0.04
-              
-              return (
-                <div
-                  style={{ aspectRatio: combinedAspect }}
-                  className="max-h-[92vh] max-w-[92vw] rounded-[36px] overflow-hidden border-[12px] border-neutral-900/90 dark:border-neutral-950/90 bg-neutral-950/95 shadow-[0_30px_70px_rgba(0,0,0,0.85)] flex gap-4 p-4 relative"
-                >
-                  {activeSlide.items.map((item, idx) => {
-                    const isFirst = idx === 0
-                    const itemAspect = item.width && item.height ? item.width / item.height : 0.75
-                    const childDir = {
-                      x: isFirst ? [dir.x[0] / 2, dir.x[1] / 2] : [-dir.x[0] / 2, -dir.x[1] / 2],
-                      y: [dir.y[0] / 2, dir.y[1] / 2]
-                    }
-                    
-                    return (
-                      <div
-                        key={item.url}
-                        style={{ flex: itemAspect }}
-                        className="relative h-full rounded-2xl overflow-hidden bg-neutral-900"
-                      >
-                        {item.type === 'image' && (
-                          <motion.img
-                            src={item.url}
-                            initial={{ scale: 1.01, x: childDir.x[0], y: childDir.y[0] }}
-                            animate={{ scale: 1.08, x: childDir.x[1], y: childDir.y[1] }}
-                            transition={{ duration: 8.2, ease: 'linear' }}
-                            className="w-full h-full object-cover"
-                          />
-                        )}
+            // Two vertical portrait photos side-by-side filling the screen
+            <div className="w-full h-full flex gap-0.5 bg-black relative">
+              {activeSlide.items.map((item, idx) => {
+                const isFirst = idx === 0
+                const childDir = {
+                  x: isFirst ? [dir.x[0] / 2, dir.x[1] / 2] : [-dir.x[0] / 2, -dir.x[1] / 2],
+                  y: [dir.y[0] / 2, dir.y[1] / 2]
+                }
+                
+                return (
+                  <div
+                    key={item.url}
+                    className="relative flex-1 h-full overflow-hidden bg-neutral-900"
+                  >
+                    {item.type === 'image' && (
+                      <motion.img
+                        src={item.url}
+                        initial={{ scale: 1.01, x: childDir.x[0], y: childDir.y[0] }}
+                        animate={{ scale: 1.08, x: childDir.x[1], y: childDir.y[1] }}
+                        transition={{ duration: 8.2, ease: 'linear' }}
+                        className="w-full h-full object-cover"
+                      />
+                    )}
 
-                        {item.type === 'live_photo' && item.videoUrl && (
-                          <motion.video
-                            src={item.videoUrl}
-                            autoPlay
-                            muted
-                            playsInline
-                            loop
-                            initial={{ scale: 1.01, x: childDir.x[0], y: childDir.y[0] }}
-                            animate={{ scale: 1.06, x: childDir.x[1], y: childDir.y[1] }}
-                            transition={{ duration: 8.2, ease: 'linear' }}
-                            className="w-full h-full object-cover"
-                          />
-                        )}
+                    {item.type === 'live_photo' && item.videoUrl && (
+                      <motion.video
+                        src={item.videoUrl}
+                        autoPlay
+                        muted
+                        playsInline
+                        loop
+                        initial={{ scale: 1.01, x: childDir.x[0], y: childDir.y[0] }}
+                        animate={{ scale: 1.06, x: childDir.x[1], y: childDir.y[1] }}
+                        transition={{ duration: 8.2, ease: 'linear' }}
+                        className="w-full h-full object-cover"
+                      />
+                    )}
 
-                        {item.type === 'video' && (
-                          <video
-                            src={item.url}
-                            autoPlay
-                            muted
-                            playsInline
-                            loop
-                            className="w-full h-full object-cover"
-                          />
-                        )}
+                    {item.type === 'video' && (
+                      <video
+                        src={item.url}
+                        autoPlay
+                        muted
+                        playsInline
+                        loop
+                        className="w-full h-full object-cover"
+                      />
+                    )}
 
-                        {/* Date & Location overlay inside each portrait mat */}
-                        <PhotoInfoCard item={item} />
-                      </div>
-                    )
-                  })}
-                </div>
-              )
-            })()
+                    {/* Date & Location overlay inside each portrait mat */}
+                    <PhotoInfoCard item={item} />
+                  </div>
+                )
+              })}
+            </div>
           )}
         </motion.div>
       </AnimatePresence>
