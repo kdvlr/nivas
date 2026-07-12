@@ -199,6 +199,7 @@ class PhotoMetadata(Base):
     __tablename__ = "photo_metadata"
 
     file_path: Mapped[str] = mapped_column(String, primary_key=True) # relative path as unique identifier
+    file_type: Mapped[str] = mapped_column(String, default="image") # image or video
     width: Mapped[int] = mapped_column(Integer, default=1920)
     height: Mapped[int] = mapped_column(Integer, default=1080)
     orientation: Mapped[str] = mapped_column(String, default="landscape")

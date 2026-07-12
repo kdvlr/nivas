@@ -50,6 +50,12 @@ def init_db() -> None:
             conn.execute(text("ALTER TABLE people ADD COLUMN avatar_emoji VARCHAR DEFAULT ''"))
         except Exception:
             pass
+        try:
+            conn.execute(
+                text("ALTER TABLE photo_metadata ADD COLUMN file_type VARCHAR DEFAULT 'image'")
+            )
+        except Exception:
+            pass
 
 
 def get_db() -> Generator[Session, None, None]:

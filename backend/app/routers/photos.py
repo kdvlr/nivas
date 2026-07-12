@@ -117,7 +117,6 @@ def geocode_worker(db_session_factory, file_paths):
             cached = db.query(PhotoMetadata).filter(PhotoMetadata.file_path == rel_str).first()
             if cached and cached.latitude is not None and cached.longitude is not None:
                 location = fetch_location_name(cached.latitude, cached.longitude)
-                # Save location name or reset to None on failure to trigger retry later
                 cached.location_name = location
                 db.commit()
         except Exception as e:
@@ -135,123 +134,163 @@ def geocode_worker(db_session_factory, file_paths):
             with GEOCODE_LOCK:
                 PENDING_GEOCODES.discard(rel_str)
 
-@router.get("")
-def get_photos(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+def sync_photos_dir(db: Session, background_tasks: BackgroundTasks = None):
+    """
+    Delta-syncs filesystem changes with the SQLite database.
+    """
     if not PHOTOS_DIR.exists() or not PHOTOS_DIR.is_dir():
-        return []
+        return
         
-    all_files = list(PHOTOS_DIR.rglob("*"))
-    
-    image_files = []
-    video_map = {}
-    
-    for file_path in all_files:
-        if file_path.is_file():
-            ext = file_path.suffix.lower()
-            try:
-                rel_path = file_path.relative_to(PHOTOS_DIR)
-            except ValueError:
-                continue
-            
-            rel_str = rel_path.as_posix()
-            
+    # 1. Scan filesystem for images and videos
+    all_files_on_disk = {}
+    for p in PHOTOS_DIR.rglob("*"):
+        if p.is_file():
+            ext = p.suffix.lower()
             if ext in IMAGE_EXTENSIONS:
-                image_files.append((file_path, rel_str))
+                try:
+                    rel_str = p.relative_to(PHOTOS_DIR).as_posix()
+                    stat = p.stat()
+                    all_files_on_disk[rel_str] = (p, "image", stat.st_size, stat.st_mtime)
+                except ValueError:
+                    continue
             elif ext in VIDEO_EXTENSIONS:
-                video_map[rel_str.lower()] = rel_path
+                try:
+                    rel_str = p.relative_to(PHOTOS_DIR).as_posix()
+                    stat = p.stat()
+                    all_files_on_disk[rel_str] = (p, "video", stat.st_size, stat.st_mtime)
+                except ValueError:
+                    continue
 
-    # Synchronize database cache for image files
-    image_map = {}
+    # 2. Get database cache records
     cached_records = db.query(PhotoMetadata).all()
     cache_dict = {rec.file_path: rec for rec in cached_records}
     
-    pending_geocodes = []
+    # 3. Find delta changes
+    disk_paths = set(all_files_on_disk.keys())
+    db_paths = set(cache_dict.keys())
     
-    for file_path, rel_str in image_files:
-        stat = file_path.stat()
-        file_size = stat.st_size
-        last_modified = stat.st_mtime
-        
-        cached = cache_dict.get(rel_str)
-        
-        if cached and cached.file_size == file_size and cached.last_modified == last_modified:
-            # Use cached metadata
-            location_display = None
-            if cached.location_name and cached.location_name != "Resolving...":
-                location_display = cached.location_name
-                
-            image_map[rel_str.lower()] = {
-                "rel_path": Path(rel_str),
-                "name": file_path.name,
-                "width": cached.width,
-                "height": cached.height,
-                "orientation": cached.orientation,
-                "date_taken": cached.date_taken,
-                "location_name": location_display
-            }
+    deleted_paths = db_paths - disk_paths
+    changed_or_new_paths = []
+    
+    for path in disk_paths:
+        p_obj, file_type, size, mtime = all_files_on_disk[path]
+        cached = cache_dict.get(path)
+        if not cached or cached.file_size != size or cached.last_modified != mtime:
+            changed_or_new_paths.append((path, p_obj, file_type, size, mtime))
+
+    # 4. Delete removed records from database
+    if deleted_paths:
+        db.query(PhotoMetadata).filter(PhotoMetadata.file_path.in_(list(deleted_paths))).delete(synchronize_session=False)
+        db.commit()
+
+    # 5. Insert or update new/changed records (delta-processing)
+    pending_geocodes = []
+    for path, p_obj, file_type, size, mtime in changed_or_new_paths:
+        cached = cache_dict.get(path)
+        if not cached:
+            cached = PhotoMetadata(file_path=path)
+            db.add(cached)
             
-            # Queue for background resolution if coordinates exist but location name is not set
-            if cached.latitude is not None and cached.longitude is not None and cached.location_name is None:
-                with GEOCODE_LOCK:
-                    if rel_str not in PENDING_GEOCODES:
-                        PENDING_GEOCODES.add(rel_str)
-                        pending_geocodes.append(rel_str)
-                        cached.location_name = "Resolving..."
-        else:
-            # Parse photo dimensions and EXIF metadata (only reads headers - fast!)
-            width, height, date_taken, lat, lon = get_exif_metadata(file_path)
-            orientation = "portrait" if height > width else "landscape"
-            
-            if not cached:
-                cached = PhotoMetadata(file_path=rel_str)
-                db.add(cached)
-                
+        cached.file_type = file_type
+        cached.file_size = size
+        cached.last_modified = mtime
+        
+        if file_type == "image":
+            # Extract dimensions & EXIF (fast - only reads headers)
+            width, height, date_taken, lat, lon = get_exif_metadata(p_obj)
             cached.width = width
             cached.height = height
-            cached.orientation = orientation
+            cached.orientation = "portrait" if height > width else "landscape"
             cached.date_taken = date_taken
             cached.latitude = lat
             cached.longitude = lon
-            cached.file_size = file_size
-            cached.last_modified = last_modified
             
-            # Queue for background resolution if coordinates exist
+            # Queue geocoding if GPS found
             if lat is not None and lon is not None:
-                with GEOCODE_LOCK:
-                    if rel_str not in PENDING_GEOCODES:
-                        PENDING_GEOCODES.add(rel_str)
-                        pending_geocodes.append(rel_str)
-                        cached.location_name = "Resolving..."
+                cached.location_name = "Resolving..."
+                pending_geocodes.append(path)
             else:
                 cached.location_name = None
+        else:
+            # Videos default metadata
+            cached.width = 1920
+            cached.height = 1080
+            cached.orientation = "landscape"
+            cached.date_taken = None
+            cached.latitude = None
+            cached.longitude = None
+            cached.location_name = None
             
-            db.flush()
-            
-            image_map[rel_str.lower()] = {
-                "rel_path": Path(rel_str),
-                "name": file_path.name,
-                "width": width,
-                "height": height,
-                "orientation": orientation,
-                "date_taken": date_taken,
-                "location_name": None
-            }
-            
-    if pending_geocodes:
         db.flush()
-        background_tasks.add_task(geocode_worker, SessionLocal, pending_geocodes)
         
     if db.new or db.dirty:
         db.commit()
+        
+    # Launch background geocode threads if requested
+    if pending_geocodes and background_tasks:
+        with GEOCODE_LOCK:
+            new_pending = []
+            for path in pending_geocodes:
+                if path not in PENDING_GEOCODES:
+                    PENDING_GEOCODES.add(path)
+                    new_pending.append(path)
+            if new_pending:
+                background_tasks.add_task(geocode_worker, SessionLocal, new_pending)
+
+def sync_photos_dir_background(db_session_factory):
+    """
+    Fast thread entrypoint to perform a delta scan.
+    """
+    db = db_session_factory()
+    try:
+        # Create a transient background tasks list to delegate geocoding tasks
+        bt = BackgroundTasks()
+        sync_photos_dir(db, bt)
+        # Execute any queued geocoding workers
+        if bt.tasks:
+            for task in bt.tasks:
+                task[0](*task[1], **task[2])
+    except Exception as e:
+        print(f"Background photos synchronization failed: {e}")
+    finally:
+        db.close()
+
+@router.get("")
+def get_photos(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    # Trigger delta scan asynchronously so this API responds instantly (under 1ms)
+    background_tasks.add_task(sync_photos_dir_background, SessionLocal)
+    
+    # Query all cached photo metadata directly from the SQLite database
+    cached_records = db.query(PhotoMetadata).all()
+    
+    image_map = {}
+    video_map = {}
+    
+    for rec in cached_records:
+        if rec.file_type == "video":
+            video_map[rec.file_path.lower()] = Path(rec.file_path)
+        else:
+            location_display = None
+            if rec.location_name and rec.location_name != "Resolving...":
+                location_display = rec.location_name
+                
+            image_map[rec.file_path.lower()] = {
+                "rel_path": Path(rec.file_path),
+                "name": Path(rec.file_path).name,
+                "width": rec.width,
+                "height": rec.height,
+                "orientation": rec.orientation,
+                "date_taken": rec.date_taken,
+                "location_name": location_display
+            }
 
     media_items = []
     paired_images = set()
     
     # 1. Pair Live Photos
     for vid_rel_str, vid_rel_path in video_map.items():
-        vid_path_obj = Path(vid_rel_str)
-        vid_base = vid_path_obj.stem
-        vid_dir = vid_path_obj.parent
+        vid_base = vid_rel_path.stem
+        vid_dir = vid_rel_path.parent
         
         if vid_base.endswith("_hevc"):
             base_name = vid_base[:-5]
@@ -260,7 +299,8 @@ def get_photos(background_tasks: BackgroundTasks, db: Session = Depends(get_db))
             
         found_pair = False
         for img_ext in IMAGE_EXTENSIONS:
-            img_rel_str = (vid_dir / f"{base_name}{img_ext}").as_posix().lower()
+            img_rel_path = vid_dir / f"{base_name}{img_ext}"
+            img_rel_str = img_rel_path.as_posix().lower()
             if img_rel_str in image_map:
                 img_data = image_map[img_rel_str]
                 
