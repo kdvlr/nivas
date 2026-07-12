@@ -158,8 +158,8 @@
 }
 
 html[data-theme='woodland']:not(.dark) {
-  --surface: #EFEFEF; /* Louis Vuitton light grey */
-  --sc-lowest: #ffffff; /* crisp white card backgrounds */
+  --surface: #ffffff; /* crisp white app background */
+  --sc-lowest: #EFEFEF; /* Louis Vuitton light grey card backgrounds */
   --sc: #e5e2da; /* elegant warm-grey/taupe container */
   --sc-high: #d7d3c8;
   --sc-highest: #c9c4b7;
