@@ -76,13 +76,13 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
       const item = list[i]
       if (used.has(item.url)) continue
 
-      const isPortrait = item.orientation === 'portrait' && (item.type === 'image' || item.type === 'live_photo')
+      const isPortrait = item.orientation === 'portrait'
 
       if (isPortrait) {
         let partner: MediaItem | null = null
         for (let j = i + 1; j < list.length; j++) {
           const nextItem = list[j]
-          const isNextPortrait = nextItem.orientation === 'portrait' && (nextItem.type === 'image' || nextItem.type === 'live_photo')
+          const isNextPortrait = nextItem.orientation === 'portrait'
           if (isNextPortrait && !used.has(nextItem.url)) {
             partner = nextItem
             break
@@ -280,6 +280,17 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                             initial={{ scale: 1.01, x: childDir.x[0], y: childDir.y[0] }}
                             animate={{ scale: 1.06, x: childDir.x[1], y: childDir.y[1] }}
                             transition={{ duration: 8.2, ease: 'linear' }}
+                            className="w-full h-full object-cover"
+                          />
+                        )}
+
+                        {item.type === 'video' && (
+                          <video
+                            src={item.url}
+                            autoPlay
+                            muted
+                            playsInline
+                            loop
                             className="w-full h-full object-cover"
                           />
                         )}

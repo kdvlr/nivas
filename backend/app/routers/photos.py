@@ -77,6 +77,57 @@ def get_exif_metadata(file_path):
 
     return width, height, date_taken, lat, lon
 
+def get_video_dimensions(file_path):
+    """
+    Parses MP4/MOV track headers to extract width, height and check for rotation matrix.
+    Returns (width, height) or (None, None) on failure.
+    """
+    try:
+        with open(file_path, "rb") as f:
+            data = f.read(5 * 1024 * 1024)  # Read first 5MB for headers
+            idx = 0
+            while True:
+                idx = data.find(b"tkhd", idx)
+                if idx == -1:
+                    break
+                
+                atom_start = idx - 4
+                if atom_start < 0:
+                    idx += 4
+                    continue
+                    
+                version = data[idx + 4]
+                if version == 0:
+                    offset = idx + 8 + 4 + 4 + 4 + 4 + 4 + 8 + 2 + 2 + 2 + 2
+                elif version == 1:
+                    offset = idx + 8 + 8 + 8 + 4 + 4 + 8 + 8 + 2 + 2 + 2 + 2
+                else:
+                    idx += 4
+                    continue
+                    
+                matrix_offset = offset
+                width_offset = offset + 36
+                
+                if width_offset + 8 > len(data):
+                    break
+                    
+                matrix_data = data[matrix_offset:matrix_offset+36]
+                matrix = struct.unpack(">9i", matrix_data)
+                
+                # Check for 90 or 270 degrees rotation (matrix[1] or matrix[3] is non-zero)
+                is_rotated = (matrix[1] != 0 or matrix[3] != 0)
+                
+                w_int, w_frac = struct.unpack(">HH", data[width_offset:width_offset+4])
+                h_int, h_frac = struct.unpack(">HH", data[width_offset+4:width_offset+8])
+                
+                if w_int > 0 and h_int > 0:
+                    return (h_int, w_int) if is_rotated else (w_int, h_int)
+                
+                idx += 4
+    except Exception as e:
+        print(f"Error parsing video dimensions for {file_path}: {e}")
+    return None, None
+
 def fetch_location_name(lat: float, lon: float) -> str | None:
     if lat is None or lon is None:
         return None
@@ -212,10 +263,17 @@ def sync_photos_dir(db: Session):
             else:
                 cached.location_name = None
         else:
-            # Videos default metadata
-            cached.width = 1920
-            cached.height = 1080
-            cached.orientation = "landscape"
+            # Parse video track dimensions
+            v_width, v_height = get_video_dimensions(p_obj)
+            if v_width and v_height:
+                cached.width = v_width
+                cached.height = v_height
+                cached.orientation = "portrait" if v_height > v_width else "landscape"
+            else:
+                cached.width = 1920
+                cached.height = 1080
+                cached.orientation = "landscape"
+                
             cached.date_taken = None
             cached.latitude = None
             cached.longitude = None
@@ -269,7 +327,7 @@ def get_photos(background_tasks: BackgroundTasks, db: Session = Depends(get_db))
     
     for rec in cached_records:
         if rec.file_type == "video":
-            video_map[rec.file_path.lower()] = Path(rec.file_path)
+            video_map[rec.file_path.lower()] = rec
         else:
             location_display = None
             if rec.location_name and rec.location_name != "Resolving...":
@@ -289,7 +347,8 @@ def get_photos(background_tasks: BackgroundTasks, db: Session = Depends(get_db))
     paired_images = set()
     
     # 1. Pair Live Photos
-    for vid_rel_str, vid_rel_path in video_map.items():
+    for vid_rel_str, vid_rec in video_map.items():
+        vid_rel_path = Path(vid_rec.file_path)
         vid_base = vid_rel_path.stem
         vid_dir = vid_rel_path.parent
         
@@ -321,14 +380,14 @@ def get_photos(background_tasks: BackgroundTasks, db: Session = Depends(get_db))
                 break
                 
         if not found_pair:
-            # Standalone video
+            # Standalone video (use actual parsed metadata width/height/orientation)
             media_items.append({
                 "url": f"/api/photos/media/{urllib.parse.quote(vid_rel_path.as_posix())}",
                 "type": "video",
                 "name": vid_rel_path.name,
-                "width": 1920,
-                "height": 1080,
-                "orientation": "landscape",
+                "width": vid_rec.width,
+                "height": vid_rec.height,
+                "orientation": vid_rec.orientation,
                 "date_taken": None,
                 "location_name": None
             })
