@@ -163,69 +163,27 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
               const item = activeSlide.items[0]
               
               return (
-                <div className="w-full h-full relative">
-                  {item.type === 'image' && (
+                <div className="w-full h-full relative overflow-hidden bg-black">
+                  {/* Background: blurred ambient frame (uses static image to optimize performance) */}
+                  <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none scale-105 filter blur-[40px] opacity-45 brightness-[0.65]">
                     <motion.img
                       src={item.url}
-                      initial={{ scale: 1.01, x: dir.x[0], y: dir.y[0] }}
-                      animate={{ scale: 1.08, x: dir.x[1], y: dir.y[1] }}
+                      initial={{ scale: 1.05, x: dir.x[0], y: dir.y[0] }}
+                      animate={{ scale: 1.15, x: dir.x[1], y: dir.y[1] }}
                       transition={{ duration: 8.2, ease: 'linear' }}
-                      className="w-full h-full object-cover object-top"
+                      className="w-full h-full object-cover"
                     />
-                  )}
+                  </div>
 
-                  {item.type === 'live_photo' && item.videoUrl && (
-                    <motion.video
-                      src={item.videoUrl}
-                      autoPlay
-                      muted
-                      playsInline
-                      loop
-                      initial={{ scale: 1.01, x: dir.x[0], y: dir.y[0] }}
-                      animate={{ scale: 1.06, x: dir.x[1], y: dir.y[1] }}
-                      transition={{ duration: 8.2, ease: 'linear' }}
-                      className="w-full h-full object-cover object-top"
-                    />
-                  )}
-
-                  {item.type === 'video' && (
-                    <video
-                      src={item.url}
-                      autoPlay
-                      muted
-                      playsInline
-                      loop
-                      className="w-full h-full object-cover object-top"
-                    />
-                  )}
-
-                  {/* Date & Location overlay */}
-                  <PhotoInfoCard item={item} />
-                </div>
-              )
-            })()
-          ) : (
-            // Two vertical portrait photos side-by-side filling the screen
-            <div className="w-full h-full flex gap-0.5 bg-black relative">
-              {activeSlide.items.map((item, idx) => {
-                const isFirst = idx === 0
-                const childDir = {
-                  x: isFirst ? [dir.x[0] / 2, dir.x[1] / 2] : [-dir.x[0] / 2, -dir.x[1] / 2],
-                  y: [dir.y[0] / 2, dir.y[1] / 2]
-                }
-                
-                return (
-                  <div
-                    key={item.url}
-                    className="relative flex-1 h-full overflow-hidden bg-neutral-900"
-                  >
+                  {/* Foreground: un-cropped media */}
+                  <div className="absolute inset-0 z-10 flex items-center justify-center">
                     {item.type === 'image' && (
                       <motion.img
                         src={item.url}
-                        initial={{ scale: 1.01, x: childDir.x[0], y: childDir.y[0] }}
-                        animate={{ scale: 1.08, x: childDir.x[1], y: childDir.y[1] }}
+                        initial={{ scale: 0.97 }}
+                        animate={{ scale: 1.03 }}
                         transition={{ duration: 8.2, ease: 'linear' }}
-                        className="w-full h-full object-cover object-top"
+                        className="w-full h-full object-contain relative z-10"
                       />
                     )}
 
@@ -236,10 +194,10 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                         muted
                         playsInline
                         loop
-                        initial={{ scale: 1.01, x: childDir.x[0], y: childDir.y[0] }}
-                        animate={{ scale: 1.06, x: childDir.x[1], y: childDir.y[1] }}
+                        initial={{ scale: 0.97 }}
+                        animate={{ scale: 1.03 }}
                         transition={{ duration: 8.2, ease: 'linear' }}
-                        className="w-full h-full object-cover object-top"
+                        className="w-full h-full object-contain relative z-10"
                       />
                     )}
 
@@ -250,9 +208,79 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                         muted
                         playsInline
                         loop
-                        className="w-full h-full object-cover object-top"
+                        className="w-full h-full object-contain relative z-10"
                       />
                     )}
+                  </div>
+
+                  {/* Date & Location overlay */}
+                  <PhotoInfoCard item={item} />
+                </div>
+              )
+            })()
+          ) : (
+            // Two vertical portrait photos side-by-side filling the screen
+            <div className="w-full h-full flex gap-1 bg-black relative">
+              {activeSlide.items.map((item, idx) => {
+                const isFirst = idx === 0
+                const childDir = {
+                  x: isFirst ? [dir.x[0] / 2, dir.x[1] / 2] : [-dir.x[0] / 2, -dir.x[1] / 2],
+                  y: [dir.y[0] / 2, dir.y[1] / 2]
+                }
+                
+                return (
+                  <div
+                    key={item.url}
+                    className="relative flex-1 h-full overflow-hidden bg-black"
+                  >
+                    {/* Background: blurred ambient frame */}
+                    <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none scale-105 filter blur-[30px] opacity-40 brightness-[0.6]">
+                      <motion.img
+                        src={item.url}
+                        initial={{ scale: 1.05, x: childDir.x[0], y: childDir.y[0] }}
+                        animate={{ scale: 1.15, x: childDir.x[1], y: childDir.y[1] }}
+                        transition={{ duration: 8.2, ease: 'linear' }}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+
+                    {/* Foreground: un-cropped media */}
+                    <div className="absolute inset-0 z-10 flex items-center justify-center">
+                      {item.type === 'image' && (
+                        <motion.img
+                          src={item.url}
+                          initial={{ scale: 0.97 }}
+                          animate={{ scale: 1.03 }}
+                          transition={{ duration: 8.2, ease: 'linear' }}
+                          className="w-full h-full object-contain relative z-10"
+                        />
+                      )}
+
+                      {item.type === 'live_photo' && item.videoUrl && (
+                        <motion.video
+                          src={item.videoUrl}
+                          autoPlay
+                          muted
+                          playsInline
+                          loop
+                          initial={{ scale: 0.97 }}
+                          animate={{ scale: 1.03 }}
+                          transition={{ duration: 8.2, ease: 'linear' }}
+                          className="w-full h-full object-contain relative z-10"
+                        />
+                      )}
+
+                      {item.type === 'video' && (
+                        <video
+                          src={item.url}
+                          autoPlay
+                          muted
+                          playsInline
+                          loop
+                          className="w-full h-full object-contain relative z-10"
+                        />
+                      )}
+                    </div>
 
                     {/* Date & Location overlay inside each portrait mat */}
                     <PhotoInfoCard item={item} />
