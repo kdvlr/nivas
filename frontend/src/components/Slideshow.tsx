@@ -170,7 +170,7 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                       initial={{ scale: 1.01, x: dir.x[0], y: dir.y[0] }}
                       animate={{ scale: 1.08, x: dir.x[1], y: dir.y[1] }}
                       transition={{ duration: 8.2, ease: 'linear' }}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover object-top"
                     />
                   )}
 
@@ -184,7 +184,7 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                       initial={{ scale: 1.01, x: dir.x[0], y: dir.y[0] }}
                       animate={{ scale: 1.06, x: dir.x[1], y: dir.y[1] }}
                       transition={{ duration: 8.2, ease: 'linear' }}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover object-top"
                     />
                   )}
 
@@ -195,7 +195,7 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                       muted
                       playsInline
                       loop
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover object-top"
                     />
                   )}
 
@@ -225,7 +225,7 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                         initial={{ scale: 1.01, x: childDir.x[0], y: childDir.y[0] }}
                         animate={{ scale: 1.08, x: childDir.x[1], y: childDir.y[1] }}
                         transition={{ duration: 8.2, ease: 'linear' }}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover object-top"
                       />
                     )}
 
@@ -239,7 +239,7 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                         initial={{ scale: 1.01, x: childDir.x[0], y: childDir.y[0] }}
                         animate={{ scale: 1.06, x: childDir.x[1], y: childDir.y[1] }}
                         transition={{ duration: 8.2, ease: 'linear' }}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover object-top"
                       />
                     )}
 
@@ -250,7 +250,7 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                         muted
                         playsInline
                         loop
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover object-top"
                       />
                     )}
 
