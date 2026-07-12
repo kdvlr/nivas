@@ -12,30 +12,34 @@ interface MediaItem {
 
 // Sub-component for individual media grid tiles to isolate state and performance
 const MediaTile = ({ item, onClick }: { item: MediaItem; onClick: () => void }) => {
-  const [isPressing, setIsPressing] = useState(false)
+  const [isPlaying, setIsPlaying] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
-  const handlePressStart = (e: React.MouseEvent | React.TouchEvent) => {
+  // IntersectionObserver to auto-play Live Photos when they scroll into view
+  useEffect(() => {
     if (item.type !== 'live_photo' || !item.videoUrl) return
-    setIsPressing(true)
-    if (videoRef.current) {
-      videoRef.current.currentTime = 0
-      videoRef.current.play().catch((err) => console.log('Live Photo playback blocked:', err))
-    }
-  }
 
-  const handlePressEnd = () => {
-    if (item.type !== 'live_photo') return
-    setIsPressing(false)
-    if (videoRef.current) {
-      videoRef.current.pause()
-      videoRef.current.currentTime = 0
-    }
-  }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsPlaying(true)
+          videoRef.current?.play().catch((err) => console.log('Live Photo autoplay blocked:', err))
+        } else {
+          setIsPlaying(false)
+          videoRef.current?.pause()
+        }
+      },
+      { threshold: 0.6 } // Play when 60% of the tile is visible in the viewport
+    )
 
-  const preventDefault = (e: any) => {
-    if (item.type === 'live_photo') e.preventDefault()
-  }
+    const currentRef = containerRef.current
+    if (currentRef) observer.observe(currentRef)
+
+    return () => {
+      if (currentRef) observer.unobserve(currentRef)
+    }
+  }, [item.type, item.videoUrl])
 
   return (
     <motion.div
@@ -54,10 +58,12 @@ const MediaTile = ({ item, onClick }: { item: MediaItem; onClick: () => void }) 
       )}
 
       {item.type === 'video' && (
-        <div className="w-full h-full relative" onClick={onClick}>
+        <div className="w-full h-full relative animate-fadeIn" onClick={onClick}>
           <video
-            src={item.url}
-            preload="none" // Keeps layout rendering lightning-fast
+            src={`${item.url}#t=0.1`} // Seek to 0.1s to force the browser to render a preview poster frame
+            preload="metadata" // Download metadata only to conserve bandwidth and speed up layout
+            muted
+            playsInline
             className="w-full h-full object-cover"
           />
           {/* Video Icon Overlay */}
@@ -71,45 +77,36 @@ const MediaTile = ({ item, onClick }: { item: MediaItem; onClick: () => void }) 
 
       {item.type === 'live_photo' && (
         <div
-          className="w-full h-full relative touch-none"
-          onClick={(e) => {
-            // Tap triggers standard lightbox view
-            onClick()
-          }}
-          onTouchStart={handlePressStart}
-          onTouchEnd={handlePressEnd}
-          onTouchCancel={handlePressEnd}
-          onMouseDown={handlePressStart}
-          onMouseUp={handlePressEnd}
-          onMouseLeave={handlePressEnd}
-          onContextMenu={preventDefault}
+          ref={containerRef}
+          className="w-full h-full relative"
+          onClick={onClick}
         >
-          {/* Static JPEG component */}
+          {/* Static JPEG component (fallback / behind video) */}
           <img
             src={item.url}
             alt={item.name}
             loading="lazy"
             className={`w-full h-full object-cover transition-opacity duration-300 ${
-              isPressing ? 'opacity-0' : 'opacity-100'
+              isPlaying ? 'opacity-0' : 'opacity-100'
             }`}
           />
 
-          {/* Hidden inline video layer */}
+          {/* Inline auto-playing video layer */}
           {item.videoUrl && (
             <video
               ref={videoRef}
               src={item.videoUrl}
-              preload="none" // Crucial for performance
+              preload="metadata"
               muted
               playsInline
               loop
               className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
-                isPressing ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                isPlaying ? 'opacity-100' : 'opacity-0 pointer-events-none'
               }`}
             />
           )}
 
-          {/* Live Photo Concentric Circle Badge */}
+          {/* Live Photo Circle Badge */}
           <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-md text-white text-[9px] font-bold tracking-wider shadow-sm select-none pointer-events-none">
             <Icon name="adjust" className="text-[10px] animate-pulse text-indigo-400" />
             <span>LIVE</span>
@@ -127,41 +124,22 @@ const MediaTile = ({ item, onClick }: { item: MediaItem; onClick: () => void }) 
 
 // Lightbox Live Photo display helper
 const LightboxLivePhoto = ({ item }: { item: MediaItem }) => {
-  const [isPressing, setIsPressing] = useState(false)
+  const [isPlaying, setIsPlaying] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
 
-  const handlePressStart = () => {
-    if (!item.videoUrl) return
-    setIsPressing(true)
-    if (videoRef.current) {
-      videoRef.current.currentTime = 0
-      videoRef.current.play().catch((err) => console.log('Lightbox live video play failed:', err))
-    }
-  }
-
-  const handlePressEnd = () => {
-    setIsPressing(false)
-    if (videoRef.current) {
-      videoRef.current.pause()
-      videoRef.current.currentTime = 0
-    }
-  }
+  useEffect(() => {
+    // Autoplay live photo in lightbox
+    setIsPlaying(true)
+    videoRef.current?.play().catch((err) => console.log('Lightbox Live Photo autoplay failed:', err))
+  }, [item.url])
 
   return (
-    <div
-      className="relative flex items-center justify-center max-h-[80vh] max-w-[90vw] select-none touch-none"
-      onTouchStart={handlePressStart}
-      onTouchEnd={handlePressEnd}
-      onTouchCancel={handlePressEnd}
-      onMouseDown={handlePressStart}
-      onMouseUp={handlePressEnd}
-      onMouseLeave={handlePressEnd}
-    >
+    <div className="relative flex items-center justify-center max-h-[80vh] max-w-[90vw] select-none">
       <img
         src={item.url}
         alt={item.name}
         className={`max-h-[80vh] max-w-[90vw] object-contain rounded-2xl transition-opacity duration-300 ${
-          isPressing ? 'opacity-0' : 'opacity-100'
+          isPlaying ? 'opacity-0' : 'opacity-100'
         }`}
       />
 
@@ -169,12 +147,12 @@ const LightboxLivePhoto = ({ item }: { item: MediaItem }) => {
         <video
           ref={videoRef}
           src={item.videoUrl}
-          preload="none"
+          preload="metadata"
           muted
           playsInline
           loop
           className={`absolute max-h-[80vh] max-w-[90vw] object-contain rounded-2xl transition-opacity duration-300 ${
-            isPressing ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            isPlaying ? 'opacity-100' : 'opacity-0 pointer-events-none'
           }`}
         />
       )}
@@ -182,7 +160,7 @@ const LightboxLivePhoto = ({ item }: { item: MediaItem }) => {
       {/* Live Badge overlay */}
       <div className="absolute top-4 left-4 flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-black/60 backdrop-blur-md text-white text-xs font-bold tracking-wider shadow-md pointer-events-none">
         <Icon name="adjust" className="text-sm animate-pulse text-indigo-400" />
-        <span>LIVE PHOTO (Press & hold)</span>
+        <span>LIVE PHOTO</span>
       </div>
     </div>
   )

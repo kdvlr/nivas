@@ -141,7 +141,7 @@ export default function App() {
   const [style, setStyleState] = useState<ThemeStyle>(getStyle)
   const [moreOpen, setMoreOpen] = useState(false)
   const [slideshowActive, setSlideshowActive] = useState(false)
-  const [photosList, setPhotosList] = useState<string[]>([])
+  const [photosList, setPhotosList] = useState<any[]>([])
 
   const { data: config } = useData<{ family_name: string; secondary_tz: string; secondary_tz_emoji: string }>(
     '/api/setup/config',
@@ -167,10 +167,7 @@ export default function App() {
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {
-          const imagesOnly = data
-            .filter((item: any) => item.type === 'image')
-            .map((item: any) => item.url)
-          setPhotosList(imagesOnly)
+          setPhotosList(data)
         }
       })
       .catch((err) => console.error('Failed to pre-fetch photos list:', err))
