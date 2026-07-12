@@ -158,7 +158,7 @@
 }
 
 html[data-theme='woodland']:not(.dark) {
-  --surface: #ffffff; /* crisp white app background */
+  --surface: #F5F5F7; /* premium neutral off-white background */
   --sc-lowest: #EFEFEF; /* Louis Vuitton light grey card backgrounds */
   --sc: #e5e2da; /* elegant warm-grey/taupe container */
   --sc-high: #d7d3c8;
