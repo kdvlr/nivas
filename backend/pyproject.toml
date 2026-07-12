@@ -20,6 +20,7 @@ dependencies = [
     "recipe-scrapers>=15.0",
     "google-genai>=1.0",
     "beautifulsoup4>=4.12",
+    "pillow>=10.0",
 ]
 
 [project.optional-dependencies]

@@ -191,3 +191,21 @@ class CoinTransaction(Base):
     reason: Mapped[str] = mapped_column(String)  # "chore_completed", "chore_missed", "reward_redeemed"
     reference_id: Mapped[int | None] = mapped_column(Integer, nullable=True)  # chore_id or reward_item_id
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class PhotoMetadata(Base):
+    """Cached EXIF metadata, dimensions, and reverse-geocoded location names for family photos."""
+
+    __tablename__ = "photo_metadata"
+
+    file_path: Mapped[str] = mapped_column(String, primary_key=True) # relative path as unique identifier
+    width: Mapped[int] = mapped_column(Integer, default=1920)
+    height: Mapped[int] = mapped_column(Integer, default=1080)
+    orientation: Mapped[str] = mapped_column(String, default="landscape")
+    date_taken: Mapped[str | None] = mapped_column(String, nullable=True)  # ISO string representation
+    latitude: Mapped[float | None] = mapped_column(JSON, nullable=True)
+    longitude: Mapped[float | None] = mapped_column(JSON, nullable=True)
+    location_name: Mapped[str | None] = mapped_column(String, nullable=True)  # e.g., "San Francisco, CA"
+    file_size: Mapped[int] = mapped_column(Integer, default=0)
+    last_modified: Mapped[float] = mapped_column(JSON, default=0.0)
+

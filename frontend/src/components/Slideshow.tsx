@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import Icon from './Icon'
 
 interface MediaItem {
   url: string
@@ -9,6 +10,8 @@ interface MediaItem {
   orientation?: 'portrait' | 'landscape'
   width?: number
   height?: number
+  date_taken?: string | null
+  location_name?: string | null
 }
 
 interface Slide {
@@ -22,13 +25,45 @@ interface SlideshowProps {
   onDismiss: () => void
 }
 
+const formatDate = (dateStr?: string | null) => {
+  if (!dateStr) return ''
+  try {
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return ''
+    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
+  } catch (e) {
+    return ''
+  }
+}
+
+// Sub-component to render the details overlay on a frame
+const PhotoInfoCard = ({ item }: { item: MediaItem }) => {
+  if (!item.location_name && !item.date_taken) return null
+
+  return (
+    <div className="absolute bottom-4 left-4 right-4 p-4.5 rounded-2xl bg-black/45 backdrop-blur-md border border-white/10 text-white z-20 flex flex-col gap-0.5 select-none pointer-events-none max-w-sm shadow-xl animate-fadeIn">
+      {item.location_name && (
+        <div className="flex items-center gap-1.5 text-sm font-bold tracking-tight">
+          <Icon name="location_on" className="text-base text-rose-400 animate-pulse" />
+          <span>{item.location_name}</span>
+        </div>
+      )}
+      {item.date_taken && (
+        <div className="flex items-center gap-1.5 text-xs text-white/70 font-medium">
+          <Icon name="calendar_today" className="text-[11px] text-indigo-300" />
+          <span>{formatDate(item.date_taken)}</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
   const [currentIdx, setCurrentIdx] = useState(0)
 
-  // Parse shuffled items into slides (single landscape/video, or pair of two portrait files)
+  // Parse items into slides (landscape/video singly, or portrait files paired side-by-side)
   const slides = useMemo(() => {
     const list = [...photos]
-    // 1. Shuffle the source photos
     for (let i = list.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [list[i], list[j]] = [list[j], list[i]]
@@ -44,7 +79,6 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
       const isPortrait = item.orientation === 'portrait' && (item.type === 'image' || item.type === 'live_photo')
 
       if (isPortrait) {
-        // Find next unused portrait item
         let partner: MediaItem | null = null
         for (let j = i + 1; j < list.length; j++) {
           const nextItem = list[j]
@@ -105,7 +139,7 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
   ]
   const dir = panDirections[currentIdx % panDirections.length]
 
-  // Background ambient photo to blur
+  // Ambient backdrop source photo
   const bgPhotoUrl = activeSlide.items[0].url
 
   return (
@@ -132,7 +166,7 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
         </motion.div>
       </AnimatePresence>
 
-      {/* Dark overlay to ensure contrast and premium feel */}
+      {/* Dark overlay for contrast */}
       <div className="absolute inset-0 bg-black/40 z-0 pointer-events-none" />
 
       {/* Main Slideshow Frame */}
@@ -146,7 +180,6 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
           className="z-10 flex items-center justify-center"
         >
           {activeSlide.type === 'single' ? (
-            // Landscape or Single Portrait wrapped in a frame
             (() => {
               const item = activeSlide.items[0]
               const aspect = item.width && item.height ? `${item.width} / ${item.height}` : '16/9'
@@ -190,17 +223,19 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                       className="w-full h-full object-cover"
                     />
                   )}
+
+                  {/* Date & Location overlay */}
+                  <PhotoInfoCard item={item} />
                 </div>
               )
             })()
           ) : (
-            // Two vertical portrait photos side-by-side inside a single frame
+            // Two vertical portrait photos side-by-side
             <div
               className="max-h-[82vh] max-w-[82vw] aspect-[4/3] sm:aspect-[1.5] md:aspect-[1.6] rounded-[36px] overflow-hidden border-[12px] border-neutral-900/90 dark:border-neutral-950/90 bg-neutral-950/95 shadow-[0_30px_70px_rgba(0,0,0,0.85)] flex gap-4 p-4 relative"
             >
               {activeSlide.items.map((item, idx) => {
                 const isFirst = idx === 0
-                // Slightly different offset directions for each side of the pair
                 const childDir = {
                   x: isFirst ? [dir.x[0] / 2, dir.x[1] / 2] : [-dir.x[0] / 2, -dir.x[1] / 2],
                   y: [dir.y[0] / 2, dir.y[1] / 2]
@@ -234,6 +269,9 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                         className="w-full h-full object-cover"
                       />
                     )}
+
+                    {/* Date & Location overlay inside each portrait mat */}
+                    <PhotoInfoCard item={item} />
                   </div>
                 )
               })}

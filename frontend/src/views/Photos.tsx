@@ -8,6 +8,22 @@ interface MediaItem {
   videoUrl?: string
   type: 'image' | 'video' | 'live_photo'
   name: string
+  orientation?: 'portrait' | 'landscape'
+  width?: number
+  height?: number
+  date_taken?: string | null
+  location_name?: string | null
+}
+
+const formatDate = (dateStr?: string | null) => {
+  if (!dateStr) return ''
+  try {
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return ''
+    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
+  } catch (e) {
+    return ''
+  }
 }
 
 // Sub-component for individual media grid tiles to isolate state and performance
@@ -275,11 +291,30 @@ export default function Photos() {
             className="fixed inset-0 z-[110] bg-neutral-950/98 backdrop-blur-md flex flex-col"
           >
             {/* Top Toolbar */}
-            <div className="flex items-center justify-between p-4 z-10 text-white">
-              <span className="text-sm font-light truncate max-w-[70vw]">{currentMedia.name}</span>
+            <div className="flex items-start justify-between p-4 z-10 text-white gap-4 w-full">
+              <div className="flex flex-col text-left truncate">
+                <span className="text-sm font-bold text-white/95 truncate">{currentMedia.name}</span>
+                {(currentMedia.location_name || currentMedia.date_taken) && (
+                  <span className="text-xs text-white/60 mt-1 flex items-center gap-2 truncate">
+                    {currentMedia.location_name && (
+                      <span className="flex items-center gap-0.5 truncate">
+                        <Icon name="location_on" className="text-xs text-rose-400" />
+                        {currentMedia.location_name}
+                      </span>
+                    )}
+                    {currentMedia.location_name && currentMedia.date_taken && <span>•</span>}
+                    {currentMedia.date_taken && (
+                      <span className="flex items-center gap-0.5 shrink-0">
+                        <Icon name="calendar_today" className="text-[10px] text-indigo-300" />
+                        {formatDate(currentMedia.date_taken)}
+                      </span>
+                    )}
+                  </span>
+                )}
+              </div>
               <button
                 onClick={closeLightbox}
-                className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-all active:scale-95"
+                className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-all active:scale-95 shrink-0"
               >
                 <Icon name="close" />
               </button>
