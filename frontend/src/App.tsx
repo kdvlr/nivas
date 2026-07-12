@@ -31,6 +31,8 @@ import Shopping from './views/Shopping'
 import Meals from './views/Meals'
 import Recipes from './views/Recipes'
 import Setup from './views/Setup'
+import Photos from './views/Photos'
+import Slideshow from './components/Slideshow'
 
 const NAV = [
   { id: 'home', label: 'Home', icon: 'home', view: Home, active: 'bg-sky-200 text-sky-950 dark:bg-sky-900 dark:text-sky-100', activeText: 'text-sky-600 dark:text-sky-400' },
@@ -40,6 +42,7 @@ const NAV = [
   { id: 'shopping', label: 'Shopping', icon: 'shopping_cart', view: Shopping, active: 'bg-orange-200 text-orange-950 dark:bg-orange-900 dark:text-orange-100', activeText: 'text-orange-600 dark:text-orange-400' },
   { id: 'meals', label: 'Meals', icon: 'restaurant', view: Meals, active: 'bg-teal-200 text-teal-950 dark:bg-teal-900 dark:text-teal-100', activeText: 'text-teal-600 dark:text-teal-400' },
   { id: 'recipes', label: 'Recipes', icon: 'menu_book', view: Recipes, active: 'bg-pink-200 text-pink-950 dark:bg-pink-900 dark:text-pink-100', activeText: 'text-pink-600 dark:text-pink-400' },
+  { id: 'photos', label: 'Photos', icon: 'photo_library', view: Photos, active: 'bg-indigo-200 text-indigo-950 dark:bg-indigo-900 dark:text-indigo-100', activeText: 'text-indigo-600 dark:text-indigo-400' },
   { id: 'setup', label: 'Setup', icon: 'settings', view: Setup, active: 'bg-slate-300 text-slate-950 dark:bg-slate-700 dark:text-slate-100', activeText: 'text-slate-600 dark:text-slate-400' },
 ] as const
 
@@ -137,6 +140,8 @@ export default function App() {
   const [appearance, setAppearanceState] = useState<Appearance>(getAppearance)
   const [style, setStyleState] = useState<ThemeStyle>(getStyle)
   const [moreOpen, setMoreOpen] = useState(false)
+  const [slideshowActive, setSlideshowActive] = useState(false)
+  const [photosList, setPhotosList] = useState<string[]>([])
 
   const { data: config } = useData<{ family_name: string; secondary_tz: string; secondary_tz_emoji: string }>(
     '/api/setup/config',
@@ -156,21 +161,55 @@ export default function App() {
     }
   }, [])
 
-  // kiosk behavior: return to Home after inactivity
+  // Fetch photos list for screensaver
   useEffect(() => {
-    let timer = setTimeout(goHome, IDLE_RETURN_MS)
+    fetch('/api/photos')
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          const imagesOnly = data
+            .filter((item: any) => item.type === 'image')
+            .map((item: any) => item.url)
+          setPhotosList(imagesOnly)
+        }
+      })
+      .catch((err) => console.error('Failed to pre-fetch photos list:', err))
+  }, [])
+
+  // Screensaver + kiosk return to home timers
+  useEffect(() => {
+    const SLIDESHOW_TRIGGER_MS = 3 * 60 * 1000
+    const IDLE_RETURN_MS = 5 * 60 * 1000
+    
+    let slideshowTimer = setTimeout(startSlideshow, SLIDESHOW_TRIGGER_MS)
+    let homeTimer = setTimeout(goHome, IDLE_RETURN_MS)
+    
+    function startSlideshow() {
+      setSlideshowActive(true)
+    }
+    
     function goHome() {
       if (currentRoute() !== 'home') location.hash = '#/home'
     }
+    
     function reset() {
-      clearTimeout(timer)
-      timer = setTimeout(goHome, IDLE_RETURN_MS)
+      setSlideshowActive(false)
+      clearTimeout(slideshowTimer)
+      clearTimeout(homeTimer)
+      slideshowTimer = setTimeout(startSlideshow, SLIDESHOW_TRIGGER_MS)
+      homeTimer = setTimeout(goHome, IDLE_RETURN_MS)
     }
-    for (const ev of ['pointerdown', 'touchstart', 'keydown']) window.addEventListener(ev, reset)
+    
+    for (const ev of ['pointerdown', 'touchstart', 'keydown']) {
+      window.addEventListener(ev, reset, { passive: true })
+    }
+    
     return () => {
-      clearTimeout(timer)
-      for (const ev of ['pointerdown', 'touchstart', 'keydown'])
+      clearTimeout(slideshowTimer)
+      clearTimeout(homeTimer)
+      for (const ev of ['pointerdown', 'touchstart', 'keydown']) {
         window.removeEventListener(ev, reset)
+      }
     }
   }, [])
 
@@ -419,6 +458,9 @@ export default function App() {
             </motion.a>
           </div>
         </motion.div>
+        {slideshowActive && photosList.length > 0 && (
+          <Slideshow photos={photosList} onDismiss={() => setSlideshowActive(false)} />
+        )}
       </RewardCelebrationProvider>
     </CelebrationProvider>
   )

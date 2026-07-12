@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import scheduler
 from .db import init_db
-from .routers import calendar, chores, meals, recipes, rewards, setup, shopping, tasks, weather
+from .routers import calendar, chores, meals, recipes, rewards, setup, shopping, tasks, weather, photos
 from .ws import manager
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Family Dashboard", lifespan=lifespan)
 
-for r in (calendar, tasks, chores, shopping, meals, recipes, rewards, setup, weather):
+for r in (calendar, tasks, chores, shopping, meals, recipes, rewards, setup, weather, photos):
     app.include_router(r.router)
 
 
@@ -49,6 +49,11 @@ async def websocket_endpoint(ws: WebSocket):
 def health():
     return {"ok": True}
 
+
+# Mount photos directory statically
+PHOTOS_DIR = Path("/photos")
+PHOTOS_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/api/photos/media", StaticFiles(directory=PHOTOS_DIR), name="photos_media")
 
 # Serve the built frontend (present in the Docker image / after `npm run build`)
 if STATIC_DIR.exists():
