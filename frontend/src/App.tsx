@@ -190,7 +190,9 @@ export default function App() {
     }
     
     function reset() {
-      setSlideshowActive(false)
+      // Only re-arm the idle timers here. Do NOT dismiss the slideshow — the
+      // Slideshow owns its own exit (tap a photo / the backdrop → onDismiss),
+      // so tapping a video to watch it full doesn't nuke the whole overlay.
       clearTimeout(slideshowTimer)
       clearTimeout(homeTimer)
       slideshowTimer = setTimeout(startSlideshow, SLIDESHOW_TRIGGER_MS)

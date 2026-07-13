@@ -186,10 +186,13 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                       item.type === 'video' || item.type === 'live_photo' ? 'cursor-pointer' : 'cursor-default'
                     }`}
                     onClick={(e) => {
-                      e.stopPropagation()
-                      if (item.type === 'video' || item.type === 'live_photo') {
-                        setSelectedVideo(item.type === 'live_photo' ? (item.videoUrl || null) : item.url)
+                      const full = item.type === 'live_photo' ? item.videoUrl : item.url
+                      if ((item.type === 'video' || item.type === 'live_photo') && full) {
+                        // open the full video with sound; keep the slideshow mounted
+                        e.stopPropagation()
+                        setSelectedVideo(full)
                       }
+                      // images (or videos without a source) fall through → onDismiss
                     }}
                   >
                     {item.type === 'image' && (
@@ -266,10 +269,13 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                         item.type === 'video' || item.type === 'live_photo' ? 'cursor-pointer' : 'cursor-default'
                       }`}
                       onClick={(e) => {
-                        e.stopPropagation()
-                        if (item.type === 'video' || item.type === 'live_photo') {
-                          setSelectedVideo(item.type === 'live_photo' ? (item.videoUrl || null) : item.url)
+                        const full = item.type === 'live_photo' ? item.videoUrl : item.url
+                        if ((item.type === 'video' || item.type === 'live_photo') && full) {
+                          // open the full video with sound; keep the slideshow mounted
+                          e.stopPropagation()
+                          setSelectedVideo(full)
                         }
+                        // images (or videos without a source) fall through → onDismiss
                       }}
                     >
                       {item.type === 'image' && (
