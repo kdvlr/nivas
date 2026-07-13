@@ -219,7 +219,7 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
               key={`album_${activeSlide.id}`}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              exit={{ opacity: 1 }}
               transition={{ duration: 1.6, ease: 'easeInOut' }}
               className="absolute inset-0 z-10 w-full h-full flex items-center justify-center"
             >
@@ -233,8 +233,14 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                     <div className="relative flex items-center justify-center">
                       <motion.div
                         style={{ aspectRatio: aspect, rotate: rotation }}
-                        initial={{ scale: 1.1, y: -20, opacity: 0 }}
+                        initial={{ scale: 0.7, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1, x: dir.x[1] * 1.8, y: dir.y[1] * 1.8 }}
+                        exit={{
+                          scale: 1.4,
+                          x: currentIdx % 2 === 0 ? '-100vw' : '100vw',
+                          opacity: 0,
+                          transition: { duration: 1.4, ease: 'easeInOut' }
+                        }}
                         transition={{
                           scale: { type: 'spring', damping: 20, stiffness: 85 },
                           opacity: { duration: 0.6 },
@@ -318,8 +324,14 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                       <motion.div
                         key={item.url}
                         style={{ aspectRatio: itemAspect, rotate: cardRot }}
-                        initial={{ scale: 1.1, y: isFirst ? -20 : 20, opacity: 0 }}
+                        initial={{ scale: 0.7, opacity: 0, x: isFirst ? -80 : 80 }}
                         animate={{ scale: 1, opacity: 1, x: childDir.x[1] * 1.8, y: childDir.y[1] * 1.8 }}
+                        exit={{
+                          scale: 1.4,
+                          x: isFirst ? '-100vw' : '100vw',
+                          opacity: 0,
+                          transition: { duration: 1.4, ease: 'easeInOut' }
+                        }}
                         transition={{
                           scale: { type: 'spring', damping: 20, stiffness: 85 },
                           opacity: { duration: 0.6 },
@@ -399,7 +411,7 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
               key={`grid_${activeSlide.id}`}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              exit={{ opacity: 1 }}
               transition={{ duration: 1.2, ease: 'easeInOut' }}
               className="absolute inset-0 z-10 w-full h-full flex items-center justify-center"
             >
@@ -412,10 +424,17 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                     <div className="relative flex items-center justify-center p-6">
                       <motion.div
                         style={{ aspectRatio: aspect }}
-                        initial={{ scale: 0.96 }}
-                        animate={{ scale: 1.02, x: dir.x[1] / 2, y: dir.y[1] / 2 }}
+                        initial={{ scale: 0.7, opacity: 0 }}
+                        animate={{ scale: 1.02, opacity: 1, x: dir.x[1] / 2, y: dir.y[1] / 2 }}
+                        exit={{
+                          scale: 1.4,
+                          x: currentIdx % 2 === 0 ? '-100vw' : '100vw',
+                          opacity: 0,
+                          transition: { duration: 1.4, ease: 'easeInOut' }
+                        }}
                         transition={{
                           scale: { type: 'spring', damping: 20, stiffness: 90 },
+                          opacity: { duration: 0.6 },
                           x: { duration: 8.2, ease: 'linear' },
                           y: { duration: 8.2, ease: 'linear' }
                         }}
@@ -492,10 +511,17 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                       <div key={item.url} className="relative flex-1 h-full max-h-[82vh] flex items-center justify-center">
                         <motion.div
                           style={{ aspectRatio: itemAspect }}
-                          initial={{ scale: 0.96 }}
-                          animate={{ scale: 1.02, x: childDir.x[1] / 2, y: childDir.y[1] / 2 }}
+                          initial={{ scale: 0.7, opacity: 0, x: isFirst ? -80 : 80 }}
+                          animate={{ scale: 1.02, opacity: 1, x: childDir.x[1] / 2, y: childDir.y[1] / 2 }}
+                          exit={{
+                            scale: 1.4,
+                            x: isFirst ? '-100vw' : '100vw',
+                            opacity: 0,
+                            transition: { duration: 1.4, ease: 'easeInOut' }
+                          }}
                           transition={{
                             scale: { type: 'spring', damping: 20, stiffness: 90 },
+                            opacity: { duration: 0.6 },
                             x: { duration: 8.2, ease: 'linear' },
                             y: { duration: 8.2, ease: 'linear' }
                           }}
