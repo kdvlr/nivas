@@ -161,43 +161,44 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
           {activeSlide.type === 'single' ? (
             (() => {
               const item = activeSlide.items[0]
+              const aspect = item.width && item.height ? `${item.width} / ${item.height}` : '16/9'
               
               return (
-                <div className="w-full h-full relative overflow-hidden bg-black">
+                <div className="w-full h-full relative overflow-hidden bg-black flex items-center justify-center">
                   {/* Background: blurred ambient frame (uses static image to optimize performance) */}
-                  <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none scale-105 filter blur-[40px] opacity-45 brightness-[0.65]">
+                  <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none scale-105 filter blur-[50px] opacity-75 brightness-[0.7]">
                     <motion.img
                       src={item.url}
-                      initial={{ scale: 1.05, x: dir.x[0], y: dir.y[0] }}
-                      animate={{ scale: 1.15, x: dir.x[1], y: dir.y[1] }}
+                      initial={{ scale: 1.25, x: -dir.x[0], y: -dir.y[0] }}
+                      animate={{ scale: 1.12, x: -dir.x[1], y: -dir.y[1] }}
                       transition={{ duration: 8.2, ease: 'linear' }}
                       className="w-full h-full object-cover"
                     />
                   </div>
 
-                  {/* Foreground: un-cropped media */}
-                  <div className="absolute inset-0 z-10 flex items-center justify-center">
+                  {/* Foreground: Floating Card element with rounded corners and shadow */}
+                  <motion.div
+                    style={{ aspectRatio: aspect }}
+                    initial={{ scale: 0.95 }}
+                    animate={{ scale: 1.03 }}
+                    transition={{ duration: 8.2, ease: 'linear' }}
+                    className="max-h-[84vh] max-w-[84vw] rounded-[32px] overflow-hidden shadow-[0_30px_70px_rgba(0,0,0,0.85)] border-2 border-white/15 bg-neutral-950 flex items-center justify-center relative z-10"
+                  >
                     {item.type === 'image' && (
-                      <motion.img
+                      <img
                         src={item.url}
-                        initial={{ scale: 0.97 }}
-                        animate={{ scale: 1.03 }}
-                        transition={{ duration: 8.2, ease: 'linear' }}
-                        className="w-full h-full object-contain relative z-10"
+                        className="w-full h-full object-cover"
                       />
                     )}
 
                     {item.type === 'live_photo' && item.videoUrl && (
-                      <motion.video
+                      <video
                         src={item.videoUrl}
                         autoPlay
                         muted
                         playsInline
                         loop
-                        initial={{ scale: 0.97 }}
-                        animate={{ scale: 1.03 }}
-                        transition={{ duration: 8.2, ease: 'linear' }}
-                        className="w-full h-full object-contain relative z-10"
+                        className="w-full h-full object-cover"
                       />
                     )}
 
@@ -208,10 +209,10 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                         muted
                         playsInline
                         loop
-                        className="w-full h-full object-contain relative z-10"
+                        className="w-full h-full object-cover"
                       />
                     )}
-                  </div>
+                  </motion.div>
 
                   {/* Date & Location overlay */}
                   <PhotoInfoCard item={item} />
@@ -223,6 +224,7 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
             <div className="w-full h-full flex gap-1 bg-black relative">
               {activeSlide.items.map((item, idx) => {
                 const isFirst = idx === 0
+                const itemAspect = item.width && item.height ? `${item.width} / ${item.height}` : '3/4'
                 const childDir = {
                   x: isFirst ? [dir.x[0] / 2, dir.x[1] / 2] : [-dir.x[0] / 2, -dir.x[1] / 2],
                   y: [dir.y[0] / 2, dir.y[1] / 2]
@@ -231,42 +233,42 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                 return (
                   <div
                     key={item.url}
-                    className="relative flex-1 h-full overflow-hidden bg-black"
+                    className="relative flex-1 h-full overflow-hidden bg-black flex items-center justify-center"
                   >
                     {/* Background: blurred ambient frame */}
-                    <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none scale-105 filter blur-[30px] opacity-40 brightness-[0.6]">
+                    <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none scale-105 filter blur-[40px] opacity-70 brightness-[0.65]">
                       <motion.img
                         src={item.url}
-                        initial={{ scale: 1.05, x: childDir.x[0], y: childDir.y[0] }}
-                        animate={{ scale: 1.15, x: childDir.x[1], y: childDir.y[1] }}
+                        initial={{ scale: 1.25, x: -childDir.x[0], y: -childDir.y[0] }}
+                        animate={{ scale: 1.12, x: -childDir.x[1], y: -childDir.y[1] }}
                         transition={{ duration: 8.2, ease: 'linear' }}
                         className="w-full h-full object-cover"
                       />
                     </div>
 
-                    {/* Foreground: un-cropped media */}
-                    <div className="absolute inset-0 z-10 flex items-center justify-center">
+                    {/* Foreground: Floating Card element with rounded corners and shadow */}
+                    <motion.div
+                      style={{ aspectRatio: itemAspect }}
+                      initial={{ scale: 0.95 }}
+                      animate={{ scale: 1.03 }}
+                      transition={{ duration: 8.2, ease: 'linear' }}
+                      className="max-h-[82%] max-w-[82%] rounded-[24px] overflow-hidden shadow-[0_22px_55px_rgba(0,0,0,0.8)] border-2 border-white/15 bg-neutral-950 flex items-center justify-center relative z-10"
+                    >
                       {item.type === 'image' && (
-                        <motion.img
+                        <img
                           src={item.url}
-                          initial={{ scale: 0.97 }}
-                          animate={{ scale: 1.03 }}
-                          transition={{ duration: 8.2, ease: 'linear' }}
-                          className="w-full h-full object-contain relative z-10"
+                          className="w-full h-full object-cover"
                         />
                       )}
 
                       {item.type === 'live_photo' && item.videoUrl && (
-                        <motion.video
+                        <video
                           src={item.videoUrl}
                           autoPlay
                           muted
                           playsInline
                           loop
-                          initial={{ scale: 0.97 }}
-                          animate={{ scale: 1.03 }}
-                          transition={{ duration: 8.2, ease: 'linear' }}
-                          className="w-full h-full object-contain relative z-10"
+                          className="w-full h-full object-cover"
                         />
                       )}
 
@@ -277,10 +279,10 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                           muted
                           playsInline
                           loop
-                          className="w-full h-full object-contain relative z-10"
+                          className="w-full h-full object-cover"
                         />
                       )}
-                    </div>
+                    </motion.div>
 
                     {/* Date & Location overlay inside each portrait mat */}
                     <PhotoInfoCard item={item} />
