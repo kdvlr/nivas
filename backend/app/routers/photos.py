@@ -281,8 +281,8 @@ def sync_photos_dir(db: Session):
             
         db.flush()
         
-    if db.new or db.dirty:
-        db.commit()
+    # Commit session to persist flushed records in SQLite cache
+    db.commit()
         
     # Launch background geocode threads if requested
     if pending_geocodes:
