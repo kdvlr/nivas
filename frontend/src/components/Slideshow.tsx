@@ -295,9 +295,12 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
 
                         {/* Handlabeled margin details */}
                         {(item.location_name || item.date_taken) && (
-                          <div className="absolute bottom-1.5 w-full text-center text-[11px] font-medium tracking-tight text-neutral-500 font-serif select-none pointer-events-none flex items-center justify-center gap-1.5">
+                          <div 
+                            style={{ fontFamily: "'Caveat', cursive" }}
+                            className="absolute bottom-1 w-full text-center text-[1.45rem] font-bold tracking-wide text-slate-700/85 select-none pointer-events-none flex items-center justify-center gap-2"
+                          >
                             {item.location_name && <span>{item.location_name}</span>}
-                            {item.location_name && item.date_taken && <span className="text-neutral-300">•</span>}
+                            {item.location_name && item.date_taken && <span className="text-slate-400/70">-</span>}
                             {item.date_taken && <span>{formatDate(item.date_taken)}</span>}
                           </div>
                         )}
@@ -383,9 +386,12 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
 
                         {/* Handlabeled margin details */}
                         {(item.location_name || item.date_taken) && (
-                          <div className="absolute bottom-1.5 w-full text-center text-[11px] font-medium tracking-tight text-neutral-500 font-serif select-none pointer-events-none flex items-center justify-center gap-1.5">
+                          <div 
+                            style={{ fontFamily: "'Caveat', cursive" }}
+                            className="absolute bottom-1 w-full text-center text-[1.45rem] font-bold tracking-wide text-slate-700/85 select-none pointer-events-none flex items-center justify-center gap-2"
+                          >
                             {item.location_name && <span>{item.location_name}</span>}
-                            {item.location_name && item.date_taken && <span className="text-neutral-300">•</span>}
+                            {item.location_name && item.date_taken && <span className="text-slate-400/70">-</span>}
                             {item.date_taken && <span>{formatDate(item.date_taken)}</span>}
                           </div>
                         )}
