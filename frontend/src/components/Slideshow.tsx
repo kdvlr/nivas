@@ -233,10 +233,10 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                     <div className="relative flex items-center justify-center">
                       <motion.div
                         style={{ aspectRatio: aspect, rotate: rotation }}
-                        initial={{ scale: 1.15, y: -25, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1, x: dir.x[1] / 3, y: dir.y[1] / 3 }}
+                        initial={{ scale: 1.1, y: -20, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1, x: dir.x[1] * 1.8, y: dir.y[1] * 1.8 }}
                         transition={{
-                          scale: { type: 'spring', damping: 18, stiffness: 80 },
+                          scale: { type: 'spring', damping: 20, stiffness: 85 },
                           opacity: { duration: 0.6 },
                           x: { duration: 8.2, ease: 'linear' },
                           y: { duration: 8.2, ease: 'linear' }
@@ -250,29 +250,23 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                           }
                         }}
                       >
-                        {/* Ken Burns drift media */}
+                        {/* Static unzoomed media inside frame to prevent any cropping */}
                         <div className="w-full h-full relative overflow-hidden bg-neutral-900 rounded-md">
                           {item.type === 'image' && (
-                            <motion.img
+                            <img
                               src={item.url}
-                              initial={{ scale: 1.15, x: -dir.x[0] * 1.5, y: -dir.y[0] * 1.5 }}
-                              animate={{ scale: 1.05, x: -dir.x[1] * 1.5, y: -dir.y[1] * 1.5 }}
-                              transition={{ duration: 8.2, ease: 'linear' }}
                               className="w-full h-full object-cover pointer-events-none"
                             />
                           )}
 
                           {item.type === 'live_photo' && item.videoUrl && (
-                            <motion.video
+                            <video
                               key={item.videoUrl}
                               src={item.videoUrl}
                               autoPlay
                               muted
                               playsInline
                               loop
-                              initial={{ scale: 1.12, x: -dir.x[0] * 1.2, y: -dir.y[0] * 1.2 }}
-                              animate={{ scale: 1.03, x: -dir.x[1] * 1.2, y: -dir.y[1] * 1.2 }}
-                              transition={{ duration: 8.2, ease: 'linear' }}
                               className="w-full h-full object-cover pointer-events-none"
                             />
                           )}
@@ -297,7 +291,7 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                         {(item.location_name || item.date_taken) && (
                           <div 
                             style={{ fontFamily: "'Caveat', cursive" }}
-                            className="absolute bottom-1 w-full text-center text-[1.45rem] font-bold tracking-wide text-slate-700/85 select-none pointer-events-none flex items-center justify-center gap-2"
+                            className="absolute bottom-1 w-full text-center text-[1.75rem] font-bold tracking-wide text-slate-700/85 select-none pointer-events-none flex items-center justify-center gap-2"
                           >
                             {item.location_name && <span>{item.location_name}</span>}
                             {item.location_name && item.date_taken && <span className="text-slate-400/70">-</span>}
@@ -324,10 +318,10 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                       <motion.div
                         key={item.url}
                         style={{ aspectRatio: itemAspect, rotate: cardRot }}
-                        initial={{ scale: 1.15, y: isFirst ? -25 : 25, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1, x: childDir.x[1] / 3, y: childDir.y[1] / 3 }}
+                        initial={{ scale: 1.1, y: isFirst ? -20 : 20, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1, x: childDir.x[1] * 1.8, y: childDir.y[1] * 1.8 }}
                         transition={{
-                          scale: { type: 'spring', damping: 18, stiffness: 80 },
+                          scale: { type: 'spring', damping: 20, stiffness: 85 },
                           opacity: { duration: 0.6 },
                           x: { duration: 8.2, ease: 'linear' },
                           y: { duration: 8.2, ease: 'linear' }
@@ -341,29 +335,23 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                           }
                         }}
                       >
-                        {/* Ken Burns drift media */}
+                        {/* Static unzoomed media inside frame to prevent any cropping */}
                         <div className="w-full h-full relative overflow-hidden bg-neutral-900 rounded-md">
                           {item.type === 'image' && (
-                            <motion.img
+                            <img
                               src={item.url}
-                              initial={{ scale: 1.15, x: -childDir.x[0] * 1.5, y: -childDir.y[0] * 1.5 }}
-                              animate={{ scale: 1.05, x: -childDir.x[1] * 1.5, y: -childDir.y[1] * 1.5 }}
-                              transition={{ duration: 8.2, ease: 'linear' }}
                               className="w-full h-full object-cover pointer-events-none"
                             />
                           )}
 
                           {item.type === 'live_photo' && item.videoUrl && (
-                            <motion.video
+                            <video
                               key={item.videoUrl}
                               src={item.videoUrl}
                               autoPlay
                               muted
                               playsInline
                               loop
-                              initial={{ scale: 1.12, x: -childDir.x[0] * 1.2, y: -childDir.y[0] * 1.2 }}
-                              animate={{ scale: 1.03, x: -childDir.x[1] * 1.2, y: -childDir.y[1] * 1.2 }}
-                              transition={{ duration: 8.2, ease: 'linear' }}
                               className="w-full h-full object-cover pointer-events-none"
                             />
                           )}
@@ -388,7 +376,7 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                         {(item.location_name || item.date_taken) && (
                           <div 
                             style={{ fontFamily: "'Caveat', cursive" }}
-                            className="absolute bottom-1 w-full text-center text-[1.45rem] font-bold tracking-wide text-slate-700/85 select-none pointer-events-none flex items-center justify-center gap-2"
+                            className="absolute bottom-1 w-full text-center text-[1.75rem] font-bold tracking-wide text-slate-700/85 select-none pointer-events-none flex items-center justify-center gap-2"
                           >
                             {item.location_name && <span>{item.location_name}</span>}
                             {item.location_name && item.date_taken && <span className="text-slate-400/70">-</span>}
