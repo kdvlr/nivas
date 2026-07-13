@@ -60,6 +60,7 @@ const PhotoInfoCard = ({ item }: { item: MediaItem }) => {
 
 export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
   const [currentIdx, setCurrentIdx] = useState(0)
+  const [selectedVideo, setSelectedVideo] = useState<string | null>(null)
 
   // Parse items into slides (landscape/video singly, or portrait files paired side-by-side)
   const slides = useMemo(() => {
@@ -117,14 +118,14 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
     return result
   }, [photos])
 
-  // Advance slide every 8 seconds
+  // Advance slide every 8 seconds, paused when a full video is being viewed
   useEffect(() => {
-    if (slides.length <= 1) return
+    if (slides.length <= 1 || selectedVideo !== null) return
     const timer = setInterval(() => {
       setCurrentIdx((prev) => (prev + 1) % slides.length)
     }, 8000)
     return () => clearInterval(timer)
-  }, [slides.length])
+  }, [slides.length, selectedVideo])
 
   if (slides.length === 0) return null
 
@@ -146,7 +147,6 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
     <div
       className="fixed inset-0 z-[100] bg-black overflow-hidden cursor-none select-none"
       onClick={onDismiss}
-      onTouchStart={onDismiss}
     >
       {/* Main Slideshow Frame */}
       <AnimatePresence mode="popLayout">
@@ -182,7 +182,15 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                     initial={{ scale: 0.95 }}
                     animate={{ scale: 1.03 }}
                     transition={{ duration: 8.2, ease: 'linear' }}
-                    className="max-h-[84vh] max-w-[84vw] rounded-[32px] overflow-hidden shadow-[0_30px_70px_rgba(0,0,0,0.85)] border-2 border-white/15 bg-neutral-950 flex items-center justify-center relative z-10"
+                    className={`max-h-[84vh] max-w-[84vw] rounded-[32px] overflow-hidden shadow-[0_30px_70px_rgba(0,0,0,0.85)] border-2 border-white/15 bg-neutral-950 flex items-center justify-center relative z-10 ${
+                      item.type === 'video' || item.type === 'live_photo' ? 'cursor-pointer' : 'cursor-default'
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (item.type === 'video' || item.type === 'live_photo') {
+                        setSelectedVideo(item.type === 'live_photo' ? (item.videoUrl || null) : item.url)
+                      }
+                    }}
                   >
                     {item.type === 'image' && (
                       <img
@@ -252,7 +260,15 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                       initial={{ scale: 0.95 }}
                       animate={{ scale: 1.03 }}
                       transition={{ duration: 8.2, ease: 'linear' }}
-                      className="max-h-[82%] max-w-[82%] rounded-[24px] overflow-hidden shadow-[0_22px_55px_rgba(0,0,0,0.8)] border-2 border-white/15 bg-neutral-950 flex items-center justify-center relative z-10"
+                      className={`max-h-[82%] max-w-[82%] rounded-[24px] overflow-hidden shadow-[0_22px_55px_rgba(0,0,0,0.8)] border-2 border-white/15 bg-neutral-950 flex items-center justify-center relative z-10 ${
+                        item.type === 'video' || item.type === 'live_photo' ? 'cursor-pointer' : 'cursor-default'
+                      }`}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (item.type === 'video' || item.type === 'live_photo') {
+                          setSelectedVideo(item.type === 'live_photo' ? (item.videoUrl || null) : item.url)
+                        }
+                      }}
                     >
                       {item.type === 'image' && (
                         <img
@@ -293,6 +309,34 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
           )}
         </motion.div>
       </AnimatePresence>
+
+      {selectedVideo && (
+        <div
+          className="fixed inset-0 z-[110] bg-black flex items-center justify-center cursor-default"
+          onClick={(e) => {
+            e.stopPropagation()
+            setSelectedVideo(null)
+          }}
+        >
+          <video
+            src={selectedVideo}
+            controls
+            autoPlay
+            playsInline
+            className="max-h-[92vh] max-w-[92vw] object-contain rounded-2xl shadow-2xl border border-white/10"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            className="absolute top-6 right-6 z-[120] p-3 rounded-full bg-neutral-900/80 hover:bg-neutral-800 text-white border border-white/10 shadow-lg cursor-pointer flex items-center justify-center"
+            onClick={(e) => {
+              e.stopPropagation()
+              setSelectedVideo(null)
+            }}
+          >
+            <Icon name="close" className="text-xl" />
+          </button>
+        </div>
+      )}
 
       {/* Tiny instructions helper */}
       <div className="absolute bottom-6 right-6 text-white/35 text-xs font-light tracking-wider z-20 pointer-events-none">
