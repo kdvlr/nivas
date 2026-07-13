@@ -22,6 +22,7 @@ VIDEO_EXTENSIONS = {".mp4", ".webm", ".mov", ".ogg"}
 
 # Thread-safe geocode processing tracker
 GEOCODE_LOCK = threading.Lock()
+GEOCODE_THREAD_LOCK = threading.Lock()
 PENDING_GEOCODES = set()
 
 def to_decimal(value):
@@ -160,30 +161,31 @@ def geocode_worker(db_session_factory, file_paths):
     """
     Background worker thread resolving geocodes sequentially with a delay to comply with TOS.
     """
-    for rel_str in file_paths:
-        time.sleep(1.2)
-        
-        db = db_session_factory()
-        try:
-            cached = db.query(PhotoMetadata).filter(PhotoMetadata.file_path == rel_str).first()
-            if cached and cached.latitude is not None and cached.longitude is not None:
-                location = fetch_location_name(cached.latitude, cached.longitude)
-                cached.location_name = location
-                db.commit()
-        except Exception as e:
-            print(f"Background geocoding failed for {rel_str}: {e}")
+    with GEOCODE_THREAD_LOCK:
+        for rel_str in file_paths:
+            time.sleep(1.2)
+            
+            db = db_session_factory()
             try:
-                db.rollback()
                 cached = db.query(PhotoMetadata).filter(PhotoMetadata.file_path == rel_str).first()
-                if cached:
-                    cached.location_name = None
+                if cached and cached.latitude is not None and cached.longitude is not None:
+                    location = fetch_location_name(cached.latitude, cached.longitude)
+                    cached.location_name = location
                     db.commit()
-            except Exception:
-                pass
-        finally:
-            db.close()
-            with GEOCODE_LOCK:
-                PENDING_GEOCODES.discard(rel_str)
+            except Exception as e:
+                print(f"Background geocoding failed for {rel_str}: {e}")
+                try:
+                    db.rollback()
+                    cached = db.query(PhotoMetadata).filter(PhotoMetadata.file_path == rel_str).first()
+                    if cached:
+                        cached.location_name = None
+                        db.commit()
+                except Exception:
+                    pass
+            finally:
+                db.close()
+                with GEOCODE_LOCK:
+                    PENDING_GEOCODES.discard(rel_str)
 
 def sync_photos_dir(db: Session):
     """
