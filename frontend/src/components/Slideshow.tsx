@@ -216,11 +216,11 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
           {/* Main Slideshow Frame */}
           <AnimatePresence mode="popLayout">
             <motion.div
-              key={`album_${activeSlide.id}`}
+              key={`${styleTheme}_${activeSlide.id}`}
               initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 1 }}
-              transition={{ duration: 1.6, ease: 'easeInOut' }}
+              animate={{ opacity: 1, zIndex: 10 }}
+              exit={{ opacity: 0.99, zIndex: 20 }}
+              transition={{ duration: 1.4, ease: 'easeInOut' }}
               className="absolute inset-0 z-10 w-full h-full flex items-center justify-center"
             >
               {activeSlide.type === 'single' ? (
@@ -229,20 +229,27 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                   const aspect = item.width && item.height ? `${item.width} / ${item.height}` : '16/9'
                   const rotation = [2.2, -3.1, 1.4, -2.3, 3.2, -1.6][currentIdx % 6]
                   
+                  // Stable deterministic seed based on activeSlide.id to select exit directions and angle tilts
+                  const seed = activeSlide.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+                  const exitDir = (seed % 2 === 0) ? 1 : -1
+                  const exitAngle = rotation + (exitDir * 20)
+                  
                   return (
                     <div className="relative flex items-center justify-center">
                       <motion.div
                         style={{ aspectRatio: aspect, rotate: rotation }}
-                        initial={{ scale: 0.7, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1, x: dir.x[1] * 1.8, y: dir.y[1] * 1.8 }}
+                        initial={{ scale: 0.35, opacity: 0, filter: 'blur(8px)' }}
+                        animate={{ scale: 1, opacity: 1, filter: 'blur(0px)', x: dir.x[1] * 1.8, y: dir.y[1] * 1.8 }}
                         exit={{
-                          scale: 1.4,
-                          x: currentIdx % 2 === 0 ? '-100vw' : '100vw',
+                          scale: 2.2,
+                          x: `${exitDir * 120}vw`,
+                          rotate: exitAngle,
                           opacity: 0,
                           transition: { duration: 1.4, ease: 'easeInOut' }
                         }}
                         transition={{
-                          scale: { type: 'spring', damping: 20, stiffness: 85 },
+                          scale: { type: 'spring', damping: 22, stiffness: 60 },
+                          filter: { duration: 0.6 },
                           opacity: { duration: 0.6 },
                           x: { duration: 8.2, ease: 'linear' },
                           y: { duration: 8.2, ease: 'linear' }
@@ -324,16 +331,18 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                       <motion.div
                         key={item.url}
                         style={{ aspectRatio: itemAspect, rotate: cardRot }}
-                        initial={{ scale: 0.7, opacity: 0, x: isFirst ? -80 : 80 }}
-                        animate={{ scale: 1, opacity: 1, x: childDir.x[1] * 1.8, y: childDir.y[1] * 1.8 }}
+                        initial={{ scale: 0.35, opacity: 0, filter: 'blur(8px)', x: isFirst ? -50 : 50 }}
+                        animate={{ scale: 1, opacity: 1, filter: 'blur(0px)', x: childDir.x[1] * 1.8, y: childDir.y[1] * 1.8 }}
                         exit={{
-                          scale: 1.4,
-                          x: isFirst ? '-100vw' : '100vw',
+                          scale: 2.2,
+                          x: isFirst ? '-120vw' : '120vw',
+                          rotate: isFirst ? cardRot - 25 : cardRot + 25,
                           opacity: 0,
                           transition: { duration: 1.4, ease: 'easeInOut' }
                         }}
                         transition={{
-                          scale: { type: 'spring', damping: 20, stiffness: 85 },
+                          scale: { type: 'spring', damping: 22, stiffness: 60 },
+                          filter: { duration: 0.6 },
                           opacity: { duration: 0.6 },
                           x: { duration: 8.2, ease: 'linear' },
                           y: { duration: 8.2, ease: 'linear' }
@@ -410,8 +419,8 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
             <motion.div
               key={`grid_${activeSlide.id}`}
               initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 1 }}
+              animate={{ opacity: 1, zIndex: 10 }}
+              exit={{ opacity: 0.99, zIndex: 20 }}
               transition={{ duration: 1.2, ease: 'easeInOut' }}
               className="absolute inset-0 z-10 w-full h-full flex items-center justify-center"
             >
@@ -420,20 +429,25 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                   const item = activeSlide.items[0]
                   const aspect = item.width && item.height ? `${item.width} / ${item.height}` : '16/9'
                   
+                  // Stable deterministic seed based on activeSlide.id to select exit directions and angle tilts
+                  const seed = activeSlide.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+                  const exitDir = (seed % 2 === 0) ? 1 : -1
+                  
                   return (
                     <div className="relative flex items-center justify-center p-6">
                       <motion.div
                         style={{ aspectRatio: aspect }}
-                        initial={{ scale: 0.7, opacity: 0 }}
-                        animate={{ scale: 1.02, opacity: 1, x: dir.x[1] / 2, y: dir.y[1] / 2 }}
+                        initial={{ scale: 0.35, opacity: 0, filter: 'blur(8px)' }}
+                        animate={{ scale: 1.02, opacity: 1, filter: 'blur(0px)', x: dir.x[1] / 2, y: dir.y[1] / 2 }}
                         exit={{
-                          scale: 1.4,
-                          x: currentIdx % 2 === 0 ? '-100vw' : '100vw',
+                          scale: 2.2,
+                          x: `${exitDir * 120}vw`,
                           opacity: 0,
                           transition: { duration: 1.4, ease: 'easeInOut' }
                         }}
                         transition={{
-                          scale: { type: 'spring', damping: 20, stiffness: 90 },
+                          scale: { type: 'spring', damping: 22, stiffness: 60 },
+                          filter: { duration: 0.6 },
                           opacity: { duration: 0.6 },
                           x: { duration: 8.2, ease: 'linear' },
                           y: { duration: 8.2, ease: 'linear' }
@@ -509,22 +523,23 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                     
                     return (
                       <div key={item.url} className="relative flex-1 h-full max-h-[82vh] flex items-center justify-center">
-                        <motion.div
-                          style={{ aspectRatio: itemAspect }}
-                          initial={{ scale: 0.7, opacity: 0, x: isFirst ? -80 : 80 }}
-                          animate={{ scale: 1.02, opacity: 1, x: childDir.x[1] / 2, y: childDir.y[1] / 2 }}
-                          exit={{
-                            scale: 1.4,
-                            x: isFirst ? '-100vw' : '100vw',
-                            opacity: 0,
-                            transition: { duration: 1.4, ease: 'easeInOut' }
-                          }}
-                          transition={{
-                            scale: { type: 'spring', damping: 20, stiffness: 90 },
-                            opacity: { duration: 0.6 },
-                            x: { duration: 8.2, ease: 'linear' },
-                            y: { duration: 8.2, ease: 'linear' }
-                          }}
+                          <motion.div
+                            style={{ aspectRatio: itemAspect }}
+                            initial={{ scale: 0.35, opacity: 0, filter: 'blur(8px)', x: isFirst ? -50 : 50 }}
+                            animate={{ scale: 1.02, opacity: 1, filter: 'blur(0px)', x: childDir.x[1] / 2, y: childDir.y[1] / 2 }}
+                            exit={{
+                              scale: 2.2,
+                              x: isFirst ? '-120vw' : '120vw',
+                              opacity: 0,
+                              transition: { duration: 1.4, ease: 'easeInOut' }
+                            }}
+                            transition={{
+                              scale: { type: 'spring', damping: 22, stiffness: 60 },
+                              filter: { duration: 0.6 },
+                              opacity: { duration: 0.6 },
+                              x: { duration: 8.2, ease: 'linear' },
+                              y: { duration: 8.2, ease: 'linear' }
+                            }}
                           className="h-full rounded-[24px] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.8)] border border-white/10 bg-neutral-950 flex items-center justify-center relative z-20 pointer-events-auto cursor-pointer"
                           onClick={(e) => {
                             const full = item.type === 'live_photo' ? item.videoUrl : item.url
