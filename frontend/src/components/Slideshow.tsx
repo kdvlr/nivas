@@ -42,6 +42,17 @@ const formatDate = (dateStr?: string | null) => {
 export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
   const [currentIdx, setCurrentIdx] = useState(0)
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null)
+  const [isPortraitViewport, setIsPortraitViewport] = useState(() => {
+    return window.innerHeight > window.innerWidth
+  })
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsPortraitViewport(window.innerHeight > window.innerWidth)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   // Parse items into slides (landscape/video singly, or portrait files paired side-by-side)
   const slides = useMemo(() => {
@@ -151,7 +162,7 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
           transition={{ duration: 1.4, ease: 'easeInOut' }}
           className="absolute inset-0 z-10 w-full h-full flex items-center justify-center"
         >
-              {activeSlide.type === 'single' ? (
+              {activeSlide.type === 'single' || isPortraitViewport ? (
                 (() => {
                   const item = activeSlide.items[0]
                   const aspect = item.width && item.height ? `${item.width} / ${item.height}` : '16/9'
@@ -182,7 +193,7 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                           x: { duration: 8.2, ease: 'linear' },
                           y: { duration: 8.2, ease: 'linear' }
                         }}
-                        className="bg-[#faf8f5] p-3.5 pb-13 rounded-xl shadow-[0_4px_10px_rgba(0,0,0,0.35),0_30px_70px_rgba(0,0,0,0.55)] border border-neutral-200/50 flex flex-col relative z-20 pointer-events-auto cursor-pointer"
+                        className="bg-[#faf8f5] p-3.5 pb-4 rounded-[4px] shadow-[0_4px_10px_rgba(0,0,0,0.35),0_30px_70px_rgba(0,0,0,0.55)] border border-neutral-200/50 flex flex-col items-center relative z-20 pointer-events-auto cursor-pointer"
                         onClick={(e) => {
                           const full = item.type === 'live_photo' ? item.videoUrl : item.url
                           if ((item.type === 'video' || item.type === 'live_photo') && full) {
@@ -194,7 +205,7 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                         {/* White-bordered photo frame with exact aspect ratio & object-contain to prevent any cropping */}
                         <div
                           style={{ aspectRatio: aspect }}
-                          className="w-auto h-auto max-h-[64vh] max-w-[70vw] relative overflow-hidden bg-neutral-100 rounded-md"
+                          className="w-auto h-auto max-h-[60vh] max-w-[70vw] relative overflow-hidden bg-neutral-100"
                         >
                           {item.type === 'image' && (
                             <img
@@ -231,11 +242,11 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                           <div className="absolute inset-0 z-10 pointer-events-none bg-gradient-to-tr from-transparent via-white/5 to-white/10" />
                         </div>
 
-                        {/* Handlabeled margin details */}
+                        {/* Handlabeled margin details (relative flex flow, auto-expands bottom border if wrapped) */}
                         {(item.location_name || item.date_taken) && (
                           <div 
                             style={{ fontFamily: "'Caveat', cursive" }}
-                            className="absolute bottom-1.5 w-full text-center text-[1.75rem] font-bold tracking-wide text-slate-700/85 select-none pointer-events-none flex items-center justify-center gap-2"
+                            className="mt-3.5 mb-1 w-full text-center text-[1.85rem] font-bold tracking-wide text-slate-700/85 select-none pointer-events-none flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 leading-tight px-1.5"
                           >
                             {item.location_name && <span>{item.location_name}</span>}
                             {item.location_name && item.date_taken && <span className="text-slate-400/70">-</span>}
@@ -259,86 +270,86 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                     }
                     
                     return (
-                      <motion.div
-                        key={item.url}
-                        style={{ rotate: cardRot }}
-                        initial={{ scale: 0.35, opacity: 0, filter: 'blur(8px)', x: isFirst ? -50 : 50 }}
-                        animate={{ scale: 1, opacity: 1, filter: 'blur(0px)', x: childDir.x[1] * 1.8, y: childDir.y[1] * 1.8 }}
-                        exit={{
-                          scale: 2.2,
-                          x: isFirst ? '-120vw' : '120vw',
-                          rotate: isFirst ? cardRot - 25 : cardRot + 25,
-                          opacity: 0,
-                          transition: { duration: 1.4, ease: 'easeInOut' }
-                        }}
-                        transition={{
-                          scale: { type: 'spring', damping: 22, stiffness: 60 },
-                          filter: { duration: 0.6 },
-                          opacity: { duration: 0.6 },
-                          x: { duration: 8.2, ease: 'linear' },
-                          y: { duration: 8.2, ease: 'linear' }
-                        }}
-                        className="bg-[#faf8f5] p-3.5 pb-13 rounded-xl shadow-[0_4px_10px_rgba(0,0,0,0.35),0_30px_70px_rgba(0,0,0,0.55)] border border-neutral-200/50 flex flex-col relative z-20 pointer-events-auto cursor-pointer"
-                        onClick={(e) => {
-                          const full = item.type === 'live_photo' ? item.videoUrl : item.url
-                          if ((item.type === 'video' || item.type === 'live_photo') && full) {
-                            e.stopPropagation()
-                            setSelectedVideo(full)
-                          }
-                        }}
-                      >
-                        {/* White-bordered photo frame with exact aspect ratio & object-contain to prevent any cropping */}
-                        <div
-                          style={{ aspectRatio: itemAspect }}
-                          className="w-auto h-auto max-h-[64vh] max-w-[34vw] relative overflow-hidden bg-neutral-100 rounded-md"
+                        <motion.div
+                          key={item.url}
+                          style={{ rotate: cardRot }}
+                          initial={{ scale: 0.35, opacity: 0, filter: 'blur(8px)', x: isFirst ? -50 : 50 }}
+                          animate={{ scale: 1, opacity: 1, filter: 'blur(0px)', x: childDir.x[1] * 1.8, y: childDir.y[1] * 1.8 }}
+                          exit={{
+                            scale: 2.2,
+                            x: isFirst ? '-120vw' : '120vw',
+                            rotate: isFirst ? cardRot - 25 : cardRot + 25,
+                            opacity: 0,
+                            transition: { duration: 1.4, ease: 'easeInOut' }
+                          }}
+                          transition={{
+                            scale: { type: 'spring', damping: 22, stiffness: 60 },
+                            filter: { duration: 0.6 },
+                            opacity: { duration: 0.6 },
+                            x: { duration: 8.2, ease: 'linear' },
+                            y: { duration: 8.2, ease: 'linear' }
+                          }}
+                          className="bg-[#faf8f5] p-3.5 pb-4 rounded-[4px] shadow-[0_4px_10px_rgba(0,0,0,0.35),0_30px_70px_rgba(0,0,0,0.55)] border border-neutral-200/50 flex flex-col items-center relative z-20 pointer-events-auto cursor-pointer"
+                          onClick={(e) => {
+                            const full = item.type === 'live_photo' ? item.videoUrl : item.url
+                            if ((item.type === 'video' || item.type === 'live_photo') && full) {
+                              e.stopPropagation()
+                              setSelectedVideo(full)
+                            }
+                          }}
                         >
-                          {item.type === 'image' && (
-                            <img
-                              src={item.url}
-                              className="w-full h-full object-contain pointer-events-none"
-                            />
-                          )}
-
-                          {item.type === 'live_photo' && item.videoUrl && (
-                            <video
-                              key={item.videoUrl}
-                              src={item.videoUrl}
-                              autoPlay
-                              muted
-                              playsInline
-                              loop
-                              className="w-full h-full object-contain pointer-events-none"
-                            />
-                          )}
-
-                          {item.type === 'video' && (
-                            <video
-                              key={item.url}
-                              src={item.url}
-                              autoPlay
-                              muted
-                              playsInline
-                              loop
-                              className="w-full h-full object-contain pointer-events-none"
-                            />
-                          )}
-
-                          {/* Frosted glare overlay */}
-                          <div className="absolute inset-0 z-10 pointer-events-none bg-gradient-to-tr from-transparent via-white/5 to-white/10" />
-                        </div>
-
-                        {/* Handlabeled margin details */}
-                        {(item.location_name || item.date_taken) && (
-                          <div 
-                            style={{ fontFamily: "'Caveat', cursive" }}
-                            className="absolute bottom-1.5 w-full text-center text-[1.75rem] font-bold tracking-wide text-slate-700/85 select-none pointer-events-none flex items-center justify-center gap-2"
+                          {/* White-bordered photo frame with exact aspect ratio & object-contain to prevent any cropping */}
+                          <div
+                            style={{ aspectRatio: itemAspect }}
+                            className="w-auto h-auto max-h-[60vh] max-w-[34vw] relative overflow-hidden bg-neutral-100"
                           >
-                            {item.location_name && <span>{item.location_name}</span>}
-                            {item.location_name && item.date_taken && <span className="text-slate-400/70">-</span>}
-                            {item.date_taken && <span>{formatDate(item.date_taken)}</span>}
+                            {item.type === 'image' && (
+                              <img
+                                src={item.url}
+                                className="w-full h-full object-contain pointer-events-none"
+                              />
+                            )}
+
+                            {item.type === 'live_photo' && item.videoUrl && (
+                              <video
+                                key={item.videoUrl}
+                                src={item.videoUrl}
+                                autoPlay
+                                muted
+                                playsInline
+                                loop
+                                className="w-full h-full object-contain pointer-events-none"
+                              />
+                            )}
+
+                            {item.type === 'video' && (
+                              <video
+                                key={item.url}
+                                src={item.url}
+                                autoPlay
+                                muted
+                                playsInline
+                                loop
+                                className="w-full h-full object-contain pointer-events-none"
+                              />
+                            )}
+
+                            {/* Frosted glare overlay */}
+                            <div className="absolute inset-0 z-10 pointer-events-none bg-gradient-to-tr from-transparent via-white/5 to-white/10" />
                           </div>
-                        )}
-                      </motion.div>
+
+                          {/* Handlabeled margin details (relative flex flow, auto-expands bottom border if wrapped) */}
+                          {(item.location_name || item.date_taken) && (
+                            <div 
+                              style={{ fontFamily: "'Caveat', cursive" }}
+                              className="mt-3.5 mb-1 w-full text-center text-[1.75rem] font-bold tracking-wide text-slate-700/85 select-none pointer-events-none flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 leading-tight px-1.5"
+                            >
+                              {item.location_name && <span>{item.location_name}</span>}
+                              {item.location_name && item.date_taken && <span className="text-slate-400/70">-</span>}
+                              {item.date_taken && <span>{formatDate(item.date_taken)}</span>}
+                            </div>
+                          )}
+                        </motion.div>
                     )
                   })}
                 </div>
