@@ -5,11 +5,14 @@ import threading
 import time
 from pathlib import Path
 from datetime import datetime
-from fastapi import APIRouter, Depends, BackgroundTasks
+from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
-from PIL import Image
+from PIL import Image, ImageOps
 import httpx
+import hashlib
 
+from ..config import get_settings
 from ..db import get_db, SessionLocal
 from ..models import PhotoMetadata
 
@@ -310,6 +313,46 @@ def sync_photos_dir_background(db_session_factory):
     finally:
         db.close()
 
+THUMBNAILS_DIR = Path(get_settings().data_dir) / "thumbnails"
+THUMBNAILS_DIR.mkdir(parents=True, exist_ok=True)
+
+@router.get("/thumbnail/{file_path:path}")
+def get_thumbnail(file_path: str):
+    try:
+        decoded_path = urllib.parse.unquote(file_path)
+        orig_path = (PHOTOS_DIR / decoded_path).resolve()
+        if not orig_path.is_relative_to(PHOTOS_DIR.resolve()) or not orig_path.is_file():
+            raise HTTPException(status_code=404, detail="File not found")
+    except Exception:
+        raise HTTPException(status_code=404, detail="Invalid path")
+
+    ext = orig_path.suffix.lower()
+    if ext in VIDEO_EXTENSIONS:
+        return FileResponse(orig_path)
+
+    # Cache key based on file path, mtime, and size
+    stat = orig_path.stat()
+    cache_key = f"{decoded_path}_{stat.st_mtime}_{stat.st_size}"
+    h = hashlib.md5(cache_key.encode()).hexdigest()
+    thumb_path = THUMBNAILS_DIR / f"{h}.jpg"
+
+    if not thumb_path.exists():
+        try:
+            with Image.open(orig_path) as img:
+                try:
+                    img = ImageOps.exif_transpose(img)
+                except Exception:
+                    pass
+                img.thumbnail((400, 400))
+                if img.mode != "RGB":
+                    img = img.convert("RGB")
+                img.save(thumb_path, "JPEG", quality=80)
+        except Exception as e:
+            print(f"Failed to generate thumbnail for {file_path}: {e}")
+            return FileResponse(orig_path)
+
+    return FileResponse(thumb_path)
+
 @router.get("")
 def get_photos(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     # Check if the database has any records
@@ -368,6 +411,7 @@ def get_photos(background_tasks: BackgroundTasks, db: Session = Depends(get_db))
                 
                 media_items.append({
                     "url": f"/api/photos/media/{urllib.parse.quote(img_data['rel_path'].as_posix())}",
+                    "thumbnailUrl": f"/api/photos/thumbnail/{urllib.parse.quote(img_data['rel_path'].as_posix())}",
                     "videoUrl": f"/api/photos/media/{urllib.parse.quote(vid_rel_path.as_posix())}",
                     "type": "live_photo",
                     "name": img_data["name"],
@@ -385,6 +429,7 @@ def get_photos(background_tasks: BackgroundTasks, db: Session = Depends(get_db))
             # Standalone video (use actual parsed metadata width/height/orientation)
             media_items.append({
                 "url": f"/api/photos/media/{urllib.parse.quote(vid_rel_path.as_posix())}",
+                "thumbnailUrl": f"/api/photos/thumbnail/{urllib.parse.quote(vid_rel_path.as_posix())}",
                 "type": "video",
                 "name": vid_rel_path.name,
                 "width": vid_rec.width,
@@ -399,6 +444,7 @@ def get_photos(background_tasks: BackgroundTasks, db: Session = Depends(get_db))
         if img_rel_str not in paired_images:
             media_items.append({
                 "url": f"/api/photos/media/{urllib.parse.quote(img_data['rel_path'].as_posix())}",
+                "thumbnailUrl": f"/api/photos/thumbnail/{urllib.parse.quote(img_data['rel_path'].as_posix())}",
                 "type": "image",
                 "name": img_data["name"],
                 "width": img_data["width"],

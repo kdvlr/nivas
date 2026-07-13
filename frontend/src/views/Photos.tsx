@@ -5,6 +5,7 @@ import Icon from '../components/Icon'
 
 interface MediaItem {
   url: string
+  thumbnailUrl?: string
   videoUrl?: string
   type: 'image' | 'video' | 'live_photo'
   name: string
@@ -65,7 +66,7 @@ const MediaTile = ({ item, onClick }: { item: MediaItem; onClick: () => void }) 
     >
       {item.type === 'image' && (
         <img
-          src={item.url}
+          src={item.thumbnailUrl || item.url}
           alt={item.name}
           loading="lazy"
           onClick={onClick}
@@ -99,7 +100,7 @@ const MediaTile = ({ item, onClick }: { item: MediaItem; onClick: () => void }) 
         >
           {/* Static JPEG component (fallback / behind video) */}
           <img
-            src={item.url}
+            src={item.thumbnailUrl || item.url}
             alt={item.name}
             loading="lazy"
             className={`w-full h-full object-cover transition-opacity duration-300 ${
@@ -185,6 +186,32 @@ const LightboxLivePhoto = ({ item }: { item: MediaItem }) => {
 export default function Photos({ onStartSlideshow }: { onStartSlideshow?: () => void }) {
   const { data: media, reload, loading } = useData<MediaItem[]>('/api/photos', ['photos'])
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null)
+  const [visibleCount, setVisibleCount] = useState(48)
+
+  useEffect(() => {
+    setVisibleCount(48)
+  }, [media])
+
+  // Infinite scroll listener
+  useEffect(() => {
+    if (!media || media.length <= visibleCount) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisibleCount((prev) => Math.min(prev + 48, media.length))
+        }
+      },
+      { rootMargin: '200px' }
+    )
+
+    const sentinel = document.getElementById('load-more-sentinel')
+    if (sentinel) observer.observe(sentinel)
+
+    return () => {
+      if (sentinel) observer.unobserve(sentinel)
+    }
+  }, [media, visibleCount])
 
   // Keyboard navigation for lightbox
   useEffect(() => {
@@ -286,11 +313,19 @@ export default function Photos({ onStartSlideshow }: { onStartSlideshow?: () => 
 
       {/* Media Grid */}
       {media && media.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-          {media.map((item, idx) => (
-            <MediaTile key={item.url} item={item} onClick={() => openLightbox(idx)} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            {media.slice(0, visibleCount).map((item, idx) => (
+              <MediaTile key={item.url} item={item} onClick={() => openLightbox(idx)} />
+            ))}
+          </div>
+
+          {media.length > visibleCount && (
+            <div id="load-more-sentinel" className="h-20 flex items-center justify-center mt-6">
+              <Icon name="progress_activity" className="text-2xl text-indigo-500 animate-spin" />
+            </div>
+          )}
+        </>
       )}
 
       {/* Lightbox Modal */}
