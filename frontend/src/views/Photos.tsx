@@ -226,10 +226,10 @@ export default function Photos({ onStartSlideshow }: { onStartSlideshow?: () => 
       {/* Header section in MD3 Style */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">
+          <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink">
             Photos
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-sm lg:text-base text-ink-soft mt-1">
             Ambient family gallery synced from iCloud
           </p>
         </div>

@@ -59,7 +59,7 @@ export default function Rewards() {
         >
           <Icon name="arrow_back" /> Back to Chores
         </button>
-        <h1 className="text-3xl font-semibold tracking-tight text-ink"><Icon name="storefront" /> Rewards Store</h1>
+        <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink"><Icon name="storefront" /> Rewards Store</h1>
       </div>
 
       {/* Coin Balances */}

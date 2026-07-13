@@ -197,7 +197,7 @@ export default function ToDos() {
     <div className="flex h-full flex-col px-4 lg:px-8">
       <div className="mb-4 lg:mb-6 flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-6">
-          <h1 className="text-3xl lg:text-4xl font-semibold tracking-tight text-ink">To-Dos</h1>
+          <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink">To-Dos</h1>
           <div className="btn-glass flex rounded-full p-1">
             {(['week', 'all'] as const).map((r) => (
               <button

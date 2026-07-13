@@ -255,7 +255,7 @@ export default function Chores() {
       <div className="mb-4 lg:mb-6 flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <h1 className="text-3xl lg:text-4xl font-semibold tracking-tight text-ink">Chores</h1>
+            <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink">Chores</h1>
             {filterPerson && (
               <motion.button
                 initial={{ scale: 0.9, opacity: 0 }}
