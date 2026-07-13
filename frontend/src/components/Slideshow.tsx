@@ -195,29 +195,31 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                     {item.type === 'image' && (
                       <img
                         src={item.url}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover pointer-events-none"
                       />
                     )}
 
                     {item.type === 'live_photo' && item.videoUrl && (
                       <video
+                        key={item.videoUrl}
                         src={item.videoUrl}
                         autoPlay
                         muted
                         playsInline
                         loop
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover pointer-events-none"
                       />
                     )}
 
                     {item.type === 'video' && (
                       <video
+                        key={item.url}
                         src={item.url}
                         autoPlay
                         muted
                         playsInline
                         loop
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover pointer-events-none"
                       />
                     )}
                   </motion.div>
@@ -273,29 +275,31 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                       {item.type === 'image' && (
                         <img
                           src={item.url}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover pointer-events-none"
                         />
                       )}
 
                       {item.type === 'live_photo' && item.videoUrl && (
                         <video
+                          key={item.videoUrl}
                           src={item.videoUrl}
                           autoPlay
                           muted
                           playsInline
                           loop
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover pointer-events-none"
                         />
                       )}
 
                       {item.type === 'video' && (
                         <video
+                          key={item.url}
                           src={item.url}
                           autoPlay
                           muted
                           playsInline
                           loop
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover pointer-events-none"
                         />
                       )}
                     </motion.div>
