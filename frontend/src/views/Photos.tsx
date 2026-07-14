@@ -92,10 +92,6 @@ const MediaTile = ({ item, onClick }: { item: MediaItem; onClick: () => void }) 
             playsInline
             className="w-full h-full object-cover"
           />
-          <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full bg-black/50 backdrop-blur-md text-white text-[9px] font-bold tracking-wider shadow-sm select-none pointer-events-none">
-            <Icon name="videocam" className="text-[10px]" />
-            <span>VIDEO</span>
-          </div>
           {/* Video Icon Overlay */}
           <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/25 transition-colors">
             <div className="flex items-center justify-center w-12 h-12 rounded-full bg-white/95 dark:bg-neutral-900/95 text-slate-900 dark:text-white shadow-md transition-transform duration-300 group-hover:scale-110">
