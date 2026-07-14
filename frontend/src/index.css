@@ -593,5 +593,5 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .fc th.fc-day-sun,
 .fc td.fc-day-sat:not(.fc-day-today),
 .fc td.fc-day-sun:not(.fc-day-today) {
-  background-color: color-mix(in srgb, var(--primary) 4%, transparent) !important;
+  background-color: color-mix(in srgb, var(--primary) 9%, transparent) !important;
 }
