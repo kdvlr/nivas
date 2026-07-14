@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from ..db import SessionLocal, get_db
 from ..models import CalendarAccount, CalendarSelection, Chore, CoinTransaction, Person, RewardItem, utcnow
+from ..utils import is_due_on
 from ..ws import manager
 
 log = logging.getLogger(__name__)
@@ -241,14 +242,8 @@ def redemption_history(db: Session = Depends(get_db)):
 
 def _is_due_today(chore: Chore, today: date) -> bool:
     """Check if a recurring chore is due today based on its recurrence pattern."""
-    if not chore.recurrence:
-        return False
-    if chore.recurrence == "daily":
-        return True
-    if chore.recurrence.startswith("weekly:"):
-        weekdays = chore.recurrence.split(":")[1].split(",")
-        return str(today.weekday()) in weekdays
-    return False
+    ref_date = date.fromisoformat(chore.due_date) if chore.due_date else chore.created_at.date()
+    return is_due_on(today, ref_date, chore.recurrence)
 
 
 def check_missed_chores() -> None:

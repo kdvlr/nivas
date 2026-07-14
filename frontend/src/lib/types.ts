@@ -37,6 +37,7 @@ export interface Task {
   person_name: string
   completed: boolean
   completed_at: string | null
+  recurrence: string
 }
 
 export interface ShoppingItem {

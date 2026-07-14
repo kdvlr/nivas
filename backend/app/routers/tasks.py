@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -10,6 +10,7 @@ from ..config import get_settings
 from ..db import get_db
 from ..models import Task
 from ..services import sync
+from ..utils import is_due_on
 from ..ws import manager
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
@@ -20,6 +21,7 @@ class TaskCreate(BaseModel):
     due_date: str = ""
     person_name: str = ""
     list_name: str = "Dashboard"
+    recurrence: str = ""
 
 
 class TaskPatch(BaseModel):
@@ -27,6 +29,7 @@ class TaskPatch(BaseModel):
     title: str | None = None
     due_date: str | None = None
     person_name: str | None = None
+    recurrence: str | None = None
 
 
 def _task_dict(t: Task) -> dict:
@@ -40,6 +43,7 @@ def _task_dict(t: Task) -> dict:
         "person_name": t.person_name,
         "completed": t.completed,
         "completed_at": t.completed_at.isoformat() if t.completed_at else None,
+        "recurrence": t.recurrence,
     }
 
 
@@ -77,6 +81,7 @@ async def create_task(body: TaskCreate, db: Session = Depends(get_db)):
         due_date=body.due_date,
         person_name=body.person_name,
         list_name=body.list_name,
+        recurrence=body.recurrence,
     )
     if not row.title:
         raise HTTPException(400, "title required")
@@ -99,11 +104,39 @@ async def patch_task(
         row.due_date = body.due_date
     if body.person_name is not None:
         row.person_name = body.person_name
+    if body.recurrence is not None and row.source == "local":
+        row.recurrence = body.recurrence
     if body.completed is not None and body.completed != row.completed:
         row.completed = body.completed
         row.completed_at = datetime.now(timezone.utc) if body.completed else None
         if row.source in ("icloud", "alexa"):
             bg.add_task(sync.write_task_completion, row, body.completed)
+        elif body.completed and row.recurrence:
+            ref_str = row.due_date[:10] if row.due_date else date.today().isoformat()
+            try:
+                ref_date = date.fromisoformat(ref_str)
+            except Exception:
+                ref_date = date.today()
+            next_due = ref_date + timedelta(days=1)
+            found = False
+            for _ in range(365):
+                if is_due_on(next_due, ref_date, row.recurrence):
+                    found = True
+                    break
+                next_due += timedelta(days=1)
+            if found:
+                new_task = Task(
+                    source="local",
+                    external_id=str(uuid.uuid4()),
+                    title=row.title,
+                    notes=row.notes,
+                    due_date=next_due.isoformat(),
+                    person_name=row.person_name,
+                    list_name=row.list_name,
+                    recurrence=row.recurrence,
+                )
+                db.add(new_task)
+                row.recurrence = ""
     db.commit()
     await manager.broadcast("tasks")
     return _task_dict(row)

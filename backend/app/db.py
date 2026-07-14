@@ -56,6 +56,12 @@ def init_db() -> None:
             )
         except Exception:
             pass
+        try:
+            conn.execute(
+                text("ALTER TABLE tasks ADD COLUMN recurrence VARCHAR DEFAULT ''")
+            )
+        except Exception:
+            pass
 
 
 def get_db() -> Generator[Session, None, None]:

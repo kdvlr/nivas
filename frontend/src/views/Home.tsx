@@ -171,14 +171,59 @@ export default function Home() {
   const todayMeals = meals?.[0]?.slots
 
   // chores relevant today (one-offs due/overdue + recurring scheduled today)
-  const dow = (now.getDay() + 6) % 7 // Monday = 0, matches backend recurrence encoding
   const choreDueToday = (c: ChoreItem) => {
-    if (c.recurrence === 'daily') return true
-    if (c.recurrence.startsWith('weekly:'))
-      return c.recurrence.slice(7).split(',').map(Number).includes(dow)
-    return !c.due_date || c.due_date <= today
+    const rec = c.recurrence
+    if (!rec) {
+      return !c.due_date || c.due_date <= today
+    }
+    if (rec === 'daily') return true
+
+    const refDateStr = c.due_date || c.created_at.slice(0, 10)
+    const refDate = new Date(refDateStr + 'T12:00:00')
+    const checkDate = new Date(today + 'T12:00:00')
+
+    if (rec.startsWith('weekly:')) {
+      const dow = (checkDate.getDay() + 6) % 7 // Monday = 0
+      return rec.slice(7).split(',').map(Number).includes(dow)
+    }
+
+    if (rec.startsWith('biweekly:')) {
+      const refMonday = new Date(refDate)
+      refMonday.setDate(refMonday.getDate() - ((refDate.getDay() + 6) % 7))
+      refMonday.setHours(12, 0, 0, 0)
+
+      const checkMonday = new Date(checkDate)
+      checkMonday.setDate(checkMonday.getDate() - ((checkDate.getDay() + 6) % 7))
+      checkMonday.setHours(12, 0, 0, 0)
+
+      const diffMs = checkMonday.getTime() - refMonday.getTime()
+      const weeksDiff = Math.round(diffMs / (1000 * 60 * 60 * 24 * 7))
+
+      if (weeksDiff % 2 !== 0) return false
+
+      const dow = (checkDate.getDay() + 6) % 7 // Monday = 0
+      return rec.slice(9).split(',').map(Number).includes(dow)
+    }
+
+    if (rec === 'monthly:day') {
+      const lastDay = new Date(checkDate.getFullYear(), checkDate.getMonth() + 1, 0).getDate()
+      const targetDay = refDate.getDate()
+      if (targetDay >= lastDay) {
+        return checkDate.getDate() === lastDay
+      } else {
+        return checkDate.getDate() === targetDay
+      }
+    }
+
+    if (rec === 'monthly:weekday') {
+      const refOccurrence = Math.floor((refDate.getDate() - 1) / 7) + 1
+      const checkOccurrence = Math.floor((checkDate.getDate() - 1) / 7) + 1
+      return checkDate.getDay() === refDate.getDay() && checkOccurrence === refOccurrence
+    }
+
+    return false
   }
-  const todayChores = useMemo(() => (chores ?? []).filter(choreDueToday), [chores, dow, today])
+  const todayChores = useMemo(() => (chores ?? []).filter(choreDueToday), [chores, today])
   const openChores = useMemo(() => {
     const list = todayChores.filter((c) => !c.completed)
     return list.filter((c) => !removedIds.includes(`chore-${c.id}`))

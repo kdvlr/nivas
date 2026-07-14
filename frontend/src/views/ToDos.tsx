@@ -19,6 +19,23 @@ interface Person {
 }
 
 const SOURCE_BADGE: Record<string, string> = { icloud: ' iCloud', alexa: '🔵 Alexa', local: '' }
+const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+function formatRecurrence(rec: string): string {
+  if (!rec) return ''
+  if (rec === 'daily') return '🔄 Daily'
+  if (rec.startsWith('weekly:')) {
+    const days = rec.replace('weekly:', '').split(',').map(Number)
+    return '🔄 Weekly on ' + days.map((d) => WEEKDAY_LABELS[d]).join(', ')
+  }
+  if (rec.startsWith('biweekly:')) {
+    const days = rec.replace('biweekly:', '').split(',').map(Number)
+    return '🔄 Bi-weekly on ' + days.map((d) => WEEKDAY_LABELS[d]).join(', ')
+  }
+  if (rec === 'monthly:day') return '🔄 Monthly on same day'
+  if (rec === 'monthly:weekday') return '🔄 Monthly on same weekday'
+  return ''
+}
 
 interface Draft {
   id?: number
@@ -26,6 +43,8 @@ interface Draft {
   title: string
   person: string
   due: string
+  recurrence: '' | 'daily' | 'weekly' | 'biweekly' | 'monthly:day' | 'monthly:weekday'
+  weekDays: number[]
 }
 
 const SWIPE_THRESHOLD = 80
@@ -109,6 +128,11 @@ function TaskRow({
         <span className="text-[0.7rem] text-ink-soft">
           {task.list_name}
           {task.due_date ? ` · due ${fmtDate(task.due_date)}` : ''}
+          {task.recurrence && (
+            <span className="font-medium text-sky-600 dark:text-sky-400">
+              {` · ${formatRecurrence(task.recurrence)}`}
+            </span>
+          )}
           {SOURCE_BADGE[task.source] ? ` · ${SOURCE_BADGE[task.source]}` : ''}
         </span>
       </span>
@@ -153,10 +177,17 @@ export default function ToDos() {
     if (!draft) return
     const title = draft.title.trim()
     if (!title) return
+    let recurrence: string = draft.recurrence
+    if (recurrence === 'weekly') {
+      recurrence = draft.weekDays.length > 0 ? `weekly:${[...draft.weekDays].sort().join(',')}` : ''
+    } else if (recurrence === 'biweekly') {
+      recurrence = draft.weekDays.length > 0 ? `biweekly:${[...draft.weekDays].sort().join(',')}` : ''
+    }
     const body = {
       title,
       person_name: draft.person,
       due_date: draft.due,
+      recurrence,
     }
     if (draft.id) {
       await api.patch(`/api/tasks/${draft.id}`, body)
@@ -221,7 +252,7 @@ export default function ToDos() {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           transition={PRESS_SPRING}
-          onClick={() => setDraft({ source: 'local', title: '', person: '', due: todayISO() })}
+          onClick={() => setDraft({ source: 'local', title: '', person: '', due: todayISO(), recurrence: '', weekDays: [] })}
           className="btn-primary px-4 py-2 lg:px-6 lg:py-3 text-base lg:text-lg cursor-pointer"
         >
           <Icon name="add" /> Add
@@ -264,15 +295,27 @@ export default function ToDos() {
                         task={t}
                         onToggle={toggle}
                         onDelete={deleteTask}
-                        onEdit={(task) =>
+                        onEdit={(task) => {
+                          const isWeekly = task.recurrence.startsWith('weekly:')
+                          const isBiweekly = task.recurrence.startsWith('biweekly:')
                           setDraft({
                             id: task.id,
                             source: task.source,
                             title: task.title,
                             person: task.person_name,
                             due: task.due_date ? task.due_date.slice(0, 10) : '',
+                            recurrence: task.recurrence === 'daily' ? 'daily' :
+                                        isWeekly ? 'weekly' :
+                                        isBiweekly ? 'biweekly' :
+                                        task.recurrence === 'monthly:day' ? 'monthly:day' :
+                                        task.recurrence === 'monthly:weekday' ? 'monthly:weekday' : '',
+                            weekDays: isWeekly
+                              ? task.recurrence.replace('weekly:', '').split(',').map(Number)
+                              : isBiweekly
+                              ? task.recurrence.replace('biweekly:', '').split(',').map(Number)
+                              : [],
                           })
-                        }
+                        }}
                       />
                     ))}
                   </div>
@@ -289,15 +332,27 @@ export default function ToDos() {
                         task={t}
                         onToggle={toggle}
                         onDelete={deleteTask}
-                        onEdit={(task) =>
+                        onEdit={(task) => {
+                          const isWeekly = task.recurrence.startsWith('weekly:')
+                          const isBiweekly = task.recurrence.startsWith('biweekly:')
                           setDraft({
                             id: task.id,
                             source: task.source,
                             title: task.title,
                             person: task.person_name,
                             due: task.due_date ? task.due_date.slice(0, 10) : '',
+                            recurrence: task.recurrence === 'daily' ? 'daily' :
+                                        isWeekly ? 'weekly' :
+                                        isBiweekly ? 'biweekly' :
+                                        task.recurrence === 'monthly:day' ? 'monthly:day' :
+                                        task.recurrence === 'monthly:weekday' ? 'monthly:weekday' : '',
+                            weekDays: isWeekly
+                              ? task.recurrence.replace('weekly:', '').split(',').map(Number)
+                              : isBiweekly
+                              ? task.recurrence.replace('biweekly:', '').split(',').map(Number)
+                              : [],
                           })
-                        }
+                        }}
                       />
                     ))}
                   </div>
@@ -348,6 +403,104 @@ export default function ToDos() {
                 </button>
               ))}
             </div>
+            {/* Recurrence */}
+            {!synced && (
+              <label className="flex flex-col gap-2 text-lg font-medium text-ink-soft">
+                Repeat
+                <div className="flex flex-wrap gap-2">
+                  {(
+                    [
+                      { label: 'One-time', value: '' },
+                      { label: 'Daily', value: 'daily' },
+                      { label: 'Weekly', value: 'weekly' },
+                      { label: 'Bi-weekly', value: 'biweekly' },
+                      { label: 'Monthly', value: 'monthly' },
+                    ] as const
+                  ).map((opt) => {
+                    const isSelected = opt.value === 'monthly'
+                      ? (draft.recurrence === 'monthly:day' || draft.recurrence === 'monthly:weekday')
+                      : draft.recurrence === opt.value
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() =>
+                          setDraft({
+                            ...draft,
+                            recurrence: opt.value === 'monthly' ? 'monthly:day' : opt.value,
+                            weekDays: (opt.value === 'weekly' || opt.value === 'biweekly') ? draft.weekDays : [],
+                          })
+                        }
+                        className={`rounded-xl px-5 py-2.5 text-base font-medium transition-all cursor-pointer ${
+                          isSelected ? 'bg-sky-500 text-white' : 'surface-tile text-ink'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    )
+                  })}
+                </div>
+                {(draft.recurrence === 'weekly' || draft.recurrence === 'biweekly') && (
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {WEEKDAY_LABELS.map((day, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() =>
+                          setDraft({
+                            ...draft,
+                            weekDays: draft.weekDays.includes(i)
+                              ? draft.weekDays.filter((d) => d !== i)
+                              : [...draft.weekDays, i],
+                          })
+                        }
+                        className={`rounded-lg px-3 py-2 text-sm font-medium transition-all cursor-pointer ${
+                          draft.weekDays.includes(i) ? 'bg-sky-500 text-white' : 'surface-tile text-ink-soft'
+                        }`}
+                      >
+                        {day}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {(draft.recurrence === 'monthly:day' || draft.recurrence === 'monthly:weekday') && (
+                  <div className="mt-1 flex flex-col gap-2">
+                    {(
+                      [
+                        {
+                          label: (() => {
+                            const d = new Date((draft.due || todayISO()) + 'T12:00:00')
+                            return `Monthly on day ${d.getDate()}`
+                          })(),
+                          value: 'monthly:day'
+                        },
+                        {
+                          label: (() => {
+                            const d = new Date((draft.due || todayISO()) + 'T12:00:00')
+                            const dayName = d.toLocaleDateString(undefined, { weekday: 'long' })
+                            const occurrence = Math.floor((d.getDate() - 1) / 7) + 1
+                            const ordinal = ['1st', '2nd', '3rd', '4th', '5th'][occurrence - 1]
+                            return `Monthly on the ${ordinal} ${dayName}`
+                          })(),
+                          value: 'monthly:weekday'
+                        }
+                      ] as const
+                    ).map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setDraft({ ...draft, recurrence: opt.value })}
+                        className={`rounded-xl px-4 py-2.5 text-left text-base font-normal transition-all cursor-pointer ${
+                          draft.recurrence === opt.value ? 'bg-sky-500/20 text-sky-600 dark:text-sky-300 border border-sky-500/30' : 'surface-tile text-ink-soft'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </label>
+            )}
             <label className="flex flex-col gap-1 text-lg font-medium text-ink-soft">
               Due
               <input

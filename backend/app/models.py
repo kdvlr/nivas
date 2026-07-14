@@ -85,6 +85,7 @@ class Task(Base):
     person_name: Mapped[str] = mapped_column(String, default="")
     completed: Mapped[bool] = mapped_column(Boolean, default=False)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    recurrence: Mapped[str] = mapped_column(String, default="")  # "" = one-off, "daily", "weekly:...", etc.
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
 
