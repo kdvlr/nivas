@@ -12,6 +12,22 @@ import { onRefresh } from '../lib/ws'
 import type { CalendarStatus, CalEvent, Selection, WeatherData } from '../lib/types'
 import Modal from '../components/Modal'
 import { useEffect } from 'react'
+import Icon from '../components/Icon'
+
+const FAMILY_GRADIENT = 'linear-gradient(115deg, #ef4444, #f97316, #eab308, #22c55e, #3b82f6, #a855f7)'
+const fmtTime = (iso: string) =>
+  new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+
+const getLocalDateString = (iso: string) => {
+  if (!iso.includes('T')) {
+    return iso.slice(0, 10)
+  }
+  const d = new Date(iso)
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 
 interface Draft {
   id?: number
@@ -43,6 +59,12 @@ export default function Calendar() {
   const [error, setError] = useState('')
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
 
+  const [currentViewMode, setCurrentViewMode] = useState<'schedule' | 'month'>('schedule')
+  const [mobileStartDate, setMobileStartDate] = useState(() => new Date())
+  const [mobileEvents, setMobileEvents] = useState<CalEvent[]>([])
+  const [loadingMobileEvents, setLoadingMobileEvents] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
+
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768)
     window.addEventListener('resize', handleResize)
@@ -57,8 +79,105 @@ export default function Calendar() {
     [status],
   )
 
-  const refetch = useCallback(() => calRef.current?.getApi().refetchEvents(), [])
+  const refetch = useCallback(() => {
+    calRef.current?.getApi()?.refetchEvents()
+    setRefreshKey((k) => k + 1)
+  }, [])
   useEffect(() => onRefresh(['calendar'], refetch), [refetch])
+
+  const addDays = (d: Date, days: number) => {
+    const res = new Date(d)
+    res.setDate(res.getDate() + days)
+    return res
+  }
+
+  const mobileDaysList = useMemo(() => {
+    const d0 = isoDate(mobileStartDate)
+    const d1 = isoDate(addDays(mobileStartDate, 1))
+    const d2 = isoDate(addDays(mobileStartDate, 2))
+    return [d0, d1, d2]
+  }, [mobileStartDate])
+
+  const getDayLabel = (isoDateStr: string, index: number) => {
+    const todayStr = isoDate(new Date())
+    const tomorrowStr = isoDate(addDays(new Date(), 1))
+    if (isoDateStr === todayStr) return 'Today'
+    if (isoDateStr === tomorrowStr) return 'Tomorrow'
+    const d = new Date(isoDateStr + 'T12:00:00')
+    return d.toLocaleDateString(undefined, { weekday: 'long' })
+  }
+
+  // Fetch events for custom mobile schedule view
+  useEffect(() => {
+    if (!isMobile || currentViewMode !== 'schedule') return
+    let active = true
+    setLoadingMobileEvents(true)
+    const startStr = `${mobileDaysList[0]}T00:00:00`
+    const endStr = `${mobileDaysList[2]}T23:59:59`
+    api.get<CalEvent[]>(`/api/calendar/events?start=${encodeURIComponent(startStr)}&end=${encodeURIComponent(endStr)}`)
+      .then((data) => {
+        if (active) {
+          setMobileEvents(data)
+          setLoadingMobileEvents(false)
+        }
+      })
+      .catch((err) => {
+        if (active) {
+          setError(err instanceof Error ? err.message : String(err))
+          setLoadingMobileEvents(false)
+        }
+      })
+    return () => {
+      active = false
+    }
+  }, [isMobile, currentViewMode, mobileDaysList, refreshKey])
+
+  const mobileEventsByDay = useMemo(() => {
+    const map = new Map<string, CalEvent[]>()
+    for (const d of mobileDaysList) {
+      map.set(d, [])
+    }
+    const sorted = [...mobileEvents].sort((a, b) => a.start.localeCompare(b.start))
+    for (const e of sorted) {
+      const dateStr = getLocalDateString(e.start)
+      if (map.has(dateStr)) {
+        map.get(dateStr)!.push(e)
+      }
+    }
+    return map
+  }, [mobileEvents, mobileDaysList])
+
+  const prevMobile = () => setMobileStartDate((d) => addDays(d, -3))
+  const nextMobile = () => setMobileStartDate((d) => addDays(d, 3))
+  const todayMobile = () => setMobileStartDate(new Date())
+
+  const onSelectMobile = (dayIso: string) => {
+    if (!selections.length) return
+    const startStr = `${dayIso}T09:00`
+    const endStr = `${dayIso}T10:00`
+    setDraft({
+      selection_id: selections[0].id,
+      title: '',
+      start: startStr,
+      end: endStr,
+      all_day: false,
+      location: '',
+      description: '',
+    })
+  }
+
+  const onEventClickMobile = (e: CalEvent) => {
+    setDraft({
+      id: Number(e.id),
+      selection_id: e.selection_id,
+      title: e.title,
+      start: toLocalInput(new Date(e.start)),
+      end: e.end ? toLocalInput(new Date(e.end)) : toLocalInput(new Date(e.start)),
+      all_day: e.all_day,
+      location: e.location || '',
+      description: e.description || '',
+    })
+  }
 
   // Fit the visible hours to the events of the currently-shown days: the axis
   // shrinks to [earliest .. latest] (anchored near the top, min 6h) and each
@@ -287,6 +406,144 @@ export default function Calendar() {
     )
   }
 
+  const renderMobileHeader = () => {
+    const startD = mobileStartDate
+    const endD = addDays(mobileStartDate, 2)
+    const fmtMonthDay = (date: Date) =>
+      date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    const fmtYear = (date: Date) => date.getFullYear()
+
+    let rangeText = ''
+    if (startD.getFullYear() === endD.getFullYear()) {
+      rangeText = `${fmtMonthDay(startD)} – ${fmtMonthDay(endD)}, ${fmtYear(startD)}`
+    } else {
+      rangeText = `${fmtMonthDay(startD)}, ${fmtYear(startD)} – ${fmtMonthDay(endD)}, ${fmtYear(endD)}`
+    }
+
+    return (
+      <div className="mb-4 flex items-center justify-between flex-wrap gap-2 shrink-0">
+        <div className="flex items-center gap-1">
+          <button
+            onClick={prevMobile}
+            className="btn-glass flex h-10 w-10 items-center justify-center rounded-full p-0"
+          >
+            <Icon name="chevron_left" className="text-xl" />
+          </button>
+          <button
+            onClick={nextMobile}
+            className="btn-glass flex h-10 w-10 items-center justify-center rounded-full p-0"
+          >
+            <Icon name="chevron_right" className="text-xl" />
+          </button>
+        </div>
+        <h2 className="text-lg font-bold text-ink truncate">
+          {rangeText}
+        </h2>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={todayMobile}
+            className="btn-glass px-3 py-1.5 text-xs font-semibold rounded-lg"
+          >
+            today
+          </button>
+          <button
+            onClick={() => setCurrentViewMode('month')}
+            className="btn-glass px-3 py-1.5 text-xs font-semibold rounded-lg"
+          >
+            month
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  const renderMobileSchedule = () => (
+    <div className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-4">
+      {mobileDaysList.map((dayIso, idx) => {
+        const dayEvents = mobileEventsByDay.get(dayIso) ?? []
+        const dayWeather = weather?.daily?.find((d) => d.date === dayIso)
+        const isToday = dayIso === isoDate(new Date())
+
+        return (
+          <div key={dayIso} className="flex flex-col gap-2">
+            <h3 className="text-sm font-bold text-ink-soft uppercase tracking-wider border-b border-ink-faint pb-1 flex flex-wrap items-center gap-2">
+              <span className={isToday ? 'text-[var(--primary)] font-extrabold' : ''}>
+                {getDayLabel(dayIso, idx)}
+              </span>
+              <span className="text-[0.75rem] font-medium opacity-85">
+                {new Date(dayIso + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+              </span>
+              {dayWeather && (
+                <span className="ml-auto flex items-center gap-1.5 text-[0.82rem] font-semibold normal-case">
+                  <span className="text-base leading-none">{dayWeather.icon}</span>
+                  <span>
+                    {dayWeather.label} · {dayWeather.tmax}° / {dayWeather.tmin}°
+                  </span>
+                </span>
+              )}
+              <button
+                onClick={() => onSelectMobile(dayIso)}
+                className="ml-auto flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-ink-soft p-0 active:scale-95 transition-transform"
+                title="Add event"
+              >
+                <Icon name="add" className="text-sm font-bold" />
+              </button>
+            </h3>
+            {dayEvents.length === 0 ? (
+              <p className="text-sm text-ink-faint py-1 pl-1">No events</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {dayEvents.map((e) => {
+                  const isFamily = !e.person_name || ['family', 'shared'].includes(e.person_name.toLowerCase())
+                  const bgStyle = isFamily ? FAMILY_GRADIENT : e.color
+                  return (
+                    <div
+                      key={e.id}
+                      className="rounded-xl p-3.5 text-white shadow flex flex-col gap-1 transition-transform active:scale-[0.98] cursor-pointer"
+                      style={{ background: bgStyle }}
+                      onClick={() => onEventClickMobile(e)}
+                    >
+                      {e.all_day ? (
+                        <div className="text-[0.7rem] font-bold uppercase tracking-wider opacity-90 flex items-center gap-1.5 mb-0.5">
+                          <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                          <span>All Day</span>
+                        </div>
+                      ) : (
+                        <div className="text-[0.7rem] font-bold leading-tight tracking-tight opacity-95 tabular-nums">
+                          {fmtTime(e.start)} – {fmtTime(e.end)}
+                        </div>
+                      )}
+                      <div className="text-base font-bold leading-snug tracking-tight">{e.title}</div>
+                      {e.location && (
+                        <div className="flex items-center gap-1.5 text-xs opacity-90 truncate mt-0.5">
+                          <Icon name="location_on" className="text-sm shrink-0" />
+                          <span className="truncate">{e.location}</span>
+                        </div>
+                      )}
+                      <div className="mt-1 flex items-center gap-1.5 rounded-md bg-white/20 px-2 py-0.5 self-start text-[0.65rem] font-bold uppercase tracking-wider backdrop-blur-sm">
+                        {isFamily ? (
+                          <>
+                            <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                            <span>Family</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="h-1.5 w-1.5 rounded-full bg-white/80" />
+                            <span>{e.person_name}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+
   const weatherByDate = new Map((weather?.daily ?? []).map((d) => [d.date, d]))
 
   return (
@@ -309,70 +566,87 @@ export default function Calendar() {
           <span className="font-medium text-rose-500">{error}</span>
         </div>
       )}
-      <div ref={wrapRef} className="glass min-h-0 flex-1 p-3 lg:p-4">
-        <FullCalendar
-          key={isMobile ? 'mobile' : 'desktop'}
-          ref={calRef}
-          plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin, listPlugin]}
-          initialView={isMobile ? 'listDay' : 'listWeek'}
-          headerToolbar={
-            isMobile
-              ? {
-                  left: 'prev,next',
-                  center: 'title',
-                  right: 'today dayGridMonth,listDay',
-                }
-              : {
-                  left: 'prev,next today',
-                  center: 'title',
-                  right: 'listDay,listWeek,dayGridMonth',
-                }
-          }
-          height="100%"
-          nowIndicator
-          editable
-          selectable
-          selectMirror
-          longPressDelay={200}
-          selectLongPressDelay={300}
-          eventLongPressDelay={200}
-          slotMinTime="08:00:00"
-          slotMaxTime="18:00:00"
-          scrollTime="00:00:00"
-          slotDuration="01:00:00"
-          slotLabelInterval="01:00:00"
-          snapDuration="00:15:00"
-          datesSet={onDatesSet}
-          eventsSet={onEventsSet}
-          allDaySlot
-          dayHeaderContent={(arg) => {
-            const w = weatherByDate.get(isoDate(arg.date))
-            const weekday = arg.date.toLocaleDateString(undefined, { weekday: 'short' })
-            const dayNum = arg.date.getDate()
-            const isDayView = arg.view.type === 'timeGridDay'
-            return (
-              <div className="flex flex-col items-center gap-0.5 py-0.5">
-                <span className="text-sm font-medium">
-                  {weekday} {arg.view.type !== 'dayGridMonth' ? dayNum : ''}
-                </span>
-                {w && arg.view.type !== 'dayGridMonth' && (
-                  <span className="flex flex-wrap justify-center items-center gap-x-1 gap-y-0 text-[0.7rem] font-semibold text-ink-soft">
-                    <span className="text-sm leading-none">{w.icon}</span>
-                    <span>
-                      {isDayView ? `${w.label} · ` : ''}{w.tmax}°<span className="text-ink-faint">/{w.tmin}°</span>
-                    </span>
+      {isMobile && currentViewMode === 'schedule' ? (
+        <div className="flex-1 min-h-0 flex flex-col p-3 lg:p-4 glass rounded-3xl overflow-hidden">
+          {renderMobileHeader()}
+          {loadingMobileEvents ? (
+            <div className="my-auto text-center text-lg text-ink-faint">Loading schedule...</div>
+          ) : (
+            renderMobileSchedule()
+          )}
+        </div>
+      ) : (
+        <div ref={wrapRef} className="glass min-h-0 flex-1 p-3 lg:p-4">
+          <FullCalendar
+            key={isMobile ? 'mobile' : 'desktop'}
+            ref={calRef}
+            plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin, listPlugin]}
+            initialView={isMobile ? 'dayGridMonth' : 'timeGridWeek'}
+            customButtons={{
+              listSchedule: {
+                text: 'schedule',
+                click: () => setCurrentViewMode('schedule'),
+              },
+            }}
+            headerToolbar={
+              isMobile
+                ? {
+                    left: 'prev,next',
+                    center: 'title',
+                    right: 'today listSchedule',
+                  }
+                : {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'timeGridDay,timeGridWeek,dayGridMonth',
+                  }
+            }
+            height="100%"
+            nowIndicator
+            editable
+            selectable
+            selectMirror
+            longPressDelay={200}
+            selectLongPressDelay={300}
+            eventLongPressDelay={200}
+            slotMinTime="08:00:00"
+            slotMaxTime="18:00:00"
+            scrollTime="00:00:00"
+            slotDuration="01:00:00"
+            slotLabelInterval="01:00:00"
+            snapDuration="00:15:00"
+            datesSet={onDatesSet}
+            eventsSet={onEventsSet}
+            allDaySlot
+            dayHeaderContent={(arg) => {
+              const w = weatherByDate.get(isoDate(arg.date))
+              const weekday = arg.date.toLocaleDateString(undefined, { weekday: 'short' })
+              const dayNum = arg.date.getDate()
+              const isDayView = arg.view.type === 'timeGridDay'
+              return (
+                <div className="flex flex-col items-center gap-0.5 py-0.5">
+                  <span className="text-sm font-medium">
+                    {weekday} {arg.view.type !== 'dayGridMonth' ? dayNum : ''}
                   </span>
-                )}
-              </div>
-            )
-          }}
-          events={fetchEvents}
-          eventDrop={moveEvent}
-          eventResize={moveEvent}
-          select={onSelect}
-          eventClick={onEventClick}
-        />
-      </div>
+                  {w && arg.view.type !== 'dayGridMonth' && (
+                    <span className="flex flex-wrap justify-center items-center gap-x-1 gap-y-0 text-[0.7rem] font-semibold text-ink-soft">
+                      <span className="text-sm leading-none">{w.icon}</span>
+                      <span>
+                        {isDayView ? `${w.label} · ` : ''}{w.tmax}°<span className="text-ink-faint">/{w.tmin}°</span>
+                      </span>
+                    </span>
+                  )}
+                </div>
+              )
+            }}
+            events={fetchEvents}
+            eventDrop={moveEvent}
+            eventResize={moveEvent}
+            select={onSelect}
+            eventClick={onEventClick}
+          />
+        </div>
+      )}
 
       {draft && (
         <Modal title={draft.id ? 'Edit event' : 'New event'} onClose={() => setDraft(null)}>
