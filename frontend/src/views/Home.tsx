@@ -307,41 +307,42 @@ export default function Home() {
   }
 
   const renderHeader = () => (
-    <header className="glass flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-1.5 lg:px-8 lg:py-2.5">
-      <div>
-        <p className="text-xs font-medium tracking-widest text-rose-400 uppercase">
-          {config?.family_name ? `${config.family_name} Nivas` : 'Nivas'}
-        </p>
-        <h1 className="text-lg font-medium tracking-tight text-ink lg:text-2xl">
-          {now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-        </h1>
-      </div>
-      {weather?.current && (
-        <button
-          onClick={() => setWeatherOpen(true)}
-          className="flex items-center gap-2 rounded-xl px-2 py-1 transition-transform active:scale-95 lg:px-3"
-          title="Weather details"
-        >
-          <span className="text-3xl lg:text-4xl">{weather.current.icon}</span>
-          <div className="text-left">
-            <div className="text-lg font-normal text-ink lg:text-xl leading-none">
-              {weather.current.temp}°
-            </div>
-            <div className="text-sm font-medium text-ink-soft lg:text-base mt-0.5">
-              {weather.current.label}
+    <header className="glass flex items-center justify-between gap-x-2 px-4 py-1.5 lg:px-8 lg:py-2.5 flex-nowrap">
+      <div className="flex items-center gap-x-3 lg:gap-x-6 min-w-0">
+        <div>
+          <p className="text-[10px] lg:text-xs font-medium tracking-widest text-rose-400 uppercase leading-none">
+            {config?.family_name ? `${config.family_name} Nivas` : 'Nivas'}
+          </p>
+          <h1 className="text-sm lg:text-2xl font-medium tracking-tight text-ink mt-1 leading-none truncate">
+            {now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+          </h1>
+        </div>
+        {weather?.current && (
+          <button
+            onClick={() => setWeatherOpen(true)}
+            className="flex items-center gap-1 lg:gap-2 rounded-xl px-1.5 py-0.5 transition-transform active:scale-95 lg:px-3"
+            title="Weather details"
+          >
+            <span className="text-2xl lg:text-4xl leading-none">{weather.current.icon}</span>
+            <div className="text-left">
+              <div className="text-xs lg:text-xl font-normal text-ink leading-none">
+                {weather.current.temp}°
+              </div>
+              <div className="text-[10px] lg:text-base font-medium text-ink-soft mt-0.5 leading-none">
+                {weather.current.label}
+              </div>
               {todayWeather && (
-                <span className="text-ink-faint">
-                  {' '}
-                  · H {todayWeather.tmax}° L {todayWeather.tmin}°
-                </span>
+                <div className="text-[9px] lg:text-xs text-ink-faint mt-0.5 leading-none">
+                  H {todayWeather.tmax}° L {todayWeather.tmin}°
+                </div>
               )}
             </div>
-          </div>
-          <Icon name="chevron_right" className="text-lg text-ink-faint" />
-        </button>
-      )}
-      <div className="ml-auto flex flex-col items-end">
-        <div className="text-3xl font-normal tabular-nums tracking-tight text-[var(--primary)] lg:text-4xl leading-none">
+            <Icon name="chevron_right" className="text-xs lg:text-lg text-ink-faint" />
+          </button>
+        )}
+      </div>
+      <div className="flex flex-col items-end shrink-0">
+        <div className="text-xl font-normal tabular-nums tracking-tight text-[var(--primary)] lg:text-4xl leading-none">
           {now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
         </div>
         {(() => {
@@ -375,11 +376,11 @@ export default function Home() {
           }
 
           return (
-            <div className="mt-1 flex gap-3 text-sm lg:text-base font-semibold text-ink-soft">
+            <div className="mt-1 flex gap-3 text-xs lg:text-base font-semibold text-ink-soft">
               <span>
                 {secondaryEmoji} {secondaryTimeFormatted}
                 {hasDateDiff && secondaryDateFormatted && (
-                  <span className="ml-1 text-xs opacity-85">
+                  <span className="ml-1 text-[10px] lg:text-xs opacity-85">
                     ({secondaryDateFormatted})
                   </span>
                 )}

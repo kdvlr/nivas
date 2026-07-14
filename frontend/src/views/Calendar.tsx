@@ -5,6 +5,7 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import type { DateSelectArg, EventClickArg, EventDropArg } from '@fullcalendar/core'
 import type { EventResizeDoneArg } from '@fullcalendar/interaction'
+import listPlugin from '@fullcalendar/list'
 import { api } from '../lib/api'
 import { useData } from '../lib/hooks'
 import { onRefresh } from '../lib/ws'
@@ -174,7 +175,7 @@ export default function Calendar() {
         ok(
           evs.map((e) => ({
             id: String(e.id),
-            title: e.title,
+            title: isMobile && e.person_name ? `${e.person_name}: ${e.title}` : e.title,
             start: e.start,
             end: e.end,
             allDay: e.all_day,
@@ -191,7 +192,7 @@ export default function Calendar() {
         fail(e as Error)
       }
     },
-    [],
+    [isMobile],
   )
 
   const moveEvent = async (arg: EventDropArg | EventResizeDoneArg) => {
@@ -290,35 +291,41 @@ export default function Calendar() {
 
   return (
     <div className="flex h-full flex-col px-4 lg:px-8">
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        {selections.map((s) => (
-          <span
-            key={s.id}
-            className="btn-glass flex items-center gap-2 px-4 py-1.5 text-sm"
-          >
-            <span className="h-3.5 w-3.5 rounded-full" style={{ background: s.color }} />
-            {s.person_name || s.name}
-          </span>
-        ))}
-        {error && <span className="ml-auto font-medium text-rose-500">{error}</span>}
-      </div>
+      {!isMobile && selections.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          {selections.map((s) => (
+            <span
+              key={s.id}
+              className="btn-glass flex items-center gap-2 px-4 py-1.5 text-sm"
+            >
+              <span className="h-3.5 w-3.5 rounded-full" style={{ background: s.color }} />
+              {s.person_name || s.name}
+            </span>
+          ))}
+        </div>
+      )}
+      {error && (
+        <div className="mb-3 flex items-center">
+          <span className="font-medium text-rose-500">{error}</span>
+        </div>
+      )}
       <div ref={wrapRef} className="glass min-h-0 flex-1 p-3 lg:p-4">
         <FullCalendar
           key={isMobile ? 'mobile' : 'desktop'}
           ref={calRef}
-          plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
-          initialView={isMobile ? 'timeGridDay' : 'timeGridWeek'}
+          plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin, listPlugin]}
+          initialView={isMobile ? 'listDay' : 'listWeek'}
           headerToolbar={
             isMobile
               ? {
                   left: 'prev,next',
                   center: 'title',
-                  right: 'today dayGridMonth,timeGridDay',
+                  right: 'today dayGridMonth,listDay',
                 }
               : {
                   left: 'prev,next today',
                   center: 'title',
-                  right: 'timeGridDay,timeGridWeek,dayGridMonth',
+                  right: 'listDay,listWeek,dayGridMonth',
                 }
           }
           height="100%"
