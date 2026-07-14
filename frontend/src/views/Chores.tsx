@@ -6,8 +6,9 @@ import CoinIcon from '../components/CoinIcon'
 import Icon from '../components/Icon'
 import { api } from '../lib/api'
 import { useData, todayISO, fmtDate } from '../lib/hooks'
-import type { ChoreItem, CoinBalance } from '../lib/types'
+import type { ChoreItem, CoinBalance, RewardStoreItem } from '../lib/types'
 import { useCelebration } from '../components/celebrations/CelebrationContext'
+import { useRewardCelebration } from '../components/celebrations/RewardCelebrationContext'
 import Modal from '../components/Modal'
 
 interface Person {
@@ -200,11 +201,29 @@ export default function Chores() {
 
   const { data: chores, reload } = useData<ChoreItem[]>('/api/chores', ['chores'])
   const { data: people } = useData<Person[]>('/api/setup/people', ['chores'])
-  const { data: balances } = useData<CoinBalance[]>('/api/rewards/balances', ['chores', 'rewards'])
+  const { data: balances, reload: reloadBalances } = useData<CoinBalance[]>('/api/rewards/balances', ['chores', 'rewards'])
+  const { data: store } = useData<RewardStoreItem[]>('/api/rewards/store', ['rewards'])
   const { celebrate } = useCelebration()
+  const { celebrateReward } = useRewardCelebration()
+  const [redeemingId, setRedeemingId] = useState<string | null>(null)
+
+  const redeem = async (personName: string, rewardItemId: number) => {
+    const key = `${personName}-${rewardItemId}`
+    setRedeemingId(key)
+    try {
+      await api.post('/api/rewards/redeem', { person_name: personName, reward_item_id: rewardItemId })
+      celebrateReward()
+      reloadBalances()
+    } catch {
+      // ignore
+    } finally {
+      setRedeemingId(null)
+    }
+  }
 
   const toggle = async (chore: ChoreItem) => {
     const completing = !chore.completed
+    if (completing && typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(50)
     await api.patch(`/api/chores/${chore.id}`, { completed: completing })
     if (completing) celebrate()
     reload()
@@ -322,87 +341,179 @@ export default function Chores() {
         </div>
       </div>
 
-      {/* Leaderboard — tap a card to filter that person's chores */}
-      {sortedBalances.length > 0 && (
-        <div className="mb-5 grid grid-cols-4 gap-2 md:flex md:shrink-0 md:gap-4 md:overflow-x-auto pb-1">
-          {sortedBalances.map((b, i) => {
-            const active = filterPerson === b.person_name
-            return (
-              <motion.button
-                key={b.person_name}
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.95 }}
-                transition={PRESS_SPRING}
-                onClick={() => setFilterPerson(active ? '' : b.person_name)}
-                className={`glass flex md:min-w-36 items-center gap-1 md:gap-2 p-1 md:p-1.5 text-left cursor-pointer transition-all duration-200 ${
-                  active ? 'ring-2 ring-[var(--primary)] shadow-md' : ''
-                }`}
-                style={{ borderLeft: `${isMobile ? 3 : 4}px solid ${b.color}` }}
-              >
-                <Avatar name={b.person_name} color={b.color} src={b.avatar} emoji={b.avatar_emoji} size={isMobile ? 22 : 36} />
-                <div className="flex min-w-0 flex-col">
-                  <span className="truncate text-[10px] md:text-sm font-semibold leading-tight" style={{ color: b.color }}>
-                    {b.person_name}
-                  </span>
-                  <span className="flex items-center gap-0.5 md:gap-1 text-xs md:text-lg font-medium tabular-nums text-ink">
-                    <CoinIcon className="text-xs md:text-lg" /> {b.balance}
-                  </span>
-                </div>
-              </motion.button>
-            )
-          })}
+      {/* Today's Progress / Streak */}
+      {allChores.length > 0 && (
+        <div className="mb-6 flex flex-col gap-2 rounded-xl bg-[var(--surface-tile)] p-4 shadow-sm border border-[var(--outline-var)]">
+          <div className="flex justify-between items-end">
+            <span className="text-sm font-semibold text-ink-soft uppercase tracking-wider">Weekly Progress</span>
+            <span className="text-sm font-bold text-sky-600 dark:text-sky-400">
+              🔥 3 Day Streak
+            </span>
+          </div>
+          <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.round((allChores.filter(c => c.completed).length / allChores.length) * 100)}%` }}
+              transition={{ duration: 1, ease: 'easeOut' }}
+              className="bg-gradient-to-r from-sky-400 to-emerald-400"
+            />
+          </div>
         </div>
       )}
 
-      {/* Chore cards */}
-      {filtered.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={EXPRESSIVE_ENTER}
-          className="flex flex-1 flex-col items-center justify-center gap-4 text-ink-soft"
-        >
-          <span className="text-7xl">✨</span>
-          <p className="text-2xl font-medium">No chores here — time to assign some!</p>
-        </motion.div>
-      ) : (
-        <LayoutGroup>
-          <motion.div layout className="grid min-h-0 flex-1 auto-rows-min grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-x-4 gap-y-3 lg:gap-x-6 lg:gap-y-4 overflow-y-auto pb-4">
-            <AnimatePresence initial={false}>
-              {[...groups.entries()].map(([person, list]) => (
-                <motion.section key={person} layout className="mb-4">
-                  <h2
-                    className="mb-1.5 flex items-center gap-2 text-lg font-semibold"
-                    style={{ color: personColor(person) }}
+      {/* Layout for Chores and Side Panel */}
+      <div className="flex flex-1 min-h-0 gap-8">
+        <div className="flex flex-1 flex-col min-w-0">
+          {/* Leaderboard — tap a card to filter that person's chores */}
+          {sortedBalances.length > 0 && (
+            <div className="mb-5 grid grid-cols-4 gap-2 md:flex md:shrink-0 md:gap-4 md:overflow-x-auto pb-1">
+              {sortedBalances.map((b, i) => {
+                const active = filterPerson === b.person_name
+                return (
+                  <motion.button
+                    key={b.person_name}
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                    transition={PRESS_SPRING}
+                    onClick={() => setFilterPerson(active ? '' : b.person_name)}
+                    className={`glass flex md:min-w-36 items-center gap-1 md:gap-2 p-1 md:p-1.5 text-left cursor-pointer transition-all duration-200 ${
+                      active ? 'ring-2 ring-[var(--primary)] shadow-md' : ''
+                    }`}
+                    style={{ borderLeft: `${isMobile ? 3 : 4}px solid ${b.color}` }}
                   >
-                    <span className="h-4 w-4 rounded-full" style={{ background: personColor(person) }} />
-                    {person}
-                    <span className="text-sm font-medium text-ink-soft">
-                      {list.filter((c) => !c.completed).length}
-                    </span>
-                  </h2>
-                  <div className="grid gap-2 grid-cols-[repeat(auto-fill,minmax(270px,1fr))]">
-                    {list.map((chore) => (
-                      <ChoreCard
-                        key={chore.id}
-                        chore={chore}
-                        onToggle={toggle}
-                        onEdit={(c) => setDraft(draftFrom(c))}
-                        onDelete={deleteChore}
-                      />
-                    ))}
-                  </div>
-                </motion.section>
-              ))}
-            </AnimatePresence>
-          </motion.div>
-        </LayoutGroup>
-      )}
+                    <Avatar name={b.person_name} color={b.color} src={b.avatar} emoji={b.avatar_emoji} size={isMobile ? 22 : 36} />
+                    <div className="flex min-w-0 flex-col">
+                      <span className="truncate text-[10px] md:text-sm font-semibold leading-tight" style={{ color: b.color }}>
+                        {b.person_name}
+                      </span>
+                      <span className="flex items-center gap-0.5 md:gap-1 text-xs md:text-lg font-medium tabular-nums text-ink">
+                        <CoinIcon className="text-xs md:text-lg" /> {b.balance}
+                      </span>
+                    </div>
+                  </motion.button>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Chore cards */}
+          {filtered.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={EXPRESSIVE_ENTER}
+              className="flex flex-1 flex-col items-center justify-center gap-4 text-ink-soft"
+            >
+              <span className="text-7xl">✨</span>
+              <p className="text-2xl font-medium">No chores here — time to assign some!</p>
+            </motion.div>
+          ) : (
+            <LayoutGroup>
+              <motion.div layout className="grid min-h-0 flex-1 auto-rows-min grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-x-4 gap-y-3 lg:gap-x-6 lg:gap-y-4 overflow-y-auto pb-4 pr-1">
+                <AnimatePresence initial={false}>
+                  {[...groups.entries()].map(([person, list]) => (
+                    <motion.section key={person} layout className="mb-4">
+                      <h2
+                        className="mb-1.5 flex items-center gap-2 text-lg font-semibold"
+                        style={{ color: personColor(person) }}
+                      >
+                        <span className="h-4 w-4 rounded-full" style={{ background: personColor(person) }} />
+                        {person}
+                        <span className="text-sm font-medium text-ink-soft">
+                          {list.filter((c) => !c.completed).length}
+                        </span>
+                      </h2>
+                      <div className="grid gap-2 grid-cols-[repeat(auto-fill,minmax(270px,1fr))]">
+                        {list.map((chore) => (
+                          <ChoreCard
+                            key={chore.id}
+                            chore={chore}
+                            onToggle={toggle}
+                            onEdit={(c) => setDraft(draftFrom(c))}
+                            onDelete={deleteChore}
+                          />
+                        ))}
+                      </div>
+                    </motion.section>
+                  ))}
+                </AnimatePresence>
+              </motion.div>
+            </LayoutGroup>
+          )}
+        </div>
+
+        {/* Right side: Rewards panel on desktop */}
+        {!isMobile && (
+          <div className="hidden lg:flex w-80 shrink-0 flex-col overflow-hidden">
+            <h2 className="mb-4 flex items-center gap-2 text-xl font-medium text-ink">
+              <Icon name="storefront" className="text-[var(--primary)]" /> Quick Rewards
+            </h2>
+            <div className="flex-1 overflow-y-auto pb-6 flex flex-col gap-3 pr-1">
+              {(store ?? []).length === 0 ? (
+                <p className="text-sm text-ink-soft">No rewards set up yet.</p>
+              ) : (
+                (store ?? []).map((item, i) => (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, scale: 0.9, y: 16 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{ ...EXPRESSIVE_ENTER, delay: i * 0.05 }}
+                    className="flex flex-col items-center glass-inset p-4 hover:bg-[var(--surface-tile)] transition-colors"
+                  >
+                    <span className="mb-1 text-3xl">{item.emoji}</span>
+                    <span className="mb-0.5 text-center text-base font-medium leading-tight">{item.title}</span>
+                    <span className="mb-2 text-sm font-medium text-amber-500"><CoinIcon /> ×{item.coin_cost}</span>
+                    <div className="flex flex-wrap justify-center gap-1.5">
+                      {(balances ?? []).map((b) => {
+                        const key = `${b.person_name}-${item.id}`
+                        const canAfford = b.balance >= item.coin_cost
+                        return (
+                          <motion.button
+                            key={b.person_name}
+                            whileHover={canAfford ? { scale: 1.05 } : undefined}
+                            whileTap={canAfford ? { scale: 0.95 } : undefined}
+                            transition={PRESS_SPRING}
+                            disabled={!canAfford || redeemingId === key}
+                            onClick={() => redeem(b.person_name, item.id)}
+                            className="rounded-full px-2 py-1 text-[10px] uppercase font-bold tracking-wide text-white transition-all disabled:opacity-30 cursor-pointer"
+                            style={{ background: b.color }}
+                            title={canAfford ? `Redeem for ${b.person_name}` : `${b.person_name} needs ${item.coin_cost - b.balance} more coins`}
+                          >
+                            {b.person_name}
+                          </motion.button>
+                        )
+                      })}
+                    </div>
+                  </motion.div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Add / Edit Chore Modal */}
       {draft && (
         <Modal title={draft.id ? 'Edit chore' : 'New chore'} onClose={() => setDraft(null)}>
           <div className="flex flex-col gap-5">
+            {!draft.id && (
+              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                {[
+                  { title: 'Do dishes', coins: 5, recurrence: 'daily' },
+                  { title: 'Take out trash', coins: 10, recurrence: 'weekly', weekDays: [2] }, // Wed
+                  { title: 'Clean room', coins: 15, recurrence: 'weekly', weekDays: [5] }, // Sat
+                  { title: 'Feed pets', coins: 5, recurrence: 'daily' },
+                ].map((tpl) => (
+                  <button
+                    key={tpl.title}
+                    onClick={() => setDraft({ ...draft, title: tpl.title, coins: tpl.coins, recurrence: tpl.recurrence as any, weekDays: tpl.weekDays || [] })}
+                    className="shrink-0 rounded-full bg-sky-50 dark:bg-sky-900/30 px-3 py-1 text-sm font-medium text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 transition-transform active:scale-95"
+                  >
+                    + {tpl.title}
+                  </button>
+                ))}
+              </div>
+            )}
             <input
               autoFocus
               value={draft.title}

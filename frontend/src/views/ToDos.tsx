@@ -61,6 +61,7 @@ function TaskRow({
   onDelete: (t: Task) => void
 }) {
   const canDelete = task.source === 'local'
+  const isOverdue = task.due_date && task.due_date < todayISO() && !task.completed
   const x = useMotionValue(0)
   // action hints fade in as the card slides
   const editHint = useTransform(x, [0, 60], [0, 1])
@@ -106,30 +107,34 @@ function TaskRow({
         whileTap={{ scale: 0.98 }}
         transition={PRESS_SPRING}
         onClick={() => {
-          if (!suppressClick.current) onToggle(task)
+          if (!suppressClick.current) onEdit(task)
         }}
         className="relative flex w-full cursor-pointer items-center gap-3 rounded-xl glass-inset p-2.5 text-left select-none"
       >
       <span
-        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-[3px] text-base font-bold transition-all duration-300 ${
+        onClick={(e) => {
+          e.stopPropagation()
+          if (!suppressClick.current) onToggle(task)
+        }}
+        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-[3px] text-base font-bold transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer ${
           task.completed
             ? 'border-emerald-400 bg-emerald-400 text-white shadow-sm'
-            : 'border-teal-300/40 text-transparent'
+            : isOverdue ? 'border-rose-400 bg-rose-50 dark:bg-rose-900/20 text-transparent' : 'border-teal-300/40 text-transparent'
         }`}
       >
         ✓
       </span>
       <span className="min-w-0 flex-1">
         <span
-          className={`block truncate text-base font-medium ${task.completed ? 'line-through text-ink-soft' : 'text-ink'}`}
+          className={`block truncate text-base font-medium ${task.completed ? 'line-through text-ink-soft' : isOverdue ? 'text-rose-600 dark:text-rose-400' : 'text-ink'}`}
         >
           {task.title}
         </span>
-        <span className="text-[0.7rem] text-ink-soft">
+        <span className={`text-[0.7rem] ${isOverdue ? 'text-rose-500/80 dark:text-rose-400/80' : 'text-ink-soft'}`}>
           {task.list_name}
           {task.due_date ? ` · due ${fmtDate(task.due_date)}` : ''}
           {task.recurrence && (
-            <span className="font-medium text-sky-600 dark:text-sky-400">
+            <span className={`font-medium ${isOverdue ? 'text-rose-600 dark:text-rose-400' : 'text-sky-600 dark:text-sky-400'}`}>
               {` · ${formatRecurrence(task.recurrence)}`}
             </span>
           )}
@@ -162,7 +167,9 @@ export default function ToDos() {
   const tasks = data?.tasks ?? []
 
   const toggle = async (task: Task) => {
-    await api.patch(`/api/tasks/${task.id}`, { completed: !task.completed })
+    const completing = !task.completed
+    if (completing && typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(50)
+    await api.patch(`/api/tasks/${task.id}`, { completed: completing })
     reload()
   }
 
@@ -325,7 +332,7 @@ export default function ToDos() {
               {completedTasks.length > 0 && (
                 <motion.section layout className="col-span-full mt-4">
                   <h2 className="mb-4 text-lg font-semibold text-ink-soft">Recently Completed</h2>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+                  <div className="flex flex-col gap-2 max-w-2xl">
                     {completedTasks.map((t) => (
                       <TaskRow
                         key={`${t.source}-${t.id}`}

@@ -680,7 +680,9 @@ export default function Home() {
           </span>
         </a>
         {isEmpty ? (
-          <p className="my-auto text-center text-lg text-ink-faint py-3">All done! 🎉</p>
+          <p className="my-auto text-center text-lg text-ink-faint py-3">
+            {todayChores.length === 0 ? "No chores scheduled today" : "All done! 🎉"}
+          </p>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto">
             <AnimatePresence initial={false}>
@@ -747,7 +749,9 @@ export default function Home() {
           </span>
         </a>
         {isEmpty ? (
-          <p className="my-auto text-center text-lg text-ink-faint py-3">Nothing to do 🎉</p>
+          <p className="my-auto text-center text-lg text-ink-faint py-3">
+            {tasks.length === 0 ? "Nothing to do" : "All done! 🎉"}
+          </p>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto">
             <AnimatePresence initial={false}>
