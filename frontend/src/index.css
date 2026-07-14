@@ -432,7 +432,7 @@ body {
 .fc {
   --fc-border-color: var(--outline-var);
   --fc-page-bg-color: transparent;
-  --fc-today-bg-color: color-mix(in srgb, var(--primary) 10%, transparent);
+  --fc-today-bg-color: transparent;
   --fc-neutral-text-color: var(--on-surface-var);
   font-size: 14px;
   color: var(--on-surface);
