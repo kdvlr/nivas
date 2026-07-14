@@ -6,6 +6,7 @@ import { api } from '../lib/api'
 import { useData, todayISO, fmtDate } from '../lib/hooks'
 import type { Task } from '../lib/types'
 import Modal from '../components/Modal'
+import ConfirmModal from '../components/ConfirmModal'
 
 interface TasksResponse {
   today: string
@@ -163,6 +164,7 @@ export default function ToDos() {
   const { data, reload } = useData<TasksResponse>(`/api/tasks?range=${range}`, ['tasks'])
   const { data: people } = useData<Person[]>('/api/setup/people', ['tasks'])
   const [draft, setDraft] = useState<Draft | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<{ id: number, title: string } | null>(null)
 
   const tasks = data?.tasks ?? []
 
@@ -175,8 +177,14 @@ export default function ToDos() {
 
   const deleteTask = async (task: Task) => {
     if (task.source !== 'local') return
-    if (!confirm(`Delete "${task.title}"?`)) return
-    await api.del(`/api/tasks/${task.id}`)
+    setConfirmDelete({ id: task.id, title: task.title })
+  }
+
+  const performDelete = async () => {
+    if (!confirmDelete) return
+    await api.del(`/api/tasks/${confirmDelete.id}`)
+    setConfirmDelete(null)
+    setDraft(null)
     reload()
   }
 
@@ -207,10 +215,7 @@ export default function ToDos() {
 
   const deleteDraft = async () => {
     if (!draft?.id) return
-    if (!confirm(`Delete "${draft.title}"?`)) return
-    await api.del(`/api/tasks/${draft.id}`)
-    setDraft(null)
-    reload()
+    setConfirmDelete({ id: draft.id, title: draft.title })
   }
 
   const synced = draft && draft.source !== 'local'
@@ -534,6 +539,15 @@ export default function ToDos() {
             </div>
           </div>
         </Modal>
+      )}
+
+      {confirmDelete && (
+        <ConfirmModal
+          title="Delete To-Do"
+          message={`Are you sure you want to delete "${confirmDelete.title}"?`}
+          onConfirm={performDelete}
+          onCancel={() => setConfirmDelete(null)}
+        />
       )}
     </div>
   )

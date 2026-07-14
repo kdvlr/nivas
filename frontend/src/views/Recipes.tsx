@@ -273,18 +273,18 @@ export default function Recipes() {
         <span className="text-sm lg:text-base font-medium text-ink-soft">{recipes?.length ?? 0} saved</span>
       </div>
 
-      <div className="mb-4 flex gap-2 lg:gap-3">
+      <div className="mb-4 flex w-full max-w-3xl gap-2 lg:gap-3">
         <input
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && saveFromUrl()}
-          placeholder="Paste a recipe URL — AI tidies it up ✨"
+          placeholder="Paste a recipe URL…"
           className="flex-1 input-glass px-4 py-2 text-sm lg:text-base"
         />
         <button
           onClick={saveFromUrl}
           disabled={!url.trim() || saving}
-          className="btn-primary px-4 py-2 text-sm lg:text-base lg:px-6"
+          className="btn-primary bg-[var(--primary)] text-[var(--on-primary)] px-4 py-2 text-sm lg:text-base lg:px-6 shadow-md shadow-[var(--primary)]/30 hover:shadow-lg hover:shadow-[var(--primary)]/40 transition-all active:scale-95"
         >
           {saving ? 'Reading…' : 'Save recipe'}
         </button>
@@ -294,7 +294,8 @@ export default function Recipes() {
       {(recipes ?? []).length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 text-ink-soft">
           <span className="text-7xl">📖</span>
-          <p className="text-2xl font-medium">Paste a recipe link above to start your recipe box</p>
+          <p className="text-xl lg:text-2xl font-medium text-center">Paste a recipe link above to start your recipe box</p>
+          <p className="text-sm lg:text-base text-ink-faint">(Manual creation coming soon)</p>
         </div>
       ) : (
         <div className="grid min-h-0 flex-1 auto-rows-min grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-5 overflow-y-auto pb-6 xl:grid-cols-5">

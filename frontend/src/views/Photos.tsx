@@ -30,6 +30,7 @@ const formatDate = (dateStr?: string | null) => {
 // Sub-component for individual media grid tiles to isolate state and performance
 const MediaTile = ({ item, onClick }: { item: MediaItem; onClick: () => void }) => {
   const [isPlaying, setIsPlaying] = useState(false)
+  const [imgError, setImgError] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -65,13 +66,21 @@ const MediaTile = ({ item, onClick }: { item: MediaItem; onClick: () => void }) 
       className="relative aspect-square cursor-pointer overflow-hidden rounded-3xl bg-slate-100 dark:bg-slate-800 shadow-sm group border border-slate-200/50 dark:border-slate-700/50 select-none"
     >
       {item.type === 'image' && (
-        <img
-          src={item.thumbnailUrl || item.url}
-          alt={item.name}
-          loading="lazy"
-          onClick={onClick}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
+        imgError ? (
+          <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 bg-slate-200 dark:bg-slate-700/50" onClick={onClick}>
+            <Icon name="broken_image" className="text-4xl opacity-50 mb-1" />
+            <span className="text-[10px] font-medium uppercase tracking-wider opacity-60">Unsupported</span>
+          </div>
+        ) : (
+          <img
+            src={item.thumbnailUrl || item.url}
+            alt={item.name}
+            loading="lazy"
+            onClick={onClick}
+            onError={() => setImgError(true)}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        )
       )}
 
       {item.type === 'video' && (
@@ -83,6 +92,10 @@ const MediaTile = ({ item, onClick }: { item: MediaItem; onClick: () => void }) 
             playsInline
             className="w-full h-full object-cover"
           />
+          <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full bg-black/50 backdrop-blur-md text-white text-[9px] font-bold tracking-wider shadow-sm select-none pointer-events-none">
+            <Icon name="videocam" className="text-[10px]" />
+            <span>VIDEO</span>
+          </div>
           {/* Video Icon Overlay */}
           <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/25 transition-colors">
             <div className="flex items-center justify-center w-12 h-12 rounded-full bg-white/95 dark:bg-neutral-900/95 text-slate-900 dark:text-white shadow-md transition-transform duration-300 group-hover:scale-110">
@@ -132,8 +145,13 @@ const MediaTile = ({ item, onClick }: { item: MediaItem; onClick: () => void }) 
       )}
 
       {/* Hover filename label */}
-      <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-        <p className="text-[10px] text-white font-medium truncate">{item.name}</p>
+      <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none flex flex-col justify-end">
+        <p className="text-xs text-white font-medium truncate drop-shadow-md">{item.name}</p>
+        {(item.date_taken || item.width) && (
+          <p className="text-[10px] text-white/80 truncate mt-0.5 drop-shadow-md">
+            {[formatDate(item.date_taken), item.width ? `${item.width}×${item.height}` : null].filter(Boolean).join(' • ')}
+          </p>
+        )}
       </div>
     </motion.div>
   )
@@ -276,6 +294,7 @@ export default function Photos({ onStartSlideshow }: { onStartSlideshow?: () => 
             onClick={reload}
             disabled={loading}
             className="btn-glass p-3 shadow-sm"
+            title="Refresh gallery"
           >
             <Icon name="refresh" className={loading ? 'animate-spin' : ''} />
           </button>

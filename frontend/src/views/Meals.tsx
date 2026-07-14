@@ -3,6 +3,7 @@ import { api } from '../lib/api'
 import { useData, todayISO, addDaysISO, fmtDate } from '../lib/hooks'
 import type { MealDay, MealSlot, Recipe } from '../lib/types'
 import Modal from '../components/Modal'
+import Icon from '../components/Icon'
 
 const SLOTS = ['breakfast', 'lunch', 'dinner'] as const
 const SLOT_ICON = { breakfast: '🥞', lunch: '🥪', dinner: '🍝' }
@@ -95,12 +96,19 @@ export default function Meals() {
           >
             ‹
           </button>
-          <button
-            onClick={() => setWeekStart(today)}
-            className="btn-glass px-6 py-3 text-base"
-          >
-            {visibleDays === 3 ? 'Today' : 'This week'}
-          </button>
+          <div className="relative">
+            <input 
+              type="date" 
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
+              value={weekStart} 
+              onChange={(e) => {
+                if (e.target.value) setWeekStart(e.target.value)
+              }} 
+            />
+            <button className="btn-glass px-4 lg:px-6 py-3 text-base pointer-events-none whitespace-nowrap min-w-[120px]">
+              {weekStart === today ? (visibleDays === 3 ? 'Today' : 'This week') : fmtDate(weekStart + 'T12:00:00')}
+            </button>
+          </div>
           <button
             onClick={() => setWeekStart(addDaysISO(weekStart, visibleDays))}
             className="btn-glass px-6 py-3 text-lg"
@@ -117,11 +125,12 @@ export default function Meals() {
           <div
             key={day.date}
             className={`flex flex-col gap-3 rounded-xl p-3 ${
-              day.date === today ? 'glass ring-2 ring-[var(--primary)] ring-inset' : 'glass'
+              day.date === today ? 'glass ring-2 ring-[var(--primary)] ring-inset shadow-md bg-[var(--primary)]/5 dark:bg-[var(--primary)]/10' : 'glass'
             }`}
           >
-            <h2 className="text-center text-lg font-medium text-ink">
-              {day.date === today ? 'Today' : fmtDate(day.date + 'T12:00:00')}
+            <h2 className="text-center text-lg font-medium text-ink flex flex-col items-center justify-center gap-0.5 min-h-[3rem]">
+              {day.date === today && <span className="text-[0.65rem] font-bold uppercase tracking-widest text-[var(--primary)]">Today</span>}
+              <span>{fmtDate(day.date + 'T12:00:00')}</span>
             </h2>
             {SLOTS.map((slot) => {
               const s = day.slots[slot]
@@ -170,7 +179,11 @@ export default function Meals() {
                       )}
                     </span>
                   ) : (
-                    <span className="text-2xl text-ink-faint">+</span>
+                    <div className="flex h-full w-full items-center justify-center pt-2 pb-1">
+                      <span className="flex items-center gap-1.5 rounded-xl border border-dashed border-[var(--outline)] px-3 py-1.5 text-sm font-medium text-ink-faint transition-colors group-hover:border-ink-soft group-hover:text-ink-soft">
+                        <Icon name="add" className="text-base" /> Plan {slot}
+                      </span>
+                    </div>
                   )}
                 </button>
               )

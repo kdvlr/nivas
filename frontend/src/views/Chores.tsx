@@ -10,6 +10,7 @@ import type { ChoreItem, CoinBalance, RewardStoreItem } from '../lib/types'
 import { useCelebration } from '../components/celebrations/CelebrationContext'
 import { useRewardCelebration } from '../components/celebrations/RewardCelebrationContext'
 import Modal from '../components/Modal'
+import ConfirmModal from '../components/ConfirmModal'
 
 interface Person {
   id: number
@@ -190,6 +191,7 @@ function ChoreCard({
 
 export default function Chores() {
   const [draft, setDraft] = useState<Draft | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<{ id: number, title: string } | null>(null)
   const [filterPerson, setFilterPerson] = useState('')
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
 
@@ -230,8 +232,14 @@ export default function Chores() {
   }
 
   const deleteChore = async (chore: ChoreItem) => {
-    if (!confirm(`Delete "${chore.title}"?`)) return
-    await api.del(`/api/chores/${chore.id}`)
+    setConfirmDelete({ id: chore.id, title: chore.title })
+  }
+
+  const performDelete = async () => {
+    if (!confirmDelete) return
+    await api.del(`/api/chores/${confirmDelete.id}`)
+    setConfirmDelete(null)
+    setDraft(null)
     reload()
   }
 
@@ -276,10 +284,7 @@ export default function Chores() {
 
   const deleteDraft = async () => {
     if (!draft?.id) return
-    if (!confirm(`Delete "${draft.title}"?`)) return
-    await api.del(`/api/chores/${draft.id}`)
-    setDraft(null)
-    reload()
+    setConfirmDelete({ id: draft.id, title: draft.title })
   }
 
   const personColor = (name: string) =>
@@ -693,6 +698,15 @@ export default function Chores() {
             </div>
           </div>
         </Modal>
+      )}
+
+      {confirmDelete && (
+        <ConfirmModal
+          title="Delete Chore"
+          message={`Are you sure you want to delete "${confirmDelete.title}"?`}
+          onConfirm={performDelete}
+          onCancel={() => setConfirmDelete(null)}
+        />
       )}
     </div>
   )

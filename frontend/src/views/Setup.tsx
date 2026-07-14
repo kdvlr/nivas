@@ -26,6 +26,7 @@ import { useRewardCelebration } from '../components/celebrations/RewardCelebrati
 import { REWARD_ANIMATIONS } from '../components/celebrations/reward-animations'
 import { PIN_FAIL_ANIMATIONS, type PinFailAnimation } from '../components/celebrations/pin-fail-animations'
 import PinFailOverlay from '../components/celebrations/PinFailOverlay'
+import ConfirmModal from '../components/ConfirmModal'
 
 const COLORS = [
   '#f87171', '#fb923c', '#fbbf24', '#facc15', '#a3e635', '#4ade80', '#34d399', '#2dd4bf',
@@ -249,6 +250,9 @@ function SetupInner() {
   const [section, setSection] = useState<SectionId>('integrations')
   const [colorEditing, setColorEditing] = useState<number | null>(null)
   const [accentColor, setAccentColorState] = useState(localStorage.getItem('accentColor') || '')
+  
+  const [confirmDisconnectGoogle, setConfirmDisconnectGoogle] = useState<{ id: number; email: string } | null>(null)
+  const [confirmRemovePerson, setConfirmRemovePerson] = useState<Person | null>(null)
 
   const renderLastUpdated = (integrationName: string) => {
     const s = status?.sync?.[integrationName]
@@ -418,10 +422,7 @@ function SetupInner() {
                       <button
                         onClick={async (e) => {
                           e.stopPropagation()
-                          if (confirm(`Disconnect ${a.email}?`)) {
-                            await api.del(`/api/calendar/accounts/${a.id}`)
-                            reloadCal()
-                          }
+                          setConfirmDisconnectGoogle({ id: a.id, email: a.email })
                         }}
                         className="ml-auto flex items-center justify-center h-8 w-8 rounded-full hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-400 hover:text-rose-500 transition-colors"
                       >
@@ -646,9 +647,7 @@ function SetupInner() {
                     <Icon name={colorEditing === p.id ? 'expand_less' : 'expand_more'} className="text-base" />
                   </button>
                   <button
-                    onClick={() => {
-                      if (confirm(`Remove ${p.name}?`)) savePeople((people ?? []).filter((x) => x.id !== p.id))
-                    }}
+                    onClick={() => setConfirmRemovePerson(p)}
                     className="flex h-9 w-9 items-center justify-center rounded-full text-rose-400 active:surface-tile-high"
                     title={`Remove ${p.name}`}
                   >
@@ -871,6 +870,31 @@ function SetupInner() {
           </AnimatePresence>
         </div>
       </div>
+
+      {confirmDisconnectGoogle && (
+        <ConfirmModal
+          title="Disconnect Google Account"
+          message={`Are you sure you want to disconnect ${confirmDisconnectGoogle.email}?`}
+          onConfirm={async () => {
+            await api.del(`/api/calendar/accounts/${confirmDisconnectGoogle.id}`)
+            setConfirmDisconnectGoogle(null)
+            reloadCal()
+          }}
+          onCancel={() => setConfirmDisconnectGoogle(null)}
+        />
+      )}
+
+      {confirmRemovePerson && (
+        <ConfirmModal
+          title="Remove Family Member"
+          message={`Are you sure you want to remove ${confirmRemovePerson.name}?`}
+          onConfirm={() => {
+            savePeople((people ?? []).filter((x) => x.id !== confirmRemovePerson.id))
+            setConfirmRemovePerson(null)
+          }}
+          onCancel={() => setConfirmRemovePerson(null)}
+        />
+      )}
     </div>
   )
 }
