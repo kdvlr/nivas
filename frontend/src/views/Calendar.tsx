@@ -3,7 +3,7 @@ import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
-import type { DateSelectArg, EventClickArg, EventDropArg } from '@fullcalendar/core'
+import type { DateSelectArg, EventClickArg, EventDropArg, DatesSetArg } from '@fullcalendar/core'
 import type { EventResizeDoneArg } from '@fullcalendar/interaction'
 import listPlugin from '@fullcalendar/list'
 import { api } from '../lib/api'
@@ -59,11 +59,12 @@ export default function Calendar() {
   const [error, setError] = useState('')
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
 
-  const [currentViewMode, setCurrentViewMode] = useState<'schedule' | 'month'>('month')
+  const [currentViewMode, setCurrentViewMode] = useState<'schedule' | 'week' | 'month'>('month')
   const [mobileStartDate, setMobileStartDate] = useState(() => new Date())
   const [mobileEvents, setMobileEvents] = useState<CalEvent[]>([])
   const [loadingMobileEvents, setLoadingMobileEvents] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [viewTitle, setViewTitle] = useState('')
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768)
@@ -157,9 +158,29 @@ export default function Calendar() {
     })
   }, [mobileDaysList, mobileEventsByDay])
 
-  const prevMobile = () => setMobileStartDate((d) => addDays(d, -30))
-  const nextMobile = () => setMobileStartDate((d) => addDays(d, 30))
-  const todayMobile = () => setMobileStartDate(new Date())
+  const handlePrev = () => {
+    if (currentViewMode === 'schedule') {
+      setMobileStartDate((d) => addDays(d, -30))
+    } else {
+      calRef.current?.getApi().prev()
+    }
+  }
+
+  const handleNext = () => {
+    if (currentViewMode === 'schedule') {
+      setMobileStartDate((d) => addDays(d, 30))
+    } else {
+      calRef.current?.getApi().next()
+    }
+  }
+
+  const handleToday = () => {
+    if (currentViewMode === 'schedule') {
+      setMobileStartDate(new Date())
+    } else {
+      calRef.current?.getApi().today()
+    }
+  }
 
   const onSelectMobile = (dayIso: string) => {
     if (!selections.length) return
@@ -286,7 +307,8 @@ export default function Calendar() {
   }, [fitHeights])
 
   // reset so navigating to a new week/day re-fits even if the event set matches
-  const onDatesSet = useCallback(() => {
+  const onDatesSet = useCallback((arg: DatesSetArg) => {
+    setViewTitle(arg.view.title)
     appliedRangeRef.current = ''
     scheduleFit()
   }, [scheduleFit])
@@ -430,20 +452,22 @@ export default function Calendar() {
       rangeText = `${fmtMonthDay(startD)}, ${fmtYear(startD)} – ${fmtMonthDay(endD)}, ${fmtYear(endD)}`
     }
 
+    const displayTitle = currentViewMode === 'schedule' ? rangeText : viewTitle
+
     return (
       <div className="mb-4 flex items-center justify-between flex-wrap gap-2 shrink-0">
         <div className="flex items-center gap-3">
           <button
-            onClick={prevMobile}
+            onClick={handlePrev}
             className="btn-glass flex h-10 w-10 items-center justify-center rounded-full p-0"
           >
             <Icon name="chevron_left" className="text-xl" />
           </button>
           <h2 className="text-lg font-bold text-ink truncate">
-            {rangeText}
+            {displayTitle}
           </h2>
           <button
-            onClick={nextMobile}
+            onClick={handleNext}
             className="btn-glass flex h-10 w-10 items-center justify-center rounded-full p-0"
           >
             <Icon name="chevron_right" className="text-xl" />
@@ -451,17 +475,29 @@ export default function Calendar() {
         </div>
         <div className="flex items-center gap-1.5">
           <button
-            onClick={todayMobile}
-            className="btn-glass px-3 py-1.5 text-xs font-semibold rounded-lg"
+            onClick={handleToday}
+            className="btn-glass px-2.5 py-1.5 text-xs font-semibold rounded-lg"
           >
             today
           </button>
-          <button
-            onClick={() => setCurrentViewMode('month')}
-            className="btn-glass px-3 py-1.5 text-xs font-semibold rounded-lg"
-          >
-            month
-          </button>
+          <div className="flex bg-secondary-container/50 p-0.5 rounded-lg border border-outline-var">
+            {(['schedule', 'week', 'month'] as const).map((mode) => {
+              const active = currentViewMode === mode
+              return (
+                <button
+                  key={mode}
+                  onClick={() => setCurrentViewMode(mode)}
+                  className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors ${
+                    active
+                      ? 'bg-primary text-on-primary shadow-sm'
+                      : 'text-on-secondary-container hover:bg-secondary-container/80'
+                  }`}
+                >
+                  {mode}
+                </button>
+              )
+            })}
+          </div>
         </div>
       </div>
     )
@@ -577,7 +613,7 @@ export default function Calendar() {
         </div>
       )}
       {isMobile && currentViewMode === 'schedule' ? (
-        <div className="flex-1 min-h-0 flex flex-col p-3 lg:p-4 glass rounded-3xl overflow-hidden">
+        <div className="glass min-h-0 flex-1 p-3 lg:p-4 flex flex-col overflow-hidden">
           {renderMobileHeader()}
           {loadingMobileEvents ? (
             <div className="my-auto text-center text-lg text-ink-faint">Loading schedule...</div>
@@ -586,76 +622,75 @@ export default function Calendar() {
           )}
         </div>
       ) : (
-        <div ref={wrapRef} className="glass min-h-0 flex-1 p-3 lg:p-4">
-          <FullCalendar
-            key={isMobile ? 'mobile' : 'desktop'}
-            ref={calRef}
-            plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin, listPlugin]}
-            initialView={isMobile ? 'dayGridMonth' : 'timeGridWeek'}
-            customButtons={{
-              listSchedule: {
-                text: 'schedule',
-                click: () => setCurrentViewMode('schedule'),
-              },
-            }}
-            headerToolbar={
-              isMobile
-                ? {
-                    left: 'prev title next',
-                    center: '',
-                    right: 'today listSchedule',
-                  }
-                : {
-                    left: 'prev,next today',
-                    center: 'title',
-                    right: 'timeGridDay,timeGridWeek,dayGridMonth',
-                  }
-            }
-            height="100%"
-            nowIndicator
-            editable
-            selectable
-            selectMirror
-            longPressDelay={200}
-            selectLongPressDelay={300}
-            eventLongPressDelay={200}
-            slotMinTime="08:00:00"
-            slotMaxTime="18:00:00"
-            scrollTime="00:00:00"
-            slotDuration="01:00:00"
-            slotLabelInterval="01:00:00"
-            snapDuration="00:15:00"
-            datesSet={onDatesSet}
-            eventsSet={onEventsSet}
-            allDaySlot
-            fixedWeekCount={false}
-            dayHeaderContent={(arg) => {
-              const w = weatherByDate.get(isoDate(arg.date))
-              const weekday = arg.date.toLocaleDateString(undefined, { weekday: 'short' })
-              const dayNum = arg.date.getDate()
-              const isDayView = arg.view.type === 'timeGridDay'
-              return (
-                <div className="flex flex-col items-center gap-0.5 py-0.5">
-                  <span className="text-sm font-medium">
-                    {weekday} {arg.view.type !== 'dayGridMonth' ? dayNum : ''}
-                  </span>
-                  {w && arg.view.type !== 'dayGridMonth' && (
-                    <span className="flex flex-wrap justify-center items-center gap-x-1 gap-y-0 text-[0.7rem] font-semibold text-ink-soft">
-                      <span className="text-sm leading-none">{w.icon}</span>
-                      <span>
-                        {isDayView ? `${w.label} · ` : ''}{w.tmax}°<span className="text-ink-faint">/{w.tmin}°</span>
-                      </span>
+        <div ref={wrapRef} className="glass min-h-0 flex-1 p-3 lg:p-4 flex flex-col overflow-hidden">
+          {isMobile && renderMobileHeader()}
+          <div className="flex-1 min-h-0">
+            <FullCalendar
+              key={isMobile ? `mobile-${currentViewMode}` : 'desktop'}
+              ref={calRef}
+              plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin, listPlugin]}
+              initialView={isMobile ? (currentViewMode === 'week' ? 'timeGridWeek' : 'dayGridMonth') : 'timeGridWeek'}
+              customButtons={{
+                listSchedule: {
+                  text: 'schedule',
+                  click: () => setCurrentViewMode('schedule'),
+                },
+              }}
+              headerToolbar={
+                isMobile
+                  ? false
+                  : {
+                      left: 'prev,next today',
+                      center: 'title',
+                      right: 'timeGridDay,timeGridWeek,dayGridMonth',
+                    }
+              }
+              height="100%"
+              nowIndicator
+              editable
+              selectable
+              selectMirror
+              longPressDelay={200}
+              selectLongPressDelay={300}
+              eventLongPressDelay={200}
+              slotMinTime="08:00:00"
+              slotMaxTime="18:00:00"
+              scrollTime="00:00:00"
+              slotDuration="01:00:00"
+              slotLabelInterval="01:00:00"
+              snapDuration="00:15:00"
+              datesSet={onDatesSet}
+              eventsSet={onEventsSet}
+              allDaySlot
+              fixedWeekCount={false}
+              dayHeaderContent={(arg) => {
+                const w = weatherByDate.get(isoDate(arg.date))
+                const weekday = arg.date.toLocaleDateString(undefined, { weekday: 'short' })
+                const dayNum = arg.date.getDate()
+                const isDayView = arg.view.type === 'timeGridDay'
+                return (
+                  <div className="flex flex-col items-center gap-0.5 py-0.5">
+                    <span className="text-sm font-medium">
+                      {weekday} {arg.view.type !== 'dayGridMonth' ? dayNum : ''}
                     </span>
-                  )}
-                </div>
-              )
-            }}
-            events={fetchEvents}
-            eventDrop={moveEvent}
-            eventResize={moveEvent}
-            select={onSelect}
-            eventClick={onEventClick}
-          />
+                    {w && arg.view.type !== 'dayGridMonth' && (
+                      <span className="flex flex-wrap justify-center items-center gap-x-1 gap-y-0 text-[0.7rem] font-semibold text-ink-soft">
+                        <span className="text-sm leading-none">{w.icon}</span>
+                        <span>
+                          {isDayView ? `${w.label} · ` : ''}{w.tmax}°<span className="text-ink-faint">/{w.tmin}°</span>
+                        </span>
+                      </span>
+                    )}
+                  </div>
+                )
+              }}
+              events={fetchEvents}
+              eventDrop={moveEvent}
+              eventResize={moveEvent}
+              select={onSelect}
+              eventClick={onEventClick}
+            />
+          </div>
         </div>
       )}
 
