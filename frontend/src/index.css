@@ -588,3 +588,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   animation: shake 0.5s ease-in-out;
 }
 
+/* Subtly shade weekend cells and columns in FullCalendar grids */
+.fc th.fc-day-sat,
+.fc th.fc-day-sun,
+.fc td.fc-day-sat:not(.fc-day-today),
+.fc td.fc-day-sun:not(.fc-day-today) {
+  background-color: color-mix(in srgb, var(--primary) 4%, transparent) !important;
+}
