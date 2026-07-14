@@ -33,7 +33,7 @@ const getDayLabel = (isoDate: string, index: number) => {
 /* ---------------- schedule timeline ---------------- */
 
 /** left gutter: period strip + hour labels */
-const AXIS_GUTTER = 92
+const AXIS_GUTTER = 56
 const FAMILY_GRADIENT = 'linear-gradient(115deg, #ef4444, #f97316, #eab308, #22c55e, #3b82f6, #a855f7)'
 const MIN_SPAN_MIN = 12 * 60
 
@@ -535,7 +535,7 @@ export default function Home() {
             {timeline.hours.map((h) => (
               <div key={h} className="absolute inset-x-0" style={{ top: `${axisPct(h * 60)}%` }}>
                 <div className="border-t border-[var(--outline-var)] opacity-80" style={{ marginLeft: AXIS_GUTTER }} />
-                <span className="absolute right-[calc(100%-86px)] top-0 -translate-y-1/2 pr-1 text-[0.7rem] font-medium tabular-nums text-ink-soft opacity-80">
+                <span className="absolute left-0 top-0 -translate-y-1/2 pr-1.5 text-right text-[0.7rem] font-medium tabular-nums text-ink-soft opacity-80" style={{ width: AXIS_GUTTER }}>
                   {fmtHour(h)}
                 </span>
               </div>
