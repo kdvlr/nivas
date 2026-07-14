@@ -14,6 +14,7 @@ from . import scheduler
 from .db import init_db
 from .routers import calendar, chores, meals, recipes, rewards, setup, shopping, tasks, weather, photos
 from .ws import manager
+from .config import get_settings
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 
@@ -51,7 +52,7 @@ def health():
 
 
 # Mount photos directory statically
-PHOTOS_DIR = Path("/photos")
+PHOTOS_DIR = get_settings().photos_dir
 PHOTOS_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/api/photos/media", StaticFiles(directory=PHOTOS_DIR), name="photos_media")
 

@@ -18,7 +18,7 @@ from ..models import PhotoMetadata
 
 router = APIRouter(prefix="/api/photos", tags=["photos"])
 
-PHOTOS_DIR = Path("/photos")
+PHOTOS_DIR = get_settings().photos_dir
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 VIDEO_EXTENSIONS = {".mp4", ".webm", ".mov", ".ogg"}

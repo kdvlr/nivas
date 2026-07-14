@@ -28,6 +28,18 @@ class Settings(BaseSettings):
     setup_pin: str = ""
 
     @property
+    def photos_dir(self) -> Path:
+        # Use /photos if it exists and is a directory (like in Docker).
+        # Otherwise, fall back to a photos folder under data_dir.
+        p = Path("/photos")
+        try:
+            if p.exists() and p.is_dir():
+                return p
+        except Exception:
+            pass
+        return self.data_dir / "photos"
+
+    @property
     def db_url(self) -> str:
         return f"sqlite:///{self.data_dir / 'dashboard.db'}"
 
