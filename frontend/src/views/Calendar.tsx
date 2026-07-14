@@ -59,7 +59,7 @@ export default function Calendar() {
   const [error, setError] = useState('')
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
 
-  const [currentViewMode, setCurrentViewMode] = useState<'schedule' | 'month'>('schedule')
+  const [currentViewMode, setCurrentViewMode] = useState<'schedule' | 'month'>('month')
   const [mobileStartDate, setMobileStartDate] = useState(() => new Date())
   const [mobileEvents, setMobileEvents] = useState<CalEvent[]>([])
   const [loadingMobileEvents, setLoadingMobileEvents] = useState(false)
@@ -432,13 +432,16 @@ export default function Calendar() {
 
     return (
       <div className="mb-4 flex items-center justify-between flex-wrap gap-2 shrink-0">
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-3">
           <button
             onClick={prevMobile}
             className="btn-glass flex h-10 w-10 items-center justify-center rounded-full p-0"
           >
             <Icon name="chevron_left" className="text-xl" />
           </button>
+          <h2 className="text-lg font-bold text-ink truncate">
+            {rangeText}
+          </h2>
           <button
             onClick={nextMobile}
             className="btn-glass flex h-10 w-10 items-center justify-center rounded-full p-0"
@@ -446,9 +449,6 @@ export default function Calendar() {
             <Icon name="chevron_right" className="text-xl" />
           </button>
         </div>
-        <h2 className="text-lg font-bold text-ink truncate">
-          {rangeText}
-        </h2>
         <div className="flex items-center gap-1.5">
           <button
             onClick={todayMobile}
@@ -469,7 +469,7 @@ export default function Calendar() {
 
   const renderMobileSchedule = () => (
     <div className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-4">
-      {visibleDays.map((dayIso, idx) => {
+      {mobileDaysList.map((dayIso, idx) => {
         const dayEvents = mobileEventsByDay.get(dayIso) ?? []
         const dayWeather = weather?.daily?.find((d) => d.date === dayIso)
         const isToday = dayIso === isoDate(new Date())
