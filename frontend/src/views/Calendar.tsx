@@ -601,8 +601,8 @@ export default function Calendar() {
             headerToolbar={
               isMobile
                 ? {
-                    left: 'prev,next',
-                    center: 'title',
+                    left: 'prev title next',
+                    center: '',
                     right: 'today listSchedule',
                   }
                 : {
