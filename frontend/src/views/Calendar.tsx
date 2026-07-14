@@ -367,6 +367,12 @@ export default function Calendar() {
 
   const onSelect = (arg: DateSelectArg) => {
     if (!selections.length) return
+
+    if (isMobile && currentViewMode === 'month') {
+      setCurrentViewMode('schedule')
+      setMobileStartDate(arg.start)
+    }
+
     setDraft({
       selection_id: selections[0].id,
       title: '',
@@ -564,10 +570,11 @@ export default function Calendar() {
               )}
               <button
                 onClick={() => onSelectMobile(dayIso)}
-                className="ml-auto flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-ink-soft p-0 active:scale-95 transition-transform"
+                className="ml-auto flex h-8 w-8 items-center justify-center rounded-full p-0 active:scale-95 transition-transform shrink-0"
+                style={{ backgroundColor: 'var(--primary)', color: 'var(--on-primary)', boxShadow: 'var(--shadow-1)' }}
                 title="Add event"
               >
-                <Icon name="add" className="text-sm font-bold" />
+                <Icon name="add" className="text-base font-bold" />
               </button>
             </h3>
             {dayEvents.length === 0 ? (
