@@ -709,37 +709,35 @@ export default function Calendar() {
                   ? {
                       backgroundColor: 'var(--primary)',
                       color: 'var(--on-primary)',
-                      borderRadius: '12px',
-                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      padding: '4px 2px',
                       boxShadow: 'var(--shadow-1)',
-                      margin: '2px',
                     }
                   : {
-                      padding: '6px 12px',
-                      margin: '2px',
+                      padding: '4px 2px',
                     }
 
                 return (
                   <div 
-                    className="flex flex-col items-center gap-1 w-full transition-all"
+                    className="flex flex-col items-center gap-0.5 w-full transition-all"
                     style={containerStyle}
                   >
-                    <span className={`text-xs font-semibold uppercase tracking-wider ${
+                    <span className={`text-[0.65rem] sm:text-xs font-semibold uppercase tracking-wider ${
                       arg.isToday ? 'text-[var(--on-primary)] opacity-90 font-extrabold' : 'text-ink-soft'
                     }`}>
                       {weekday}
                     </span>
                     {arg.view.type !== 'dayGridMonth' && (
-                      <span className={`text-base ${arg.isToday ? 'font-extrabold' : 'font-bold text-ink'}`}>
+                      <span className={`text-sm sm:text-base ${arg.isToday ? 'font-extrabold' : 'font-bold text-ink'}`}>
                         {dayNum}
                       </span>
                     )}
                     {w && arg.view.type !== 'dayGridMonth' && (
-                      <span className={`flex flex-wrap justify-center items-center gap-x-1 gap-y-0 text-[0.7rem] font-semibold ${
+                      <span className={`flex flex-wrap justify-center items-center gap-x-1 gap-y-0 text-[0.6rem] sm:text-[0.7rem] font-semibold ${
                         arg.isToday ? 'text-[var(--on-primary)] opacity-95' : 'text-ink-soft'
                       }`}>
-                        <span className="text-sm leading-none">{w.icon}</span>
-                        <span>
+                        <span className="text-xs sm:text-sm leading-none">{w.icon}</span>
+                        <span className="hidden sm:inline">
                           {isDayView ? `${w.label} · ` : ''}{w.tmax}°<span className={arg.isToday ? 'text-[var(--on-primary)] opacity-70' : 'text-ink-faint'}>/{w.tmin}°</span>
                         </span>
                       </span>
