@@ -129,6 +129,7 @@ export default function Home() {
   const [weatherOpen, setWeatherOpen] = useState(false)
   const [completingIds, setCompletingIds] = useState<string[]>([])
   const [removedIds, setRemovedIds] = useState<string[]>([])
+  const [fabOpen, setFabOpen] = useState(false)
   const now = useClock()
   const today = todayISO()
   const { data: events, loading: loadingEvents } = useData<CalEvent[]>(
@@ -351,12 +352,16 @@ export default function Home() {
     }
   }
 
-  const renderHeader = () => (
+  const renderHeader = () => {
+    const hr = now.getHours()
+    const greeting = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening'
+
+    return (
     <header className="glass flex items-center justify-between gap-x-2 px-4 py-1.5 lg:px-8 lg:py-2.5 flex-nowrap">
       <div className="flex items-center gap-x-3 lg:gap-x-6 min-w-0">
         <div>
-          <p className="text-[10px] lg:text-xs font-medium tracking-widest text-rose-400 uppercase leading-none">
-            {config?.family_name ? `${config.family_name} Nivas` : 'Nivas'}
+          <p className="text-[10px] lg:text-xs font-medium tracking-widest text-rose-400 uppercase leading-none truncate w-full">
+            {greeting} • {config?.family_name ? `${config.family_name} Nivas` : 'Nivas'}
           </p>
           <h1 className="text-sm lg:text-2xl font-medium tracking-tight text-ink mt-1 leading-none truncate">
             {now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
@@ -435,7 +440,8 @@ export default function Home() {
         })()}
       </div>
     </header>
-  )
+    )
+  }
 
   const renderSchedule = (isDesktop: boolean) => (
     <section className={`glass flex min-h-64 flex-col p-5 ${isDesktop ? 'lg:col-span-2 lg:min-h-0' : 'flex-1 min-h-0 overflow-hidden'} ${loadingEvents ? 'shimmer-loading' : ''}`}>
@@ -550,11 +556,6 @@ export default function Home() {
                     )}
                     {idx > 0 && (
                       <div className="pointer-events-none absolute inset-y-0 -left-2 w-px" style={{ background: 'var(--outline)', opacity: 0.35 }} />
-                    )}
-                    {placed.length === 0 && (timeline.allDayByDay.get(dayIso) ?? []).length === 0 && (
-                      <p className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-xs text-ink-faint">
-                        No events
-                      </p>
                     )}
                     {placed.map((it) => {
                       const heightPct = ((it.e - it.s) / timeline.spanMin) * 100
@@ -822,7 +823,11 @@ export default function Home() {
                   {slot}
                 </div>
                 <div className="mt-0.5 whitespace-pre-line text-sm font-medium leading-tight text-ink">
-                  {label || <span className="text-ink-faint">—</span>}
+                  {label ? label : (
+                    <span className="flex items-center gap-1 text-[var(--primary)] opacity-85 hover:opacity-100 transition-opacity">
+                      <Icon name="add_circle" className="text-sm" /> Plan
+                    </span>
+                  )}
                 </div>
               </a>
             )
@@ -1027,6 +1032,53 @@ export default function Home() {
           </div>
         </Modal>
       )}
+
+      {/* Mobile FAB */}
+      <div className="lg:hidden fixed bottom-24 right-4 z-50 flex flex-col items-end gap-3 pointer-events-none">
+        <AnimatePresence>
+          {fabOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.8 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.8 }}
+              className="flex flex-col items-end gap-2 pointer-events-auto"
+            >
+              <a href="#/shopping" className="flex items-center gap-3 bg-white dark:bg-slate-800 rounded-full py-2 px-4 shadow-lg text-sm font-bold text-ink active:scale-95 transition-transform border border-ink-faint" onClick={() => setFabOpen(false)}>
+                <span>Add Shopping</span>
+                <Icon name="shopping_cart" className="text-orange-500" />
+              </a>
+              <a href="#/todos" className="flex items-center gap-3 bg-white dark:bg-slate-800 rounded-full py-2 px-4 shadow-lg text-sm font-bold text-ink active:scale-95 transition-transform border border-ink-faint" onClick={() => setFabOpen(false)}>
+                <span>Add To-Do</span>
+                <Icon name="task_alt" className="text-emerald-500" />
+              </a>
+              <a href="#/calendar" className="flex items-center gap-3 bg-white dark:bg-slate-800 rounded-full py-2 px-4 shadow-lg text-sm font-bold text-ink active:scale-95 transition-transform border border-ink-faint" onClick={() => setFabOpen(false)}>
+                <span>Add Event</span>
+                <Icon name="event" className="text-[var(--primary)]" />
+              </a>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        {/* Backdrop for FAB menu */}
+        <AnimatePresence>
+          {fabOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/20 dark:bg-black/40 pointer-events-auto -z-10"
+              onClick={() => setFabOpen(false)}
+            />
+          )}
+        </AnimatePresence>
+        <button
+          onClick={() => setFabOpen(!fabOpen)}
+          className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full shadow-xl bg-[var(--primary)] text-white hover:scale-105 active:scale-95 transition-all relative"
+        >
+          <motion.div animate={{ rotate: fabOpen ? 45 : 0 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }}>
+            <Icon name="add" className="text-3xl" />
+          </motion.div>
+        </button>
+      </div>
     </div>
   )
 }
