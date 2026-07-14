@@ -50,6 +50,11 @@ const isoDate = (d: Date) => {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
 
+const isoUtcDate = (d: Date) => {
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}`
+}
+
 export default function Calendar() {
   const { data: status } = useData<CalendarStatus>('/api/calendar/status', ['calendar'])
   const { data: weather } = useData<WeatherData>('/api/weather', [], 15 * 60 * 1000)
@@ -694,9 +699,10 @@ export default function Calendar() {
               allDaySlot
               fixedWeekCount={false}
               dayHeaderContent={(arg) => {
-                const w = weatherByDate.get(isoDate(arg.date))
-                const weekday = arg.date.toLocaleDateString(undefined, { weekday: 'short' })
-                const dayNum = arg.date.getDate()
+                const dateStr = isoUtcDate(arg.date)
+                const w = weatherByDate.get(dateStr)
+                const weekday = arg.date.toLocaleDateString(undefined, { timeZone: 'UTC', weekday: 'short' })
+                const dayNum = arg.date.getUTCDate()
                 const isDayView = arg.view.type === 'timeGridDay'
                 return (
                   <div className="flex flex-col items-center gap-0.5 py-0.5">
