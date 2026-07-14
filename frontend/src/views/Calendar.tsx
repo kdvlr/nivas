@@ -455,43 +455,59 @@ export default function Calendar() {
     const displayTitle = currentViewMode === 'schedule' ? rangeText : viewTitle
 
     return (
-      <div className="mb-4 flex items-center justify-between flex-wrap gap-2 shrink-0">
-        <div className="flex items-center gap-3">
+      <div className="mb-4 flex flex-col items-center justify-center gap-3 shrink-0 w-full">
+        {/* Title row */}
+        <div className="flex items-center gap-3 justify-center w-full">
           <button
             onClick={handlePrev}
-            className="btn-glass flex h-10 w-10 items-center justify-center rounded-full p-0"
+            className="btn-glass flex h-10 w-10 items-center justify-center rounded-full p-0 shrink-0"
           >
             <Icon name="chevron_left" className="text-xl" />
           </button>
-          <h2 className="text-lg font-bold text-ink truncate">
+          <h2 className="text-lg font-bold text-ink truncate text-center max-w-[200px] sm:max-w-xs">
             {displayTitle}
           </h2>
           <button
             onClick={handleNext}
-            className="btn-glass flex h-10 w-10 items-center justify-center rounded-full p-0"
+            className="btn-glass flex h-10 w-10 items-center justify-center rounded-full p-0 shrink-0"
           >
             <Icon name="chevron_right" className="text-xl" />
           </button>
         </div>
-        <div className="flex items-center gap-1.5">
+        
+        {/* Actions row */}
+        <div className="flex items-center gap-2.5 justify-center w-full">
           <button
             onClick={handleToday}
-            className="btn-glass px-2.5 py-1.5 text-xs font-semibold rounded-lg"
+            className="btn-glass px-3 py-1.5 text-xs font-semibold rounded-lg shrink-0"
           >
             today
           </button>
-          <div className="flex bg-secondary-container/50 p-0.5 rounded-lg border border-outline-var">
+          <div 
+            className="flex p-0.5 rounded-lg border shrink-0"
+            style={{ 
+              backgroundColor: 'color-mix(in srgb, var(--secondary-container) 50%, transparent)',
+              borderColor: 'var(--outline-var)'
+            }}
+          >
             {(['schedule', 'week', 'month'] as const).map((mode) => {
               const active = currentViewMode === mode
               return (
                 <button
                   key={mode}
                   onClick={() => setCurrentViewMode(mode)}
-                  className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors ${
+                  className="px-3 py-1.5 text-xs font-semibold rounded-md transition-all active:scale-95"
+                  style={
                     active
-                      ? 'bg-primary text-on-primary shadow-sm'
-                      : 'text-on-secondary-container hover:bg-secondary-container/80'
-                  }`}
+                      ? {
+                          backgroundColor: 'var(--primary)',
+                          color: 'var(--on-primary)',
+                          boxShadow: 'var(--shadow-1)',
+                        }
+                      : {
+                          color: 'var(--on-secondary-container)',
+                        }
+                  }
                 >
                   {mode}
                 </button>
