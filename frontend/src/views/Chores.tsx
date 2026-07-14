@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence, LayoutGroup, useMotionValue, useTransform } from 'framer-motion'
 import { PRESS_SPRING, EXPRESSIVE_ENTER } from '../lib/motion'
 import Avatar from '../components/Avatar'
@@ -190,6 +190,13 @@ function ChoreCard({
 export default function Chores() {
   const [draft, setDraft] = useState<Draft | null>(null)
   const [filterPerson, setFilterPerson] = useState('')
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   const { data: chores, reload } = useData<ChoreItem[]>('/api/chores', ['chores'])
   const { data: people } = useData<Person[]>('/api/setup/people', ['chores'])
@@ -317,7 +324,7 @@ export default function Chores() {
 
       {/* Leaderboard — tap a card to filter that person's chores */}
       {sortedBalances.length > 0 && (
-        <div className="mb-5 flex shrink-0 gap-4 overflow-x-auto pb-1">
+        <div className="mb-5 grid grid-cols-4 gap-2 md:flex md:shrink-0 md:gap-4 md:overflow-x-auto pb-1">
           {sortedBalances.map((b, i) => {
             const active = filterPerson === b.person_name
             return (
@@ -327,18 +334,18 @@ export default function Chores() {
                 whileTap={{ scale: 0.95 }}
                 transition={PRESS_SPRING}
                 onClick={() => setFilterPerson(active ? '' : b.person_name)}
-                className={`glass flex min-w-36 items-center gap-2 p-1.5 text-left cursor-pointer transition-all duration-200 ${
+                className={`glass flex md:min-w-36 items-center gap-1 md:gap-2 p-1 md:p-1.5 text-left cursor-pointer transition-all duration-200 ${
                   active ? 'ring-2 ring-[var(--primary)] shadow-md' : ''
                 }`}
-                style={{ borderLeft: `4px solid ${b.color}` }}
+                style={{ borderLeft: `${isMobile ? 3 : 4}px solid ${b.color}` }}
               >
-                <Avatar name={b.person_name} color={b.color} src={b.avatar} emoji={b.avatar_emoji} size={36} />
+                <Avatar name={b.person_name} color={b.color} src={b.avatar} emoji={b.avatar_emoji} size={isMobile ? 22 : 36} />
                 <div className="flex min-w-0 flex-col">
-                  <span className="truncate text-sm font-semibold leading-tight" style={{ color: b.color }}>
+                  <span className="truncate text-[10px] md:text-sm font-semibold leading-tight" style={{ color: b.color }}>
                     {b.person_name}
                   </span>
-                  <span className="flex items-center gap-1 text-lg font-medium tabular-nums text-ink">
-                    <CoinIcon className="text-lg" /> {b.balance}
+                  <span className="flex items-center gap-0.5 md:gap-1 text-xs md:text-lg font-medium tabular-nums text-ink">
+                    <CoinIcon className="text-xs md:text-lg" /> {b.balance}
                   </span>
                 </div>
               </motion.button>
