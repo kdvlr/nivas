@@ -38,6 +38,13 @@ export function applyTheme(appearance: Appearance = getAppearance(), style: Them
   document.documentElement.classList.toggle('dark', dark)
   document.documentElement.dataset.theme = style
   document.documentElement.dataset.font = getFont()
+
+  const accent = localStorage.getItem('accentColor')
+  if (accent) {
+    document.documentElement.style.setProperty('--primary', accent)
+  } else {
+    document.documentElement.style.removeProperty('--primary')
+  }
 }
 
 export function setAppearance(a: Appearance) {
@@ -49,6 +56,15 @@ export function setAppearance(a: Appearance) {
 export function setStyle(s: ThemeStyle) {
   localStorage.setItem('themeStyle', s)
   applyTheme(getAppearance(), s)
+}
+
+export function setAccentColor(color: string | null) {
+  if (color) {
+    localStorage.setItem('accentColor', color)
+  } else {
+    localStorage.removeItem('accentColor')
+  }
+  applyTheme(getAppearance(), getStyle())
 }
 
 /** Re-apply when the OS switches light/dark while in auto mode. Returns unsubscribe. */

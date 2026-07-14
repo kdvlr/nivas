@@ -16,6 +16,7 @@ import {
   setAppearance,
   setFont,
   setStyle,
+  setAccentColor,
   type Appearance,
   type FontChoice,
   type ThemeStyle,
@@ -247,6 +248,7 @@ function SetupInner() {
   const [calendarColorEditing, setCalendarColorEditing] = useState<number | null>(null)
   const [section, setSection] = useState<SectionId>('integrations')
   const [colorEditing, setColorEditing] = useState<number | null>(null)
+  const [accentColor, setAccentColorState] = useState(localStorage.getItem('accentColor') || '')
 
   const renderLastUpdated = (integrationName: string) => {
     const s = status?.sync?.[integrationName]
@@ -932,6 +934,7 @@ function AppearanceCard() {
   const [style, setStyleState] = useState<ThemeStyle>(getStyle)
   const [appearance, setAppearanceState] = useState<Appearance>(getAppearance)
   const [font, setFontState] = useState<FontChoice>(getFont)
+  const [accentColor, setAccentColorState] = useState(localStorage.getItem('accentColor') || '')
 
   const pickStyle = (s: ThemeStyle) => {
     setStyleState(s)
@@ -951,7 +954,7 @@ function AppearanceCard() {
       <div className="flex flex-col gap-4">
         <div>
           <p className="mb-2 text-base font-medium text-ink-soft">Theme</p>
-                <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
             {(
               [
                 ['material', 'auto_awesome_mosaic', 'Material You'],
@@ -1021,6 +1024,37 @@ function AppearanceCard() {
                   The quick brown fox 123
                 </span>
               </motion.button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2 pt-2">
+          <span className="text-[0.65rem] font-bold uppercase tracking-wider text-ink-soft">
+            Accent Color
+          </span>
+          <div className="flex flex-wrap gap-3">
+            {[
+              { label: 'Emerald', hex: '' }, // default
+              { label: 'Sapphire', hex: '#2563eb' },
+              { label: 'Amethyst', hex: '#7c3aed' },
+              { label: 'Rose', hex: '#e11d48' },
+              { label: 'Amber', hex: '#d97706' },
+              { label: 'Slate', hex: '#475569' },
+            ].map((c) => (
+              <button
+                key={c.label}
+                onClick={() => {
+                  setAccentColor(c.hex || null)
+                  setAccentColorState(c.hex)
+                }}
+                className={`h-10 w-10 rounded-full border-2 transition-all duration-200 ${
+                  (c.hex === '' && accentColor === '') || accentColor === c.hex
+                    ? 'border-ink scale-110 shadow-sm'
+                    : 'border-transparent hover:scale-105'
+                }`}
+                style={{ backgroundColor: c.hex || 'var(--primary)' }}
+                title={c.label}
+              />
             ))}
           </div>
         </div>

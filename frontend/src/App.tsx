@@ -142,6 +142,12 @@ export default function App() {
   const [moreOpen, setMoreOpen] = useState(false)
   const [slideshowActive, setSlideshowActive] = useState(false)
   const [photosList, setPhotosList] = useState<any[]>([])
+  
+  // Touch gestures for swipe-to-navigate and pull-to-refresh
+  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null)
+  const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(null)
+  const mainRef = useRef<HTMLElement>(null)
+  const [isPulling, setIsPulling] = useState(false)
 
   const { data: config } = useData<{ family_name: string; secondary_tz: string; secondary_tz_emoji: string }>(
     '/api/setup/config',
@@ -235,34 +241,73 @@ export default function App() {
   const now = useClock()
   const isHome = route === 'home'
 
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null)
+    setTouchStart({ x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY })
+  }
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd({ x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY })
+    if (touchStart && mainRef.current && mainRef.current.scrollTop <= 0) {
+      const yDiff = e.targetTouches[0].clientY - touchStart.y
+      if (yDiff > 60) setIsPulling(true)
+    }
+  }
+
+  const onTouchEnd = () => {
+    if (isPulling) {
+      window.location.reload()
+      return
+    }
+    if (!touchStart || !touchEnd) return
+    const xDiff = touchStart.x - touchEnd.x
+    const yDiff = Math.abs(touchStart.y - touchEnd.y)
+    
+    // Only trigger horizontal swipe if the swipe is mostly horizontal
+    if (Math.abs(xDiff) > 60 && yDiff < 40) {
+      const currentIndex = NAV.findIndex(n => n.id === activeNav)
+      if (xDiff > 0 && currentIndex < NAV.length - 2) {
+        // Swipe left (next tab, excluding setup at the end)
+        window.location.hash = `#/${NAV[currentIndex + 1].id}`
+      } else if (xDiff < 0 && currentIndex > 0) {
+        // Swipe right (prev tab)
+        window.location.hash = `#/${NAV[currentIndex - 1].id}`
+      }
+    }
+    setTouchStart(null)
+    setTouchEnd(null)
+    setIsPulling(false)
+  }
+
 
 
   return (
     <CelebrationProvider>
       <RewardCelebrationProvider>
         <div className="flex h-full flex-col lg:flex-row gap-2 p-2 lg:gap-4 lg:p-4">
-          <nav className="glass order-last lg:order-first flex flex-row lg:flex-col w-full lg:w-22 h-14 lg:h-full shrink-0 items-center justify-around lg:justify-start gap-1 lg:gap-4 py-1.5 lg:py-4 px-2 lg:px-0">
+          <nav className="glass group/nav order-last lg:order-first flex flex-row lg:flex-col w-full lg:w-22 hover:lg:w-48 transition-[width] duration-300 ease-in-out h-14 lg:h-full shrink-0 items-center lg:items-start justify-around lg:justify-start gap-1 lg:gap-4 py-1.5 lg:py-4 px-2 lg:px-3 z-20">
 
             {/* Main Nav Items */}
             <div className="flex flex-row lg:flex-col items-center justify-around lg:justify-start gap-1 lg:gap-3 flex-1 lg:flex-none w-full">
-              {NAV.filter(n => n.id !== 'setup').map((n) => {
+              {NAV.filter(n => n.id !== 'setup').map((n, index) => {
                 const isActive = activeNav === n.id
+                const mobileHidden = index > 4 ? 'hidden lg:flex' : 'flex'
                 return (
                   <a
                     key={n.id}
                     href={`#/${n.id}`}
-                    className="flex flex-col items-center justify-center transition-all duration-200 group text-center flex-1 lg:flex-none w-12 lg:w-full"
+                    className={`${mobileHidden} flex-col lg:flex-row items-center lg:justify-start justify-center transition-all duration-200 group text-center lg:text-left flex-1 lg:flex-none w-12 lg:w-full overflow-hidden`}
                   >
                     <motion.div
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       transition={PRESS_SPRING}
-                      className={`flex flex-col items-center justify-center gap-1 rounded-2xl w-full py-1.5 transition-all duration-200 ${
+                      className={`flex flex-col lg:flex-row items-center lg:justify-start justify-center gap-1 lg:gap-3 rounded-2xl w-full py-1.5 lg:py-2.5 lg:px-3 transition-all duration-200 ${
                         isActive ? n.active : 'text-ink-soft group-hover:text-ink group-hover:bg-slate-300/15 dark:group-hover:bg-slate-700/15'
                       }`}
                     >
-                      <Icon name={n.icon} filled={isActive} className="text-[1.25rem] lg:text-[1.55rem]" />
-                      <span className="hidden text-[0.65rem] font-semibold lg:block tracking-tight leading-none">{n.label}</span>
+                      <Icon name={n.icon} filled={isActive} className="text-[1.25rem] lg:text-[1.55rem] shrink-0" />
+                      <span className="hidden text-[0.65rem] lg:text-sm font-semibold lg:block tracking-tight leading-none whitespace-nowrap opacity-0 group-hover/nav:opacity-100 transition-opacity duration-300 w-0 group-hover/nav:w-auto">{n.label}</span>
                     </motion.div>
                   </a>
                 )
@@ -303,8 +348,8 @@ export default function App() {
                   transition={PRESS_SPRING}
                   className="flex flex-col items-center justify-center gap-1 rounded-2xl w-full py-1.5 transition-all duration-200 text-ink-soft group-hover:text-ink group-hover:bg-slate-300/15 dark:group-hover:bg-slate-700/15"
                 >
-                  <Icon name={APPEARANCE_META[appearance].icon} className="text-[1.25rem] lg:text-[1.55rem]" />
-                  <span className="hidden text-[0.65rem] font-semibold lg:block tracking-tight leading-none">
+                  <Icon name={APPEARANCE_META[appearance].icon} className="text-[1.25rem] lg:text-[1.55rem] shrink-0" />
+                  <span className="hidden text-[0.65rem] lg:text-sm font-semibold lg:block tracking-tight leading-none whitespace-nowrap opacity-0 group-hover/nav:opacity-100 transition-opacity duration-300 w-0 group-hover/nav:w-auto">
                     {APPEARANCE_META[appearance].label}
                   </span>
                 </motion.div>
@@ -321,19 +366,32 @@ export default function App() {
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       transition={PRESS_SPRING}
-                      className={`flex flex-col items-center justify-center gap-1 rounded-2xl w-full py-1.5 transition-all duration-200 ${
+                      className={`flex flex-col lg:flex-row items-center lg:justify-start justify-center gap-1 lg:gap-3 rounded-2xl w-full py-1.5 lg:py-2.5 lg:px-3 transition-all duration-200 ${
                         isActive ? n.active : 'text-ink-soft group-hover:text-ink group-hover:bg-slate-300/15 dark:group-hover:bg-slate-700/15'
                       }`}
                     >
-                      <Icon name={n.icon} filled={isActive} className="text-[1.25rem] lg:text-[1.55rem]" />
-                      <span className="hidden text-[0.65rem] font-semibold lg:block tracking-tight leading-none">{n.label}</span>
+                      <Icon name={n.icon} filled={isActive} className="text-[1.25rem] lg:text-[1.55rem] shrink-0" />
+                      <span className="hidden text-[0.65rem] lg:text-sm font-semibold lg:block tracking-tight leading-none whitespace-nowrap opacity-0 group-hover/nav:opacity-100 transition-opacity duration-300 w-0 group-hover/nav:w-auto">{n.label}</span>
                     </motion.div>
                   </a>
                 )
               })}
             </div>
           </nav>
-          <main className="flex min-w-0 flex-1 flex-col overflow-y-auto py-1">
+          <main 
+            ref={mainRef}
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+            className="flex min-w-0 flex-1 flex-col overflow-y-auto py-1 relative"
+          >
+            {isPulling && (
+              <div className="absolute top-0 left-0 right-0 flex justify-center py-4 z-50">
+                <div className="glass-inset rounded-full p-2 animate-spin">
+                  <Icon name="refresh" />
+                </div>
+              </div>
+            )}
             {!isHome && (
               <header className="flex flex-col px-6 py-4 lg:px-8">
                 <div className="flex flex-col">
@@ -444,6 +502,23 @@ export default function App() {
               value={style}
               onSelect={chooseStyle}
             />
+            <div className="flex flex-col gap-2 mt-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-ink-soft">More Views</span>
+              <div className="flex flex-col gap-1">
+                {NAV.slice(5).filter(n => n.id !== 'setup').map((n) => (
+                  <motion.a
+                    key={n.id}
+                    href={`#/${n.id}`}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => setMoreOpen(false)}
+                    className="flex items-center gap-4 rounded-2xl px-5 py-3.5 text-base hover:bg-slate-300/20 dark:hover:bg-slate-700/20"
+                  >
+                    <Icon name={n.icon} className="text-ink-soft" />
+                    <span className="font-medium">{n.label}</span>
+                  </motion.a>
+                ))}
+              </div>
+            </div>
             <motion.a
               href="#/setup"
               whileTap={{ scale: 0.97 }}
