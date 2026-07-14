@@ -92,10 +92,11 @@ export default function Calendar() {
   }
 
   const mobileDaysList = useMemo(() => {
-    const d0 = isoDate(mobileStartDate)
-    const d1 = isoDate(addDays(mobileStartDate, 1))
-    const d2 = isoDate(addDays(mobileStartDate, 2))
-    return [d0, d1, d2]
+    const list = []
+    for (let i = 0; i < 30; i++) {
+      list.push(isoDate(addDays(mobileStartDate, i)))
+    }
+    return list
   }, [mobileStartDate])
 
   const getDayLabel = (isoDateStr: string, index: number) => {
@@ -113,7 +114,7 @@ export default function Calendar() {
     let active = true
     setLoadingMobileEvents(true)
     const startStr = `${mobileDaysList[0]}T00:00:00`
-    const endStr = `${mobileDaysList[2]}T23:59:59`
+    const endStr = `${mobileDaysList[mobileDaysList.length - 1]}T23:59:59`
     api.get<CalEvent[]>(`/api/calendar/events?start=${encodeURIComponent(startStr)}&end=${encodeURIComponent(endStr)}`)
       .then((data) => {
         if (active) {
@@ -147,8 +148,17 @@ export default function Calendar() {
     return map
   }, [mobileEvents, mobileDaysList])
 
-  const prevMobile = () => setMobileStartDate((d) => addDays(d, -3))
-  const nextMobile = () => setMobileStartDate((d) => addDays(d, 3))
+  const visibleDays = useMemo(() => {
+    const todayStr = isoDate(new Date())
+    return mobileDaysList.filter((dayIso) => {
+      if (dayIso === todayStr) return true
+      const dayEvents = mobileEventsByDay.get(dayIso) ?? []
+      return dayEvents.length > 0
+    })
+  }, [mobileDaysList, mobileEventsByDay])
+
+  const prevMobile = () => setMobileStartDate((d) => addDays(d, -30))
+  const nextMobile = () => setMobileStartDate((d) => addDays(d, 30))
   const todayMobile = () => setMobileStartDate(new Date())
 
   const onSelectMobile = (dayIso: string) => {
@@ -408,7 +418,7 @@ export default function Calendar() {
 
   const renderMobileHeader = () => {
     const startD = mobileStartDate
-    const endD = addDays(mobileStartDate, 2)
+    const endD = addDays(mobileStartDate, 29)
     const fmtMonthDay = (date: Date) =>
       date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
     const fmtYear = (date: Date) => date.getFullYear()
@@ -459,7 +469,7 @@ export default function Calendar() {
 
   const renderMobileSchedule = () => (
     <div className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-4">
-      {mobileDaysList.map((dayIso, idx) => {
+      {visibleDays.map((dayIso, idx) => {
         const dayEvents = mobileEventsByDay.get(dayIso) ?? []
         const dayWeather = weather?.daily?.find((d) => d.date === dayIso)
         const isToday = dayIso === isoDate(new Date())
