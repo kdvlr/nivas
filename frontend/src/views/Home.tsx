@@ -360,10 +360,7 @@ export default function Home() {
     <header className="glass flex items-center justify-between gap-x-2 px-4 py-1.5 lg:px-8 lg:py-2.5 flex-nowrap">
       <div className="flex items-center gap-x-3 lg:gap-x-6 min-w-0">
         <div>
-          <p className="text-[10px] lg:text-xs font-medium tracking-widest text-rose-400 uppercase leading-none truncate w-full">
-            {greeting} • {config?.family_name ? `${config.family_name} Nivas` : 'Nivas'}
-          </p>
-          <h1 className="text-sm lg:text-2xl font-medium tracking-tight text-ink mt-1 leading-none truncate">
+          <h1 className="text-sm lg:text-2xl font-medium tracking-tight text-ink leading-none truncate">
             {now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
           </h1>
         </div>
