@@ -628,6 +628,7 @@ export default function Calendar() {
             datesSet={onDatesSet}
             eventsSet={onEventsSet}
             allDaySlot
+            fixedWeekCount={false}
             dayHeaderContent={(arg) => {
               const w = weatherByDate.get(isoDate(arg.date))
               const weekday = arg.date.toLocaleDateString(undefined, { weekday: 'short' })
