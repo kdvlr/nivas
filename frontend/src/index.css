@@ -502,6 +502,21 @@ body {
   color: var(--on-surface-var);
 }
 
+@media (max-width: 768px) {
+  .fc .fc-header-toolbar {
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+  }
+  .fc .fc-toolbar-title {
+    font-size: 1.15rem !important;
+  }
+  .fc .fc-button {
+    padding: 0.4rem 0.75rem !important;
+    font-size: 0.85rem !important;
+  }
+}
+
 /* touch-friendly scrollbars off */
 ::-webkit-scrollbar {
   width: 0;

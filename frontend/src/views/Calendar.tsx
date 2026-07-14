@@ -40,6 +40,13 @@ export default function Calendar() {
   const [draft, setDraft] = useState<Draft | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   const selections: Selection[] = useMemo(
     () =>
@@ -297,14 +304,23 @@ export default function Calendar() {
       </div>
       <div ref={wrapRef} className="glass min-h-0 flex-1 p-3 lg:p-4">
         <FullCalendar
+          key={isMobile ? 'mobile' : 'desktop'}
           ref={calRef}
           plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
-          initialView="timeGridWeek"
-          headerToolbar={{
-            left: 'prev,next today',
-            center: 'title',
-            right: 'timeGridDay,timeGridWeek,dayGridMonth',
-          }}
+          initialView={isMobile ? 'timeGridDay' : 'timeGridWeek'}
+          headerToolbar={
+            isMobile
+              ? {
+                  left: 'prev,next',
+                  center: 'title',
+                  right: 'today dayGridMonth,timeGridDay',
+                }
+              : {
+                  left: 'prev,next today',
+                  center: 'title',
+                  right: 'timeGridDay,timeGridWeek,dayGridMonth',
+                }
+          }
           height="100%"
           nowIndicator
           editable
@@ -326,16 +342,17 @@ export default function Calendar() {
             const w = weatherByDate.get(isoDate(arg.date))
             const weekday = arg.date.toLocaleDateString(undefined, { weekday: 'short' })
             const dayNum = arg.date.getDate()
+            const isDayView = arg.view.type === 'timeGridDay'
             return (
               <div className="flex flex-col items-center gap-0.5 py-0.5">
                 <span className="text-sm font-medium">
                   {weekday} {arg.view.type !== 'dayGridMonth' ? dayNum : ''}
                 </span>
                 {w && arg.view.type !== 'dayGridMonth' && (
-                  <span className="flex items-center gap-1.5 text-[0.75rem] font-semibold text-ink-soft">
+                  <span className="flex flex-wrap justify-center items-center gap-x-1 gap-y-0 text-[0.7rem] font-semibold text-ink-soft">
                     <span className="text-sm leading-none">{w.icon}</span>
                     <span>
-                      {w.label} · {w.tmax}° <span className="text-ink-faint">/ {w.tmin}°</span>
+                      {isDayView ? `${w.label} · ` : ''}{w.tmax}°<span className="text-ink-faint">/{w.tmin}°</span>
                     </span>
                   </span>
                 )}
