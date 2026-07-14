@@ -515,6 +515,11 @@ body {
     padding: 0.4rem 0.75rem !important;
     font-size: 0.85rem !important;
   }
+  .fc .fc-toolbar-chunk {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
 }
 
 /* touch-friendly scrollbars off */
