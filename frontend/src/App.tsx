@@ -147,6 +147,7 @@ export default function App() {
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null)
   const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(null)
   const mainRef = useRef<HTMLElement>(null)
+  const [pullY, setPullY] = useState(0)
   const [isPulling, setIsPulling] = useState(false)
 
   const { data: config } = useData<{ family_name: string; secondary_tz: string; secondary_tz_emoji: string }>(
@@ -250,15 +251,20 @@ export default function App() {
     setTouchEnd({ x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY })
     if (touchStart && mainRef.current && mainRef.current.scrollTop <= 0) {
       const yDiff = e.targetTouches[0].clientY - touchStart.y
-      if (yDiff > 60) setIsPulling(true)
+      if (yDiff > 0 && yDiff < 200) { // Limit max pull
+        setPullY(Math.min(yDiff * 0.4, 80))
+      }
     }
   }
 
   const onTouchEnd = () => {
-    if (isPulling) {
+    if (pullY > 60) {
+      setIsPulling(true)
       window.location.reload()
       return
     }
+    setPullY(0)
+    
     if (!touchStart || !touchEnd) return
     const xDiff = touchStart.x - touchEnd.x
     const yDiff = Math.abs(touchStart.y - touchEnd.y)
@@ -285,7 +291,7 @@ export default function App() {
     <CelebrationProvider>
       <RewardCelebrationProvider>
         <div className="flex h-full flex-col lg:flex-row gap-2 p-2 lg:gap-4 lg:p-4">
-          <nav className="glass group/nav order-last lg:order-first flex flex-row lg:flex-col w-full lg:w-22 hover:lg:w-48 transition-[width] duration-300 ease-in-out h-14 lg:h-full shrink-0 items-center lg:items-start justify-around lg:justify-start gap-1 lg:gap-4 py-1.5 lg:py-4 px-2 lg:px-3 z-20">
+          <nav className="glass group/nav order-last lg:order-first flex flex-row lg:flex-col w-full lg:w-16 hover:lg:w-48 transition-[width] duration-300 ease-in-out h-14 lg:h-full shrink-0 items-center lg:items-start justify-around lg:justify-start gap-1 lg:gap-4 py-1.5 lg:py-4 px-2 lg:px-2 z-20">
 
             {/* Main Nav Items */}
             <div className="flex flex-row lg:flex-col items-center justify-around lg:justify-start gap-1 lg:gap-3 flex-1 lg:flex-none w-full">
@@ -339,17 +345,17 @@ export default function App() {
             <div className="hidden lg:flex lg:mt-auto flex-col items-center gap-3 lg:pb-4 w-full">
               <button
                 onClick={cycleAppearance}
-                className="flex flex-col items-center justify-center transition-all duration-200 group text-center w-full cursor-pointer"
+                className="flex flex-col lg:flex-row items-center lg:justify-start justify-center transition-all duration-200 group text-center lg:text-left w-full cursor-pointer overflow-hidden"
                 title="Appearance: follows your device in Auto"
               >
                 <motion.div
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   transition={PRESS_SPRING}
-                  className="flex flex-col items-center justify-center gap-1 rounded-2xl w-full py-1.5 transition-all duration-200 text-ink-soft group-hover:text-ink group-hover:bg-slate-300/15 dark:group-hover:bg-slate-700/15"
+                  className="flex flex-col lg:flex-row items-center lg:justify-start justify-center gap-1 lg:gap-3 rounded-2xl w-full py-1.5 lg:py-2.5 lg:px-3 transition-all duration-200 text-ink-soft group-hover:text-ink group-hover:bg-slate-300/15 dark:group-hover:bg-slate-700/15"
                 >
                   <Icon name={APPEARANCE_META[appearance].icon} className="text-[1.25rem] lg:text-[1.55rem] shrink-0" />
-                  <span className="hidden text-[0.65rem] lg:text-sm font-semibold lg:block tracking-tight leading-none whitespace-nowrap opacity-0 group-hover/nav:opacity-100 transition-opacity duration-300 w-0 group-hover/nav:w-auto">
+                  <span className="hidden text-[0.65rem] lg:text-sm font-semibold lg:block tracking-tight leading-none whitespace-nowrap opacity-0 lg:scale-95 group-hover/nav:opacity-100 group-hover/nav:scale-100 transition-all duration-300 w-0 group-hover/nav:w-auto">
                     {APPEARANCE_META[appearance].label}
                   </span>
                 </motion.div>
@@ -360,7 +366,7 @@ export default function App() {
                   <a
                     key={n.id}
                     href={`#/${n.id}`}
-                    className="flex flex-col items-center justify-center transition-all duration-200 group text-center w-full"
+                    className="flex flex-col lg:flex-row items-center lg:justify-start justify-center transition-all duration-200 group text-center lg:text-left w-full overflow-hidden"
                   >
                     <motion.div
                       whileHover={{ scale: 1.05 }}
@@ -371,7 +377,7 @@ export default function App() {
                       }`}
                     >
                       <Icon name={n.icon} filled={isActive} className="text-[1.25rem] lg:text-[1.55rem] shrink-0" />
-                      <span className="hidden text-[0.65rem] lg:text-sm font-semibold lg:block tracking-tight leading-none whitespace-nowrap opacity-0 group-hover/nav:opacity-100 transition-opacity duration-300 w-0 group-hover/nav:w-auto">{n.label}</span>
+                      <span className="hidden text-[0.65rem] lg:text-sm font-semibold lg:block tracking-tight leading-none whitespace-nowrap opacity-0 lg:scale-95 group-hover/nav:opacity-100 group-hover/nav:scale-100 transition-all duration-300 w-0 group-hover/nav:w-auto">{n.label}</span>
                     </motion.div>
                   </a>
                 )
@@ -385,10 +391,19 @@ export default function App() {
             onTouchEnd={onTouchEnd}
             className="flex min-w-0 flex-1 flex-col overflow-y-auto py-1 relative"
           >
-            {isPulling && (
-              <div className="absolute top-0 left-0 right-0 flex justify-center py-4 z-50">
-                <div className="glass-inset rounded-full p-2 animate-spin">
-                  <Icon name="refresh" />
+            {pullY > 0 && (
+              <div 
+                className="absolute left-0 right-0 flex justify-center z-50 pointer-events-none transition-transform duration-100"
+                style={{ transform: `translateY(${pullY - 40}px)` }}
+              >
+                <div 
+                  className="glass rounded-full p-2.5 shadow-md flex items-center justify-center transition-transform"
+                  style={{ transform: `rotate(${pullY * 2}deg)` }}
+                >
+                  <Icon 
+                    name="refresh" 
+                    className={`text-2xl text-ink ${isPulling ? 'animate-spin' : ''}`}
+                  />
                 </div>
               </div>
             )}
@@ -488,21 +503,9 @@ export default function App() {
         >
           <div className="mx-auto mb-5 h-1.5 w-12 rounded-full bg-[var(--outline-var)]" />
           <div className="flex flex-col gap-5">
-            <SegmentedRow
-              label="Appearance"
-              pillId="sheet-appearance-pill"
-              options={APPEARANCE_OPTIONS}
-              value={appearance}
-              onSelect={chooseAppearance}
-            />
-            <SegmentedRow
-              label="Theme"
-              pillId="sheet-style-pill"
-              options={STYLE_OPTIONS}
-              value={style}
-              onSelect={chooseStyle}
-            />
-            <div className="flex flex-col gap-2 mt-2">
+            
+            {/* More Views Section (Moved above Theme/Appearance) */}
+            <div className="flex flex-col gap-2">
               <span className="text-xs font-semibold uppercase tracking-wider text-ink-soft">More Views</span>
               <div className="flex flex-col gap-1">
                 {NAV.slice(5).filter(n => n.id !== 'setup').map((n) => (
@@ -519,6 +522,22 @@ export default function App() {
                 ))}
               </div>
             </div>
+
+            <SegmentedRow
+              label="Appearance"
+              pillId="sheet-appearance-pill"
+              options={APPEARANCE_OPTIONS}
+              value={appearance}
+              onSelect={setAppearanceState}
+            />
+            <SegmentedRow
+              label="Theme"
+              pillId="sheet-style-pill"
+              options={STYLE_OPTIONS}
+              value={style}
+              onSelect={chooseStyle}
+            />
+            
             <motion.a
               href="#/setup"
               whileTap={{ scale: 0.97 }}
