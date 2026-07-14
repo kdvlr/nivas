@@ -370,7 +370,7 @@ export default function Home() {
         {weather?.current && (
           <button
             onClick={() => setWeatherOpen(true)}
-            className="flex items-center gap-1 lg:gap-2 rounded-xl px-1.5 py-0.5 transition-transform active:scale-95 lg:px-3"
+            className="flex items-center gap-1 lg:gap-2 rounded-xl px-1.5 py-0.5 transition-transform active:scale-95 lg:px-3 shrink-0"
             title="Weather details"
           >
             <span className="text-2xl lg:text-4xl leading-none">{weather.current.icon}</span>
@@ -378,16 +378,16 @@ export default function Home() {
               <div className="text-xs lg:text-xl font-normal text-ink leading-none">
                 {weather.current.temp}°
               </div>
-              <div className="text-[10px] lg:text-base font-medium text-ink-soft mt-0.5 leading-none">
+              <div className="hidden sm:block text-[10px] lg:text-base font-medium text-ink-soft mt-0.5 leading-none">
                 {weather.current.label}
               </div>
               {todayWeather && (
-                <div className="text-[9px] lg:text-xs text-ink-faint mt-0.5 leading-none">
+                <div className="hidden sm:block text-[9px] lg:text-xs text-ink-faint mt-0.5 leading-none">
                   H {todayWeather.tmax}° L {todayWeather.tmin}°
                 </div>
               )}
             </div>
-            <Icon name="chevron_right" className="text-xs lg:text-lg text-ink-faint" />
+            <Icon name="chevron_right" className="hidden sm:block text-xs lg:text-lg text-ink-faint" />
           </button>
         )}
       </div>
