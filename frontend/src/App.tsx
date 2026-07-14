@@ -79,26 +79,31 @@ function SegmentedRow<T extends string>({
   value,
   onSelect,
   pillId,
+  inline = false,
 }: {
   label: string
   options: { id: T; icon: string; label: string }[]
   value: T
   onSelect: (v: T) => void
   pillId: string
+  inline?: boolean
 }) {
   return (
-    <div className="flex flex-col gap-2">
-      <span className="text-xs font-semibold uppercase tracking-wider text-ink-soft">{label}</span>
-      <div className="glass-inset flex !rounded-full p-1">
+    <div className={inline ? "flex items-center justify-between gap-4" : "flex flex-col gap-2"}>
+      <span className={inline ? "text-[0.95rem] font-medium text-ink shrink-0 w-24" : "text-xs font-semibold uppercase tracking-wider text-ink-soft"}>{label}</span>
+      <div 
+        className={`glass-inset flex !rounded-full p-1 overflow-x-auto ${inline ? 'flex-1' : ''} [&::-webkit-scrollbar]:hidden`}
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
         {options.map((o) => {
           const active = o.id === value
           return (
             <button
               key={o.id}
               onClick={() => onSelect(o.id)}
-              className={`relative flex flex-1 items-center justify-center gap-1.5 rounded-full py-2.5 text-sm font-medium transition-colors duration-200 ${
+              className={`relative flex items-center justify-center gap-1.5 rounded-full py-2.5 px-3.5 text-sm font-medium transition-colors duration-200 shrink-0 ${
                 active ? 'text-[var(--on-primary)]' : 'text-ink-soft'
-              }`}
+              } ${!inline && options.length <= 3 ? 'flex-1' : ''}`}
             >
               {active && (
                 <motion.span
@@ -523,32 +528,39 @@ export default function App() {
               </div>
             </div>
 
-            <SegmentedRow
-              label="Appearance"
-              pillId="sheet-appearance-pill"
-              options={APPEARANCE_OPTIONS}
-              value={appearance}
-              onSelect={setAppearanceState}
-            />
-            <SegmentedRow
-              label="Theme"
-              pillId="sheet-style-pill"
-              options={STYLE_OPTIONS}
-              value={style}
-              onSelect={chooseStyle}
-            />
-            
-            <motion.a
-              href="#/setup"
-              whileTap={{ scale: 0.97 }}
-              transition={PRESS_SPRING}
-              className="btn-glass flex items-center justify-between !rounded-2xl px-5 py-3.5 text-base"
-            >
-              <span className="flex items-center gap-3">
-                <Icon name="settings" /> All settings
-              </span>
-              <Icon name="chevron_right" />
-            </motion.a>
+            {/* Settings Section */}
+            <div className="flex flex-col gap-4 mt-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-ink-soft">Settings</span>
+              
+              <SegmentedRow
+                label="Appearance"
+                pillId="sheet-appearance-pill"
+                options={APPEARANCE_OPTIONS}
+                value={appearance}
+                onSelect={setAppearanceState}
+                inline
+              />
+              <SegmentedRow
+                label="Theme"
+                pillId="sheet-style-pill"
+                options={STYLE_OPTIONS}
+                value={style}
+                onSelect={chooseStyle}
+                inline
+              />
+              
+              <motion.a
+                href="#/setup"
+                whileTap={{ scale: 0.97 }}
+                transition={PRESS_SPRING}
+                className="btn-glass flex items-center justify-between !rounded-2xl px-5 py-3.5 text-base mt-2"
+              >
+                <span className="flex items-center gap-3">
+                  <Icon name="settings" /> All settings
+                </span>
+                <Icon name="chevron_right" />
+              </motion.a>
+            </div>
           </div>
         </motion.div>
         {slideshowActive && photosList.length > 0 && (
