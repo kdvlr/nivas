@@ -170,6 +170,14 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                   
                   // Stable deterministic seed based on activeSlide.id to select exit directions and angle tilts
                   const seed = activeSlide.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+                  const exitSide = seed % 4
+                  let exitX: string | number = 0
+                  let exitY: string | number = 0
+                  if (exitSide === 0) exitX = '-120vw'
+                  else if (exitSide === 1) exitX = '120vw'
+                  else if (exitSide === 2) exitY = '-120vh'
+                  else exitY = '120vh'
+
                   const exitDir = (seed % 2 === 0) ? 1 : -1
                   const exitAngle = rotation + (exitDir * 20)
                   
@@ -181,7 +189,8 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                         animate={{ scale: 1, opacity: 1, filter: 'blur(0px)', x: dir.x[1] * 1.8, y: dir.y[1] * 1.8 }}
                         exit={{
                           scale: 2.2,
-                          x: `${exitDir * 120}vw`,
+                          x: exitX,
+                          y: exitY,
                           rotate: exitAngle,
                           opacity: 0,
                           transition: { duration: 1.4, ease: 'easeInOut' }
@@ -269,6 +278,20 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                       y: [dir.y[0] / 2, dir.y[1] / 2]
                     }
                     
+                    const seed = activeSlide.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+                    const exitSide = seed % 4
+                    let exitX: string | number = 0
+                    let exitY: string | number = 0
+                    if (exitSide === 0) {
+                      exitX = isFirst ? '-120vw' : '120vw'
+                    } else if (exitSide === 1) {
+                      exitX = isFirst ? '120vw' : '-120vw'
+                    } else if (exitSide === 2) {
+                      exitY = isFirst ? '-120vh' : '120vh'
+                    } else {
+                      exitY = isFirst ? '120vh' : '-120vh'
+                    }
+
                     return (
                         <motion.div
                           key={item.url}
@@ -277,7 +300,8 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                           animate={{ scale: 1, opacity: 1, filter: 'blur(0px)', x: childDir.x[1] * 1.8, y: childDir.y[1] * 1.8 }}
                           exit={{
                             scale: 2.2,
-                            x: isFirst ? '-120vw' : '120vw',
+                            x: exitX,
+                            y: exitY,
                             rotate: isFirst ? cardRot - 25 : cardRot + 25,
                             opacity: 0,
                             transition: { duration: 1.4, ease: 'easeInOut' }
