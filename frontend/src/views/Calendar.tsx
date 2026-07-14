@@ -704,40 +704,43 @@ export default function Calendar() {
                 const weekday = arg.date.toLocaleDateString(undefined, { timeZone: 'UTC', weekday: 'short' })
                 const dayNum = arg.date.getUTCDate()
                 const isDayView = arg.view.type === 'timeGridDay'
+
+                const containerStyle = arg.isToday
+                  ? {
+                      backgroundColor: 'var(--primary)',
+                      color: 'var(--on-primary)',
+                      borderRadius: '12px',
+                      padding: '6px 12px',
+                      boxShadow: 'var(--shadow-1)',
+                      margin: '2px',
+                    }
+                  : {
+                      padding: '6px 12px',
+                      margin: '2px',
+                    }
+
                 return (
-                  <div className="flex flex-col items-center gap-1.5 py-1">
+                  <div 
+                    className="flex flex-col items-center gap-1 w-full transition-all"
+                    style={containerStyle}
+                  >
                     <span className={`text-xs font-semibold uppercase tracking-wider ${
-                      arg.isToday ? 'text-[var(--primary)] font-extrabold' : 'text-ink-soft'
+                      arg.isToday ? 'text-[var(--on-primary)] opacity-90 font-extrabold' : 'text-ink-soft'
                     }`}>
                       {weekday}
                     </span>
                     {arg.view.type !== 'dayGridMonth' && (
-                      <span 
-                        className="flex items-center justify-center text-sm font-bold transition-all"
-                        style={
-                          arg.isToday 
-                            ? {
-                                backgroundColor: 'var(--primary)',
-                                color: 'var(--on-primary)',
-                                borderRadius: '50%',
-                                width: '26px',
-                                height: '26px',
-                                boxShadow: 'var(--shadow-1)',
-                              }
-                            : {
-                                width: '26px',
-                                height: '26px',
-                              }
-                        }
-                      >
+                      <span className={`text-base ${arg.isToday ? 'font-extrabold' : 'font-bold text-ink'}`}>
                         {dayNum}
                       </span>
                     )}
                     {w && arg.view.type !== 'dayGridMonth' && (
-                      <span className="flex flex-wrap justify-center items-center gap-x-1 gap-y-0 text-[0.7rem] font-semibold text-ink-soft">
+                      <span className={`flex flex-wrap justify-center items-center gap-x-1 gap-y-0 text-[0.7rem] font-semibold ${
+                        arg.isToday ? 'text-[var(--on-primary)] opacity-95' : 'text-ink-soft'
+                      }`}>
                         <span className="text-sm leading-none">{w.icon}</span>
                         <span>
-                          {isDayView ? `${w.label} · ` : ''}{w.tmax}°<span className="text-ink-faint">/{w.tmin}°</span>
+                          {isDayView ? `${w.label} · ` : ''}{w.tmax}°<span className={arg.isToday ? 'text-[var(--on-primary)] opacity-70' : 'text-ink-faint'}>/{w.tmin}°</span>
                         </span>
                       </span>
                     )}
