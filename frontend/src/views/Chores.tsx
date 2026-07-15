@@ -388,7 +388,7 @@ export default function Chores() {
                   >
                     <Avatar name={b.person_name} color={b.color} src={b.avatar} emoji={b.avatar_emoji} size={isMobile ? 22 : 36} />
                     <div className="flex min-w-0 flex-col">
-                      <span className="truncate text-[10px] md:text-sm font-semibold leading-tight" style={{ color: b.color }}>
+                      <span className="truncate text-xs md:text-base font-bold leading-tight" style={{ color: b.color }}>
                         {b.person_name}
                       </span>
                       <span className="flex items-center gap-0.5 md:gap-1 text-xs md:text-lg font-medium tabular-nums text-ink">
