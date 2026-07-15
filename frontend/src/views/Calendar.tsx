@@ -548,18 +548,7 @@ export default function Calendar() {
               <span className="text-[0.75rem] font-medium opacity-85">
                 {new Date(dayIso + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
               </span>
-              {isWeekend && !isToday && (
-                <span 
-                  className="text-[0.65rem] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded-md border"
-                  style={{
-                    backgroundColor: 'var(--secondary-container)',
-                    color: 'var(--on-secondary-container)',
-                    borderColor: 'var(--outline-var)'
-                  }}
-                >
-                  Weekend
-                </span>
-              )}
+
               {dayWeather && (
                 <span className="ml-auto flex items-center gap-1.5 text-[0.82rem] font-semibold normal-case">
                   <span className="text-base leading-none">{dayWeather.icon}</span>
