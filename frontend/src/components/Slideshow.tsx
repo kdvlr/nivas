@@ -211,9 +211,9 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                           scale: { type: 'spring', damping: 22, stiffness: 60 },
                           filter: { duration: 0.6 },
                           opacity: { duration: 0.6 },
-                          x: { duration: 8.2, ease: 'easeInOut' },
-                          y: { duration: 8.2, ease: 'easeInOut' },
-                          rotate: { duration: 8.2, ease: 'easeInOut' }
+                          x: { duration: 8.2, ease: 'linear' },
+                          y: { duration: 8.2, ease: 'linear' },
+                          rotate: { duration: 8.2, ease: 'linear' }
                         }}
                         className="bg-[#faf8f5] p-3.5 pb-4 rounded-[4px] shadow-[0_4px_10px_rgba(0,0,0,0.35),0_30px_70px_rgba(0,0,0,0.55)] border border-neutral-200/50 flex flex-col items-center relative z-20 pointer-events-auto cursor-pointer"
                         onClick={(e) => {
@@ -321,9 +321,9 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                             scale: { type: 'spring', damping: 22, stiffness: 60, delay: isFirst ? 0 : 0.08 },
                             filter: { duration: 0.6, delay: isFirst ? 0 : 0.08 },
                             opacity: { duration: 0.6, delay: isFirst ? 0 : 0.08 },
-                            x: { duration: 8.2, ease: 'easeInOut' },
-                            y: { duration: 8.2, ease: 'easeInOut' },
-                            rotate: { duration: 8.2, ease: 'easeInOut' }
+                            x: { duration: 8.2, ease: 'linear' },
+                            y: { duration: 8.2, ease: 'linear' },
+                            rotate: { duration: 8.2, ease: 'linear' }
                           }}
                           className="bg-[#faf8f5] p-3.5 pb-4 rounded-[4px] shadow-[0_4px_10px_rgba(0,0,0,0.35),0_30px_70px_rgba(0,0,0,0.55)] border border-neutral-200/50 flex flex-col items-center relative z-20 pointer-events-auto cursor-pointer"
                           onClick={(e) => {
