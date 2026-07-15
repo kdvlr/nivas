@@ -170,6 +170,15 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                   
                   // Stable deterministic seed based on activeSlide.id to select exit directions and angle tilts
                   const seed = activeSlide.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+                  
+                  const targetX = dir.x[1] * 2;
+                  const targetY = dir.y[1] * 2;
+                  const targetRot = rotation + (seed % 2 === 0 ? 2 : -2);
+                  
+                  const xKeys = [0, targetX * 0.3 + 3, targetX * 0.7 - 3, targetX];
+                  const yKeys = [0, targetY * 0.3 - 3, targetY * 0.7 + 3, targetY];
+                  const rotKeys = [rotation, rotation + (targetRot - rotation)*0.4, rotation + (targetRot - rotation)*0.8, targetRot];
+
                   const exitSide = seed % 4
                   let exitX: string | number = 0
                   let exitY: string | number = 0
@@ -179,14 +188,13 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                   else exitY = '120vh'
 
                   const exitDir = (seed % 2 === 0) ? 1 : -1
-                  const exitAngle = rotation + (exitDir * 20)
+                  const exitAngle = targetRot + (exitDir * 20)
                   
                   return (
                     <div className="relative flex items-center justify-center">
                       <motion.div
-                        style={{ rotate: rotation }}
-                        initial={{ scale: 0.35, opacity: 0, filter: 'blur(8px)' }}
-                        animate={{ scale: 1, opacity: 1, filter: 'blur(0px)', x: dir.x[1] * 1.8, y: dir.y[1] * 1.8 }}
+                        initial={{ scale: 0.35, opacity: 0, filter: 'blur(8px)', x: 0, y: 0, rotate: rotation }}
+                        animate={{ scale: 1, opacity: 1, filter: 'blur(0px)', x: xKeys, y: yKeys, rotate: rotKeys }}
                         exit={{
                           scale: 2.2,
                           x: exitX,
@@ -199,8 +207,9 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                           scale: { type: 'spring', damping: 22, stiffness: 60 },
                           filter: { duration: 0.6 },
                           opacity: { duration: 0.6 },
-                          x: { duration: 8.2, ease: 'linear' },
-                          y: { duration: 8.2, ease: 'linear' }
+                          x: { duration: 8.2, ease: 'easeInOut' },
+                          y: { duration: 8.2, ease: 'easeInOut' },
+                          rotate: { duration: 8.2, ease: 'easeInOut' }
                         }}
                         className="bg-[#faf8f5] p-3.5 pb-4 rounded-[4px] shadow-[0_4px_10px_rgba(0,0,0,0.35),0_30px_70px_rgba(0,0,0,0.55)] border border-neutral-200/50 flex flex-col items-center relative z-20 pointer-events-auto cursor-pointer"
                         onClick={(e) => {
@@ -271,47 +280,50 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
                   {activeSlide.items.map((item, idx) => {
                     const isFirst = idx === 0
                     const itemAspect = item.width && item.height ? `${item.width} / ${item.height}` : '3/4'
-                    const rotation = [2.2, -3.1, 1.4, -2.3, 3.2, -1.6][(currentIdx + idx) % 6]
-                    const cardRot = isFirst ? rotation : -rotation * 0.8
-                    const childDir = {
-                      x: isFirst ? [dir.x[0] / 2, dir.x[1] / 2] : [-dir.x[0] / 2, -dir.x[1] / 2],
-                      y: [dir.y[0] / 2, dir.y[1] / 2]
-                    }
+                    const baseRot = [2.2, -3.1, 1.4, -2.3, 3.2, -1.6][(currentIdx + idx) % 6]
                     
-                    const seed = activeSlide.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
-                    const exitSide = seed % 4
+                    const itemSeed = item.url.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+                    
+                    const initX = isFirst ? -50 - (itemSeed % 20) : 50 + (itemSeed % 20);
+                    const initY = (itemSeed % 30) - 15;
+                    const initRot = isFirst ? baseRot : -baseRot + (itemSeed % 4);
+
+                    const targetX = isFirst ? -10 + (itemSeed % 15) : 10 - (itemSeed % 15);
+                    const targetY = initY + (itemSeed % 40) - 20;
+                    const targetRot = initRot + (itemSeed % 2 === 0 ? 4 : -4);
+
+                    const xKeys = [initX, initX + (targetX - initX)*0.3 + 4, initX + (targetX - initX)*0.7 - 4, targetX];
+                    const yKeys = [initY, initY + (targetY - initY)*0.3 - 4, initY + (targetY - initY)*0.7 + 4, targetY];
+                    const rotKeys = [initRot, initRot + (targetRot - initRot)*0.4, initRot + (targetRot - initRot)*0.8, targetRot];
+
+                    const exitSide = itemSeed % 4
                     let exitX: string | number = 0
                     let exitY: string | number = 0
-                    if (exitSide === 0) {
-                      exitX = isFirst ? '-120vw' : '120vw'
-                    } else if (exitSide === 1) {
-                      exitX = isFirst ? '120vw' : '-120vw'
-                    } else if (exitSide === 2) {
-                      exitY = isFirst ? '-120vh' : '120vh'
-                    } else {
-                      exitY = isFirst ? '120vh' : '-120vh'
-                    }
+                    if (exitSide === 0) exitX = isFirst ? '-120vw' : '120vw'
+                    else if (exitSide === 1) exitX = isFirst ? '120vw' : '-120vw'
+                    else if (exitSide === 2) exitY = isFirst ? '-120vh' : '120vh'
+                    else exitY = isFirst ? '120vh' : '-120vh'
 
                     return (
                         <motion.div
                           key={item.url}
-                          style={{ rotate: cardRot }}
-                          initial={{ scale: 0.35, opacity: 0, filter: 'blur(8px)', x: isFirst ? -50 : 50 }}
-                          animate={{ scale: 1, opacity: 1, filter: 'blur(0px)', x: childDir.x[1] * 1.8, y: childDir.y[1] * 1.8 }}
+                          initial={{ scale: 0.35, opacity: 0, filter: 'blur(8px)', x: initX, y: initY, rotate: initRot }}
+                          animate={{ scale: 1, opacity: 1, filter: 'blur(0px)', x: xKeys, y: yKeys, rotate: rotKeys }}
                           exit={{
                             scale: 2.2,
                             x: exitX,
                             y: exitY,
-                            rotate: isFirst ? cardRot - 25 : cardRot + 25,
+                            rotate: isFirst ? targetRot - 25 : targetRot + 25,
                             opacity: 0,
                             transition: { duration: 1.4, ease: 'easeInOut' }
                           }}
                           transition={{
-                            scale: { type: 'spring', damping: 22, stiffness: 60 },
-                            filter: { duration: 0.6 },
-                            opacity: { duration: 0.6 },
-                            x: { duration: 8.2, ease: 'linear' },
-                            y: { duration: 8.2, ease: 'linear' }
+                            scale: { type: 'spring', damping: 22, stiffness: 60, delay: isFirst ? 0 : 0.08 },
+                            filter: { duration: 0.6, delay: isFirst ? 0 : 0.08 },
+                            opacity: { duration: 0.6, delay: isFirst ? 0 : 0.08 },
+                            x: { duration: 8.2, ease: 'easeInOut' },
+                            y: { duration: 8.2, ease: 'easeInOut' },
+                            rotate: { duration: 8.2, ease: 'easeInOut' }
                           }}
                           className="bg-[#faf8f5] p-3.5 pb-4 rounded-[4px] shadow-[0_4px_10px_rgba(0,0,0,0.35),0_30px_70px_rgba(0,0,0,0.55)] border border-neutral-200/50 flex flex-col items-center relative z-20 pointer-events-auto cursor-pointer"
                           onClick={(e) => {
