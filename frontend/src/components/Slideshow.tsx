@@ -98,7 +98,7 @@ const BALLOON_COLORS = ['#f87171', '#fb923c', '#facc15', '#4ade80', '#38bdf8', '
 
 function Balloon({ color }: { color: string }) {
   return (
-    <svg width="78" height="138" viewBox="0 0 88 150" className="pointer-events-none" aria-hidden="true">
+    <svg width="106" height="181" viewBox="0 0 88 150" className="pointer-events-none" aria-hidden="true">
       <path
         d="M44 4 C20 4 8 24 8 44 C8 68 28 86 44 86 C60 86 80 68 80 44 C80 24 68 4 44 4 Z"
         fill={color}
@@ -213,8 +213,12 @@ interface RigProps {
 
 function PhotoRig({ item, phase, kind, index, pair, pairIdx, onOpenVideo }: RigProps) {
   const seed = hashStr(item.url)
+  // Two independent 0..1 values per photo so side-by-side pairs get visibly
+  // different rise speeds, resting heights, and sway rhythms.
+  const f = (seed % 97) / 97
+  const g = (Math.floor(seed / 7) % 89) / 89
   const aspect = item.width && item.height ? `${item.width} / ${item.height}` : pair ? '3/4' : '16/9'
-  const delay = pairIdx * 0.18
+  const delay = pairIdx * 0.18 + f * 0.25
   const rainy = kind === 'rainy' || kind === 'stormy'
   const daylight = phase === 'day' || phase === 'dawn'
 
@@ -292,12 +296,12 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, onOpenVideo }: RigP
         initial={{ x: sx, y: sy, scale: 0.06, opacity: 0 }}
         animate={{ x: 0, y: 0, scale: 1, opacity: 1 }}
         exit={{ x: ex, y: ey, scale: 0.04, opacity: 0, transition: { duration: 1.8, ease: 'easeIn', delay: delay * 0.5 } }}
-        transition={{ duration: 2.4, ease: [0.16, 1, 0.3, 1], delay, opacity: { duration: 1.3, delay } }}
+        transition={{ duration: 2.2 + f * 0.8, ease: [0.16, 1, 0.3, 1], delay, opacity: { duration: 1.3, delay } }}
         className="relative"
       >
         <motion.div
-          animate={{ y: [-7, 7] }}
-          transition={{ repeat: Infinity, repeatType: 'mirror', duration: 5, ease: 'easeInOut', delay: seed % 3 }}
+          animate={{ y: [-(5 + f * 4), 5 + g * 4] }}
+          transition={{ repeat: Infinity, repeatType: 'mirror', duration: 4.2 + g * 2, ease: 'easeInOut', delay: f * 1.5 }}
         >
           {card}
         </motion.div>
@@ -308,18 +312,18 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, onOpenVideo }: RigP
   if (phase === 'dusk') {
     return (
       <motion.div
-        initial={{ y: '46vh', opacity: 0 }}
-        animate={{ y: ['46vh', '4vh', '-2vh'], opacity: 1 }}
+        initial={{ y: `${44 + f * 6}vh`, opacity: 0 }}
+        animate={{ y: [`${44 + f * 6}vh`, `${3 + g * 4}vh`, `-${1 + f * 4}vh`], opacity: 1 }}
         exit={{ y: '-85vh', opacity: 0, transition: { duration: 2.1, ease: 'easeIn', delay: delay * 0.5 } }}
         transition={{
-          y: { duration: 10, times: [0, 0.5, 1], ease: ['easeOut', 'easeInOut'], delay },
+          y: { duration: 9.5 + f * 1.5, times: [0, 0.5, 1], ease: ['easeOut', 'easeInOut'], delay },
           opacity: { duration: 1.2, delay },
         }}
         className="relative"
       >
         <motion.div
-          animate={{ rotate: [-1.2, 1.2] }}
-          transition={{ repeat: Infinity, repeatType: 'mirror', duration: 4.5, ease: 'easeInOut', delay: seed % 2 }}
+          animate={{ rotate: [-(0.9 + f * 0.8), 0.9 + g * 0.8] }}
+          transition={{ repeat: Infinity, repeatType: 'mirror', duration: 4.2 + g * 1.4, ease: 'easeInOut', delay: f * 2 }}
           style={{ transformOrigin: 'top center' }}
         >
           {card}
@@ -333,23 +337,23 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, onOpenVideo }: RigP
   const balloonColor = BALLOON_COLORS[(seed + pairIdx * 3 + index) % BALLOON_COLORS.length]
   return (
     <motion.div
-      initial={{ y: '58vh', opacity: 0 }}
-      animate={{ y: ['58vh', '6vh', '-4vh'], opacity: 1 }}
+      initial={{ y: `${54 + f * 8}vh`, opacity: 0 }}
+      animate={{ y: [`${54 + f * 8}vh`, `${4 + g * 5}vh`, `-${2 + f * 5}vh`], opacity: 1 }}
       exit={{ y: '-125vh', opacity: 0.9, transition: { duration: 1.7, ease: 'easeIn', delay: delay * 0.5 } }}
       transition={{
-        y: { duration: 9.5, times: [0, 0.42, 1], ease: ['easeOut', 'easeInOut'], delay },
+        y: { duration: 9 + f * 1.5, times: [0, 0.42, 1], ease: ['easeOut', 'easeInOut'], delay },
         opacity: { duration: 1.0, delay },
       }}
       className="relative"
     >
       <motion.div
-        animate={{ rotate: [-2.2, 2.2] }}
-        transition={{ repeat: Infinity, repeatType: 'mirror', duration: 3.8, ease: 'easeInOut', delay: seed % 2 }}
+        animate={{ rotate: [-(1.7 + f * 1.3), 1.7 + g * 1.3] }}
+        transition={{ repeat: Infinity, repeatType: 'mirror', duration: 3.3 + g * 1.4, ease: 'easeInOut', delay: f * 2.2 }}
         style={{ transformOrigin: 'top center' }}
         className="flex flex-col items-center"
       >
         {rainy ? (
-          <div className="text-6xl -mb-1 pointer-events-none select-none" style={{ filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.35))' }}>
+          <div className="text-7xl -mb-1 pointer-events-none select-none" style={{ filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.35))' }}>
             ☂️
           </div>
         ) : (
