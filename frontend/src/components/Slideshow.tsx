@@ -6,6 +6,7 @@ import { startStarCanvas, startFxCanvas, SkyPhase, SkyKind, SkyState } from './s
 
 interface MediaItem {
   url: string
+  displayUrl?: string
   videoUrl?: string
   type: 'image' | 'video' | 'live_photo'
   name: string
@@ -267,7 +268,9 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, onOpenVideo }: RigP
         maxWidth: pair ? '30vw' : '62vw',
       }}
     >
-      {item.type === 'image' && <img src={item.url} className="w-full h-full object-contain pointer-events-none" />}
+      {item.type === 'image' && (
+        <img src={item.displayUrl || item.url} decoding="async" className="w-full h-full object-contain pointer-events-none" />
+      )}
       {item.type === 'live_photo' && item.videoUrl && (
         <CleanVideo key={item.videoUrl} src={item.videoUrl} autoPlay muted playsInline loop className="w-full h-full object-contain pointer-events-none" />
       )}
@@ -486,6 +489,19 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
     }
     return result
   }, [photos])
+
+  // Warm the browser cache/decoder for the next slide's images so the decode
+  // never lands in the middle of the entrance animation.
+  useEffect(() => {
+    if (slides.length <= 1) return
+    const next = slides[(currentIdx + 1) % slides.length]
+    for (const it of next.items) {
+      if (it.type === 'image' || it.type === 'live_photo') {
+        const img = new window.Image()
+        img.src = it.displayUrl || it.url
+      }
+    }
+  }, [currentIdx, slides])
 
   // Advance every 9 seconds, paused while a full video is being watched.
   useEffect(() => {

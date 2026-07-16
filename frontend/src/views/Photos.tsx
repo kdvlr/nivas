@@ -5,6 +5,7 @@ import Icon from '../components/Icon'
 
 interface MediaItem {
   url: string
+  displayUrl?: string
   thumbnailUrl?: string
   videoUrl?: string
   type: 'image' | 'video' | 'live_photo'
@@ -167,7 +168,7 @@ const LightboxLivePhoto = ({ item }: { item: MediaItem }) => {
   return (
     <div className="relative flex items-center justify-center max-h-[80vh] max-w-[90vw] select-none">
       <img
-        src={item.url}
+        src={item.displayUrl || item.url}
         alt={item.name}
         className={`max-h-[80vh] max-w-[90vw] object-contain rounded-2xl transition-opacity duration-300 ${
           isPlaying ? 'opacity-0' : 'opacity-100'
@@ -396,7 +397,7 @@ export default function Photos({ onStartSlideshow }: { onStartSlideshow?: () => 
                 >
                   {currentMedia.type === 'image' && (
                     <img
-                      src={currentMedia.url}
+                      src={currentMedia.displayUrl || currentMedia.url}
                       alt={currentMedia.name}
                       className="max-h-[80vh] max-w-[90vw] object-contain rounded-2xl"
                     />

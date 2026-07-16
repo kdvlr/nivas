@@ -50,6 +50,11 @@ def get_exif_metadata(file_path):
             width, height = img.width, img.height
             exif = img.getexif()
             if exif:
+                # 274 = Orientation. Rotated photos (common from phones) store
+                # sensor dimensions; swap so metadata matches how browsers
+                # render them (and how the display/thumbnail variants are cut).
+                if exif.get(274) in (5, 6, 7, 8):
+                    width, height = height, width
                 # 36867 = DateTimeOriginal, 306 = DateTime
                 date_str = exif.get(36867) or exif.get(306)
                 if date_str:
@@ -190,13 +195,25 @@ def geocode_worker(db_session_factory, file_paths):
                 with GEOCODE_LOCK:
                     PENDING_GEOCODES.discard(rel_str)
 
+# Bump when metadata extraction changes in a way that requires re-reading
+# every file (e.g. the EXIF orientation fix) — wipes the cache table once.
+PHOTO_META_VERSION = "2"
+
+
 def sync_photos_dir(db: Session):
     """
     Delta-syncs filesystem changes with the SQLite database.
     """
     if not PHOTOS_DIR.exists() or not PHOTOS_DIR.is_dir():
         return
-        
+
+    from ..services.sync import get_setting, set_setting
+
+    if get_setting(db, "photo_meta_version") != PHOTO_META_VERSION:
+        db.query(PhotoMetadata).delete()
+        db.commit()
+        set_setting(db, "photo_meta_version", PHOTO_META_VERSION)
+
     # 1. Scan filesystem for images and videos
     all_files_on_disk = {}
     for p in PHOTOS_DIR.rglob("*"):
@@ -315,43 +332,66 @@ def sync_photos_dir_background(db_session_factory):
 
 THUMBNAILS_DIR = Path(get_settings().data_dir) / "thumbnails"
 THUMBNAILS_DIR.mkdir(parents=True, exist_ok=True)
+DISPLAY_DIR = Path(get_settings().data_dir) / "display"
+DISPLAY_DIR.mkdir(parents=True, exist_ok=True)
 
-@router.get("/thumbnail/{file_path:path}")
-def get_thumbnail(file_path: str):
+
+def _resolve_photo_path(file_path: str):
     try:
         decoded_path = urllib.parse.unquote(file_path)
         orig_path = (PHOTOS_DIR / decoded_path).resolve()
         if not orig_path.is_relative_to(PHOTOS_DIR.resolve()) or not orig_path.is_file():
             raise HTTPException(status_code=404, detail="File not found")
+        return decoded_path, orig_path
+    except HTTPException:
+        raise
     except Exception:
         raise HTTPException(status_code=404, detail="Invalid path")
 
+
+def _resized_variant(decoded_path: str, orig_path: Path, cache_dir: Path, max_px: int, quality: int):
+    """Serve a disk-cached, EXIF-rotated, downscaled JPEG of the original."""
     ext = orig_path.suffix.lower()
-    if ext in VIDEO_EXTENSIONS:
+    # Videos can't be resized here; animated GIFs would lose animation.
+    if ext in VIDEO_EXTENSIONS or ext == ".gif":
         return FileResponse(orig_path)
 
-    # Cache key based on file path, mtime, and size
     stat = orig_path.stat()
-    cache_key = f"{decoded_path}_{stat.st_mtime}_{stat.st_size}"
+    cache_key = f"{decoded_path}_{stat.st_mtime}_{stat.st_size}_{max_px}"
     h = hashlib.md5(cache_key.encode()).hexdigest()
-    thumb_path = THUMBNAILS_DIR / f"{h}.jpg"
+    out_path = cache_dir / f"{h}.jpg"
 
-    if not thumb_path.exists():
+    if not out_path.exists():
         try:
             with Image.open(orig_path) as img:
                 try:
                     img = ImageOps.exif_transpose(img)
                 except Exception:
                     pass
-                img.thumbnail((400, 400))
+                img.thumbnail((max_px, max_px))
                 if img.mode != "RGB":
                     img = img.convert("RGB")
-                img.save(thumb_path, "JPEG", quality=80)
+                img.save(out_path, "JPEG", quality=quality)
         except Exception as e:
-            print(f"Failed to generate thumbnail for {file_path}: {e}")
+            print(f"Failed to generate {max_px}px variant for {decoded_path}: {e}")
             return FileResponse(orig_path)
 
-    return FileResponse(thumb_path)
+    return FileResponse(out_path)
+
+
+@router.get("/thumbnail/{file_path:path}")
+def get_thumbnail(file_path: str):
+    decoded_path, orig_path = _resolve_photo_path(file_path)
+    return _resized_variant(decoded_path, orig_path, THUMBNAILS_DIR, 400, 80)
+
+
+@router.get("/display/{file_path:path}")
+def get_display(file_path: str):
+    # Screen-sized variant for the slideshow/lightbox: decoding a 2048px JPEG
+    # is ~10x cheaper than a 12-48MP phone original and looks identical on a
+    # 1080p kiosk.
+    decoded_path, orig_path = _resolve_photo_path(file_path)
+    return _resized_variant(decoded_path, orig_path, DISPLAY_DIR, 2048, 85)
 
 @router.get("")
 def get_photos(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
@@ -411,6 +451,7 @@ def get_photos(background_tasks: BackgroundTasks, db: Session = Depends(get_db))
                 
                 media_items.append({
                     "url": f"/api/photos/media/{urllib.parse.quote(img_data['rel_path'].as_posix())}",
+                    "displayUrl": f"/api/photos/display/{urllib.parse.quote(img_data['rel_path'].as_posix())}",
                     "thumbnailUrl": f"/api/photos/thumbnail/{urllib.parse.quote(img_data['rel_path'].as_posix())}",
                     "videoUrl": f"/api/photos/media/{urllib.parse.quote(vid_rel_path.as_posix())}",
                     "type": "live_photo",
@@ -444,6 +485,7 @@ def get_photos(background_tasks: BackgroundTasks, db: Session = Depends(get_db))
         if img_rel_str not in paired_images:
             media_items.append({
                 "url": f"/api/photos/media/{urllib.parse.quote(img_data['rel_path'].as_posix())}",
+                "displayUrl": f"/api/photos/display/{urllib.parse.quote(img_data['rel_path'].as_posix())}",
                 "thumbnailUrl": f"/api/photos/thumbnail/{urllib.parse.quote(img_data['rel_path'].as_posix())}",
                 "type": "image",
                 "name": img_data["name"],
