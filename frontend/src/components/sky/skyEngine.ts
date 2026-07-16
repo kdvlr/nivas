@@ -1,7 +1,7 @@
 // Canvas engines for the Living Sky screensaver.
 // Two layers: a star canvas behind the photos (stars, twinkle, shooting stars)
 // and an fx canvas in front (rain, snow, storm flashes, fireflies, birds).
-// Tuned for low-end tablets: DPR capped, ~30fps, pre-rendered glow sprites.
+// Tuned for low-end tablets: DPR capped, ~30fps, pre-rendered glow sprites, no layout thrashing.
 
 export type SkyPhase = 'dawn' | 'day' | 'dusk' | 'night'
 export type SkyKind = 'clear' | 'cloudy' | 'rainy' | 'snowy' | 'stormy'
@@ -9,6 +9,7 @@ export type SkyKind = 'clear' | 'cloudy' | 'rainy' | 'snowy' | 'stormy'
 export interface SkyState {
   phase: SkyPhase
   kind: SkyKind
+  paused?: boolean
 }
 
 const rand = (a: number, b: number) => a + Math.random() * (b - a)
@@ -16,19 +17,6 @@ const rand = (a: number, b: number) => a + Math.random() * (b - a)
 // Cap the frame rate: full-screen 60fps canvas work is wasted on ambient
 // weather. rAF still schedules, we just skip paints.
 const FRAME_MS = 31
-
-function fit(canvas: HTMLCanvasElement) {
-  const dpr = Math.min(window.devicePixelRatio || 1, 1.5)
-  const w = canvas.clientWidth
-  const h = canvas.clientHeight
-  const pw = Math.max(1, Math.round(w * dpr))
-  const ph = Math.max(1, Math.round(h * dpr))
-  if (canvas.width !== pw || canvas.height !== ph) {
-    canvas.width = pw
-    canvas.height = ph
-  }
-  return { w, h, dpr }
-}
 
 // Pre-rendered radial glow sprite (avoids per-frame gradient allocations).
 function makeGlowSprite(r: number, g: number, b: number): HTMLCanvasElement {
@@ -73,11 +61,33 @@ export function startStarCanvas(canvas: HTMLCanvasElement, get: () => SkyState):
   let lastDraw = 0
   let raf = 0
 
+  let w = canvas.clientWidth
+  let h = canvas.clientHeight
+  let dpr = Math.min(window.devicePixelRatio || 1, 1.5)
+
+  const resize = () => {
+    w = canvas.clientWidth
+    h = canvas.clientHeight
+    dpr = Math.min(window.devicePixelRatio || 1, 1.5)
+    const pw = Math.max(1, Math.round(w * dpr))
+    const ph = Math.max(1, Math.round(h * dpr))
+    if (canvas.width !== pw || canvas.height !== ph) {
+      canvas.width = pw
+      canvas.height = ph
+    }
+  }
+
+  resize()
+  window.addEventListener('resize', resize)
+
   const frame = (t: number) => {
     raf = requestAnimationFrame(frame)
+    const state = get()
+    if (state.paused) return
+
     if (t - lastDraw < FRAME_MS) return
     lastDraw = t
-    const { w, h, dpr } = fit(canvas)
+
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.clearRect(0, 0, w, h)
 
@@ -95,7 +105,6 @@ export function startStarCanvas(canvas: HTMLCanvasElement, get: () => SkyState):
       }))
     }
 
-    const state = get()
     const mult = starAlpha(state)
 
     if (mult > 0.01) {
@@ -159,7 +168,10 @@ export function startStarCanvas(canvas: HTMLCanvasElement, get: () => SkyState):
   }
 
   raf = requestAnimationFrame(frame)
-  return () => cancelAnimationFrame(raf)
+  return () => {
+    cancelAnimationFrame(raf)
+    window.removeEventListener('resize', resize)
+  }
 }
 
 interface Drop {
@@ -213,6 +225,25 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
   let lastDraw = performance.now()
   let raf = 0
 
+  let w = canvas.clientWidth
+  let h = canvas.clientHeight
+  let dpr = Math.min(window.devicePixelRatio || 1, 1.5)
+
+  const resize = () => {
+    w = canvas.clientWidth
+    h = canvas.clientHeight
+    dpr = Math.min(window.devicePixelRatio || 1, 1.5)
+    const pw = Math.max(1, Math.round(w * dpr))
+    const ph = Math.max(1, Math.round(h * dpr))
+    if (canvas.width !== pw || canvas.height !== ph) {
+      canvas.width = pw
+      canvas.height = ph
+    }
+  }
+
+  resize()
+  window.addEventListener('resize', resize)
+
   const seed = (w: number, h: number) => {
     drops = Array.from({ length: 130 }, () => ({
       x: Math.random() * (w + 120) - 60,
@@ -253,10 +284,13 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
 
   const frame = (t: number) => {
     raf = requestAnimationFrame(frame)
+    const state = get()
+    if (state.paused) return
+
     if (t - lastDraw < FRAME_MS) return
     const dt = Math.min(0.08, (t - lastDraw) / 1000)
     lastDraw = t
-    const { w, h, dpr } = fit(canvas)
+
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.clearRect(0, 0, w, h)
 
@@ -376,5 +410,8 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
   }
 
   raf = requestAnimationFrame(frame)
-  return () => cancelAnimationFrame(raf)
+  return () => {
+    cancelAnimationFrame(raf)
+    window.removeEventListener('resize', resize)
+  }
 }

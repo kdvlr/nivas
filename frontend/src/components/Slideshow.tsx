@@ -376,7 +376,7 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
   const [now, setNow] = useState(() => new Date())
 
   const phase: SkyPhase = PHASE_OVERRIDE ?? computePhase(now, sun.sunrise, sun.sunset)
-  const skyState: SkyState = { phase, kind }
+  const skyState: SkyState = { phase, kind, paused: !!selectedVideo }
   const stateRef = useRef<SkyState>(skyState)
   stateRef.current = skyState
 
