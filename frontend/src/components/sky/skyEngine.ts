@@ -1,6 +1,7 @@
 // Canvas engines for the Living Sky screensaver.
 // Two layers: a star canvas behind the photos (stars, twinkle, shooting stars)
 // and an fx canvas in front (rain, snow, storm flashes, fireflies, birds).
+// Tuned for low-end tablets: DPR capped, ~30fps, pre-rendered glow sprites.
 
 export type SkyPhase = 'dawn' | 'day' | 'dusk' | 'night'
 export type SkyKind = 'clear' | 'cloudy' | 'rainy' | 'snowy' | 'stormy'
@@ -12,8 +13,12 @@ export interface SkyState {
 
 const rand = (a: number, b: number) => a + Math.random() * (b - a)
 
+// Cap the frame rate: full-screen 60fps canvas work is wasted on ambient
+// weather. rAF still schedules, we just skip paints.
+const FRAME_MS = 31
+
 function fit(canvas: HTMLCanvasElement) {
-  const dpr = Math.min(window.devicePixelRatio || 1, 2)
+  const dpr = Math.min(window.devicePixelRatio || 1, 1.5)
   const w = canvas.clientWidth
   const h = canvas.clientHeight
   const pw = Math.max(1, Math.round(w * dpr))
@@ -23,6 +28,20 @@ function fit(canvas: HTMLCanvasElement) {
     canvas.height = ph
   }
   return { w, h, dpr }
+}
+
+// Pre-rendered radial glow sprite (avoids per-frame gradient allocations).
+function makeGlowSprite(r: number, g: number, b: number): HTMLCanvasElement {
+  const c = document.createElement('canvas')
+  c.width = c.height = 32
+  const ctx = c.getContext('2d')!
+  const grad = ctx.createRadialGradient(16, 16, 0, 16, 16, 16)
+  grad.addColorStop(0, `rgba(${r},${g},${b},0.9)`)
+  grad.addColorStop(0.5, `rgba(${r},${g},${b},0.35)`)
+  grad.addColorStop(1, `rgba(${r},${g},${b},0)`)
+  ctx.fillStyle = grad
+  ctx.fillRect(0, 0, 32, 32)
+  return c
 }
 
 // How visible the star field is for a given sky state (0..1).
@@ -51,10 +70,13 @@ export function startStarCanvas(canvas: HTMLCanvasElement, get: () => SkyState):
   let sizeKey = ''
   let shooting: { x: number; y: number; vx: number; vy: number; born: number; life: number } | null = null
   let nextShoot = performance.now() + rand(12_000, 45_000)
+  let lastDraw = 0
   let raf = 0
 
   const frame = (t: number) => {
     raf = requestAnimationFrame(frame)
+    if (t - lastDraw < FRAME_MS) return
+    lastDraw = t
     const { w, h, dpr } = fit(canvas)
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.clearRect(0, 0, w, h)
@@ -62,11 +84,11 @@ export function startStarCanvas(canvas: HTMLCanvasElement, get: () => SkyState):
     const key = `${w}x${h}`
     if (key !== sizeKey) {
       sizeKey = key
-      const n = Math.round((w * h) / 8500)
+      const n = Math.round((w * h) / 10_000)
       stars = Array.from({ length: n }, () => ({
         x: Math.random() * w,
         y: Math.random() * h * 0.92,
-        r: rand(0.4, 1.5),
+        r: rand(0.5, 1.5),
         alpha: rand(0.25, 0.9),
         speed: rand(0.4, 1.6),
         offset: rand(0, Math.PI * 2),
@@ -178,6 +200,8 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
   const ctx = canvas.getContext('2d')
   if (!ctx) return () => {}
 
+  const fireflyGlow = makeGlowSprite(220, 255, 150)
+
   let drops: Drop[] = []
   let flakes: Flake[] = []
   let flies: Firefly[] = []
@@ -186,17 +210,17 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
   let nextFlock = performance.now() + rand(15_000, 60_000)
   let flashUntil = 0
   let nextFlash = performance.now() + rand(8_000, 20_000)
-  let last = performance.now()
+  let lastDraw = performance.now()
   let raf = 0
 
   const seed = (w: number, h: number) => {
-    drops = Array.from({ length: 150 }, () => ({
+    drops = Array.from({ length: 130 }, () => ({
       x: Math.random() * (w + 120) - 60,
       y: Math.random() * h,
       len: rand(9, 22),
       speed: rand(520, 860),
     }))
-    flakes = Array.from({ length: 90 }, () => ({
+    flakes = Array.from({ length: 80 }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
       r: rand(1.2, 3.4),
@@ -204,7 +228,7 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
       sway: rand(12, 34),
       offset: rand(0, Math.PI * 2),
     }))
-    flies = Array.from({ length: 14 }, () => ({
+    flies = Array.from({ length: 12 }, () => ({
       x: Math.random() * w,
       y: h * rand(0.45, 0.95),
       angle: rand(0, Math.PI * 2),
@@ -229,8 +253,9 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
 
   const frame = (t: number) => {
     raf = requestAnimationFrame(frame)
-    const dt = Math.min(0.05, (t - last) / 1000)
-    last = t
+    if (t - lastDraw < FRAME_MS) return
+    const dt = Math.min(0.08, (t - lastDraw) / 1000)
+    lastDraw = t
     const { w, h, dpr } = fit(canvas)
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.clearRect(0, 0, w, h)
@@ -293,14 +318,10 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
         if (f.y > h) f.y = h * rand(0.5, 0.95)
         const glow = Math.max(0, Math.sin(t / 1000 * f.pulse + f.offset))
         if (glow < 0.05) continue
-        const g = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, 7)
-        g.addColorStop(0, `rgba(220,255,150,${0.85 * glow})`)
-        g.addColorStop(1, 'rgba(220,255,150,0)')
-        ctx.fillStyle = g
-        ctx.beginPath()
-        ctx.arc(f.x, f.y, 7, 0, Math.PI * 2)
-        ctx.fill()
+        ctx.globalAlpha = glow
+        ctx.drawImage(fireflyGlow, f.x - 8, f.y - 8, 16, 16)
       }
+      ctx.globalAlpha = 1
     }
 
     // Rain (and storms).

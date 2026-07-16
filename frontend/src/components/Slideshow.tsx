@@ -141,14 +141,16 @@ function CloudLayer({ phase, kind }: SkyState) {
       {clouds.map((c) => (
         <div
           key={c.id}
-          className="absolute rounded-full"
+          className="absolute"
           style={{
             top: `${c.top}vh`,
             left: 0,
             width: `${c.width}vmin`,
-            height: `${c.height}vmin`,
-            background: `rgba(${color},${c.opacity})`,
-            filter: 'blur(14px)',
+            height: `${c.height * 1.5}vmin`,
+            // Soft-edged puffs via radial gradients — no blur filter, which is
+            // expensive to composite on low-end tablet GPUs.
+            background: `radial-gradient(closest-side at 32% 58%, rgb(${color}) 0%, rgba(${color},0.55) 48%, transparent 95%), radial-gradient(closest-side at 68% 42%, rgba(${color},0.9) 0%, rgba(${color},0.45) 52%, transparent 95%)`,
+            opacity: c.opacity,
             animation: `sky-cloud ${c.dur}s linear infinite`,
             animationDelay: `${c.delay}s`,
           }}
@@ -216,16 +218,21 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, onOpenVideo }: RigP
   const rainy = kind === 'rainy' || kind === 'stormy'
   const daylight = phase === 'day' || phase === 'dawn'
 
-  const frameGlow =
+  // A physical print: opaque paper mat with a phase-tinted ambient glow so the
+  // lantern/starlight mood still reads. Box-shadows rasterize once per layer —
+  // cheap even on weak GPUs (unlike backdrop blur).
+  const ambient =
     phase === 'dusk'
-      ? { border: 'rgba(255,217,160,0.75)', shadow: '0 0 46px 10px rgba(255,170,80,0.33), 0 10px 40px rgba(0,0,0,0.4)' }
+      ? '0 0 44px 6px rgba(255,170,80,0.30), '
       : phase === 'night'
-        ? { border: 'rgba(207,224,255,0.65)', shadow: '0 0 46px 10px rgba(150,185,255,0.26), 0 10px 40px rgba(0,0,0,0.45)' }
-        : { border: 'rgba(255,255,255,0.65)', shadow: '0 0 34px 6px rgba(255,255,255,0.22), 0 12px 44px rgba(0,0,0,0.35)' }
+        ? '0 0 44px 6px rgba(150,185,255,0.22), '
+        : ''
+  const matShadow = `${ambient}0 4px 10px rgba(0,0,0,0.35), 0 30px 70px rgba(0,0,0,0.5)`
+  const tilt = ((seed % 44) / 10 - 2.2) * (pairIdx === 1 ? -1 : 1)
 
   const media = (
     <div
-      className="rounded-lg overflow-hidden bg-black/25 relative"
+      className="overflow-hidden bg-neutral-100 relative"
       style={{
         aspectRatio: aspect,
         maxHeight: pair ? '44vh' : daylight ? '50vh' : '54vh',
@@ -249,23 +256,19 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, onOpenVideo }: RigP
 
   const caption = (item.location_name || item.date_taken) && (
     <div
-      style={{
-        fontFamily: "'Caveat', cursive",
-        color: '#fff6e6',
-        textShadow: '0 0 14px rgba(255,235,190,0.55), 0 1px 3px rgba(0,0,0,0.55)',
-      }}
-      className={`mt-2.5 w-full text-center ${pair ? 'text-[1.6rem]' : 'text-[1.8rem]'} font-bold tracking-wide select-none pointer-events-none flex flex-wrap items-center justify-center gap-x-2 leading-tight px-2`}
+      style={{ fontFamily: "'Caveat', cursive" }}
+      className={`mt-3 mb-0.5 w-full text-center ${pair ? 'text-[1.6rem]' : 'text-[1.8rem]'} font-bold tracking-wide text-slate-700/85 select-none pointer-events-none flex flex-wrap items-center justify-center gap-x-2 leading-tight px-1.5`}
     >
       {item.location_name && <span>{item.location_name}</span>}
-      {item.location_name && item.date_taken && <span className="opacity-60">-</span>}
+      {item.location_name && item.date_taken && <span className="text-slate-400/70">-</span>}
       {item.date_taken && <span>{formatDate(item.date_taken)}</span>}
     </div>
   )
 
   const card = (
     <div
-      className="rounded-xl p-2.5 backdrop-blur-sm flex flex-col items-center pointer-events-auto cursor-pointer"
-      style={{ background: 'rgba(255,255,255,0.09)', border: `1.5px solid ${frameGlow.border}`, boxShadow: frameGlow.shadow }}
+      className="bg-[#faf8f5] p-3.5 pb-4 rounded-[4px] border border-neutral-200/60 flex flex-col items-center pointer-events-auto cursor-pointer"
+      style={{ boxShadow: matShadow, transform: `rotate(${tilt.toFixed(1)}deg)` }}
       onClick={(e) => {
         const full = item.type === 'live_photo' ? item.videoUrl : item.url
         if ((item.type === 'video' || item.type === 'live_photo') && full) {
