@@ -201,6 +201,30 @@ function CelestialGlow({ phase, kind }: SkyState) {
   )
 }
 
+interface CleanVideoProps extends React.VideoHTMLAttributes<HTMLVideoElement> {
+  src: string
+}
+
+function CleanVideo({ src, ...props }: CleanVideoProps) {
+  const videoRef = useRef<HTMLVideoElement>(null)
+
+  useEffect(() => {
+    return () => {
+      if (videoRef.current) {
+        try {
+          videoRef.current.pause()
+          videoRef.current.src = ""
+          videoRef.current.load()
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+  }, [src])
+
+  return <video ref={videoRef} src={src} {...props} />
+}
+
 interface RigProps {
   item: MediaItem
   phase: SkyPhase
@@ -245,10 +269,10 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, onOpenVideo }: RigP
     >
       {item.type === 'image' && <img src={item.url} className="w-full h-full object-contain pointer-events-none" />}
       {item.type === 'live_photo' && item.videoUrl && (
-        <video key={item.videoUrl} src={item.videoUrl} autoPlay muted playsInline loop className="w-full h-full object-contain pointer-events-none" />
+        <CleanVideo key={item.videoUrl} src={item.videoUrl} autoPlay muted playsInline loop className="w-full h-full object-contain pointer-events-none" />
       )}
       {item.type === 'video' && (
-        <video key={item.url} src={item.url} autoPlay muted playsInline loop className="w-full h-full object-contain pointer-events-none" />
+        <CleanVideo key={item.url} src={item.url} autoPlay muted playsInline loop className="w-full h-full object-contain pointer-events-none" />
       )}
       {(item.type === 'video' || item.type === 'live_photo') && (
         <div className="absolute bottom-2 right-2 z-10 w-8 h-8 rounded-full bg-black/45 border border-white/40 flex items-center justify-center pointer-events-none">
