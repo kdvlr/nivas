@@ -208,10 +208,13 @@ interface RigProps {
   index: number
   pair: boolean
   pairIdx: number
+  // True once the slideshow has advanced at least once: the incoming rig rises
+  // fast and "bumps" the resting photo, which launches upward from the impact.
+  bump: boolean
   onOpenVideo: (url: string) => void
 }
 
-function PhotoRig({ item, phase, kind, index, pair, pairIdx, onOpenVideo }: RigProps) {
+function PhotoRig({ item, phase, kind, index, pair, pairIdx, bump, onOpenVideo }: RigProps) {
   const seed = hashStr(item.url)
   // Two independent 0..1 values per photo so side-by-side pairs get visibly
   // different rise speeds, resting heights, and sway rhythms.
@@ -310,13 +313,35 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, onOpenVideo }: RigP
   }
 
   if (phase === 'dusk') {
+    // The incoming lantern nudges the resting one on its way up: it rises to a
+    // contact point (~1.7s in), dips back from the impact, then settles. The
+    // outgoing lantern holds still until that moment, then drifts off with a
+    // gentle jolt of spin (see exit below).
+    const startY = 44 + f * 6
+    const jolt = (seed % 2 === 0 ? 1 : -1) * (2 + f * 2)
     return (
       <motion.div
-        initial={{ y: `${44 + f * 6}vh`, opacity: 0 }}
-        animate={{ y: [`${44 + f * 6}vh`, `${3 + g * 4}vh`, `-${1 + f * 4}vh`], opacity: 1 }}
-        exit={{ y: '-85vh', opacity: 0, transition: { duration: 2.1, ease: 'easeIn', delay: delay * 0.5 } }}
+        initial={{ y: `${startY}vh`, opacity: 0 }}
+        animate={{
+          y: bump
+            ? [`${startY}vh`, `${1 + g * 2}vh`, `${5 + g * 3}vh`, `-${1 + f * 4}vh`]
+            : [`${startY}vh`, `${3 + g * 4}vh`, `-${1 + f * 4}vh`],
+          opacity: 1,
+        }}
+        exit={{
+          y: [null, '-13vh', '-85vh'],
+          rotate: [null, jolt, jolt * 1.6],
+          opacity: 0,
+          transition: {
+            y: { duration: 2.2, times: [0, 0.25, 1], ease: ['easeOut', 'easeIn'], delay: 1.75 + pairIdx * 0.18 },
+            rotate: { duration: 2.2, times: [0, 0.25, 1], ease: ['easeOut', 'easeIn'], delay: 1.75 + pairIdx * 0.18 },
+            opacity: { duration: 2.2, ease: 'easeIn', delay: 1.75 + pairIdx * 0.18 },
+          },
+        }}
         transition={{
-          y: { duration: 9.5 + f * 1.5, times: [0, 0.5, 1], ease: ['easeOut', 'easeInOut'], delay },
+          y: bump
+            ? { duration: 9.5 + f * 1.5, times: [0, 0.17, 0.25, 1], ease: ['easeIn', 'easeOut', 'easeInOut'], delay }
+            : { duration: 9.5 + f * 1.5, times: [0, 0.5, 1], ease: ['easeOut', 'easeInOut'], delay },
           opacity: { duration: 1.2, delay },
         }}
         className="relative"
@@ -335,13 +360,34 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, onOpenVideo }: RigP
   // Day and dawn: photos drift up carried by a balloon (or shelter under an
   // umbrella when it's raining).
   const balloonColor = BALLOON_COLORS[(seed + pairIdx * 3 + index) % BALLOON_COLORS.length]
+  const joltDay = (seed % 2 === 0 ? 1 : -1) * (3 + f * 3)
   return (
+    // Collision handoff: the incoming balloon accelerates up into the resting
+    // photo (~1.4s in), recoils from the bump, then floats to rest. The
+    // outgoing photo waits for contact, then gets kicked upward — a fast hit
+    // that eases, a jolt of spin, then buoyancy carries it off screen.
     <motion.div
       initial={{ y: `${54 + f * 8}vh`, opacity: 0 }}
-      animate={{ y: [`${54 + f * 8}vh`, `${4 + g * 5}vh`, `-${2 + f * 5}vh`], opacity: 1 }}
-      exit={{ y: '-125vh', opacity: 0.9, transition: { duration: 1.7, ease: 'easeIn', delay: delay * 0.5 } }}
+      animate={{
+        y: bump
+          ? [`${54 + f * 8}vh`, `${1 + g * 2}vh`, `${6 + g * 3}vh`, `-${2 + f * 5}vh`]
+          : [`${54 + f * 8}vh`, `${4 + g * 5}vh`, `-${2 + f * 5}vh`],
+        opacity: 1,
+      }}
+      exit={{
+        y: [null, '-18vh', '-125vh'],
+        rotate: [null, joltDay, joltDay * 1.7],
+        opacity: 0.9,
+        transition: {
+          y: { duration: 1.9, times: [0, 0.22, 1], ease: ['easeOut', 'easeIn'], delay: 1.4 + pairIdx * 0.18 },
+          rotate: { duration: 1.9, times: [0, 0.22, 1], ease: ['easeOut', 'easeIn'], delay: 1.4 + pairIdx * 0.18 },
+          opacity: { duration: 1.9, delay: 1.4 + pairIdx * 0.18 },
+        },
+      }}
       transition={{
-        y: { duration: 9 + f * 1.5, times: [0, 0.42, 1], ease: ['easeOut', 'easeInOut'], delay },
+        y: bump
+          ? { duration: 9 + f * 1.5, times: [0, 0.14, 0.21, 1], ease: ['easeIn', 'easeOut', 'easeInOut'], delay }
+          : { duration: 9 + f * 1.5, times: [0, 0.42, 1], ease: ['easeOut', 'easeInOut'], delay },
         opacity: { duration: 1.0, delay },
       }}
       className="relative"
@@ -464,9 +510,11 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
   }, [photos])
 
   // Advance every 9 seconds, paused while a full video is being watched.
+  const hasAdvancedRef = useRef(false)
   useEffect(() => {
     if (slides.length <= 1 || selectedVideo !== null) return
     const timer = setInterval(() => {
+      hasAdvancedRef.current = true
       setCurrentIdx((prev) => (prev + 1) % slides.length)
     }, 9000)
     return () => clearInterval(timer)
@@ -530,6 +578,7 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
               index={currentIdx}
               pair={pair}
               pairIdx={idx}
+              bump={hasAdvancedRef.current}
               onOpenVideo={setSelectedVideo}
             />
           ))}
