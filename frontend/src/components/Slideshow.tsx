@@ -353,7 +353,7 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, onOpenVideo }: RigP
         className="flex flex-col items-center"
       >
         {rainy ? (
-          <div className="text-7xl -mb-1 pointer-events-none select-none" style={{ filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.35))' }}>
+          <div className="pointer-events-none select-none -mb-4" style={{ fontSize: '108px', filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.35))' }}>
             ☂️
           </div>
         ) : (
