@@ -291,17 +291,19 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVide
         autoplayable ? (
           <CleanVideo key={item.videoUrl} src={item.videoUrl} autoPlay muted playsInline loop className="w-full h-full object-contain pointer-events-none" />
         ) : (
-          <CleanVideo key={item.videoUrl} src={`${item.videoUrl}#t=0.1`} preload="metadata" muted playsInline className="w-full h-full object-contain pointer-events-none" />
+          <CleanVideo key={item.videoUrl} src={`${item.videoUrl}#t=0.1`} preload="auto" muted playsInline className="w-full h-full object-contain pointer-events-none" />
         )
       )}
       {item.type === 'video' && (
         autoplayable ? (
           <CleanVideo key={item.url} src={item.url} autoPlay muted playsInline loop className="w-full h-full object-contain pointer-events-none" />
         ) : (
-          // Heavy clip: fetch just enough to render a still frame instead of
-          // streaming tens of megabytes for a 9-second slide. Tapping still
-          // opens the full player with audio.
-          <CleanVideo key={item.url} src={`${item.url}#t=0.1`} preload="metadata" muted playsInline className="w-full h-full object-contain pointer-events-none" />
+          // Heavy clip: show a still frame instead of playing it. preload=auto
+          // on a *paused* element is self-limiting — the browser buffers a
+          // prefix and fires `suspend` rather than fetching the whole file —
+          // so the frame is sharp and a tap starts instantly, without the
+          // continuous decode of actually playing a 90MB clip.
+          <CleanVideo key={item.url} src={`${item.url}#t=0.1`} preload="auto" muted playsInline className="w-full h-full object-contain pointer-events-none" />
         )
       )}
       {(item.type === 'video' || item.type === 'live_photo') && (
@@ -424,6 +426,7 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVide
 export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
   const [currentIdx, setCurrentIdx] = useState(0)
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null)
+  const [playerReady, setPlayerReady] = useState(false)
   const [isPortraitViewport, setIsPortraitViewport] = useState(() => window.innerHeight > window.innerWidth)
   const [kind, setKind] = useState<SkyKind>(KIND_OVERRIDE ?? 'clear')
   const [sun, setSun] = useState<{ sunrise: Date | null; sunset: Date | null }>({ sunrise: null, sunset: null })
@@ -437,6 +440,7 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
   const stateRef = useRef<SkyState>(skyState)
   stateRef.current = skyState
 
+  const rootRef = useRef<HTMLDivElement>(null)
   const starRef = useRef<HTMLCanvasElement>(null)
   const fxRef = useRef<HTMLCanvasElement>(null)
 
@@ -529,6 +533,26 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
     return result
   }, [photos])
 
+  useEffect(() => {
+    if (selectedVideo) setPlayerReady(false)
+  }, [selectedVideo])
+
+  // While the full-screen player is open, pause the slide's inline clips so
+  // they aren't decoding the same (or another) video underneath it — that
+  // contention is what makes the tapped video stutter.
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root) return
+    const inline = [...root.querySelectorAll('video')].filter((v) => !v.controls)
+    if (selectedVideo) {
+      inline.forEach((v) => v.pause())
+    } else {
+      inline.forEach((v) => {
+        if (v.autoplay && v.isConnected) v.play().catch(() => {})
+      })
+    }
+  }, [selectedVideo])
+
   // Warm the browser cache/decoder for the next slide's images so the decode
   // never lands in the middle of the entrance animation.
   useEffect(() => {
@@ -561,6 +585,7 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
 
   return (
     <div
+      ref={rootRef}
       className="fixed inset-0 z-[100] overflow-hidden cursor-none select-none"
       onClick={onDismiss}
     >
@@ -634,12 +659,23 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
             setSelectedVideo(null)
           }}
         >
+          {!playerReady && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 pointer-events-none">
+              <div className="h-10 w-10 rounded-full border-2 border-white/25 border-t-white animate-spin" />
+              <span className="text-white/60 text-sm tracking-wide">Loading video…</span>
+            </div>
+          )}
           <video
+            key={selectedVideo}
             src={selectedVideo}
             controls
             autoPlay
             playsInline
-            className="max-h-[92vh] max-w-[92vw] object-contain rounded-2xl shadow-2xl border border-white/10"
+            preload="auto"
+            onCanPlay={() => setPlayerReady(true)}
+            onPlaying={() => setPlayerReady(true)}
+            style={{ opacity: playerReady ? 1 : 0 }}
+            className="max-h-[92vh] max-w-[92vw] object-contain rounded-2xl shadow-2xl border border-white/10 transition-opacity duration-200"
             onClick={(e) => e.stopPropagation()}
           />
           <button
