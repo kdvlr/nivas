@@ -15,6 +15,9 @@ log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/rewards", tags=["rewards"])
 
+# Reasons written by a parent rather than earned/spent through normal play.
+MANUAL_REASONS = ("manual_adjust", "manual_reset")
+
 
 class StoreItemCreate(BaseModel):
     title: str
@@ -31,6 +34,20 @@ class StoreItemPatch(BaseModel):
 class RedeemRequest(BaseModel):
     person_name: str
     reward_item_id: int
+
+
+class AdjustRequest(BaseModel):
+    person_name: str
+    amount: int  # positive grants coins, negative takes them away
+    note: str = ""
+
+
+class ResetRequest(BaseModel):
+    # omit person_name to reset everyone
+    person_name: str | None = None
+    # clear_history wipes the ledger; otherwise a balancing entry is written so
+    # the history of what was earned and spent survives.
+    clear_history: bool = False
 
 
 def _item_dict(item: RewardItem) -> dict:
@@ -56,6 +73,15 @@ def _get_balance_breakdown(db: Session, person_name: str) -> dict:
             func.coalesce(
                 func.sum(case((CoinTransaction.reason == "reward_redeemed", CoinTransaction.amount), else_=0)), 0
             ).label("spent"),
+            func.coalesce(
+                func.sum(
+                    case(
+                        (CoinTransaction.reason.in_(MANUAL_REASONS), CoinTransaction.amount),
+                        else_=0,
+                    )
+                ),
+                0,
+            ).label("adjusted"),
             func.coalesce(func.sum(CoinTransaction.amount), 0).label("balance"),
         )
         .filter(CoinTransaction.person_name == person_name)
@@ -65,6 +91,7 @@ def _get_balance_breakdown(db: Session, person_name: str) -> dict:
         "earned": int(row.earned),
         "lost": int(row.lost),  # will be negative or zero
         "spent": int(row.spent),  # will be negative or zero
+        "adjusted": int(row.adjusted),  # parent adjustments/resets, either sign
         "balance": int(row.balance),
     }
 
@@ -186,6 +213,68 @@ async def redeem_reward(body: RedeemRequest, db: Session = Depends(get_db)):
         "reward_emoji": item.emoji,
         "coins_spent": item.coin_cost,
         "redeemed_at": txn.created_at.isoformat(),
+    }
+
+
+# ── Parent controls: manual adjustments and resets ────────────────────
+
+
+@router.post("/adjust")
+async def adjust_balance(body: AdjustRequest, db: Session = Depends(get_db)):
+    """Grant or remove coins by hand, recorded in the ledger like any other change."""
+    if body.amount == 0:
+        raise HTTPException(400, "amount must not be zero")
+    person = db.query(Person).filter(Person.name == body.person_name).first()
+    if person is None:
+        raise HTTPException(404, f"no person named {body.person_name}")
+
+    txn = CoinTransaction(
+        person_name=person.name,
+        amount=body.amount,
+        reason="manual_adjust",
+        reference_id=None,
+        created_at=utcnow(),
+    )
+    db.add(txn)
+    db.commit()
+    await manager.broadcast("rewards")
+    return {"person_name": person.name, **_get_balance_breakdown(db, person.name)}
+
+
+@router.post("/reset")
+async def reset_balance(body: ResetRequest, db: Session = Depends(get_db)):
+    """Zero one child's coins, or everyone's when no name is given."""
+    if body.person_name:
+        person = db.query(Person).filter(Person.name == body.person_name).first()
+        if person is None:
+            raise HTTPException(404, f"no person named {body.person_name}")
+        names = [person.name]
+    else:
+        names = [p.name for p in db.query(Person).order_by(Person.name).all()]
+
+    for name in names:
+        if body.clear_history:
+            db.query(CoinTransaction).filter(CoinTransaction.person_name == name).delete(
+                synchronize_session=False
+            )
+        else:
+            balance = _get_balance_breakdown(db, name)["balance"]
+            if balance != 0:
+                db.add(
+                    CoinTransaction(
+                        person_name=name,
+                        amount=-balance,
+                        reason="manual_reset",
+                        reference_id=None,
+                        created_at=utcnow(),
+                    )
+                )
+    db.commit()
+    await manager.broadcast("rewards")
+    return {
+        "reset": names,
+        "cleared_history": body.clear_history,
+        "balances": [{"person_name": n, **_get_balance_breakdown(db, n)} for n in names],
     }
 
 

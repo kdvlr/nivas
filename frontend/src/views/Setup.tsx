@@ -27,6 +27,7 @@ import { REWARD_ANIMATIONS } from '../components/celebrations/reward-animations'
 import { PIN_FAIL_ANIMATIONS, type PinFailAnimation } from '../components/celebrations/pin-fail-animations'
 import PinFailOverlay from '../components/celebrations/PinFailOverlay'
 import ConfirmModal from '../components/ConfirmModal'
+import { PointsAdminCard, RewardStoreCard } from '../components/setup/RewardsAdminCards'
 
 const COLORS = [
   '#f87171', '#fb923c', '#fbbf24', '#facc15', '#a3e635', '#4ade80', '#34d399', '#2dd4bf',
@@ -53,6 +54,7 @@ const AVATAR_EMOJIS = [
 const SECTIONS = [
   { id: 'integrations', icon: 'cloud_sync', label: 'Integrations' },
   { id: 'family', icon: 'groups', label: 'Family' },
+  { id: 'rewards', icon: 'stars', label: 'Rewards' },
   { id: 'looks', icon: 'palette', label: 'Look & Feel' },
   { id: 'general', icon: 'tune', label: 'General' },
 ] as const
@@ -819,6 +821,9 @@ function SetupInner() {
           </div>
         </Card>
         )}
+
+        {section === 'rewards' && <PointsAdminCard />}
+        {section === 'rewards' && <RewardStoreCard />}
 
         {section === 'looks' && <AppearanceCard />}
 
