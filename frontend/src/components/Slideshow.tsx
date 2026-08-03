@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Icon from './Icon'
 import { api } from '../lib/api'
 import { startStarCanvas, startFxCanvas, SkyPhase, SkyKind, SkyState } from './sky/skyEngine'
+import { useQuality, Quality } from './sky/useQuality'
 
 interface MediaItem {
   url: string
@@ -111,10 +112,11 @@ function Balloon({ color }: { color: string }) {
   )
 }
 
-function CloudLayer({ phase, kind }: SkyState) {
+function CloudLayer({ phase, kind, quality }: SkyState) {
   const overcast = kind !== 'clear'
+  const lite = quality === 'low'
   const clouds = useMemo(() => {
-    const count = overcast ? 9 : phase === 'night' ? 2 : 5
+    const count = lite ? (overcast ? 3 : 2) : overcast ? 9 : phase === 'night' ? 2 : 5
     return Array.from({ length: count }, (_, i) => ({
       id: i,
       top: 2 + Math.random() * 36,
@@ -124,7 +126,7 @@ function CloudLayer({ phase, kind }: SkyState) {
       delay: -Math.random() * 180,
       opacity: overcast ? 0.45 + Math.random() * 0.3 : 0.22 + Math.random() * 0.25,
     }))
-  }, [phase, overcast])
+  }, [phase, overcast, lite])
 
   const color =
     phase === 'night'
@@ -152,8 +154,9 @@ function CloudLayer({ phase, kind }: SkyState) {
             // expensive to composite on low-end tablet GPUs.
             background: `radial-gradient(closest-side at 32% 58%, rgb(${color}) 0%, rgba(${color},0.55) 48%, transparent 95%), radial-gradient(closest-side at 68% 42%, rgba(${color},0.9) 0%, rgba(${color},0.45) 52%, transparent 95%)`,
             opacity: c.opacity,
-            animation: `sky-cloud ${c.dur}s linear infinite`,
-            animationDelay: `${c.delay}s`,
+            ...(lite
+              ? { transform: `translateX(${20 + c.id * 24}vw)` }
+              : { animation: `sky-cloud ${c.dur}s linear infinite`, animationDelay: `${c.delay}s` }),
           }}
         />
       ))}
@@ -233,10 +236,14 @@ interface RigProps {
   index: number
   pair: boolean
   pairIdx: number
+  quality: Quality
   onOpenVideo: (url: string) => void
 }
 
-function PhotoRig({ item, phase, kind, index, pair, pairIdx, onOpenVideo }: RigProps) {
+function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVideo }: RigProps) {
+  // On the lowest tier the perpetual sway is dropped: the entrance drift still
+  // reads as floating, but nothing animates once a photo has settled.
+  const sway = quality !== 'low'
   const seed = hashStr(item.url)
   // Two independent 0..1 values per photo so side-by-side pairs get visibly
   // different rise speeds, resting heights, and sway rhythms.
@@ -327,7 +334,7 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, onOpenVideo }: RigP
         className="relative"
       >
         <motion.div
-          animate={{ y: [-(5 + f * 4), 5 + g * 4] }}
+          animate={sway ? { y: [-(5 + f * 4), 5 + g * 4] } : undefined}
           transition={{ repeat: Infinity, repeatType: 'mirror', duration: 4.2 + g * 2, ease: 'easeInOut', delay: f * 1.5 }}
         >
           {card}
@@ -349,7 +356,7 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, onOpenVideo }: RigP
         className="relative"
       >
         <motion.div
-          animate={{ rotate: [-(0.9 + f * 0.8), 0.9 + g * 0.8] }}
+          animate={sway ? { rotate: [-(0.9 + f * 0.8), 0.9 + g * 0.8] } : undefined}
           transition={{ repeat: Infinity, repeatType: 'mirror', duration: 4.2 + g * 1.4, ease: 'easeInOut', delay: f * 2 }}
           style={{ transformOrigin: 'top center' }}
         >
@@ -374,7 +381,7 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, onOpenVideo }: RigP
       className="relative"
     >
       <motion.div
-        animate={{ rotate: [-(1.7 + f * 1.3), 1.7 + g * 1.3] }}
+        animate={sway ? { rotate: [-(1.7 + f * 1.3), 1.7 + g * 1.3] } : undefined}
         transition={{ repeat: Infinity, repeatType: 'mirror', duration: 3.3 + g * 1.4, ease: 'easeInOut', delay: f * 2.2 }}
         style={{ transformOrigin: 'top center' }}
         className="flex flex-col items-center"
@@ -402,8 +409,11 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
   const [sun, setSun] = useState<{ sunrise: Date | null; sunset: Date | null }>({ sunrise: null, sunset: null })
   const [now, setNow] = useState(() => new Date())
 
+  const [hidden, setHidden] = useState(() => document.visibilityState === 'hidden')
+  const quality = useQuality(!hidden)
+
   const phase: SkyPhase = PHASE_OVERRIDE ?? computePhase(now, sun.sunrise, sun.sunset)
-  const skyState: SkyState = { phase, kind, paused: !!selectedVideo }
+  const skyState: SkyState = { phase, kind, paused: !!selectedVideo || hidden, quality }
   const stateRef = useRef<SkyState>(skyState)
   stateRef.current = skyState
 
@@ -414,6 +424,13 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
     const handleResize = () => setIsPortraitViewport(window.innerHeight > window.innerWidth)
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  // Stop all sky work when the kiosk screen sleeps or the tab is backgrounded.
+  useEffect(() => {
+    const onVis = () => setHidden(document.visibilityState === 'hidden')
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
   }, [])
 
   // Real weather drives the sky. Refresh every 15 minutes; tick the clock so
@@ -444,6 +461,8 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
     }
   }, [])
 
+  // Re-runs when the quality tier changes, because the canvases themselves are
+  // only mounted above the lowest tier — the engines must follow their refs.
   useEffect(() => {
     const stopStars = starRef.current ? startStarCanvas(starRef.current, () => stateRef.current) : undefined
     const stopFx = fxRef.current ? startFxCanvas(fxRef.current, () => stateRef.current) : undefined
@@ -451,7 +470,7 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
       stopStars?.()
       stopFx?.()
     }
-  }, [])
+  }, [quality])
 
   // Parse items into slides (landscape/video singly, portraits paired side-by-side)
   const slides = useMemo(() => {
@@ -540,21 +559,26 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
         />
       </AnimatePresence>
 
-      <CelestialGlow phase={phase} kind={kind} />
-
-      {/* Stars + shooting stars (behind photos) */}
-      <canvas ref={starRef} className="absolute inset-0 w-full h-full pointer-events-none" />
-
-      <CloudLayer phase={phase} kind={kind} />
-
-      {/* Soft vignette so photos pop against a bright sky */}
+      {/* Vignette, painted into the same layer as nothing else — kept as a
+          sibling of the gradient but non-animating so it rasterizes once. */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{ background: 'radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.26) 100%)' }}
       />
 
-      {/* Photos */}
-      <AnimatePresence mode="popLayout">
+      <CelestialGlow phase={phase} kind={kind} />
+
+      {/* Stars + shooting stars (behind photos) */}
+      {quality !== 'low' && (
+        <canvas ref={starRef} className="absolute inset-0 w-full h-full pointer-events-none" />
+      )}
+
+      <CloudLayer phase={phase} kind={kind} quality={quality} />
+
+      {/* Photos. Plain sync presence: every layer here is already absolutely
+          positioned, so popLayout's layout projection was measuring for
+          nothing on every frame. */}
+      <AnimatePresence>
         <motion.div
           key={activeSlide.id}
           className="absolute inset-0 flex items-center justify-center gap-12 p-10"
@@ -570,6 +594,7 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
               index={currentIdx}
               pair={pair}
               pairIdx={idx}
+              quality={quality}
               onOpenVideo={setSelectedVideo}
             />
           ))}
@@ -577,7 +602,9 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
       </AnimatePresence>
 
       {/* Weather + delights (rain, snow, fireflies, birds — in front of photos) */}
-      <canvas ref={fxRef} className="absolute inset-0 w-full h-full pointer-events-none z-20" />
+      {quality !== 'low' && (
+        <canvas ref={fxRef} className="absolute inset-0 w-full h-full pointer-events-none z-20" />
+      )}
 
       {selectedVideo && (
         <div

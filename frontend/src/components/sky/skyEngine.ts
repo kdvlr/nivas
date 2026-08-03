@@ -10,6 +10,8 @@ export interface SkyState {
   phase: SkyPhase
   kind: SkyKind
   paused?: boolean
+  // 'high' | 'medium' — 'low' never mounts a canvas at all.
+  quality?: 'high' | 'medium' | 'low'
 }
 
 const rand = (a: number, b: number) => a + Math.random() * (b - a)
@@ -17,6 +19,12 @@ const rand = (a: number, b: number) => a + Math.random() * (b - a)
 // Cap the frame rate: full-screen 60fps canvas work is wasted on ambient
 // weather. rAF still schedules, we just skip paints.
 const FRAME_MS = 31
+const FRAME_MS_LOW = 50
+
+const frameBudget = (s: SkyState) => (s.quality === 'medium' ? FRAME_MS_LOW : FRAME_MS)
+const dprFor = (s: SkyState) =>
+  Math.min(window.devicePixelRatio || 1, s.quality === 'medium' ? 1 : 1.5)
+const densityFor = (s: SkyState) => (s.quality === 'medium' ? 0.5 : 1)
 
 // Pre-rendered radial glow sprite (avoids per-frame gradient allocations).
 function makeGlowSprite(r: number, g: number, b: number): HTMLCanvasElement {
@@ -60,15 +68,16 @@ export function startStarCanvas(canvas: HTMLCanvasElement, get: () => SkyState):
   let nextShoot = performance.now() + rand(12_000, 45_000)
   let lastDraw = 0
   let raf = 0
+  let blanked = false
 
   let w = canvas.clientWidth
   let h = canvas.clientHeight
-  let dpr = Math.min(window.devicePixelRatio || 1, 1.5)
+  let dpr = dprFor(get())
 
   const resize = () => {
     w = canvas.clientWidth
     h = canvas.clientHeight
-    dpr = Math.min(window.devicePixelRatio || 1, 1.5)
+    dpr = dprFor(get())
     const pw = Math.max(1, Math.round(w * dpr))
     const ph = Math.max(1, Math.round(h * dpr))
     if (canvas.width !== pw || canvas.height !== ph) {
@@ -85,16 +94,35 @@ export function startStarCanvas(canvas: HTMLCanvasElement, get: () => SkyState):
     const state = get()
     if (state.paused) return
 
-    if (t - lastDraw < FRAME_MS) return
+    if (t - lastDraw < frameBudget(state)) return
     lastDraw = t
+
+    const mult = starAlpha(state)
+
+    // Daytime: no stars, no meteors — hide the layer so the compositor skips a
+    // full-screen canvas that would render nothing.
+    if (mult <= 0.01 && !shooting) {
+      if (!blanked) {
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+        ctx.clearRect(0, 0, w, h)
+        canvas.style.visibility = 'hidden'
+        blanked = true
+      }
+      return
+    }
+    if (blanked) {
+      canvas.style.visibility = ''
+      blanked = false
+    }
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.clearRect(0, 0, w, h)
 
-    const key = `${w}x${h}`
+    // Quality is part of the key so a tier change re-seeds particle counts.
+    const key = `${w}x${h}x${state.quality ?? 'high'}`
     if (key !== sizeKey) {
       sizeKey = key
-      const n = Math.round((w * h) / 10_000)
+      const n = Math.round(((w * h) / 10_000) * densityFor(state))
       stars = Array.from({ length: n }, () => ({
         x: Math.random() * w,
         y: Math.random() * h * 0.92,
@@ -104,8 +132,6 @@ export function startStarCanvas(canvas: HTMLCanvasElement, get: () => SkyState):
         offset: rand(0, Math.PI * 2),
       }))
     }
-
-    const mult = starAlpha(state)
 
     if (mult > 0.01) {
       ctx.fillStyle = '#ffffff'
@@ -224,15 +250,16 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
   let nextFlash = performance.now() + rand(8_000, 20_000)
   let lastDraw = performance.now()
   let raf = 0
+  let blanked = false
 
   let w = canvas.clientWidth
   let h = canvas.clientHeight
-  let dpr = Math.min(window.devicePixelRatio || 1, 1.5)
+  let dpr = dprFor(get())
 
   const resize = () => {
     w = canvas.clientWidth
     h = canvas.clientHeight
-    dpr = Math.min(window.devicePixelRatio || 1, 1.5)
+    dpr = dprFor(get())
     const pw = Math.max(1, Math.round(w * dpr))
     const ph = Math.max(1, Math.round(h * dpr))
     if (canvas.width !== pw || canvas.height !== ph) {
@@ -244,14 +271,14 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
   resize()
   window.addEventListener('resize', resize)
 
-  const seed = (w: number, h: number) => {
-    drops = Array.from({ length: 130 }, () => ({
+  const seed = (w: number, h: number, density: number) => {
+    drops = Array.from({ length: Math.round(130 * density) }, () => ({
       x: Math.random() * (w + 120) - 60,
       y: Math.random() * h,
       len: rand(9, 22),
       speed: rand(520, 860),
     }))
-    flakes = Array.from({ length: 80 }, () => ({
+    flakes = Array.from({ length: Math.round(80 * density) }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
       r: rand(1.2, 3.4),
@@ -259,7 +286,7 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
       sway: rand(12, 34),
       offset: rand(0, Math.PI * 2),
     }))
-    flies = Array.from({ length: 12 }, () => ({
+    flies = Array.from({ length: Math.round(12 * density) }, () => ({
       x: Math.random() * w,
       y: h * rand(0.45, 0.95),
       angle: rand(0, Math.PI * 2),
@@ -287,24 +314,48 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     const state = get()
     if (state.paused) return
 
-    if (t - lastDraw < FRAME_MS) return
+    if (t - lastDraw < frameBudget(state)) return
     const dt = Math.min(0.08, (t - lastDraw) / 1000)
     lastDraw = t
+
+    const { phase, kind } = state
+    const daylight = phase === 'day' || phase === 'dawn'
+    const calm = kind === 'clear' || kind === 'cloudy'
+
+    // Decide whether this layer has anything to render at all. A clear day has
+    // no weather and no fireflies, so the canvas would otherwise clear and
+    // composite a full-screen transparent layer 30x/sec for nothing. Hide the
+    // element entirely in that case so the compositor skips it.
+    const wantsWeather = kind === 'rainy' || kind === 'stormy' || kind === 'snowy'
+    const wantsFlies = (phase === 'night' || phase === 'dusk') && calm
+    const birdsPossible = daylight && calm
+    const active = wantsWeather || wantsFlies || flock !== null || (birdsPossible && t > nextFlock)
+
+    if (!active) {
+      if (!blanked) {
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+        ctx.clearRect(0, 0, w, h)
+        canvas.style.visibility = 'hidden'
+        blanked = true
+      }
+      return
+    }
+    if (blanked) {
+      canvas.style.visibility = ''
+      blanked = false
+    }
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.clearRect(0, 0, w, h)
 
-    const key = `${w}x${h}`
+    const key = `${w}x${h}x${state.quality ?? 'high'}`
     if (key !== sizeKey) {
       sizeKey = key
-      seed(w, h)
+      seed(w, h, densityFor(state))
     }
 
-    const { phase, kind } = get()
-    const daylight = phase === 'day' || phase === 'dawn'
-
     // Birds: occasional flock crossing the sky on nice days.
-    if (daylight && (kind === 'clear' || kind === 'cloudy')) {
+    if (birdsPossible) {
       if (!flock && t > nextFlock) {
         const dir: 1 | -1 = Math.random() < 0.5 ? 1 : -1
         const scale = rand(0.8, 1.3)
@@ -341,7 +392,7 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     }
 
     // Fireflies: calm nights and dusk.
-    if ((phase === 'night' || phase === 'dusk') && (kind === 'clear' || kind === 'cloudy')) {
+    if (wantsFlies) {
       for (const f of flies) {
         f.angle += rand(-1.6, 1.6) * dt
         f.x += Math.cos(f.angle) * f.speed * dt

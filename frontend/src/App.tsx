@@ -295,7 +295,14 @@ export default function App() {
   return (
     <CelebrationProvider>
       <RewardCelebrationProvider>
-        <div className="flex h-full flex-col lg:flex-row gap-2 p-2 lg:gap-4 lg:p-4">
+        {/* While the screensaver covers the screen, stop painting the dashboard
+            underneath it. `visibility: hidden` keeps the tree mounted (so
+            FullCalendar keeps its measured layout) but skips paint and
+            compositing for the whole app — the slideshow gets the GPU. */}
+        <div
+          className="flex h-full flex-col lg:flex-row gap-2 p-2 lg:gap-4 lg:p-4"
+          style={slideshowActive ? { visibility: 'hidden' } : undefined}
+        >
           <nav className="glass group/nav order-last lg:order-first flex flex-row lg:flex-col w-full lg:w-16 hover:lg:w-48 transition-[width] duration-300 ease-in-out h-14 lg:h-full shrink-0 items-center lg:items-start justify-around lg:justify-start gap-1 lg:gap-4 py-1.5 lg:py-4 px-2 lg:px-2 z-20">
 
             {/* Main Nav Items */}
