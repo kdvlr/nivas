@@ -441,6 +441,7 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
   stateRef.current = skyState
 
   const rootRef = useRef<HTMLDivElement>(null)
+  const playerRef = useRef<HTMLVideoElement>(null)
   const starRef = useRef<HTMLCanvasElement>(null)
   const fxRef = useRef<HTMLCanvasElement>(null)
 
@@ -533,8 +534,30 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
     return result
   }, [photos])
 
+  // Readiness is probed from the element rather than trusted to events. The
+  // poster clip has usually already buffered this URL, so `canplay` can fire
+  // before React attaches its (non-bubbling, directly-bound) media listeners —
+  // miss it and the spinner would latch on forever. Also covers autoplay being
+  // refused, which never fires `playing` at all.
   useEffect(() => {
-    if (selectedVideo) setPlayerReady(false)
+    if (!selectedVideo) return
+    setPlayerReady(false)
+    const v = playerRef.current
+    if (!v) return
+    const check = () => {
+      if (v.readyState >= 3) setPlayerReady(true)
+    }
+    check()
+    const poll = setInterval(check, 200)
+    // Last resort: never leave a spinner up, even if the browser goes quiet.
+    const bail = setTimeout(() => setPlayerReady(true), 3000)
+    // Blocked autoplay (common on kiosk browsers with sound) resolves to a
+    // rejected promise; show the controls instead of spinning.
+    v.play().catch(() => setPlayerReady(true))
+    return () => {
+      clearInterval(poll)
+      clearTimeout(bail)
+    }
   }, [selectedVideo])
 
   // While the full-screen player is open, pause the slide's inline clips so
@@ -667,15 +690,16 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
           )}
           <video
             key={selectedVideo}
+            ref={playerRef}
             src={selectedVideo}
             controls
             autoPlay
             playsInline
             preload="auto"
             onCanPlay={() => setPlayerReady(true)}
+            onLoadedData={() => setPlayerReady(true)}
             onPlaying={() => setPlayerReady(true)}
-            style={{ opacity: playerReady ? 1 : 0 }}
-            className="max-h-[92vh] max-w-[92vw] object-contain rounded-2xl shadow-2xl border border-white/10 transition-opacity duration-200"
+            className="max-h-[92vh] max-w-[92vw] object-contain rounded-2xl shadow-2xl border border-white/10"
             onClick={(e) => e.stopPropagation()}
           />
           <button
