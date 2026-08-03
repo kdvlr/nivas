@@ -9,6 +9,8 @@ interface MediaItem {
   url: string
   displayUrl?: string
   videoUrl?: string
+  posterUrl?: string
+  playbackUrl?: string
   media_bytes?: number
   type: 'image' | 'video' | 'live_photo'
   name: string
@@ -236,6 +238,37 @@ function CleanVideo({ src, ...props }: CleanVideoProps) {
   return <video ref={videoRef} src={src} {...props} />
 }
 
+/**
+ * A video's still frame. Prefers the server-built poster JPEG — a few KB and no
+ * media pipeline at all. Falls back to a paused video element for libraries
+ * whose derivatives haven't been generated (or where ffmpeg is unavailable).
+ */
+function VideoStill({ item }: { item: MediaItem }) {
+  const [posterFailed, setPosterFailed] = useState(false)
+  const clip = item.type === 'live_photo' ? item.videoUrl : item.url
+  if (item.posterUrl && !posterFailed) {
+    return (
+      <img
+        src={item.posterUrl}
+        decoding="async"
+        onError={() => setPosterFailed(true)}
+        className="w-full h-full object-contain pointer-events-none"
+      />
+    )
+  }
+  if (!clip) return null
+  return (
+    <CleanVideo
+      key={clip}
+      src={`${clip}#t=0.1`}
+      preload="auto"
+      muted
+      playsInline
+      className="w-full h-full object-contain pointer-events-none"
+    />
+  )
+}
+
 interface RigProps {
   item: MediaItem
   phase: SkyPhase
@@ -289,21 +322,16 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVide
       )}
       {item.type === 'live_photo' && item.videoUrl && (
         autoplayable ? (
-          <CleanVideo key={item.videoUrl} src={item.videoUrl} autoPlay muted playsInline loop className="w-full h-full object-contain pointer-events-none" />
+          <CleanVideo key={item.videoUrl} src={item.playbackUrl || item.videoUrl} autoPlay muted playsInline loop className="w-full h-full object-contain pointer-events-none" />
         ) : (
-          <CleanVideo key={item.videoUrl} src={`${item.videoUrl}#t=0.1`} preload="auto" muted playsInline className="w-full h-full object-contain pointer-events-none" />
+          <VideoStill item={item} />
         )
       )}
       {item.type === 'video' && (
         autoplayable ? (
-          <CleanVideo key={item.url} src={item.url} autoPlay muted playsInline loop className="w-full h-full object-contain pointer-events-none" />
+          <CleanVideo key={item.url} src={item.playbackUrl || item.url} autoPlay muted playsInline loop className="w-full h-full object-contain pointer-events-none" />
         ) : (
-          // Heavy clip: show a still frame instead of playing it. preload=auto
-          // on a *paused* element is self-limiting — the browser buffers a
-          // prefix and fires `suspend` rather than fetching the whole file —
-          // so the frame is sharp and a tap starts instantly, without the
-          // continuous decode of actually playing a 90MB clip.
-          <CleanVideo key={item.url} src={`${item.url}#t=0.1`} preload="auto" muted playsInline className="w-full h-full object-contain pointer-events-none" />
+          <VideoStill item={item} />
         )
       )}
       {(item.type === 'video' || item.type === 'live_photo') && (
@@ -330,7 +358,8 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVide
       className="bg-[#faf8f5] p-3.5 pb-4 rounded-[4px] border border-neutral-200/60 flex flex-col items-center pointer-events-auto cursor-pointer"
       style={{ boxShadow: matShadow, transform: `rotate(${tilt.toFixed(1)}deg)` }}
       onClick={(e) => {
-        const full = item.type === 'live_photo' ? item.videoUrl : item.url
+        // Prefer the transcoded copy: ~10x smaller and quick to start.
+        const full = item.playbackUrl || (item.type === 'live_photo' ? item.videoUrl : item.url)
         if ((item.type === 'video' || item.type === 'live_photo') && full) {
           e.stopPropagation()
           onOpenVideo(full)

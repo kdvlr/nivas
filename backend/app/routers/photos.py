@@ -15,6 +15,7 @@ import hashlib
 from ..config import get_settings
 from ..db import get_db, SessionLocal
 from ..models import PhotoMetadata
+from ..services import derivatives
 
 router = APIRouter(prefix="/api/photos", tags=["photos"])
 
@@ -393,6 +394,40 @@ def get_display(file_path: str):
     decoded_path, orig_path = _resolve_photo_path(file_path)
     return _resized_variant(decoded_path, orig_path, DISPLAY_DIR, 2048, 85)
 
+@router.get("/poster/{file_path:path}")
+def get_poster(file_path: str):
+    """A single JPEG frame for a video, so stills cost a few KB."""
+    decoded_path, orig_path = _resolve_photo_path(file_path)
+    out = derivatives.poster_path(orig_path)
+    if out.exists():
+        return FileResponse(out, media_type="image/jpeg")
+    built = derivatives.make_poster(orig_path)
+    if built is not None:
+        return FileResponse(built, media_type="image/jpeg")
+    raise HTTPException(status_code=404, detail="No poster available")
+
+
+@router.get("/playback/{file_path:path}")
+def get_playback(file_path: str):
+    """Web-friendly transcode; falls back to the original until it exists."""
+    decoded_path, orig_path = _resolve_photo_path(file_path)
+    out = derivatives.playback_path(orig_path)
+    if out.exists():
+        return FileResponse(out, media_type="video/mp4")
+    return FileResponse(orig_path)
+
+
+@router.get("/derivatives/status")
+def derivatives_status():
+    return derivatives.STATE.snapshot()
+
+
+@router.post("/derivatives/backfill")
+def derivatives_backfill():
+    started = derivatives.start_backfill(PHOTOS_DIR, VIDEO_EXTENSIONS)
+    return {"started": started, **derivatives.STATE.snapshot()}
+
+
 @router.get("")
 def get_photos(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     # Check if the database has any records
@@ -457,6 +492,8 @@ def get_photos(background_tasks: BackgroundTasks, db: Session = Depends(get_db))
                     # Byte size of the clip, so the slideshow can decide whether
                     # autoplaying it is worth the bandwidth on a kiosk tablet.
                     "media_bytes": vid_rec.file_size,
+                    "posterUrl": f"/api/photos/poster/{urllib.parse.quote(vid_rel_path.as_posix())}",
+                    "playbackUrl": f"/api/photos/playback/{urllib.parse.quote(vid_rel_path.as_posix())}",
                     "type": "live_photo",
                     "name": img_data["name"],
                     "width": img_data["width"],
@@ -475,6 +512,8 @@ def get_photos(background_tasks: BackgroundTasks, db: Session = Depends(get_db))
                 "url": f"/api/photos/media/{urllib.parse.quote(vid_rel_path.as_posix())}",
                 "thumbnailUrl": f"/api/photos/thumbnail/{urllib.parse.quote(vid_rel_path.as_posix())}",
                 "media_bytes": vid_rec.file_size,
+                "posterUrl": f"/api/photos/poster/{urllib.parse.quote(vid_rel_path.as_posix())}",
+                "playbackUrl": f"/api/photos/playback/{urllib.parse.quote(vid_rel_path.as_posix())}",
                 "type": "video",
                 "name": vid_rel_path.name,
                 "width": vid_rec.width,

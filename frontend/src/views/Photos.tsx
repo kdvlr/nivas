@@ -8,6 +8,8 @@ interface MediaItem {
   displayUrl?: string
   thumbnailUrl?: string
   videoUrl?: string
+  posterUrl?: string
+  playbackUrl?: string
   type: 'image' | 'video' | 'live_photo'
   name: string
   orientation?: 'portrait' | 'landscape'
@@ -86,13 +88,18 @@ const MediaTile = ({ item, onClick }: { item: MediaItem; onClick: () => void }) 
 
       {item.type === 'video' && (
         <div className="w-full h-full relative animate-fadeIn" onClick={onClick}>
-          <video
-            src={`${item.url}#t=0.1`} // Seek to 0.1s to force the browser to render a preview poster frame
-            preload="metadata" // Download metadata only to conserve bandwidth and speed up layout
-            muted
-            playsInline
-            className="w-full h-full object-cover"
-          />
+          {item.posterUrl ? (
+            // Server-built poster frame: a few KB, no media pipeline per tile
+            <img src={item.posterUrl} alt={item.name} loading="lazy" className="w-full h-full object-cover" />
+          ) : (
+            <video
+              src={`${item.url}#t=0.1`} // Seek to 0.1s to force the browser to render a preview poster frame
+              preload="metadata" // Download metadata only to conserve bandwidth and speed up layout
+              muted
+              playsInline
+              className="w-full h-full object-cover"
+            />
+          )}
           {/* Video Icon Overlay */}
           <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/25 transition-colors">
             <div className="flex items-center justify-center w-12 h-12 rounded-full bg-white/95 dark:bg-neutral-900/95 text-slate-900 dark:text-white shadow-md transition-transform duration-300 group-hover:scale-110">
@@ -178,7 +185,7 @@ const LightboxLivePhoto = ({ item }: { item: MediaItem }) => {
       {item.videoUrl && (
         <video
           ref={videoRef}
-          src={item.videoUrl}
+          src={item.playbackUrl || item.videoUrl}
           preload="metadata"
           muted
           playsInline
@@ -405,7 +412,7 @@ export default function Photos({ onStartSlideshow }: { onStartSlideshow?: () => 
 
                   {currentMedia.type === 'video' && (
                     <video
-                      src={currentMedia.url}
+                      src={currentMedia.playbackUrl || currentMedia.url}
                       controls
                       autoPlay
                       className="max-h-[80vh] max-w-[90vw] object-contain rounded-2xl"

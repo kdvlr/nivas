@@ -12,6 +12,12 @@ FROM python:3.12-slim
 WORKDIR /app
 ENV PYTHONUNBUFFERED=1 DATA_DIR=/data
 
+# ffmpeg builds the video derivatives (poster frames + 1080p H.264 playback
+# copies). Without it the app still runs and simply serves original videos.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY backend/pyproject.toml ./
 COPY backend/app ./app
 RUN pip install --no-cache-dir .
