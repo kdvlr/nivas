@@ -805,7 +805,7 @@ export default function Home() {
   const renderMeals = (isDesktop: boolean) => {
     const isEmpty = !todayMeals || (!todayMeals.breakfast && !todayMeals.lunch && !todayMeals.dinner)
     return (
-      <section className={`glass flex flex-col p-5 ${loadingMeals ? 'shimmer-loading' : ''} ${isDesktop ? '' : (isEmpty ? 'h-auto' : 'flex-1 min-h-0 overflow-hidden')}`}>
+      <section className={`glass flex flex-col p-5 ${loadingMeals ? 'shimmer-loading' : ''} ${isDesktop ? 'shrink-0 overflow-hidden' : (isEmpty ? 'h-auto' : 'flex-1 min-h-0 overflow-hidden')}`}>
         <a href="#/meals" className="mb-3 flex items-center gap-3 text-xl font-normal text-ink">
           <Icon name="restaurant" className="text-2xl" /> Today's Meals
           <span className="ml-auto text-sm font-medium text-sky-600 dark:text-sky-400">plan ›</span>
@@ -840,8 +840,14 @@ export default function Home() {
 
   const renderShopping = (isDesktop: boolean) => {
     const isEmpty = shoppingCount === 0
+    // Desktop: an explicit min-height replaces flexbox's default
+    // `min-height: auto`, which otherwise refuses to shrink the card below its
+    // content and pushes the column off the bottom of the page.
     return (
-      <section className={`glass flex flex-col p-4 ${loadingShopping ? 'shimmer-loading' : ''} ${isDesktop ? '' : (isEmpty ? 'h-auto' : 'flex-1 min-h-0 overflow-hidden')}`}>
+      <section
+        className={`glass flex flex-col p-4 ${loadingShopping ? 'shimmer-loading' : ''} ${isDesktop ? 'min-h-0 overflow-hidden' : (isEmpty ? 'h-auto' : 'flex-1 min-h-0 overflow-hidden')}`}
+        style={isDesktop ? { flexGrow: Math.max(shoppingPeek.length, 1) } : undefined}
+      >
         <a href="#/shopping" className="flex items-center gap-3 text-lg font-normal text-ink">
           <Icon name="shopping_cart" className="text-2xl" /> Shopping
           <span className="ml-auto rounded-full bg-orange-100 dark:bg-orange-900/40 px-2.5 py-0.5 text-xs font-semibold text-orange-800 dark:text-orange-300">
@@ -922,7 +928,7 @@ export default function Home() {
         {renderHeader()}
         <div className="grid min-h-0 flex-1 grid-cols-3 gap-4">
           {renderSchedule(true)}
-          <div className="flex min-h-0 flex-col gap-4">
+          <div className="flex min-h-0 flex-col gap-4 overflow-hidden">
             {renderChores(true)}
             {renderTasks(true)}
             {renderMeals(true)}
