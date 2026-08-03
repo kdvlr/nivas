@@ -454,6 +454,9 @@ def get_photos(background_tasks: BackgroundTasks, db: Session = Depends(get_db))
                     "displayUrl": f"/api/photos/display/{urllib.parse.quote(img_data['rel_path'].as_posix())}",
                     "thumbnailUrl": f"/api/photos/thumbnail/{urllib.parse.quote(img_data['rel_path'].as_posix())}",
                     "videoUrl": f"/api/photos/media/{urllib.parse.quote(vid_rel_path.as_posix())}",
+                    # Byte size of the clip, so the slideshow can decide whether
+                    # autoplaying it is worth the bandwidth on a kiosk tablet.
+                    "media_bytes": vid_rec.file_size,
                     "type": "live_photo",
                     "name": img_data["name"],
                     "width": img_data["width"],
@@ -471,6 +474,7 @@ def get_photos(background_tasks: BackgroundTasks, db: Session = Depends(get_db))
             media_items.append({
                 "url": f"/api/photos/media/{urllib.parse.quote(vid_rel_path.as_posix())}",
                 "thumbnailUrl": f"/api/photos/thumbnail/{urllib.parse.quote(vid_rel_path.as_posix())}",
+                "media_bytes": vid_rec.file_size,
                 "type": "video",
                 "name": vid_rel_path.name,
                 "width": vid_rec.width,

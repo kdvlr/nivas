@@ -9,6 +9,7 @@ interface MediaItem {
   url: string
   displayUrl?: string
   videoUrl?: string
+  media_bytes?: number
   type: 'image' | 'video' | 'live_photo'
   name: string
   orientation?: 'portrait' | 'landscape'
@@ -95,6 +96,12 @@ const SKY_GRADIENTS: Record<SkyPhase, { clear: string; overcast: string }> = {
     overcast: 'linear-gradient(180deg, #05070f 0%, #0b0f1e 50%, #141a2e 100%)',
   },
 }
+
+// A third of a real family library is video, averaging ~23MB and reaching
+// 90MB. Streaming one of those for a 9-second slide swamps a kiosk tablet's
+// network and media pipeline, so only short/small clips animate; anything
+// bigger shows a still frame and stays tap-to-play.
+const AUTOPLAY_MAX_BYTES = 5 * 1024 * 1024
 
 const BALLOON_COLORS = ['#f87171', '#fb923c', '#facc15', '#4ade80', '#38bdf8', '#c084fc', '#f472b6']
 
@@ -264,6 +271,8 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVide
         ? '0 0 44px 6px rgba(150,185,255,0.22), '
         : ''
   const matShadow = `${ambient}0 4px 10px rgba(0,0,0,0.35), 0 30px 70px rgba(0,0,0,0.5)`
+  // Unknown size (older cache rows) is treated as heavy — fail safe.
+  const autoplayable = quality !== 'low' && (item.media_bytes ?? Infinity) <= AUTOPLAY_MAX_BYTES
   const tilt = ((seed % 44) / 10 - 2.2) * (pairIdx === 1 ? -1 : 1)
 
   const media = (
@@ -279,10 +288,21 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVide
         <img src={item.displayUrl || item.url} decoding="async" className="w-full h-full object-contain pointer-events-none" />
       )}
       {item.type === 'live_photo' && item.videoUrl && (
-        <CleanVideo key={item.videoUrl} src={item.videoUrl} autoPlay muted playsInline loop className="w-full h-full object-contain pointer-events-none" />
+        autoplayable ? (
+          <CleanVideo key={item.videoUrl} src={item.videoUrl} autoPlay muted playsInline loop className="w-full h-full object-contain pointer-events-none" />
+        ) : (
+          <CleanVideo key={item.videoUrl} src={`${item.videoUrl}#t=0.1`} preload="metadata" muted playsInline className="w-full h-full object-contain pointer-events-none" />
+        )
       )}
       {item.type === 'video' && (
-        <CleanVideo key={item.url} src={item.url} autoPlay muted playsInline loop className="w-full h-full object-contain pointer-events-none" />
+        autoplayable ? (
+          <CleanVideo key={item.url} src={item.url} autoPlay muted playsInline loop className="w-full h-full object-contain pointer-events-none" />
+        ) : (
+          // Heavy clip: fetch just enough to render a still frame instead of
+          // streaming tens of megabytes for a 9-second slide. Tapping still
+          // opens the full player with audio.
+          <CleanVideo key={item.url} src={`${item.url}#t=0.1`} preload="metadata" muted playsInline className="w-full h-full object-contain pointer-events-none" />
+        )
       )}
       {(item.type === 'video' || item.type === 'live_photo') && (
         <div className="absolute bottom-2 right-2 z-10 w-8 h-8 rounded-full bg-black/45 border border-white/40 flex items-center justify-center pointer-events-none">

@@ -146,6 +146,34 @@ export default function App() {
   const [style, setStyleState] = useState<ThemeStyle>(getStyle)
   const [moreOpen, setMoreOpen] = useState(false)
   const [slideshowActive, setSlideshowActive] = useState(false)
+  const dashboardRef = useRef<HTMLDivElement>(null)
+  const resumeVideosRef = useRef<HTMLVideoElement[]>([])
+
+  // The gallery autoplays a muted <video> for every Live Photo scrolled into
+  // view. Hiding the dashboard stops it painting but the browser keeps
+  // decoding those videos behind the screensaver, which on a large library is
+  // a lot of continuous work for something nobody can see. Pause them while
+  // the slideshow is up and resume whatever was actually playing on exit
+  // (the tiles' IntersectionObservers won't re-fire on their own).
+  useEffect(() => {
+    const root = dashboardRef.current
+    if (!root) return
+    if (slideshowActive) {
+      const paused: HTMLVideoElement[] = []
+      root.querySelectorAll('video').forEach((v) => {
+        if (!v.paused) {
+          v.pause()
+          paused.push(v)
+        }
+      })
+      resumeVideosRef.current = paused
+    } else if (resumeVideosRef.current.length) {
+      resumeVideosRef.current.forEach((v) => {
+        if (v.isConnected) v.play().catch(() => {})
+      })
+      resumeVideosRef.current = []
+    }
+  }, [slideshowActive])
   const [photosList, setPhotosList] = useState<any[]>([])
   
   // Touch gestures for swipe-to-navigate and pull-to-refresh
@@ -301,6 +329,7 @@ export default function App() {
             compositing for the whole app — the slideshow gets the GPU. */}
         <div
           className="flex h-full flex-col lg:flex-row gap-2 p-2 lg:gap-4 lg:p-4"
+          ref={dashboardRef}
           style={slideshowActive ? { visibility: 'hidden' } : undefined}
         >
           <nav className="glass group/nav order-last lg:order-first flex flex-row lg:flex-col w-full lg:w-16 hover:lg:w-48 transition-[width] duration-300 ease-in-out h-14 lg:h-full shrink-0 items-center lg:items-start justify-around lg:justify-start gap-1 lg:gap-4 py-1.5 lg:py-4 px-2 lg:px-2 z-20">
