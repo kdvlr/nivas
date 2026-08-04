@@ -31,8 +31,8 @@ class RecipeManual(BaseModel):
     source_url: str = ""
 
 
-def _dict(r: Recipe, full: bool = True) -> dict:
-    d = {
+def _dict(r: Recipe) -> dict:
+    return {
         "id": r.id,
         "title": r.title,
         "image_url": r.image_url,
@@ -40,23 +40,17 @@ def _dict(r: Recipe, full: bool = True) -> dict:
         "servings": r.servings,
         "tags": r.tags,
         "source_url": r.source_url,
+        "prep_time": r.prep_time,
+        "cook_time": r.cook_time,
+        "ingredients": r.ingredients,
+        "steps": r.steps,
     }
-    if full:
-        d.update(
-            {
-                "prep_time": r.prep_time,
-                "cook_time": r.cook_time,
-                "ingredients": r.ingredients,
-                "steps": r.steps,
-            }
-        )
-    return d
 
 
 @router.get("")
 def list_recipes(db: Session = Depends(get_db)):
     rows = db.query(Recipe).order_by(Recipe.created_at.desc()).all()
-    return [_dict(r, full=False) for r in rows]
+    return [_dict(r) for r in rows]
 
 
 @router.get("/{recipe_id}")

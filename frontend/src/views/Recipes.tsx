@@ -245,9 +245,21 @@ export default function Recipes() {
     if (!q) return recipes ?? []
     return (recipes ?? []).filter((r) => {
       const titleMatch = r.title?.toLowerCase().includes(q)
-      const tagMatch = r.tags?.some((t) => t.toLowerCase().includes(q))
-      const ingredientMatch = r.ingredients?.some((ing) => ing.toLowerCase().includes(q))
-      const stepMatch = r.steps?.some((step) => step.toLowerCase().includes(q))
+      const tagMatch = r.tags?.some((t) => typeof t === 'string' && t.toLowerCase().includes(q))
+      const ingredientMatch = r.ingredients?.some((ing) =>
+        typeof ing === 'string'
+          ? ing.toLowerCase().includes(q)
+          : ing && typeof ing === 'object'
+          ? Object.values(ing).some((v) => String(v).toLowerCase().includes(q))
+          : false
+      )
+      const stepMatch = r.steps?.some((step) =>
+        typeof step === 'string'
+          ? step.toLowerCase().includes(q)
+          : step && typeof step === 'object'
+          ? Object.values(step).some((v) => String(v).toLowerCase().includes(q))
+          : false
+      )
       return titleMatch || tagMatch || ingredientMatch || stepMatch
     })
   }, [recipes, searchQuery])
