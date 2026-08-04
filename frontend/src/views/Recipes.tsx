@@ -1,9 +1,11 @@
 import { useEffect, useState, useMemo } from 'react'
+import { motion } from 'framer-motion'
 import Icon from '../components/Icon'
 import { api, ApiError } from '../lib/api'
 import { useData, useVoiceCommands } from '../lib/hooks'
 import type { Recipe } from '../lib/types'
 import Modal from '../components/Modal'
+import { PRESS_SPRING } from '../lib/motion'
 
 function detailIdFromHash() {
   const m = location.hash.match(/^#\/recipes\/(\d+)/)
@@ -239,6 +241,31 @@ export default function Recipes() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [addMode, setAddMode] = useState<'url' | 'manual'>('url')
+
+  // Manual creation state
+  const [manualTitle, setManualTitle] = useState('')
+  const [manualServings, setManualServings] = useState('')
+  const [manualPrepTime, setManualPrepTime] = useState('')
+  const [manualCookTime, setManualCookTime] = useState('')
+  const [manualTags, setManualTags] = useState('')
+  const [manualIngredients, setManualIngredients] = useState('')
+  const [manualSteps, setManualSteps] = useState('')
+  const [manualImageUrl, setManualImageUrl] = useState('')
+
+  const resetAddForm = () => {
+    setUrl('')
+    setManualTitle('')
+    setManualServings('')
+    setManualPrepTime('')
+    setManualCookTime('')
+    setManualTags('')
+    setManualIngredients('')
+    setManualSteps('')
+    setManualImageUrl('')
+    setError('')
+  }
 
   const filteredRecipes = useMemo(() => {
     const q = searchQuery.toLowerCase().trim()
@@ -277,11 +304,60 @@ export default function Recipes() {
     setError('')
     try {
       const r = await api.post<Recipe>('/api/recipes', { url: u })
-      setUrl('')
+      resetAddForm()
+      setShowAddModal(false)
       reload()
       location.hash = `#/recipes/${r.id}`
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not save that recipe')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const saveManual = async () => {
+    const title = manualTitle.trim()
+    if (!title || saving) return
+    setSaving(true)
+    setError('')
+    try {
+      const ingredients = manualIngredients
+        .split('\n')
+        .map((s) => s.trim())
+        .filter(Boolean)
+      const steps = manualSteps
+        .split('\n')
+        .map((s) => s.trim())
+        .filter(Boolean)
+      const tags = manualTags
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+
+      const prep = manualPrepTime.trim()
+      const cook = manualCookTime.trim()
+      const total = [prep && `Prep: ${prep}`, cook && `Cook: ${cook}`].filter(Boolean).join(' · ')
+
+      const body = {
+        title,
+        servings: manualServings.trim(),
+        prep_time: prep,
+        cook_time: cook,
+        total_time: total,
+        ingredients,
+        steps,
+        tags,
+        image_url: manualImageUrl.trim(),
+        source_url: '',
+      }
+
+      const r = await api.post<Recipe>('/api/recipes/manual', body)
+      resetAddForm()
+      setShowAddModal(false)
+      reload()
+      location.hash = `#/recipes/${r.id}`
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Could not save recipe')
     } finally {
       setSaving(false)
     }
@@ -293,40 +369,38 @@ export default function Recipes() {
 
   return (
     <div className="flex h-full flex-col px-4 py-3 lg:px-8 lg:py-4">
-      <div className="mb-3 flex items-center gap-4">
-        <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink">Recipes</h1>
-        <span className="text-sm lg:text-base font-medium text-ink-soft">
-          {searchQuery.trim()
-            ? `${filteredRecipes.length} found`
-            : `${recipes?.length ?? 0} saved`}
-        </span>
+      {/* Header */}
+      <div className="mb-4 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink">Recipes</h1>
+          <span className="text-sm lg:text-base font-medium text-ink-soft">
+            {searchQuery.trim()
+              ? `${filteredRecipes.length} found`
+              : `${recipes?.length ?? 0} saved`}
+          </span>
+        </div>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          transition={PRESS_SPRING}
+          onClick={() => {
+            resetAddForm()
+            setShowAddModal(true)
+          }}
+          className="btn-primary px-4 py-2 lg:px-6 lg:py-3 text-base lg:text-lg cursor-pointer flex items-center gap-1.5"
+        >
+          <Icon name="add" /> Add
+        </motion.button>
       </div>
 
-      <div className="mb-4 flex w-full max-w-3xl gap-3 flex-col sm:flex-row">
-        <div className="flex-1 flex gap-2">
-          <input
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && saveFromUrl()}
-            placeholder="Paste a recipe URL…"
-            className="flex-1 input-glass px-4 py-2 text-sm lg:text-base"
-          />
-          <button
-            onClick={saveFromUrl}
-            disabled={!url.trim() || saving}
-            className="btn-primary bg-[var(--primary)] text-[var(--on-primary)] px-4 py-2 text-sm lg:text-base lg:px-6 shadow-md shadow-[var(--primary)]/30 hover:shadow-lg hover:shadow-[var(--primary)]/40 transition-all active:scale-95"
-          >
-            {saving ? 'Reading…' : 'Save recipe'}
-          </button>
-        </div>
-
-        {/* Search Box */}
-        <div className="relative w-full sm:w-64">
+      {/* Search Bar */}
+      <div className="mb-4 flex w-full max-w-xl">
+        <div className="relative w-full">
           <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search recipes…"
-            className="w-full input-glass pl-10 pr-10 py-2 text-sm lg:text-base"
+            placeholder="Search recipes by title, ingredient, tag..."
+            className="w-full input-glass pl-10 pr-10 py-2.5 text-sm lg:text-base"
           />
           <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-soft select-none pointer-events-none flex items-center">
             <Icon name="search" className="text-lg lg:text-xl" />
@@ -341,7 +415,6 @@ export default function Recipes() {
           )}
         </div>
       </div>
-      {error && <p className="mb-4 font-medium text-rose-600">{error}</p>}
 
       {!recipes ? (
         <div className="flex flex-1 items-center justify-center text-ink-soft">
@@ -350,8 +423,16 @@ export default function Recipes() {
       ) : recipes.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 text-ink-soft">
           <span className="text-7xl">📖</span>
-          <p className="text-xl lg:text-2xl font-medium text-center">Paste a recipe link above to start your recipe box</p>
-          <p className="text-sm lg:text-base text-ink-faint">(Manual creation coming soon)</p>
+          <p className="text-xl lg:text-2xl font-medium text-center">Your recipe box is empty</p>
+          <button
+            onClick={() => {
+              resetAddForm()
+              setShowAddModal(true)
+            }}
+            className="btn-primary px-6 py-2.5 text-base font-medium cursor-pointer"
+          >
+            + Add your first recipe
+          </button>
         </div>
       ) : filteredRecipes.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-2 text-ink-soft">
@@ -388,6 +469,174 @@ export default function Recipes() {
             </a>
           ))}
         </div>
+      )}
+
+      {/* Add Recipe Modal */}
+      {showAddModal && (
+        <Modal
+          title="Add Recipe"
+          onClose={() => {
+            setShowAddModal(false)
+            resetAddForm()
+          }}
+        >
+          <div className="flex flex-col gap-4">
+            {/* Mode Tabs */}
+            <div className="flex rounded-xl p-1 glass-inset">
+              <button
+                type="button"
+                onClick={() => setAddMode('url')}
+                className={`flex-1 py-2 text-sm lg:text-base font-medium rounded-lg transition-all cursor-pointer ${
+                  addMode === 'url'
+                    ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-sm'
+                    : 'text-ink-soft hover:text-ink'
+                }`}
+              >
+                Import Link
+              </button>
+              <button
+                type="button"
+                onClick={() => setAddMode('manual')}
+                className={`flex-1 py-2 text-sm lg:text-base font-medium rounded-lg transition-all cursor-pointer ${
+                  addMode === 'manual'
+                    ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-sm'
+                    : 'text-ink-soft hover:text-ink'
+                }`}
+              >
+                Create Manually
+              </button>
+            </div>
+
+            {error && <p className="text-sm font-medium text-rose-600">{error}</p>}
+
+            {addMode === 'url' ? (
+              <div className="flex flex-col gap-4">
+                <p className="text-sm text-ink-soft">
+                  Paste a link from any recipe website, blog, or cooking site to automatically extract its title, photo, ingredients, and instructions.
+                </p>
+                <input
+                  autoFocus
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && saveFromUrl()}
+                  placeholder="https://..."
+                  className="input-glass px-4 py-3 text-base focus:outline-none"
+                />
+                <div className="flex justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddModal(false)
+                      resetAddForm()
+                    }}
+                    className="px-4 py-2.5 text-base font-medium text-ink-soft hover:text-ink cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={PRESS_SPRING}
+                    onClick={saveFromUrl}
+                    disabled={!url.trim() || saving}
+                    className="btn-primary px-6 py-2.5 text-base cursor-pointer disabled:opacity-40"
+                  >
+                    {saving ? 'Reading recipe...' : 'Import Recipe'}
+                  </motion.button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto pr-1">
+                <div>
+                  <label className="text-xs font-medium text-ink-soft mb-1 block">Title *</label>
+                  <input
+                    autoFocus
+                    value={manualTitle}
+                    onChange={(e) => setManualTitle(e.target.value)}
+                    placeholder="e.g. Grandma's Chocolate Chip Cookies"
+                    className="input-glass w-full px-4 py-2.5 text-base focus:outline-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-ink-soft mb-1 block">Servings</label>
+                    <input
+                      value={manualServings}
+                      onChange={(e) => setManualServings(e.target.value)}
+                      placeholder="e.g. 4 servings"
+                      className="input-glass w-full px-3 py-2 text-sm focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-ink-soft mb-1 block">Prep / Cook Time</label>
+                    <input
+                      value={manualPrepTime}
+                      onChange={(e) => setManualPrepTime(e.target.value)}
+                      placeholder="e.g. 15m prep, 30m cook"
+                      className="input-glass w-full px-3 py-2 text-sm focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-ink-soft mb-1 block">Image URL (optional)</label>
+                  <input
+                    value={manualImageUrl}
+                    onChange={(e) => setManualImageUrl(e.target.value)}
+                    placeholder="https://..."
+                    className="input-glass w-full px-3 py-2 text-sm focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-ink-soft mb-1 block">Ingredients (one per line)</label>
+                  <textarea
+                    rows={4}
+                    value={manualIngredients}
+                    onChange={(e) => setManualIngredients(e.target.value)}
+                    placeholder={"2 cups flour\n1 tsp baking soda\n1/2 cup sugar"}
+                    className="input-glass w-full px-3 py-2 text-sm focus:outline-none resize-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-ink-soft mb-1 block">Steps (one per line)</label>
+                  <textarea
+                    rows={4}
+                    value={manualSteps}
+                    onChange={(e) => setManualSteps(e.target.value)}
+                    placeholder={"Preheat oven to 375°F.\nMix dry ingredients in a large bowl.\nBake for 10-12 minutes."}
+                    className="input-glass w-full px-3 py-2 text-sm focus:outline-none resize-none"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddModal(false)
+                      resetAddForm()
+                    }}
+                    className="px-4 py-2.5 text-base font-medium text-ink-soft hover:text-ink cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={PRESS_SPRING}
+                    onClick={saveManual}
+                    disabled={!manualTitle.trim() || saving}
+                    className="btn-primary px-6 py-2.5 text-base cursor-pointer disabled:opacity-40"
+                  >
+                    {saving ? 'Saving...' : 'Save Recipe'}
+                  </motion.button>
+                </div>
+              </div>
+            )}
+          </div>
+        </Modal>
       )}
     </div>
   )
