@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import Icon from '../components/Icon'
 import { api, ApiError } from '../lib/api'
 import { useData, useVoiceCommands } from '../lib/hooks'
@@ -238,6 +238,19 @@ export default function Recipes() {
   const [url, setUrl] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const filteredRecipes = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim()
+    if (!q) return recipes ?? []
+    return (recipes ?? []).filter((r) => {
+      const titleMatch = r.title?.toLowerCase().includes(q)
+      const tagMatch = r.tags?.some((t) => t.toLowerCase().includes(q))
+      const ingredientMatch = r.ingredients?.some((ing) => ing.toLowerCase().includes(q))
+      const stepMatch = r.steps?.some((step) => step.toLowerCase().includes(q))
+      return titleMatch || tagMatch || ingredientMatch || stepMatch
+    })
+  }, [recipes, searchQuery])
 
   useEffect(() => {
     const onHash = () => setDetailId(detailIdFromHash())
@@ -270,36 +283,78 @@ export default function Recipes() {
     <div className="flex h-full flex-col px-4 py-3 lg:px-8 lg:py-4">
       <div className="mb-3 flex items-center gap-4">
         <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink">Recipes</h1>
-        <span className="text-sm lg:text-base font-medium text-ink-soft">{recipes?.length ?? 0} saved</span>
+        <span className="text-sm lg:text-base font-medium text-ink-soft">
+          {searchQuery.trim()
+            ? `${filteredRecipes.length} found`
+            : `${recipes?.length ?? 0} saved`}
+        </span>
       </div>
 
-      <div className="mb-4 flex w-full max-w-3xl gap-2 lg:gap-3">
-        <input
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && saveFromUrl()}
-          placeholder="Paste a recipe URL…"
-          className="flex-1 input-glass px-4 py-2 text-sm lg:text-base"
-        />
-        <button
-          onClick={saveFromUrl}
-          disabled={!url.trim() || saving}
-          className="btn-primary bg-[var(--primary)] text-[var(--on-primary)] px-4 py-2 text-sm lg:text-base lg:px-6 shadow-md shadow-[var(--primary)]/30 hover:shadow-lg hover:shadow-[var(--primary)]/40 transition-all active:scale-95"
-        >
-          {saving ? 'Reading…' : 'Save recipe'}
-        </button>
+      <div className="mb-4 flex w-full max-w-3xl gap-3 flex-col sm:flex-row">
+        <div className="flex-1 flex gap-2">
+          <input
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && saveFromUrl()}
+            placeholder="Paste a recipe URL…"
+            className="flex-1 input-glass px-4 py-2 text-sm lg:text-base"
+          />
+          <button
+            onClick={saveFromUrl}
+            disabled={!url.trim() || saving}
+            className="btn-primary bg-[var(--primary)] text-[var(--on-primary)] px-4 py-2 text-sm lg:text-base lg:px-6 shadow-md shadow-[var(--primary)]/30 hover:shadow-lg hover:shadow-[var(--primary)]/40 transition-all active:scale-95"
+          >
+            {saving ? 'Reading…' : 'Save recipe'}
+          </button>
+        </div>
+
+        {/* Search Box */}
+        <div className="relative w-full sm:w-64">
+          <input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search recipes…"
+            className="w-full input-glass pl-10 pr-10 py-2 text-sm lg:text-base"
+          />
+          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-soft select-none pointer-events-none flex items-center">
+            <Icon name="search" className="text-lg lg:text-xl" />
+          </span>
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-soft hover:text-ink transition-transform active:scale-90 cursor-pointer flex items-center justify-center"
+            >
+              <Icon name="close" className="text-lg lg:text-xl" />
+            </button>
+          )}
+        </div>
       </div>
       {error && <p className="mb-4 font-medium text-rose-600">{error}</p>}
 
-      {(recipes ?? []).length === 0 ? (
+      {!recipes ? (
+        <div className="flex flex-1 items-center justify-center text-ink-soft">
+          <p className="text-lg font-medium">Loading recipes...</p>
+        </div>
+      ) : recipes.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 text-ink-soft">
           <span className="text-7xl">📖</span>
           <p className="text-xl lg:text-2xl font-medium text-center">Paste a recipe link above to start your recipe box</p>
           <p className="text-sm lg:text-base text-ink-faint">(Manual creation coming soon)</p>
         </div>
+      ) : filteredRecipes.length === 0 ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 text-ink-soft">
+          <span className="text-5xl">🔍</span>
+          <p className="text-lg lg:text-xl font-medium text-center">No recipes found matching "{searchQuery}"</p>
+          <button
+            onClick={() => setSearchQuery('')}
+            className="text-sm text-[var(--primary)] hover:underline mt-2 font-medium cursor-pointer"
+          >
+            Clear search
+          </button>
+        </div>
       ) : (
         <div className="grid min-h-0 flex-1 auto-rows-min grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-5 overflow-y-auto pb-6 xl:grid-cols-5">
-          {(recipes ?? []).map((r) => (
+          {filteredRecipes.map((r) => (
             <a
               key={r.id}
               href={`#/recipes/${r.id}`}
