@@ -60,9 +60,21 @@ app.mount("/api/photos/media", StaticFiles(directory=PHOTOS_DIR), name="photos_m
 if STATIC_DIR.exists():
     app.mount("/assets", StaticFiles(directory=STATIC_DIR / "assets"), name="assets")
 
+    # index.html points at content-hashed bundles, so it must never be cached:
+    # a kiosk WebView that pins a stale copy keeps loading the old JS forever
+    # and every deploy looks like it did nothing.
+    INDEX_HEADERS = {"Cache-Control": "no-cache, no-store, must-revalidate"}
+
     @app.get("/{path:path}")
     def spa(path: str):
         file = STATIC_DIR / path
-        if path and file.is_file():
+        # Keep the lookup inside STATIC_DIR — "path" is attacker-controlled and
+        # ".." would otherwise escape the static root.
+        contained = False
+        try:
+            contained = file.resolve().is_relative_to(STATIC_DIR.resolve())
+        except (OSError, ValueError):
+            contained = False
+        if path and contained and file.is_file() and file.name != "index.html":
             return FileResponse(file)
-        return FileResponse(STATIC_DIR / "index.html")
+        return FileResponse(STATIC_DIR / "index.html", headers=INDEX_HEADERS)
