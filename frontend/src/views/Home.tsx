@@ -37,6 +37,16 @@ const AXIS_GUTTER = 56
 const FAMILY_GRADIENT = 'linear-gradient(115deg, #ef4444, #f97316, #eab308, #22c55e, #3b82f6, #a855f7)'
 const MIN_SPAN_MIN = 12 * 60
 
+/** Only a calendar explicitly assigned to Family/Shared gets the rainbow. */
+const isFamilyName = (name?: string | null) => {
+  const n = (name ?? '').trim().toLowerCase()
+  return n === 'family' || n === 'shared'
+}
+
+/** "kiran" / "KIRAN" -> "Kiran" (names are free text in Setup). */
+const titleCase = (s: string) =>
+  s.replace(/\S+/g, (w) => w[0].toUpperCase() + w.slice(1).toLowerCase())
+
 const isFamilyEvent = (e: CalEvent) =>
   !e.person_name || e.person_name.toLowerCase() === 'family' || e.person_name.toLowerCase() === 'shared'
 
@@ -274,28 +284,26 @@ export default function Home() {
   const axisPct = (m: number) => ((m - timeline.axis.start) / timeline.spanMin) * 100
   const nowMin = now.getHours() * 60 + now.getMinutes()
 
-  // calendar legend: one chip per enabled calendar (family calendars get the gradient)
-  const calendarLegend = useMemo(() => {
-    const order = ['Family', 'Kiran', 'Swati', 'Swara', 'Dhruv']
-    const colors: Record<string, string> = {
-      Family: FAMILY_GRADIENT,
-      Kiran: '#fb923c',
-      Swati: '#38bdf8',
-      Swara: '#c084fc',
-      Dhruv: '#a3e635',
-    }
+  // Legend: one chip per enabled calendar, derived from the real calendars.
+  // Only Family/Shared gets the rainbow; everyone else keeps their own color.
+  const calendarLegend = useMemo<[string, string][]>(() => {
+    const byKey = new Map<string, [string, string]>()
 
     for (const s of (calStatus?.accounts ?? []).flatMap((a) => a.selections)) {
       if (!s.enabled) continue
-      const label = s.person_name || s.name
-      const isFamily = !s.person_name || ['family', 'shared'].includes(s.person_name.toLowerCase())
-      const key = isFamily ? 'Family' : label
-      if (order.includes(key)) {
-        colors[key] = isFamily ? FAMILY_GRADIENT : s.color
-      }
+      const family = isFamilyName(s.person_name)
+      const raw = (s.person_name || s.name || '').trim()
+      if (!raw) continue
+      const label = family ? 'Family' : titleCase(raw)
+      const key = label.toLowerCase()
+      // first calendar wins, so one person with several calendars shows once
+      if (!byKey.has(key)) byKey.set(key, [label, family ? FAMILY_GRADIENT : s.color])
     }
 
-    return order.map((name) => [name, colors[name] || '#ccc'])
+    // Family first, then people alphabetically
+    return [...byKey.values()].sort(([a], [b]) =>
+      a === 'Family' ? -1 : b === 'Family' ? 1 : a.localeCompare(b),
+    )
   }, [calStatus])
 
   const completeChore = async (c: ChoreItem) => {

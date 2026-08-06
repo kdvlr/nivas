@@ -49,7 +49,8 @@ const NAV = [
 const IDLE_RETURN_MS = 5 * 60 * 1000
 
 function currentRoute() {
-  const hash = location.hash.replace(/^#\/?/, '').split('/')[0]
+  // strip the query string first: "#/photos?sky=day" is still the photos route
+  const hash = location.hash.replace(/^#\/?/, '').split('?')[0].split('/')[0]
   if (hash === 'rewards') return 'rewards'
   return NAV.some((n) => n.id === hash) ? hash : 'home'
 }
