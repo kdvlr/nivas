@@ -2,13 +2,18 @@ import { useEffect, useRef, useState } from 'react'
 
 export type Quality = 'high' | 'medium' | 'low'
 
-// Dev/test override: ?fx=low forces a tier.
-const FORCED = (() => {
-  const v = new URLSearchParams(window.location.search).get('fx')
-  return v === 'high' || v === 'medium' || v === 'low' ? (v as Quality) : null
-})()
+import { getQueryParam } from './queryParam'
 
-const STORAGE_KEY = 'nivas-sky-quality'
+// Dev/test override: ?fx=low forces a tier. Read hash-aware, so it works in
+// "#/photos?sky=night&fx=high" just like the sky/skyfx overrides do.
+const forcedTier = (): Quality | null => {
+  const v = getQueryParam('fx')
+  return v === 'high' || v === 'medium' || v === 'low' ? (v as Quality) : null
+}
+
+// v2: v1 latched devices to 'low' permanently, which silently removed every
+// sky effect. Renaming the key discards those stale verdicts.
+const STORAGE_KEY = 'nivas-sky-quality-v2'
 
 function stored(): Quality | null {
   try {
@@ -29,8 +34,9 @@ function stored(): Quality | null {
  * instead of janking through the discovery phase again.
  */
 export function useQuality(active: boolean): Quality {
-  const [quality, setQuality] = useState<Quality>(() => FORCED ?? stored() ?? 'high')
-  const settled = useRef(FORCED !== null)
+  const forced = forcedTier()
+  const [quality, setQuality] = useState<Quality>(() => forced ?? stored() ?? 'high')
+  const settled = useRef(forced !== null)
 
   useEffect(() => {
     if (!active || settled.current) return

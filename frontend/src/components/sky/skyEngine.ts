@@ -20,11 +20,16 @@ const rand = (a: number, b: number) => a + Math.random() * (b - a)
 // weather. rAF still schedules, we just skip paints.
 const FRAME_MS = 31
 const FRAME_MS_LOW = 50
+const FRAME_MS_MIN = 66 // ~15fps: enough for drifting ambience on weak devices
 
-const frameBudget = (s: SkyState) => (s.quality === 'medium' ? FRAME_MS_LOW : FRAME_MS)
+// 'low' still paints — just fewer particles, at a lower resolution and frame
+// rate. An empty sky is a worse outcome than a cheap one.
+const frameBudget = (s: SkyState) =>
+  s.quality === 'low' ? FRAME_MS_MIN : s.quality === 'medium' ? FRAME_MS_LOW : FRAME_MS
 const dprFor = (s: SkyState) =>
-  Math.min(window.devicePixelRatio || 1, s.quality === 'medium' ? 1 : 1.5)
-const densityFor = (s: SkyState) => (s.quality === 'medium' ? 0.5 : 1)
+  Math.min(window.devicePixelRatio || 1, s.quality === 'high' ? 1.5 : 1)
+const densityFor = (s: SkyState) =>
+  s.quality === 'low' ? 0.28 : s.quality === 'medium' ? 0.5 : 1
 
 // Pre-rendered radial glow sprite (avoids per-frame gradient allocations).
 function makeGlowSprite(r: number, g: number, b: number): HTMLCanvasElement {

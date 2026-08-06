@@ -4,6 +4,7 @@ import Icon from './Icon'
 import { api } from '../lib/api'
 import { startStarCanvas, startFxCanvas, SkyPhase, SkyKind, SkyState } from './sky/skyEngine'
 import { useQuality, Quality } from './sky/useQuality'
+import { getQueryParam } from './sky/queryParam'
 
 interface MediaItem {
   url: string
@@ -57,16 +58,7 @@ const formatDate = (dateStr?: string | null) => {
 const hashStr = (s: string) => s.split('').reduce((a, c) => ((a * 31 + c.charCodeAt(0)) >>> 0) % 100000, 7)
 
 // Dev/test override: append ?sky=night&skyfx=rainy anywhere in the URL to preview any sky state.
-export const getQueryParam = (key: string): string | null => {
-  const searchQP = new URLSearchParams(window.location.search)
-  if (searchQP.has(key)) return searchQP.get(key)
-  const qIdx = window.location.href.indexOf('?')
-  if (qIdx !== -1) {
-    const qp = new URLSearchParams(window.location.href.substring(qIdx))
-    if (qp.has(key)) return qp.get(key)
-  }
-  return null
-}
+export { getQueryParam }
 
 const PHASES: SkyPhase[] = ['dawn', 'day', 'dusk', 'night']
 const KINDS: SkyKind[] = ['clear', 'cloudy', 'rainy', 'snowy', 'stormy']
@@ -689,9 +681,7 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
       <CelestialGlow phase={phase} kind={kind} />
 
       {/* Stars + shooting stars (behind photos) */}
-      {quality !== 'low' && (
-        <canvas ref={starRef} className="absolute inset-0 w-full h-full pointer-events-none" />
-      )}
+      <canvas ref={starRef} className="absolute inset-0 w-full h-full pointer-events-none" />
 
       <CloudLayer phase={phase} kind={kind} quality={quality} />
 
@@ -722,9 +712,7 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
       </AnimatePresence>
 
       {/* Weather + delights (rain, snow, fireflies, birds — in front of photos) */}
-      {quality !== 'low' && (
-        <canvas ref={fxRef} className="absolute inset-0 w-full h-full pointer-events-none z-20" />
-      )}
+      <canvas ref={fxRef} className="absolute inset-0 w-full h-full pointer-events-none z-20" />
 
       {selectedVideo && (
         <div
