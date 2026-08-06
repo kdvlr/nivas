@@ -472,14 +472,18 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null)
   const [playerReady, setPlayerReady] = useState(false)
   const [isPortraitViewport, setIsPortraitViewport] = useState(() => window.innerHeight > window.innerWidth)
-  const [kind, setKind] = useState<SkyKind>(getKindOverride() ?? 'clear')
+  // Capture the URL overrides ONCE. The kiosk's idle timer rewrites the hash
+  // to "#/home" after a few minutes, which used to erase ?sky=/?skyfx= mid-run
+  // and silently drop the sky back to real weather.
+  const [override] = useState(() => ({ phase: getPhaseOverride(), kind: getKindOverride() }))
+  const [kind, setKind] = useState<SkyKind>(override.kind ?? 'clear')
   const [sun, setSun] = useState<{ sunrise: Date | null; sunset: Date | null }>({ sunrise: null, sunset: null })
   const [now, setNow] = useState(() => new Date())
 
   const [hidden, setHidden] = useState(() => document.visibilityState === 'hidden')
   const quality = useQuality(!hidden)
 
-  const phase: SkyPhase = getPhaseOverride() ?? computePhase(now, sun.sunrise, sun.sunset)
+  const phase: SkyPhase = override.phase ?? computePhase(now, sun.sunrise, sun.sunset)
   const skyState: SkyState = { phase, kind, paused: !!selectedVideo || hidden, quality }
   const stateRef = useRef<SkyState>(skyState)
   stateRef.current = skyState
@@ -510,7 +514,7 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
       try {
         const data = await api.get<WeatherResp>('/api/weather')
         if (!alive) return
-        if (!getKindOverride()) setKind(toKind(data.current?.kind))
+        if (!override.kind) setKind(toKind(data.current?.kind))
         const today = data.daily?.[0]
         setSun({
           sunrise: today?.sunrise ? new Date(today.sunrise) : null,

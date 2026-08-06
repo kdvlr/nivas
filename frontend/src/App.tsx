@@ -147,6 +147,8 @@ export default function App() {
   const [style, setStyleState] = useState<ThemeStyle>(getStyle)
   const [moreOpen, setMoreOpen] = useState(false)
   const [slideshowActive, setSlideshowActive] = useState(false)
+  const slideshowActiveRef = useRef(false)
+  slideshowActiveRef.current = slideshowActive
   const dashboardRef = useRef<HTMLDivElement>(null)
   const resumeVideosRef = useRef<HTMLVideoElement[]>([])
 
@@ -234,6 +236,10 @@ export default function App() {
     }
     
     function goHome() {
+      // Don't rewrite the URL while the screensaver is up: the dashboard is
+      // hidden anyway, and it would erase any ?sky=/?skyfx= preview params the
+      // running slideshow was launched with.
+      if (slideshowActiveRef.current) return
       if (currentRoute() !== 'home') location.hash = '#/home'
     }
     
