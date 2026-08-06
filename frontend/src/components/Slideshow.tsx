@@ -70,8 +70,8 @@ const getQueryParam = (key: string): string | null => {
 
 const PHASES: SkyPhase[] = ['dawn', 'day', 'dusk', 'night']
 const KINDS: SkyKind[] = ['clear', 'cloudy', 'rainy', 'snowy', 'stormy']
-const PHASE_OVERRIDE = PHASES.find((p) => p === getQueryParam('sky')) ?? null
-const KIND_OVERRIDE = KINDS.find((k) => k === getQueryParam('skyfx')) ?? null
+const getPhaseOverride = () => PHASES.find((p) => p === getQueryParam('sky')) ?? null
+const getKindOverride = () => KINDS.find((k) => k === getQueryParam('skyfx')) ?? null
 
 const toKind = (k?: string | null): SkyKind => {
   if (k === 'sunny') return 'clear'
@@ -477,14 +477,14 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null)
   const [playerReady, setPlayerReady] = useState(false)
   const [isPortraitViewport, setIsPortraitViewport] = useState(() => window.innerHeight > window.innerWidth)
-  const [kind, setKind] = useState<SkyKind>(KIND_OVERRIDE ?? 'clear')
+  const [kind, setKind] = useState<SkyKind>(getKindOverride() ?? 'clear')
   const [sun, setSun] = useState<{ sunrise: Date | null; sunset: Date | null }>({ sunrise: null, sunset: null })
   const [now, setNow] = useState(() => new Date())
 
   const [hidden, setHidden] = useState(() => document.visibilityState === 'hidden')
   const quality = useQuality(!hidden)
 
-  const phase: SkyPhase = PHASE_OVERRIDE ?? computePhase(now, sun.sunrise, sun.sunset)
+  const phase: SkyPhase = getPhaseOverride() ?? computePhase(now, sun.sunrise, sun.sunset)
   const skyState: SkyState = { phase, kind, paused: !!selectedVideo || hidden, quality }
   const stateRef = useRef<SkyState>(skyState)
   stateRef.current = skyState
@@ -515,7 +515,7 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
       try {
         const data = await api.get<WeatherResp>('/api/weather')
         if (!alive) return
-        if (!KIND_OVERRIDE) setKind(toKind(data.current?.kind))
+        if (!getKindOverride()) setKind(toKind(data.current?.kind))
         const today = data.daily?.[0]
         setSun({
           sunrise: today?.sunrise ? new Date(today.sunrise) : null,
