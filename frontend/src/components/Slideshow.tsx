@@ -222,12 +222,23 @@ function CleanVideo({ src, ...props }: CleanVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
+    const el = videoRef.current
+    if (el) {
+      el.muted = true
+      el.defaultMuted = true
+      const p = el.play()
+      if (p !== undefined) {
+        p.catch(() => {
+          // Autoplay policy prevented playback, silent fallback
+        })
+      }
+    }
     return () => {
-      if (videoRef.current) {
+      if (el) {
         try {
-          videoRef.current.pause()
-          videoRef.current.src = ""
-          videoRef.current.load()
+          el.pause()
+          el.src = ""
+          el.load()
         } catch (e) {
           // ignore
         }
@@ -304,8 +315,7 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVide
         ? '0 0 44px 6px rgba(150,185,255,0.22), '
         : ''
   const matShadow = `${ambient}0 4px 10px rgba(0,0,0,0.35), 0 30px 70px rgba(0,0,0,0.5)`
-  // Unknown size (older cache rows) is treated as heavy — fail safe.
-  const autoplayable = quality !== 'low' && (item.media_bytes ?? Infinity) <= AUTOPLAY_MAX_BYTES
+  const autoplayable = quality !== 'low' || !!item.playbackUrl
   const tilt = ((seed % 44) / 10 - 2.2) * (pairIdx === 1 ? -1 : 1)
 
   const media = (
