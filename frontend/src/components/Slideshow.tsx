@@ -323,8 +323,8 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVide
       className="overflow-hidden bg-neutral-100 relative"
       style={{
         aspectRatio: aspect,
-        maxHeight: pair ? '68vh' : daylight ? '72vh' : '76vh',
-        maxWidth: pair ? '42vw' : '78vw',
+        maxHeight: pair ? '74vh' : daylight ? '78vh' : '82vh',
+        maxWidth: pair ? '44vw' : '84vw',
       }}
     >
       {item.type === 'image' && (
