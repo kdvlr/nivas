@@ -32,7 +32,7 @@ import Meals from './views/Meals'
 import Recipes from './views/Recipes'
 import Setup from './views/Setup'
 import Photos from './views/Photos'
-import Slideshow from './components/Slideshow'
+import Slideshow, { hasSkyOverride } from './components/Slideshow'
 
 const NAV = [
   { id: 'home', label: 'Home', icon: 'home', view: Home, active: 'bg-sky-200 text-sky-950 dark:bg-sky-900 dark:text-sky-100', activeText: 'text-sky-600 dark:text-sky-400' },
@@ -201,6 +201,13 @@ export default function App() {
       window.removeEventListener('hashchange', onHash)
     }
   }, [])
+
+  // "#/photos?sky=night&skyfx=stormy" jumps straight into the slideshow so the
+  // sky preview is one URL away. Keyed on the route, so dismissing it stays
+  // dismissed until you navigate again.
+  useEffect(() => {
+    if (route === 'photos' && hasSkyOverride()) setSlideshowActive(true)
+  }, [route])
 
   // Fetch photos list for screensaver
   useEffect(() => {

@@ -57,7 +57,7 @@ const formatDate = (dateStr?: string | null) => {
 const hashStr = (s: string) => s.split('').reduce((a, c) => ((a * 31 + c.charCodeAt(0)) >>> 0) % 100000, 7)
 
 // Dev/test override: append ?sky=night&skyfx=rainy anywhere in the URL to preview any sky state.
-const getQueryParam = (key: string): string | null => {
+export const getQueryParam = (key: string): string | null => {
   const searchQP = new URLSearchParams(window.location.search)
   if (searchQP.has(key)) return searchQP.get(key)
   const qIdx = window.location.href.indexOf('?')
@@ -72,6 +72,9 @@ const PHASES: SkyPhase[] = ['dawn', 'day', 'dusk', 'night']
 const KINDS: SkyKind[] = ['clear', 'cloudy', 'rainy', 'snowy', 'stormy']
 const getPhaseOverride = () => PHASES.find((p) => p === getQueryParam('sky')) ?? null
 const getKindOverride = () => KINDS.find((k) => k === getQueryParam('skyfx')) ?? null
+
+/** True when the URL carries a valid sky/skyfx preview override. */
+export const hasSkyOverride = () => getPhaseOverride() !== null || getKindOverride() !== null
 
 const toKind = (k?: string | null): SkyKind => {
   if (k === 'sunny') return 'clear'
