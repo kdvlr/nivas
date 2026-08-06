@@ -56,12 +56,22 @@ const formatDate = (dateStr?: string | null) => {
 
 const hashStr = (s: string) => s.split('').reduce((a, c) => ((a * 31 + c.charCodeAt(0)) >>> 0) % 100000, 7)
 
-// Dev/test override: append ?sky=night&skyfx=rainy to preview any sky state.
-const QP = new URLSearchParams(window.location.search)
+// Dev/test override: append ?sky=night&skyfx=rainy anywhere in the URL to preview any sky state.
+const getQueryParam = (key: string): string | null => {
+  const searchQP = new URLSearchParams(window.location.search)
+  if (searchQP.has(key)) return searchQP.get(key)
+  const qIdx = window.location.href.indexOf('?')
+  if (qIdx !== -1) {
+    const qp = new URLSearchParams(window.location.href.substring(qIdx))
+    if (qp.has(key)) return qp.get(key)
+  }
+  return null
+}
+
 const PHASES: SkyPhase[] = ['dawn', 'day', 'dusk', 'night']
 const KINDS: SkyKind[] = ['clear', 'cloudy', 'rainy', 'snowy', 'stormy']
-const PHASE_OVERRIDE = PHASES.find((p) => p === QP.get('sky')) ?? null
-const KIND_OVERRIDE = KINDS.find((k) => k === QP.get('skyfx')) ?? null
+const PHASE_OVERRIDE = PHASES.find((p) => p === getQueryParam('sky')) ?? null
+const KIND_OVERRIDE = KINDS.find((k) => k === getQueryParam('skyfx')) ?? null
 
 const toKind = (k?: string | null): SkyKind => {
   if (k === 'sunny') return 'clear'
