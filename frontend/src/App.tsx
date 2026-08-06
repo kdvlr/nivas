@@ -211,16 +211,46 @@ export default function App() {
     if (route === 'photos' && hasSkyOverride()) setSlideshowActive(true)
   }, [route])
 
-  // Fetch photos list for screensaver
+  // Fetch the photo list for the screensaver.
+  //
+  // This used to be a single attempt: if it failed, photosList stayed empty for
+  // the life of the page and the screensaver silently never rendered (its
+  // trigger fires, but there's nothing to show). A wall tablet boots alongside
+  // the server and routinely loses this race, so retry with backoff and then
+  // refresh occasionally to pick up newly added photos.
   useEffect(() => {
-    fetch('/api/photos')
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setPhotosList(data)
-        }
-      })
-      .catch((err) => console.error('Failed to pre-fetch photos list:', err))
+    let alive = true
+    let attempt = 0
+    let timer: ReturnType<typeof setTimeout>
+
+    const schedule = (ms: number) => {
+      clearTimeout(timer)
+      timer = setTimeout(load, ms)
+    }
+
+    async function load() {
+      try {
+        const res = await fetch('/api/photos')
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const data = await res.json()
+        if (!alive) return
+        if (!Array.isArray(data) || data.length === 0) throw new Error('empty photo list')
+        setPhotosList(data)
+        attempt = 0
+        schedule(30 * 60 * 1000)
+      } catch (err) {
+        if (!alive) return
+        attempt++
+        console.error('Photo list fetch failed (retrying):', err)
+        schedule(Math.min(60_000, 2_000 * 2 ** Math.min(attempt, 5)))
+      }
+    }
+
+    load()
+    return () => {
+      alive = false
+      clearTimeout(timer)
+    }
   }, [])
 
   // Screensaver + kiosk return to home timers
