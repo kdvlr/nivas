@@ -328,8 +328,8 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVide
       className="overflow-hidden bg-neutral-100 relative"
       style={{
         aspectRatio: aspect,
-        maxHeight: pair ? '68vh' : daylight ? '70vh' : '74vh',
-        maxWidth: pair ? '42vw' : '80vw',
+        maxHeight: pair ? '74vh' : daylight ? '78vh' : '82vh',
+        maxWidth: pair ? '44vw' : '84vw',
       }}
     >
       {item.type === 'image' && (
@@ -438,7 +438,7 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVide
   return (
     <motion.div
       initial={{ y: `${54 + f * 8}vh`, opacity: 0 }}
-      animate={{ y: [`${54 + f * 8}vh`, `${3 + g * 3}vh`, `${1 + f * 2}vh`], opacity: 1 }}
+      animate={{ y: [`${54 + f * 8}vh`, `${2 + g * 3}vh`, `0vh`], opacity: 1 }}
       exit={{ y: '-125vh', opacity: 0.9, transition: { duration: 1.7, ease: 'easeIn', delay: delay * 0.5 } }}
       transition={{
         y: { duration: 9 + f * 1.5, times: [0, 0.42, 1], ease: ['easeOut', 'easeInOut'], delay },
@@ -450,14 +450,14 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVide
         animate={sway ? { rotate: [-(1.5 + f * 1.0), 1.5 + g * 1.0] } : undefined}
         transition={{ repeat: Infinity, repeatType: 'mirror', duration: 3.3 + g * 1.4, ease: 'easeInOut', delay: f * 2.2 }}
         style={{ transformOrigin: 'top center' }}
-        className="flex flex-col items-center"
+        className="relative flex flex-col items-center"
       >
         {rainy ? (
-          <div className="pointer-events-none select-none -mb-5 z-10" style={{ fontSize: '96px', filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.35))' }}>
+          <div className="absolute bottom-[calc(100%-16px)] pointer-events-none select-none z-10" style={{ fontSize: '96px', filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.35))' }}>
             ☂️
           </div>
         ) : (
-          <div className="-mb-4 z-10">
+          <div className="absolute bottom-[calc(100%-12px)] pointer-events-none select-none z-10">
             <Balloon color={balloonColor} />
           </div>
         )}
