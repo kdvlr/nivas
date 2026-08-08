@@ -215,6 +215,17 @@ def _backfill(photos_dir: Path, exts: set[str]) -> None:
 
     try:
         videos = list(_iter_videos(photos_dir, exts))
+        valid_poster_keys = {_key(src, "poster") for src in videos}
+        valid_playback_keys = {_key(src, "playback") for src in videos}
+
+        # Cleanup orphaned posters and playback files from deleted/replaced videos
+        for p in POSTERS_DIR.glob("*.jpg"):
+            if p.stem not in valid_poster_keys:
+                p.unlink(missing_ok=True)
+        for p in PLAYBACK_DIR.glob("*.mp4"):
+            if p.stem not in valid_playback_keys:
+                p.unlink(missing_ok=True)
+
         with STATE.lock:
             STATE.total = len(videos)
             STATE.done = 0
