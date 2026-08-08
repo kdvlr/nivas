@@ -165,13 +165,31 @@ def get_video_dimensions(file_path):
     return None, None
 
 GOOGLE_MAPS_API_KEY = "AIzaSyBGepb_4wwoBKznHyPf0dvChUtvAs6Xrko"
+GOOGLE_MAPS_MAX_MONTHLY_CALLS = 5000  # Cap at 5,000 requests/month (well within Google's 40,000 free tier limit)
+_google_maps_usage = {"month": None, "count": 0}
+_google_maps_lock = threading.Lock()
+
+def _check_and_increment_google_usage() -> bool:
+    """Check and track monthly Google Maps API usage to guarantee remaining within free tier."""
+    now = datetime.now()
+    month_key = f"{now.year}-{now.month}"
+    with _google_maps_lock:
+        if _google_maps_usage["month"] != month_key:
+            _google_maps_usage["month"] = month_key
+            _google_maps_usage["count"] = 0
+            
+        if _google_maps_usage["count"] >= GOOGLE_MAPS_MAX_MONTHLY_CALLS:
+            return False
+            
+        _google_maps_usage["count"] += 1
+        return True
 
 def fetch_location_name(lat: float, lon: float) -> str | None:
     if lat is None or lon is None:
         return None
         
-    # 1. Try Google Maps Reverse Geocoding API first
-    if GOOGLE_MAPS_API_KEY:
+    # 1. Try Google Maps Reverse Geocoding API first (if under monthly safety cap)
+    if GOOGLE_MAPS_API_KEY and _check_and_increment_google_usage():
         try:
             url = f"https://maps.googleapis.com/maps/api/geocode/json?latlng={lat},{lon}&key={GOOGLE_MAPS_API_KEY}"
             headers = {"User-Agent": "NivasFamilyDashboard/1.0"}
