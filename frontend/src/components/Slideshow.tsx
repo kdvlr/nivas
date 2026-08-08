@@ -396,7 +396,10 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVide
     )
   } else if (rainy) {
     topElement = (
-      <div className="absolute bottom-[calc(100%-16px)] pointer-events-none select-none z-10 text-[96px] filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.35)]">
+      <div
+        className="absolute bottom-[calc(100%-20px)] pointer-events-none select-none z-10 filter drop-shadow-[0_4px_12px_rgba(0,0,0,0.35)] flex items-center justify-center"
+        style={{ width: '144px', height: '168px', fontSize: '140px', lineHeight: '168px' }}
+      >
         ☂️
       </div>
     )
