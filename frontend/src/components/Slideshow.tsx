@@ -126,27 +126,6 @@ function Balloon({ color }: { color: string }) {
   )
 }
 
-function Umbrella() {
-  return (
-    <svg width="144" height="168" viewBox="0 0 140 160" className="pointer-events-none filter drop-shadow-[0_8px_18px_rgba(0,0,0,0.45)]" aria-hidden="true">
-      {/* Umbrella Dome Canopy */}
-      <path d="M10 68 Q70 5 130 68 Q110 58 90 68 Q70 58 50 68 Q30 58 10 68 Z" fill="#e53e3e" />
-      {/* Colorful stripes: red, golden yellow, sky blue */}
-      <path d="M10 68 Q70 5 50 68 Q30 58 10 68 Z" fill="#dd6b20" />
-      <path d="M50 68 Q70 5 90 68 Q70 58 50 68 Z" fill="#ecc94b" />
-      <path d="M90 68 Q70 5 130 68 Q110 58 90 68 Z" fill="#3182ce" />
-      {/* Top tip (ferrule) */}
-      <path d="M68 8 L72 8 L70 1 Z" fill="#2d3748" />
-      {/* Rib highlights */}
-      <path d="M70 5 V68 M50 14 V68 M90 14 V68" stroke="rgba(255,255,255,0.45)" strokeWidth="1.8" fill="none" />
-      {/* Center Shaft / Pole */}
-      <line x1="70" y1="68" x2="70" y2="146" stroke="#2d3748" strokeWidth="4.5" strokeLinecap="round" />
-      {/* Curved Handle at bottom */}
-      <path d="M70 146 C70 156 56 156 56 148" stroke="#2d3748" strokeWidth="4.5" strokeLinecap="round" fill="none" />
-    </svg>
-  )
-}
-
 function CloudLayer({ phase, kind, quality }: SkyState) {
   const overcast = kind !== 'clear'
   const lite = quality === 'low'
@@ -417,8 +396,8 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVide
     )
   } else if (rainy) {
     topElement = (
-      <div className="absolute bottom-[calc(100%-20px)] pointer-events-none select-none z-10">
-        <Umbrella />
+      <div className="absolute bottom-[calc(100%-16px)] pointer-events-none select-none z-10 text-[96px] filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.35)]">
+        ☂️
       </div>
     )
   } else if (phase === 'night') {
