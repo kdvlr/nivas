@@ -396,6 +396,16 @@ export default function Home() {
           </button>
         )}
       </div>
+
+      <div className="flex-1 text-center px-2 min-w-0 truncate">
+        <span
+          style={{ fontFamily: "'Great Vibes', 'Alex Brush', 'Caveat', cursive" }}
+          className="text-2xl sm:text-3xl lg:text-5xl font-normal text-ink/90 tracking-wide select-none drop-shadow-sm pointer-events-none inline-block leading-tight"
+        >
+          The Davuluris
+        </span>
+      </div>
+
       <div className="flex flex-col items-end shrink-0">
         <div className="text-xl font-normal tabular-nums tracking-tight text-[var(--primary)] lg:text-4xl leading-none">
           {now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
