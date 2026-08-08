@@ -134,12 +134,30 @@ function computeAxis(timed: PlacedEvent[]): { start: number; end: number } {
   return { start, end }
 }
 
+const TITLE_FONTS = [
+  { name: 'Great Vibes', family: "'Great Vibes', cursive" },
+  { name: 'Alex Brush', family: "'Alex Brush', cursive" },
+  { name: 'Pinyon Script', family: "'Pinyon Script', cursive" },
+  { name: 'Sacramento', family: "'Sacramento', cursive" },
+  { name: 'Pacifico', family: "'Pacifico', cursive" },
+  { name: 'Dancing Script', family: "'Dancing Script', cursive" },
+  { name: 'Satisfy', family: "'Satisfy', cursive" },
+  { name: 'Cinzel Decorative', family: "'Cinzel Decorative', serif" },
+  { name: 'Playfair Display', family: "'Playfair Display', serif" },
+  { name: 'Caveat', family: "'Caveat', cursive" },
+]
+
 export default function Home() {
-  const [selectedEvent, setSelectedEvent] = useState<CalEvent | null>(null)
-  const [weatherOpen, setWeatherOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState<'all' | 'schedule' | 'tasks' | 'chores' | 'shopping' | 'meals'>('all')
   const [completingIds, setCompletingIds] = useState<string[]>([])
   const [removedIds, setRemovedIds] = useState<string[]>([])
   const [fabOpen, setFabOpen] = useState(false)
+  const [fontIdx, setFontIdx] = useState(() => {
+    const saved = localStorage.getItem('davuluri_title_font')
+    return saved ? Math.max(0, TITLE_FONTS.findIndex(f => f.name === saved)) : 0
+  })
+  const [selectedEvent, setSelectedEvent] = useState<CalEvent | null>(null)
+  const [weatherOpen, setWeatherOpen] = useState(false)
   const now = useClock()
   const today = todayISO()
   const { data: events, loading: loadingEvents } = useData<CalEvent[]>(
@@ -397,14 +415,22 @@ export default function Home() {
         )}
       </div>
 
-      <div className="flex-1 text-center px-2 min-w-0 truncate">
+      <button
+        onClick={() => {
+          const next = (fontIdx + 1) % TITLE_FONTS.length
+          setFontIdx(next)
+          localStorage.setItem('davuluri_title_font', TITLE_FONTS[next].name)
+        }}
+        className="flex-1 text-center px-2 min-w-0 truncate cursor-pointer transition-transform active:scale-95 group/title"
+        title={`Font: ${TITLE_FONTS[fontIdx].name} (click to change)`}
+      >
         <span
-          style={{ fontFamily: "'Great Vibes', 'Alex Brush', 'Caveat', cursive" }}
-          className="text-2xl sm:text-3xl lg:text-5xl font-normal text-ink/90 tracking-wide select-none drop-shadow-sm pointer-events-none inline-block leading-tight"
+          style={{ fontFamily: TITLE_FONTS[fontIdx].family }}
+          className="text-2xl sm:text-3xl lg:text-5xl font-normal text-ink/90 tracking-wide select-none drop-shadow-sm inline-block leading-tight group-hover/title:text-[var(--primary)] transition-colors"
         >
           The Davuluris
         </span>
-      </div>
+      </button>
 
       <div className="flex flex-col items-end shrink-0">
         <div className="text-xl font-normal tabular-nums tracking-tight text-[var(--primary)] lg:text-4xl leading-none">
