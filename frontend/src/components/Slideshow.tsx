@@ -386,55 +386,48 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVide
     </div>
   )
 
-  if (phase === 'night') {
-    const sx = `${(pairIdx === 0 ? -1 : 1) * (12 + (seed % 18))}vw`
-    const sy = `${-(8 + (seed % 16))}vh`
-    const ex = `${(seed % 2 === 0 ? 1 : -1) * (14 + (seed % 14))}vw`
-    const ey = `${-(10 + ((seed >> 3) % 12))}vh`
-    return (
-      <motion.div
-        initial={{ x: sx, y: sy, scale: 0.06, opacity: 0 }}
-        animate={{ x: 0, y: 0, scale: 1, opacity: 1 }}
-        exit={{ x: ex, y: ey, scale: 0.04, opacity: 0, transition: { duration: 1.8, ease: 'easeIn', delay: delay * 0.5 } }}
-        transition={{ duration: 2.2 + f * 0.8, ease: [0.16, 1, 0.3, 1], delay, opacity: { duration: 1.3, delay } }}
-        className="relative"
-      >
-        <motion.div
-          animate={sway ? { y: [-(5 + f * 4), 5 + g * 4] } : undefined}
-          transition={{ repeat: Infinity, repeatType: 'mirror', duration: 4.2 + g * 2, ease: 'easeInOut', delay: f * 1.5 }}
-        >
-          {card}
-        </motion.div>
-      </motion.div>
+  // Select the top attachment element based on weather kind & sky phase
+  let topElement: React.ReactNode = null
+  if (kind === 'snowy') {
+    topElement = (
+      <div className="absolute bottom-[calc(100%-16px)] pointer-events-none select-none z-10 text-[96px] filter drop-shadow-[0_0_16px_rgba(255,255,255,0.8)] animate-pulse">
+        ❄️
+      </div>
+    )
+  } else if (rainy) {
+    topElement = (
+      <div className="absolute bottom-[calc(100%-16px)] pointer-events-none select-none z-10 text-[96px] filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.35)]">
+        ☂️
+      </div>
+    )
+  } else if (phase === 'night') {
+    topElement = (
+      <div className="absolute bottom-[calc(100%-16px)] pointer-events-none select-none z-10 text-[92px] filter drop-shadow-[0_0_24px_rgba(255,160,50,0.95)]">
+        🏮
+      </div>
+    )
+  } else if (phase === 'dawn') {
+    topElement = (
+      <div className="absolute bottom-[calc(100%-16px)] pointer-events-none select-none z-10 text-[92px] filter drop-shadow-[0_4px_10px_rgba(0,0,0,0.3)]">
+        🐓
+      </div>
+    )
+  } else if (phase === 'dusk') {
+    topElement = (
+      <div className="absolute bottom-[calc(100%-16px)] pointer-events-none select-none z-10 text-[92px] filter drop-shadow-[0_0_20px_rgba(255,200,80,0.9)]">
+        🪔
+      </div>
+    )
+  } else {
+    // Clear / Sunny / Cloudy Day
+    const balloonColor = BALLOON_COLORS[(seed + pairIdx * 3 + index) % BALLOON_COLORS.length]
+    topElement = (
+      <div className="absolute bottom-[calc(100%-12px)] pointer-events-none select-none z-10">
+        <Balloon color={balloonColor} />
+      </div>
     )
   }
 
-  if (phase === 'dusk') {
-    return (
-      <motion.div
-        initial={{ y: `${44 + f * 6}vh`, opacity: 0 }}
-        animate={{ y: [`${44 + f * 6}vh`, `${3 + g * 4}vh`, `-${1 + f * 4}vh`], opacity: 1 }}
-        exit={{ y: '-85vh', opacity: 0, transition: { duration: 2.1, ease: 'easeIn', delay: delay * 0.5 } }}
-        transition={{
-          y: { duration: 9.5 + f * 1.5, times: [0, 0.5, 1], ease: ['easeOut', 'easeInOut'], delay },
-          opacity: { duration: 1.2, delay },
-        }}
-        className="relative"
-      >
-        <motion.div
-          animate={sway ? { rotate: [-(0.9 + f * 0.8), 0.9 + g * 0.8] } : undefined}
-          transition={{ repeat: Infinity, repeatType: 'mirror', duration: 4.2 + g * 1.4, ease: 'easeInOut', delay: f * 2 }}
-          style={{ transformOrigin: 'top center' }}
-        >
-          {card}
-        </motion.div>
-      </motion.div>
-    )
-  }
-
-  // Day and dawn: photos drift up carried by a balloon (or shelter under an
-  // umbrella when it's raining).
-  const balloonColor = BALLOON_COLORS[(seed + pairIdx * 3 + index) % BALLOON_COLORS.length]
   return (
     <motion.div
       initial={{ y: `${54 + f * 8}vh`, opacity: 0 }}
@@ -452,15 +445,7 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVide
         style={{ transformOrigin: 'top center' }}
         className="relative flex flex-col items-center"
       >
-        {rainy ? (
-          <div className="absolute bottom-[calc(100%-16px)] pointer-events-none select-none z-10" style={{ fontSize: '96px', filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.35))' }}>
-            ☂️
-          </div>
-        ) : (
-          <div className="absolute bottom-[calc(100%-12px)] pointer-events-none select-none z-10">
-            <Balloon color={balloonColor} />
-          </div>
-        )}
+        {topElement}
         {card}
       </motion.div>
     </motion.div>
