@@ -530,6 +530,9 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
     }
   }, [quality])
 
+  // Track shuffle seed so slides re-randomize every time the screensaver mounts or finishes a cycle
+  const [shuffleSeed, setShuffleSeed] = useState(() => Math.random())
+
   // Parse items into slides (landscape/video singly, portraits paired side-by-side)
   const slides = useMemo(() => {
     const list = [...photos]
@@ -565,7 +568,7 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
       used.add(item.url)
     }
     return result
-  }, [photos])
+  }, [photos, shuffleSeed])
 
   // Readiness is probed from the element rather than trusted to events. The
   // poster clip has usually already buffered this URL, so `canplay` can fire
@@ -623,10 +626,19 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
   }, [currentIdx, slides])
 
   // Advance every 9 seconds, paused while a full video is being watched.
+  // When wrapping around at the end of the deck, re-shuffle so the next loop
+  // plays in a completely new random order.
   useEffect(() => {
     if (slides.length <= 1 || selectedVideo !== null) return
     const timer = setInterval(() => {
-      setCurrentIdx((prev) => (prev + 1) % slides.length)
+      setCurrentIdx((prev) => {
+        const next = prev + 1
+        if (next >= slides.length) {
+          setShuffleSeed(Math.random())
+          return 0
+        }
+        return next
+      })
     }, 9000)
     return () => clearInterval(timer)
   }, [slides.length, selectedVideo])
