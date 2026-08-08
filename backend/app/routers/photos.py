@@ -164,9 +164,62 @@ def get_video_dimensions(file_path):
         print(f"Error parsing video dimensions for {file_path}: {e}")
     return None, None
 
+GOOGLE_MAPS_API_KEY = "AIzaSyBGepb_4wwoBKznHyPf0dvChUtvAs6Xrko"
+
 def fetch_location_name(lat: float, lon: float) -> str | None:
     if lat is None or lon is None:
         return None
+        
+    # 1. Try Google Maps Reverse Geocoding API first
+    if GOOGLE_MAPS_API_KEY:
+        try:
+            url = f"https://maps.googleapis.com/maps/api/geocode/json?latlng={lat},{lon}&key={GOOGLE_MAPS_API_KEY}"
+            headers = {"User-Agent": "NivasFamilyDashboard/1.0"}
+            with httpx.Client(timeout=4.0) as client:
+                r = client.get(url, headers=headers)
+                if r.status_code == 200:
+                    data = r.json()
+                    if data.get("status") == "OK":
+                        locality = None
+                        sublocality = None
+                        admin_area = None
+                        country = None
+                        park_or_poi = None
+
+                        for result in data.get("results", []):
+                            types = result.get("types", [])
+                            if ("park" in types or "natural_feature" in types or "point_of_interest" in types) and not park_or_poi:
+                                for comp in result.get("address_components", []):
+                                    ctypes = comp.get("types", [])
+                                    if "park" in ctypes or "natural_feature" in ctypes:
+                                        park_or_poi = comp.get("long_name")
+
+                            for comp in result.get("address_components", []):
+                                ctypes = comp.get("types", [])
+                                if "locality" in ctypes and not locality:
+                                    locality = comp.get("long_name")
+                                elif ("sublocality" in ctypes or "sublocality_level_1" in ctypes or "neighborhood" in ctypes) and not sublocality:
+                                    sublocality = comp.get("long_name")
+                                elif "administrative_area_level_1" in ctypes and not admin_area:
+                                    admin_area = comp.get("short_name")
+                                elif "country" in ctypes and not country:
+                                    country = comp.get("short_name")
+
+                        city = locality or sublocality
+                        if park_or_poi and admin_area and ("park" in park_or_poi.lower() or "national" in park_or_poi.lower()):
+                            return f"{park_or_poi}, {admin_area}"
+                        elif city and admin_area:
+                            return f"{city}, {admin_area}"
+                        elif city and country:
+                            return f"{city}, {country}"
+                        elif admin_area and country:
+                            return f"{admin_area}, {country}"
+                        elif country:
+                            return country
+        except Exception as e:
+            print(f"Google Maps geocoding failed: {e}")
+
+    # 2. Fallback to OpenStreetMap / Nominatim if Google Maps fails
     url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lon}&zoom=10&addressdetails=1"
     headers = {"User-Agent": "NivasFamilyDashboard/1.0 (d.kiran@yahoo.com)"}
     try:
@@ -194,11 +247,11 @@ def fetch_location_name(lat: float, lon: float) -> str | None:
 
 def geocode_worker(db_session_factory, file_paths):
     """
-    Background worker thread resolving geocodes sequentially with a delay to comply with TOS.
+    Background worker thread resolving geocodes with Google Maps API / Nominatim.
     """
     with GEOCODE_THREAD_LOCK:
         for rel_str in file_paths:
-            time.sleep(1.2)
+            time.sleep(0.15)
             
             db = db_session_factory()
             try:
@@ -336,6 +389,12 @@ def sync_photos_dir(db: Session):
             
         db.flush()
         
+    # Also queue any existing cached items with GPS coordinates that lack a location_name
+    for rec in cached_records:
+        if rec.latitude is not None and rec.longitude is not None and (not rec.location_name or rec.location_name == "Resolving..."):
+            if rec.file_path not in pending_geocodes:
+                pending_geocodes.append(rec.file_path)
+
     # Commit session to persist flushed records in SQLite cache
     db.commit()
         
