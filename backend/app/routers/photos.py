@@ -13,13 +13,56 @@ import httpx
 import hashlib
 import re
 
+def parse_xmp_sidecar(file_path: Path):
+    """
+    Checks for .xmp or .XMP sidecar files (e.g., photo.jpg.xmp or photo.xmp)
+    and extracts (latitude, longitude, date_taken) if available.
+    """
+    possible_xmps = [
+        file_path.with_name(file_path.name + ".xmp"),
+        file_path.with_name(file_path.name + ".XMP"),
+        file_path.with_suffix(".xmp"),
+        file_path.with_suffix(".XMP"),
+    ]
+    lat, lon, date_taken = None, None, None
+    for xmp in possible_xmps:
+        if xmp.exists():
+            try:
+                content = xmp.read_text(encoding="utf-8", errors="ignore")
+                lat_m = re.search(r"<exif:GPSLatitude>([+-]?\d+\.?\d*)</exif:GPSLatitude>", content)
+                lon_m = re.search(r"<exif:GPSLongitude>([+-]?\d+\.?\d*)</exif:GPSLongitude>", content)
+                if lat_m and lon_m:
+                    lat, lon = float(lat_m.group(1)), float(lon_m.group(1))
+                
+                date_m = re.search(r"<(?:exif:DateTimeOriginal|xmp:CreateDate)>([^<]+)</", content)
+                if date_m:
+                    d_str = date_m.group(1).strip()
+                    try:
+                        dt = datetime.fromisoformat(d_str)
+                        date_taken = dt.isoformat()
+                    except Exception:
+                        pass
+                if lat is not None and lon is not None:
+                    break
+            except Exception as e:
+                print(f"Error parsing XMP sidecar {xmp}: {e}")
+    return lat, lon, date_taken
+
 def get_video_gps_location(file_path):
     """
-    Scans MP4/MOV header atoms for ISO 6709 location metadata (e.g. ©xyz atom: +37.7749-122.4194/).
+    Scans MP4/MOV header atoms for ISO 6709 location metadata or checks .xmp sidecar files.
     Returns (latitude, longitude) or (None, None).
     """
+    p = Path(file_path) if not isinstance(file_path, Path) else file_path
+    
+    # 1. Check XMP sidecar file first
+    x_lat, x_lon, _ = parse_xmp_sidecar(p)
+    if x_lat is not None and x_lon is not None:
+        return x_lat, x_lon
+
+    # 2. Check embedded video container headers
     try:
-        with open(file_path, "rb") as f:
+        with open(p, "rb") as f:
             data = f.read(5 * 1024 * 1024)  # Read first 5MB for headers
             
             # Quick check for ©xyz or location atom
@@ -110,6 +153,15 @@ def get_exif_metadata(file_path):
                         lon = lon_val
     except Exception as e:
         print(f"Error parsing EXIF for {file_path}: {e}")
+
+    # Fallback to XMP sidecar if EXIF missing GPS or date
+    p = Path(file_path) if not isinstance(file_path, Path) else file_path
+    if lat is None or lon is None or not date_taken:
+        x_lat, x_lon, x_date = parse_xmp_sidecar(p)
+        if lat is None and x_lat is not None:
+            lat, lon = x_lat, x_lon
+        if not date_taken and x_date:
+            date_taken = x_date
 
     return width, height, date_taken, lat, lon
 
