@@ -398,7 +398,7 @@ def sync_photos_dir(db: Session):
     for path in disk_paths:
         p_obj, file_type, size, mtime = all_files_on_disk[path]
         cached = cache_dict.get(path)
-        if not cached or cached.file_size != size or cached.last_modified != mtime:
+        if not cached or cached.file_size != size or cached.last_modified != mtime or cached.latitude is None:
             changed_or_new_paths.append((path, p_obj, file_type, size, mtime))
 
     # 4. Delete removed records from database
