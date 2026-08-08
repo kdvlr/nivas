@@ -11,6 +11,32 @@ from sqlalchemy.orm import Session
 from PIL import Image, ImageOps
 import httpx
 import hashlib
+import re
+
+def get_video_gps_location(file_path):
+    """
+    Scans MP4/MOV header atoms for ISO 6709 location metadata (e.g. ©xyz atom: +37.7749-122.4194/).
+    Returns (latitude, longitude) or (None, None).
+    """
+    try:
+        with open(file_path, "rb") as f:
+            data = f.read(5 * 1024 * 1024)  # Read first 5MB for headers
+            
+            # Quick check for ©xyz or location atom
+            xyz_idx = data.find(b"\xa9xyz")
+            if xyz_idx != -1:
+                snippet = data[xyz_idx:xyz_idx+60].decode('latin1', errors='ignore')
+                m = re.search(r'([+-]\d{2,3}\.\d+)([+-]\d{2,3}\.\d+)', snippet)
+                if m:
+                    return float(m.group(1)), float(m.group(2))
+                    
+            # General ISO 6709 regex fallback across header block (e.g. +37.7749-122.4194/)
+            m = re.search(rb'([+-]\d{2}\.\d{3,8})([+-]\d{3}\.\d{3,8})', data)
+            if m:
+                return float(m.group(1)), float(m.group(2))
+    except Exception as e:
+        print(f"Error parsing video GPS for {file_path}: {e}")
+    return None, None
 
 from ..config import get_settings
 from ..db import get_db, SessionLocal
@@ -298,9 +324,15 @@ def sync_photos_dir(db: Session):
                 cached.orientation = "landscape"
                 
             cached.date_taken = datetime.fromtimestamp(mtime).isoformat()
-            cached.latitude = None
-            cached.longitude = None
-            cached.location_name = None
+            lat, lon = get_video_gps_location(p_obj)
+            cached.latitude = lat
+            cached.longitude = lon
+            
+            if lat is not None and lon is not None:
+                cached.location_name = "Resolving..."
+                pending_geocodes.append(path)
+            else:
+                cached.location_name = None
             
         db.flush()
         
