@@ -627,45 +627,50 @@ def get_photos(background_tasks: BackgroundTasks, db: Session = Depends(get_db))
     media_items = []
     paired_images = set()
     
-    # 1. Pair Live Photos
+    # 1. Pair Live Photos (Apple Live Photos are ONLY .mov / .MOV motion clips)
     for vid_rel_str, vid_rec in video_map.items():
         vid_rel_path = Path(vid_rec.file_path)
+        vid_ext = vid_rel_path.suffix.lower()
         vid_base = vid_rel_path.stem
         vid_dir = vid_rel_path.parent
         
-        if vid_base.endswith("_hevc"):
-            base_name = vid_base[:-5]
-        else:
-            base_name = vid_base
-            
         found_pair = False
-        for img_ext in IMAGE_EXTENSIONS:
-            img_rel_path = vid_dir / f"{base_name}{img_ext}"
-            img_rel_str = img_rel_path.as_posix().lower()
-            if img_rel_str in image_map:
-                img_data = image_map[img_rel_str]
+        if vid_ext == ".mov":
+            if vid_base.endswith("_hevc"):
+                base_name = vid_base[:-5]
+            else:
+                base_name = vid_base
                 
-                media_items.append({
-                    "url": f"/api/photos/media/{urllib.parse.quote(img_data['rel_path'].as_posix())}",
-                    "displayUrl": f"/api/photos/display/{urllib.parse.quote(img_data['rel_path'].as_posix())}",
-                    "thumbnailUrl": f"/api/photos/thumbnail/{urllib.parse.quote(img_data['rel_path'].as_posix())}",
-                    "videoUrl": f"/api/photos/media/{urllib.parse.quote(vid_rel_path.as_posix())}",
-                    # Byte size of the clip, so the slideshow can decide whether
-                    # autoplaying it is worth the bandwidth on a kiosk tablet.
-                    "media_bytes": vid_rec.file_size,
-                    "posterUrl": f"/api/photos/poster/{urllib.parse.quote(vid_rel_path.as_posix())}",
-                    "playbackUrl": f"/api/photos/playback/{urllib.parse.quote(vid_rel_path.as_posix())}",
-                    "type": "live_photo",
-                    "name": img_data["name"],
-                    "width": img_data["width"],
-                    "height": img_data["height"],
-                    "orientation": img_data["orientation"],
-                    "date_taken": img_data["date_taken"],
-                    "location_name": img_data["location_name"]
-                })
-                paired_images.add(img_rel_str)
-                found_pair = True
-                break
+            for img_ext in IMAGE_EXTENSIONS:
+                img_rel_path = vid_dir / f"{base_name}{img_ext}"
+                img_rel_str = img_rel_path.as_posix().lower()
+                if img_rel_str in image_map:
+                    img_data = image_map[img_rel_str]
+                    
+                    media_items.append({
+                        "url": f"/api/photos/media/{urllib.parse.quote(img_data['rel_path'].as_posix())}",
+                        "displayUrl": f"/api/photos/display/{urllib.parse.quote(img_data['rel_path'].as_posix())}",
+                        "thumbnailUrl": f"/api/photos/thumbnail/{urllib.parse.quote(img_data['rel_path'].as_posix())}",
+                        "videoUrl": f"/api/photos/media/{urllib.parse.quote(vid_rel_path.as_posix())}",
+                        # Byte size of the clip, so the slideshow can decide whether
+                        # autoplaying it is worth the bandwidth on a kiosk tablet.
+                        "media_bytes": vid_rec.file_size,
+                        "posterUrl": f"/api/photos/poster/{urllib.parse.quote(vid_rel_path.as_posix())}",
+                        "playbackUrl": f"/api/photos/playback/{urllib.parse.quote(vid_rel_path.as_posix())}",
+                        "type": "live_photo",
+                        "name": img_data["name"],
+                        "width": img_data["width"],
+                        "height": img_data["height"],
+                        "orientation": img_data["orientation"],
+                        "date_taken": img_data["date_taken"],
+                        "location_name": img_data["location_name"]
+                    })
+                    paired_images.add(img_rel_str)
+                    found_pair = True
+                    break
+                    
+        if found_pair:
+            continue
                 
         if not found_pair:
             # Standalone video (use actual parsed metadata width/height/orientation)
