@@ -431,7 +431,7 @@ export default function Home() {
       >
         <span
           style={{ fontFamily: TITLE_FONTS[fontIdx].family }}
-          className="text-2xl sm:text-3xl lg:text-5xl font-normal text-ink tracking-wide select-none drop-shadow-sm inline-block leading-tight group-hover/title:text-[var(--primary)] transition-colors"
+          className="text-2xl sm:text-3xl lg:text-5xl font-normal text-[var(--primary)] tracking-wide select-none drop-shadow-sm inline-block leading-tight group-hover/title:text-ink transition-colors"
         >
           The Davuluri Family
         </span>
