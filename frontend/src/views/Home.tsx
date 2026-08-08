@@ -135,6 +135,11 @@ function computeAxis(timed: PlacedEvent[]): { start: number; end: number } {
 }
 
 const TITLE_FONTS = [
+  { name: 'Mrs Saint Delafield (Ultra Wide)', family: "'Mrs Saint Delafield', cursive" },
+  { name: 'Italianno (Wide Script)', family: "'Italianno', cursive" },
+  { name: 'MonteCarlo (Wide Calligraphy)', family: "'MonteCarlo', cursive" },
+  { name: 'Marck Script (Expansive Script)', family: "'Marck Script', cursive" },
+  { name: 'Yellowtail (Wide Brush)', family: "'Yellowtail', cursive" },
   { name: 'Great Vibes', family: "'Great Vibes', cursive" },
   { name: 'Alex Brush', family: "'Alex Brush', cursive" },
   { name: 'Pinyon Script', family: "'Pinyon Script', cursive" },
@@ -426,9 +431,9 @@ export default function Home() {
       >
         <span
           style={{ fontFamily: TITLE_FONTS[fontIdx].family }}
-          className="text-2xl sm:text-3xl lg:text-5xl font-normal text-ink/90 tracking-wide select-none drop-shadow-sm inline-block leading-tight group-hover/title:text-[var(--primary)] transition-colors"
+          className="text-2xl sm:text-3xl lg:text-5xl font-normal text-ink tracking-wide select-none drop-shadow-sm inline-block leading-tight group-hover/title:text-[var(--primary)] transition-colors"
         >
-          The Davuluris
+          The Davuluri Family
         </span>
       </button>
 
