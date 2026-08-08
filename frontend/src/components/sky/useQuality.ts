@@ -33,52 +33,62 @@ function stored(): Quality | null {
  * costs nothing. The chosen tier is remembered so the next run starts there
  * instead of janking through the discovery phase again.
  */
-export function useQuality(active: boolean): Quality {
+export interface QualityMetrics {
+  quality: Quality
+  fps: number
+  frameTimeMs: number
+  sampleCount: number
+}
+
+export function useQuality(active: boolean): QualityMetrics {
   const forced = forcedTier()
   const [quality, setQuality] = useState<Quality>(() => forced ?? stored() ?? 'high')
-  const settled = useRef(forced !== null)
+  const [fps, setFps] = useState<number>(60)
+  const [frameTimeMs, setFrameTimeMs] = useState<number>(16.7)
+  const sampleCount = useRef(0)
 
   useEffect(() => {
-    if (!active || settled.current) return
+    if (!active) return
 
     let raf = 0
     let last = performance.now()
     let samples: number[] = []
-    // Ignore the first stretch: mount, image decode and the entrance animation
-    // are not representative of steady state.
-    const warmupUntil = last + 1500
+    const warmupUntil = last + 1000
 
     const tick = (t: number) => {
       const dt = t - last
       last = t
-      if (t > warmupUntil && dt < 500) samples.push(dt)
+      if (t > warmupUntil && dt < 500) {
+        samples.push(dt)
+        sampleCount.current++
+      }
 
-      if (samples.length >= 90) {
-        const sorted = samples.sort((a, b) => a - b)
+      if (samples.length >= 60) {
+        const sorted = [...samples].sort((a, b) => a - b)
         const median = sorted[Math.floor(sorted.length / 2)]
+        const calculatedFps = Math.round(1000 / (median || 16.7))
+        setFps(calculatedFps)
+        setFrameTimeMs(Math.round(median * 10) / 10)
         samples = []
-        // 60fps = 16.7ms. Below ~40fps (25ms) the drift animations visibly
-        // stutter, so drop a tier and re-measure.
-        if (median > 25 && quality !== 'low') {
-          const next: Quality = quality === 'high' ? 'medium' : 'low'
-          if (next === 'low') settled.current = true
-          try {
-            localStorage.setItem(STORAGE_KEY, next)
-          } catch {
-            /* private mode */
+
+        // If median frame time > 33ms (<30fps) and forced is null, drop tier to keep slideshow smooth
+        if (forced === null) {
+          if (median > 33 && quality !== 'low') {
+            const next: Quality = quality === 'high' ? 'medium' : 'low'
+            try {
+              localStorage.setItem(STORAGE_KEY, next)
+            } catch {}
+            setQuality(next)
+            console.info(`[Nivas Telemetry] Framerate drop detected (${calculatedFps} FPS / ${median.toFixed(1)}ms). Auto-adjusting quality tier: ${quality} -> ${next}`)
           }
-          setQuality(next)
-          return // effect re-runs on the new tier and re-measures
         }
-        settled.current = true
-        return
       }
       raf = requestAnimationFrame(tick)
     }
 
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [active, quality])
+  }, [active, quality, forced])
 
-  return quality
+  return { quality, fps, frameTimeMs, sampleCount: sampleCount.current }
 }

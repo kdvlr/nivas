@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Icon from './Icon'
 import { api } from '../lib/api'
+import { useData } from '../lib/hooks'
 import { startStarCanvas, startFxCanvas, SkyPhase, SkyKind, SkyState } from './sky/skyEngine'
 import { useQuality, Quality } from './sky/useQuality'
 import { getQueryParam } from './sky/queryParam'
@@ -469,7 +470,9 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
   const [now, setNow] = useState(() => new Date())
 
   const [hidden, setHidden] = useState(() => document.visibilityState === 'hidden')
-  const quality = useQuality(!hidden)
+  const { quality, fps, frameTimeMs } = useQuality(!hidden)
+  const { data: config } = useData<{ secondary_tz: string; secondary_tz_emoji: string }>('/api/setup/config', ['setup'])
+  const [showDebug, setShowDebug] = useState(() => getQueryParam('debug') === '1')
 
   const phase: SkyPhase = override.phase ?? computePhase(now, sun.sunrise, sun.sunset)
   const skyState: SkyState = { phase, kind, paused: !!selectedVideo || hidden, quality }
@@ -495,7 +498,7 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
   }, [])
 
   // Real weather drives the sky. Refresh every 15 minutes; tick the clock so
-  // the phase (dawn/day/dusk/night) follows the actual sun.
+  // time and phase follow the actual sun.
   useEffect(() => {
     let alive = true
     const load = async () => {
@@ -514,7 +517,7 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
     }
     load()
     const weatherTimer = setInterval(load, 15 * 60 * 1000)
-    const clockTimer = setInterval(() => setNow(new Date()), 30 * 1000)
+    const clockTimer = setInterval(() => setNow(new Date()), 1000)
     return () => {
       alive = false
       clearInterval(weatherTimer)
@@ -616,17 +619,35 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
   }, [selectedVideo])
 
   // Warm the browser cache/decoder for the next slide's images so the decode
-  // never lands in the middle of the entrance animation.
+  // never lands in the middle of the entrance animation. Clean up references
+  // on slide change to avoid memory accumulation on Android WebViews.
   useEffect(() => {
     if (slides.length <= 1) return
     const next = slides[(currentIdx + 1) % slides.length]
+    const preloads: HTMLImageElement[] = []
     for (const it of next.items) {
       if (it.type === 'image' || it.type === 'live_photo') {
         const img = new window.Image()
         img.src = it.displayUrl || it.url
+        preloads.push(img)
+      }
+    }
+    return () => {
+      for (const img of preloads) {
+        img.onload = null
+        img.onerror = null
+        img.src = ''
       }
     }
   }, [currentIdx, slides])
+
+  // Performance telemetry logging for diagnosing Android tablet slowdowns
+  useEffect(() => {
+    const memoryMb = (performance as any)?.memory ? Math.round((performance as any).memory.usedJSHeapSize / 1048576) : null
+    console.info(
+      `[Nivas Telemetry] Slide ${currentIdx + 1}/${slides.length} | FPS: ${fps} (${frameTimeMs}ms) | Quality: ${quality}${memoryMb !== null ? ` | Heap: ${memoryMb}MB` : ''}`
+    )
+  }, [currentIdx, slides.length, fps, frameTimeMs, quality])
 
   // Advance every 9 seconds, paused while a full video is being watched.
   // When wrapping around at the end of the deck, re-shuffle so the next loop
@@ -654,6 +675,24 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
   const items = isPortraitViewport ? activeSlide.items.slice(0, 1) : activeSlide.items
   const pair = items.length > 1
 
+  // Secondary timezone formatting for the clock overlay
+  const secondaryTz = config?.secondary_tz || 'Asia/Kolkata'
+  const secondaryEmoji = config?.secondary_tz_emoji || '🇮🇳'
+  let secondaryFormatted = ''
+  try {
+    const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone
+    const localDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: localTz }).format(now)
+    const secondaryDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: secondaryTz }).format(now)
+    const hasDateDiff = localDateStr !== secondaryDateStr
+    const tStr = now.toLocaleTimeString(undefined, { timeZone: secondaryTz, hour: 'numeric', minute: '2-digit' })
+    if (hasDateDiff) {
+      const dStr = new Intl.DateTimeFormat('en-US', { timeZone: secondaryTz, month: 'short', day: 'numeric' }).format(now)
+      secondaryFormatted = `${tStr} (${dStr})`
+    } else {
+      secondaryFormatted = tStr
+    }
+  } catch {}
+
   return (
     <div
       ref={rootRef}
@@ -661,6 +700,50 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
       onClick={onDismiss}
     >
       <style>{'@keyframes sky-cloud { from { transform: translateX(-60vmin); } to { transform: translateX(110vw); } }'}</style>
+
+      {/* Clock & Date Ambient Glass Overlay */}
+      <div className="absolute top-6 right-6 z-40 flex flex-col items-end pointer-events-none select-none">
+        <div className="bg-black/30 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/15 text-white shadow-2xl flex flex-col items-end">
+          <div className="text-2xl sm:text-3xl lg:text-4xl font-normal tabular-nums tracking-tight text-white leading-none drop-shadow-md">
+            {now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+          </div>
+          <div className="text-xs sm:text-sm font-medium text-white/80 mt-1.5 leading-none drop-shadow-sm">
+            {now.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+          </div>
+          {secondaryFormatted && (
+            <div className="text-[11px] sm:text-xs text-white/70 mt-1.5 leading-none flex items-center gap-1.5 font-light">
+              <span>{secondaryEmoji}</span>
+              <span>{secondaryFormatted}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Debug & Telemetry HUD */}
+      <div
+        className="absolute top-6 left-6 z-50 text-white/50 text-[11px] font-mono tracking-tight cursor-pointer select-none"
+        onClick={(e) => {
+          e.stopPropagation()
+          setShowDebug(!showDebug)
+        }}
+      >
+        {showDebug ? (
+          <div className="bg-black/85 backdrop-blur-md p-3 rounded-xl border border-white/20 text-white space-y-1 shadow-2xl pointer-events-auto min-w-[200px]">
+            <div className="font-bold text-amber-400 border-b border-white/10 pb-1 mb-1 flex items-center justify-between">
+              <span>⚡ Telemetry & HUD</span>
+              <span className="text-[9px] text-white/40">Tap to close</span>
+            </div>
+            <div>FPS: <span className={fps >= 45 ? 'text-emerald-400' : fps >= 30 ? 'text-amber-400' : 'text-rose-400 font-bold'}>{fps}</span> ({frameTimeMs}ms)</div>
+            <div>Quality Tier: <span className="text-cyan-400 font-semibold">{quality.toUpperCase()}</span></div>
+            <div>Slide: <span className="text-white font-medium">{currentIdx + 1} / {slides.length}</span></div>
+            {(performance as any)?.memory && (
+              <div>JS Heap: <span className="text-purple-300">{Math.round((performance as any).memory.usedJSHeapSize / 1048576)} MB</span></div>
+            )}
+          </div>
+        ) : (
+          <span className="hover:text-white/80 transition-colors opacity-40 hover:opacity-100">⚙️ Telemetry</span>
+        )}
+      </div>
 
       {/* Sky gradient, crossfading between phases */}
       <AnimatePresence>
