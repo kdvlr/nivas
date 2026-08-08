@@ -297,7 +297,7 @@ def sync_photos_dir(db: Session):
                 cached.height = 1080
                 cached.orientation = "landscape"
                 
-            cached.date_taken = None
+            cached.date_taken = datetime.fromtimestamp(mtime).isoformat()
             cached.latitude = None
             cached.longitude = None
             cached.location_name = None
@@ -508,6 +508,10 @@ def get_photos(background_tasks: BackgroundTasks, db: Session = Depends(get_db))
                 
         if not found_pair:
             # Standalone video (use actual parsed metadata width/height/orientation)
+            vid_loc = None
+            if vid_rec.location_name and vid_rec.location_name != "Resolving...":
+                vid_loc = vid_rec.location_name
+
             media_items.append({
                 "url": f"/api/photos/media/{urllib.parse.quote(vid_rel_path.as_posix())}",
                 "thumbnailUrl": f"/api/photos/thumbnail/{urllib.parse.quote(vid_rel_path.as_posix())}",
@@ -519,8 +523,8 @@ def get_photos(background_tasks: BackgroundTasks, db: Session = Depends(get_db))
                 "width": vid_rec.width,
                 "height": vid_rec.height,
                 "orientation": vid_rec.orientation,
-                "date_taken": None,
-                "location_name": None
+                "date_taken": vid_rec.date_taken or (datetime.fromtimestamp(vid_rec.last_modified).isoformat() if vid_rec.last_modified else None),
+                "location_name": vid_loc
             })
             
     # 2. Add remaining standalone images
