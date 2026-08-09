@@ -27,6 +27,13 @@ class ConnectionManager:
     async def broadcast(self, scope: str) -> None:
         """scope: calendar | tasks | shopping | meals | recipes | setup"""
         msg = json.dumps({"type": "refresh", "scope": scope})
+        await self.broadcast_raw(msg)
+
+    async def broadcast_custom(self, data: dict) -> None:
+        msg = json.dumps(data)
+        await self.broadcast_raw(msg)
+
+    async def broadcast_raw(self, msg: str) -> None:
         for ws in list(self._connections):
             try:
                 await ws.send_text(msg)

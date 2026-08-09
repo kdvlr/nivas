@@ -190,21 +190,33 @@ export default function App() {
   const [pullY, setPullY] = useState(0)
   const [isPulling, setIsPulling] = useState(false)
 
-  const { data: config } = useData<{ family_name: string; secondary_tz: string; secondary_tz_emoji: string }>(
+  const { data: config } = useData<{ family_name: string; secondary_tz: string; secondary_tz_emoji: string; appearance?: Appearance }>(
     '/api/setup/config',
     ['setup'],
   )
 
+  useEffect(() => {
+    if (config?.appearance) {
+      setAppearance(config.appearance)
+      setAppearanceState(config.appearance)
+    }
+  }, [config?.appearance])
 
   useEffect(() => {
     applyTheme()
     startWs()
     const unwatch = watchSystemTheme() // follow OS light/dark while in auto
     const onHash = () => setRoute(currentRoute())
+    const handleAppChanged = (e: Event) => {
+      const customEv = e as CustomEvent<Appearance>
+      if (customEv.detail) setAppearanceState(customEv.detail)
+    }
     window.addEventListener('hashchange', onHash)
+    window.addEventListener('appearance-changed', handleAppChanged)
     return () => {
       unwatch()
       window.removeEventListener('hashchange', onHash)
+      window.removeEventListener('appearance-changed', handleAppChanged)
     }
   }, [])
 

@@ -40,13 +40,36 @@ class SettingsPut(BaseModel):
     secondary_tz_emoji: str | None = None
 
 
+class ThemePut(BaseModel):
+    appearance: str | None = None
+    reload: bool = True
+
+
 @router.get("/config")
 def get_config(db: Session = Depends(get_db)):
     return {
         "family_name": sync.get_setting(db, "family_name", ""),
         "secondary_tz": sync.get_setting(db, "secondary_tz", "Asia/Kolkata"),
         "secondary_tz_emoji": sync.get_setting(db, "secondary_tz_emoji", "🇮🇳"),
+        "appearance": sync.get_setting(db, "appearance", "auto"),
     }
+
+
+@router.post("/theme")
+@router.post("/reload")
+async def update_theme(body: ThemePut | None = None, db: Session = Depends(get_db)):
+    appearance = body.appearance.lower().strip() if (body and body.appearance) else None
+    should_reload = body.reload if body else True
+
+    if appearance in ("light", "dark", "auto"):
+        sync.set_setting(db, "appearance", appearance)
+
+    await manager.broadcast_custom({
+        "type": "theme_changed",
+        "appearance": appearance,
+        "reload": should_reload,
+    })
+    return {"ok": True, "appearance": appearance, "reload": should_reload}
 
 
 @router.get("/family-name")

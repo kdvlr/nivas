@@ -12,6 +12,16 @@ function connect() {
     try {
       const msg = JSON.parse(ev.data)
       if (msg.type === 'refresh') listeners.forEach((fn) => fn(msg.scope))
+      if (msg.type === 'theme_changed') {
+        if (msg.appearance) {
+          localStorage.setItem('appearance', msg.appearance)
+        }
+        if (msg.reload) {
+          window.location.reload()
+        } else if (msg.appearance) {
+          window.dispatchEvent(new CustomEvent('appearance-changed', { detail: msg.appearance }))
+        }
+      }
     } catch {
       /* ignore */
     }
