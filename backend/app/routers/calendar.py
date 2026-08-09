@@ -143,19 +143,30 @@ def auth_callback(code: str, state: str, oauth_state: str | None = Cookie(defaul
     primary_person = matched.name if matched else local_part.capitalize()
     existing = {s.calendar_id for s in account.selections}
     n_existing = db.query(CalendarSelection).count()
-    for i, cal in enumerate(gcal.list_calendars(account, db)):
-        if cal["id"] in existing:
-            continue
-        db.add(
-            CalendarSelection(
-                account_id=account.id,
-                calendar_id=cal["id"],
-                name=cal["name"],
-                person_name=primary_person if cal["primary"] else "",
-                color=PALETTE[(n_existing + i) % len(PALETTE)],
-                enabled=cal["primary"],
+
+    try:
+        cals = gcal.list_calendars(account, db)
+        for i, cal in enumerate(cals):
+            if cal["id"] in existing:
+                continue
+            db.add(
+                CalendarSelection(
+                    account_id=account.id,
+                    calendar_id=cal["id"],
+                    name=cal["name"],
+                    person_name=primary_person if cal["primary"] else "",
+                    color=PALETTE[(n_existing + i) % len(PALETTE)],
+                    enabled=cal["primary"],
+                )
             )
-        )
+        sync_status.report("google", True)
+    except Exception as e:
+        log.warning("failed to list calendars for %s after OAuth: %s", email, e)
+        err_msg = str(e)
+        if "insufficientPermissions" in err_msg or "insufficient authentication scopes" in err_msg:
+            err_msg = "Insufficient permission: Make sure to check the 'Google Calendar' checkbox on the Google sign-in consent screen."
+        sync_status.report("google", False, err_msg)
+
     db.commit()
     return RedirectResponse("/#/setup")
 
