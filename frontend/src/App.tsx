@@ -141,6 +141,9 @@ const getTzDateString = (date: Date, timeZone: string) => {
   }
 }
 
+import { playChime } from './lib/useAudioChime'
+import type { ReminderPayload } from './components/AmbientCalendarOverlay'
+
 export default function App() {
   const [route, setRoute] = useState(currentRoute)
   const [appearance, setAppearanceState] = useState<Appearance>(getAppearance)
@@ -149,6 +152,7 @@ export default function App() {
   const [slideshowActive, setSlideshowActive] = useState(false)
   const slideshowActiveRef = useRef(false)
   slideshowActiveRef.current = slideshowActive
+  const alertedSetRef = useRef(new Set<string>())
   const dashboardRef = useRef<HTMLDivElement>(null)
   const resumeVideosRef = useRef<HTMLVideoElement[]>([])
 
@@ -217,6 +221,7 @@ export default function App() {
   // the life of the page and the screensaver silently never rendered (its
   // trigger fires, but there's nothing to show). A wall tablet boots alongside
   // the server and routinely loses this race, so retry with backoff and then
+  // Pre-fetch photos list in background for slideshow; back off if backend is warming up,
   // refresh occasionally to pick up newly added photos.
   useEffect(() => {
     let alive = true
@@ -253,6 +258,69 @@ export default function App() {
     }
   }, [])
 
+  // 1-Hour and 10-Minute Scheduled Event/Task Reminders
+  useEffect(() => {
+    const checkReminders = async () => {
+      try {
+        const today = new Date()
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+        const endStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate() + 1).padStart(2, '0')}`
+
+        const events = await api.get<any[]>(`/api/calendar/events?start=${todayStr}T00:00:00&end=${endStr}T23:59:59`).catch(() => [])
+        const nowMs = Date.now()
+
+        for (const ev of events || []) {
+          if (ev.all_day) continue
+          const startMs = new Date(ev.start).getTime()
+          const diffMin = Math.round((startMs - nowMs) / (60 * 1000))
+
+          // 1 Hour threshold (58m - 62m)
+          if (diffMin >= 58 && diffMin <= 62) {
+            const key = `ev_${ev.id}_60m`
+            if (!alertedSetRef.current.has(key)) {
+              alertedSetRef.current.add(key)
+              triggerReminderAlert({
+                title: ev.title,
+                timeStr: new Date(ev.start).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+                minutesLeft: 60,
+                personName: ev.person_name,
+                personColor: ev.color,
+                type: 'event',
+              })
+            }
+          }
+
+          // 10 Minute threshold (8m - 12m)
+          if (diffMin >= 8 && diffMin <= 12) {
+            const key = `ev_${ev.id}_10m`
+            if (!alertedSetRef.current.has(key)) {
+              alertedSetRef.current.add(key)
+              triggerReminderAlert({
+                title: ev.title,
+                timeStr: new Date(ev.start).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+                minutesLeft: 10,
+                personName: ev.person_name,
+                personColor: ev.color,
+                type: 'event',
+              })
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[Reminders] Error checking reminders:', e)
+      }
+    }
+
+    function triggerReminderAlert(payload: ReminderPayload) {
+      playChime('reminder')
+      window.dispatchEvent(new CustomEvent('trigger-calendar-overlay', { detail: { reminder: payload } }))
+    }
+
+    const interval = setInterval(checkReminders, 30 * 1000)
+    checkReminders()
+    return () => clearInterval(interval)
+  }, [])
+
   // Screensaver + kiosk return to home timers
   useEffect(() => {
     const IDLE_RETURN_MS = 3 * 60 * 1000              // 3 minutes of inactivity to go Home
@@ -266,17 +334,11 @@ export default function App() {
     }
     
     function goHome() {
-      // Don't rewrite the URL while the screensaver is up: the dashboard is
-      // hidden anyway, and it would erase any ?sky=/?skyfx= preview params the
-      // running slideshow was launched with.
       if (slideshowActiveRef.current) return
       if (currentRoute() !== 'home') location.hash = '#/home'
     }
     
     function reset() {
-      // Only re-arm the idle timers here. Do NOT dismiss the slideshow — the
-      // Slideshow owns its own exit (tap a photo / the backdrop → onDismiss),
-      // so tapping a video to watch it full doesn't nuke the whole overlay.
       clearTimeout(slideshowTimer)
       clearTimeout(homeTimer)
       slideshowTimer = setTimeout(startSlideshow, SLIDESHOW_TRIGGER_MS)
@@ -284,9 +346,12 @@ export default function App() {
     }
 
     function handleKioskMotion() {
-      // Motion / proximity / screen-on detected: exit slideshow & go home
-      setSlideshowActive(false)
-      if (currentRoute() !== 'home') location.hash = '#/home'
+      if (slideshowActiveRef.current) {
+        // Option 2: Reveal Ambient Calendar Overlay without closing slideshow
+        window.dispatchEvent(new CustomEvent('trigger-calendar-overlay'))
+      } else {
+        if (currentRoute() !== 'home') location.hash = '#/home'
+      }
       reset()
     }
     

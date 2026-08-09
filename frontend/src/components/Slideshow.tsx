@@ -6,6 +6,7 @@ import { useData } from '../lib/hooks'
 import { startStarCanvas, startFxCanvas, SkyPhase, SkyKind, SkyState } from './sky/skyEngine'
 import { useQuality, Quality } from './sky/useQuality'
 import { getQueryParam } from './sky/queryParam'
+import AmbientCalendarOverlay, { ReminderPayload } from './AmbientCalendarOverlay'
 
 interface MediaItem {
   url: string
@@ -474,6 +475,31 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
   const { data: config } = useData<{ secondary_tz: string; secondary_tz_emoji: string }>('/api/setup/config', ['setup'])
   const [showDebug, setShowDebug] = useState(() => getQueryParam('debug') === '1')
 
+  const [overlayVisible, setOverlayVisible] = useState(false)
+  const [reminderPayload, setReminderPayload] = useState<ReminderPayload | null>(null)
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null
+
+    const handleShowAgenda = (e: Event) => {
+      const customEv = e as CustomEvent<{ reminder?: ReminderPayload }>
+      const payload = customEv.detail?.reminder || null
+      setReminderPayload(payload)
+      setOverlayVisible(true)
+
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(() => {
+        setOverlayVisible(false)
+      }, payload ? 30000 : 20000)
+    }
+
+    window.addEventListener('trigger-calendar-overlay', handleShowAgenda)
+    return () => {
+      window.removeEventListener('trigger-calendar-overlay', handleShowAgenda)
+      if (timer) clearTimeout(timer)
+    }
+  }, [])
+
   const phase: SkyPhase = override.phase ?? computePhase(now, sun.sunrise, sun.sunset)
   const skyState: SkyState = { phase, kind, paused: !!selectedVideo || hidden, quality }
   const stateRef = useRef<SkyState>(skyState)
@@ -716,8 +742,26 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
               <span>{secondaryFormatted}</span>
             </div>
           )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              setOverlayVisible(!overlayVisible)
+            }}
+            className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-xl bg-white/15 hover:bg-white/25 text-white/90 transition-all pointer-events-auto border border-white/15 shadow-sm active:scale-95"
+          >
+            <Icon name="calendar_month" className="text-sm text-[var(--primary)] shrink-0" />
+            <span>{overlayVisible ? 'Hide Agenda' : 'View Agenda'}</span>
+          </button>
         </div>
       </div>
+
+      {/* Motion & Scheduled Reminder Agenda Overlay */}
+      <AmbientCalendarOverlay
+        visible={overlayVisible}
+        onDismiss={() => setOverlayVisible(false)}
+        reminderPayload={reminderPayload}
+        onOpenDashboard={onDismiss}
+      />
 
       {/* Debug & Telemetry HUD */}
       <div
