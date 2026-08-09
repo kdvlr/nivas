@@ -999,14 +999,25 @@ function AppearanceCard() {
   const [appearance, setAppearanceState] = useState<Appearance>(getAppearance)
   const [font, setFontState] = useState<FontChoice>(getFont)
   const [accentColor, setAccentColorState] = useState(localStorage.getItem('accentColor') || '')
+  const [syncing, setSyncing] = useState(false)
 
   const pickStyle = (s: ThemeStyle) => {
     setStyleState(s)
     setStyle(s)
   }
-  const pickAppearance = (a: Appearance) => {
+  const pickAppearance = async (a: Appearance, broadcast = true) => {
     setAppearanceState(a)
     setAppearance(a)
+    if (broadcast) {
+      setSyncing(true)
+      try {
+        await api.post('/api/setup/theme', { appearance: a, reload: true })
+      } catch (e) {
+        console.warn('Failed to broadcast global theme:', e)
+      } finally {
+        setTimeout(() => setSyncing(false), 1000)
+      }
+    }
   }
   const pickFont = (f: FontChoice) => {
     setFontState(f)
@@ -1042,9 +1053,20 @@ function AppearanceCard() {
           </div>
         </div>
         <div>
-          <p className="mb-2 text-base font-medium text-ink-soft">
-            Mode — Auto follows the device's light/dark setting
-          </p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-base font-medium text-ink-soft">
+              Mode — Auto follows the device's light/dark setting
+            </p>
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => pickAppearance(appearance, true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-[var(--primary)]/15 text-[var(--primary)] hover:bg-[var(--primary)]/25 transition-all border border-[var(--primary)]/20"
+            >
+              <Icon name={syncing ? 'sync' : 'devices'} className={syncing ? 'animate-spin text-sm' : 'text-sm'} />
+              <span>{syncing ? 'Broadcasting...' : 'Sync Theme to All Displays'}</span>
+            </motion.button>
+          </div>
           <div className="flex gap-2">
             {(
               [
@@ -1058,7 +1080,7 @@ function AppearanceCard() {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.94 }}
                 transition={PRESS_SPRING}
-                onClick={() => pickAppearance(a)}
+                onClick={() => pickAppearance(a, true)}
                 className={`flex items-center gap-2 rounded-xl px-5 py-3 text-base font-medium transition-all ${
                   appearance === a ? 'bg-[var(--primary)] text-[var(--on-primary)]' : 'glass-inset text-ink-soft'
                 }`}
