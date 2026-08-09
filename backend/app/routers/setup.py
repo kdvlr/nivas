@@ -64,6 +64,7 @@ async def update_theme(body: ThemePut | None = None, db: Session = Depends(get_d
     if appearance in ("light", "dark", "auto"):
         sync.set_setting(db, "appearance", appearance)
 
+    await manager.broadcast("setup")
     await manager.broadcast_custom({
         "type": "theme_changed",
         "appearance": appearance,

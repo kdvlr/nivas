@@ -190,17 +190,35 @@ export default function App() {
   const [pullY, setPullY] = useState(0)
   const [isPulling, setIsPulling] = useState(false)
 
-  const { data: config } = useData<{ family_name: string; secondary_tz: string; secondary_tz_emoji: string; appearance?: Appearance }>(
+  const { data: config, reload: reloadConfig } = useData<{ family_name: string; secondary_tz: string; secondary_tz_emoji: string; appearance?: Appearance }>(
     '/api/setup/config',
     ['setup'],
   )
 
   useEffect(() => {
     if (config?.appearance) {
-      setAppearance(config.appearance)
-      setAppearanceState(config.appearance)
+      const current = localStorage.getItem('appearance') ?? 'auto'
+      if (config.appearance !== current) {
+        setAppearance(config.appearance)
+        setAppearanceState(config.appearance)
+      }
     }
   }, [config?.appearance])
+
+  // Poll server config and refresh on visibility change so wall tablets stay in sync
+  useEffect(() => {
+    const timer = setInterval(() => {
+      reloadConfig()
+    }, 30000)
+    const onVis = () => {
+      if (document.visibilityState === 'visible') reloadConfig()
+    }
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', onVis)
+    }
+  }, [reloadConfig])
 
   useEffect(() => {
     applyTheme()
