@@ -360,10 +360,8 @@ export default function App() {
           setSlideshowActive(false)
           if (currentRoute() !== 'home') location.hash = '#/home'
         }
-      } else {
-        if (currentRoute() !== 'home') location.hash = '#/home'
       }
-      reset()
+      // Note: Do NOT call reset() here — camera motion must not delay the slideshow timer!
     }
     
     for (const ev of ['pointerdown', 'touchstart', 'keydown']) {
