@@ -321,6 +321,8 @@ export default function App() {
     return () => clearInterval(interval)
   }, [])
 
+  const lastMotionTimeRef = useRef<number>(Date.now())
+
   // Screensaver + kiosk return to home timers
   useEffect(() => {
     const IDLE_RETURN_MS = 3 * 60 * 1000              // 3 minutes of inactivity to go Home
@@ -346,9 +348,18 @@ export default function App() {
     }
 
     function handleKioskMotion() {
+      const nowMs = Date.now()
+      const elapsedMs = nowMs - lastMotionTimeRef.current
+      lastMotionTimeRef.current = nowMs
+
+      const TWO_HOURS_MS = 2 * 60 * 60 * 1000
+
       if (slideshowActiveRef.current) {
-        // Option 2: Reveal Ambient Calendar Overlay without closing slideshow
-        window.dispatchEvent(new CustomEvent('trigger-calendar-overlay'))
+        if (elapsedMs > TWO_HOURS_MS) {
+          // More than 2 hours since last motion: exit slideshow & show dashboard directly
+          setSlideshowActive(false)
+          if (currentRoute() !== 'home') location.hash = '#/home'
+        }
       } else {
         if (currentRoute() !== 'home') location.hash = '#/home'
       }
