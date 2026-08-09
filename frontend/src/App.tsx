@@ -282,9 +282,31 @@ export default function App() {
       slideshowTimer = setTimeout(startSlideshow, SLIDESHOW_TRIGGER_MS)
       homeTimer = setTimeout(goHome, IDLE_RETURN_MS)
     }
+
+    function handleKioskMotion() {
+      // Motion / proximity / screen-on detected: exit slideshow & go home
+      setSlideshowActive(false)
+      if (currentRoute() !== 'home') location.hash = '#/home'
+      reset()
+    }
     
     for (const ev of ['pointerdown', 'touchstart', 'keydown']) {
       window.addEventListener(ev, reset, { passive: true })
+    }
+
+    for (const ev of ['fully-motion', 'fully-screen-on', 'fully-proximity']) {
+      window.addEventListener(ev, handleKioskMotion)
+    }
+
+    // Automatically bind to Fully Kiosk JavaScript Interface if present
+    if (typeof (window as any).fully !== 'undefined') {
+      try {
+        ;(window as any).fully.bind('onMotion', 'window.dispatchEvent(new Event("fully-motion"))')
+        ;(window as any).fully.bind('onScreenOn', 'window.dispatchEvent(new Event("fully-screen-on"))')
+        ;(window as any).fully.bind('onProximity', 'window.dispatchEvent(new Event("fully-proximity"))')
+      } catch (e) {
+        console.warn('[Fully Kiosk] JS binding notice:', e)
+      }
     }
     
     return () => {
@@ -292,6 +314,9 @@ export default function App() {
       clearTimeout(homeTimer)
       for (const ev of ['pointerdown', 'touchstart', 'keydown']) {
         window.removeEventListener(ev, reset)
+      }
+      for (const ev of ['fully-motion', 'fully-screen-on', 'fully-proximity']) {
+        window.removeEventListener(ev, handleKioskMotion)
       }
     }
   }, [])
