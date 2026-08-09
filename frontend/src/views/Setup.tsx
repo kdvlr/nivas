@@ -80,11 +80,16 @@ function Card({ title, badge, children }: { title: ReactNode; badge?: ReactNode;
   )
 }
 
-function Badge({ ok, label }: { ok: boolean; label: string }) {
+function Badge({ ok, label, error, title }: { ok: boolean; label: string; error?: boolean; title?: string }) {
   return (
     <span
+      title={title}
       className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-        ok ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' : 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200'
+        error
+          ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200 border border-rose-300 dark:border-rose-800'
+          : ok
+          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200'
+          : 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200'
       }`}
     >
       {label}
@@ -405,6 +410,10 @@ function SetupInner() {
               )}
               {(cal?.accounts ?? []).map((a) => {
                 const expanded = !!expandedAccounts[a.id]
+                const googleHealth = cal?.sync_health || status?.sync?.google
+                const syncOk = googleHealth ? googleHealth.ok : true
+                const errorDetail = googleHealth && !googleHealth.ok ? googleHealth.detail : ''
+
                 return (
                   <div key={a.id} className="rounded-xl border border-[var(--outline-var)] overflow-hidden mb-3">
                     <div
@@ -419,7 +428,11 @@ function SetupInner() {
                         className="text-ink-soft shrink-0"
                       />
                       <span className="font-semibold text-sm text-ink truncate max-w-40 md:max-w-xs shrink-0">{a.email}</span>
-                      <Badge ok={true} label="connected" />
+                      {syncOk ? (
+                        <Badge ok={true} label="connected" />
+                      ) : (
+                        <Badge ok={false} error={true} label="sync error" title={errorDetail} />
+                      )}
                       {renderLastUpdated('google')}
                       <button
                         onClick={async (e) => {
@@ -431,6 +444,12 @@ function SetupInner() {
                         <Icon name="delete" className="text-lg" />
                       </button>
                     </div>
+                    {errorDetail && (
+                      <div className="mx-3 my-2 text-xs font-medium text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 p-2.5 rounded-lg border border-rose-200 dark:border-rose-800 flex items-start gap-1.5 leading-snug">
+                        <Icon name="error_outline" className="text-base shrink-0 text-rose-500 mt-0.5" />
+                        <span>Google Sync Error: {errorDetail}</span>
+                      </div>
+                    )}
                     {expanded && (
                       <div className="px-4 pb-3 flex flex-col gap-2 bg-transparent">
                         {a.selections.map((s) => {

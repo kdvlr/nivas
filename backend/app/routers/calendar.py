@@ -11,6 +11,7 @@ from googleapiclient.discovery import build
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 
+from .. import sync_status
 from ..db import get_db
 from ..integrations import google_calendar as gcal
 from ..models import CalendarAccount, CalendarEvent, CalendarSelection, Person
@@ -76,9 +77,11 @@ def _selection_dict(sel: CalendarSelection, person_colors: dict[str, str] | None
 def status(db: Session = Depends(get_db)):
     accounts = db.query(CalendarAccount).all()
     colors = _person_colors(db)
+    google_health = sync_status.snapshot().get("google", {})
     return {
         "client_config": gcal.client_config_available(),
         "redirect_uri": gcal.redirect_uri(),
+        "sync_health": google_health,
         "accounts": [
             {
                 "id": a.id,

@@ -24,6 +24,7 @@ export interface Selection {
 export interface CalendarStatus {
   client_config: boolean
   redirect_uri: string
+  sync_health?: { ok: boolean; detail: string; at: string }
   accounts: { id: number; email: string; selections: Selection[] }[]
 }
 
