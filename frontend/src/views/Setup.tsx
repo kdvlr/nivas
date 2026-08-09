@@ -434,20 +434,36 @@ function SetupInner() {
                         <Badge ok={false} error={true} label="sync error" title={errorDetail} />
                       )}
                       {renderLastUpdated('google')}
+                      <a
+                        href="/api/calendar/auth/start"
+                        onClick={(e) => e.stopPropagation()}
+                        className="ml-auto inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg bg-sky-500 hover:bg-sky-600 text-white transition-colors shadow-sm"
+                        title="Re-authorize this account with Google"
+                      >
+                        <Icon name="sync" className="text-sm" /> Reconnect
+                      </a>
                       <button
                         onClick={async (e) => {
                           e.stopPropagation()
                           setConfirmDisconnectGoogle({ id: a.id, email: a.email })
                         }}
-                        className="ml-auto flex items-center justify-center h-8 w-8 rounded-full hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-400 hover:text-rose-500 transition-colors"
+                        className="flex items-center justify-center h-8 w-8 rounded-full hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-400 hover:text-rose-500 transition-colors shrink-0"
                       >
                         <Icon name="delete" className="text-lg" />
                       </button>
                     </div>
                     {errorDetail && (
-                      <div className="mx-3 my-2 text-xs font-medium text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 p-2.5 rounded-lg border border-rose-200 dark:border-rose-800 flex items-start gap-1.5 leading-snug">
-                        <Icon name="error_outline" className="text-base shrink-0 text-rose-500 mt-0.5" />
-                        <span>Google Sync Error: {errorDetail}</span>
+                      <div className="mx-3 my-2 text-xs font-medium text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 p-2.5 rounded-lg border border-rose-200 dark:border-rose-800 flex items-center justify-between gap-2 leading-snug">
+                        <div className="flex items-start gap-1.5 min-w-0">
+                          <Icon name="error_outline" className="text-base shrink-0 text-rose-500 mt-0.5" />
+                          <span className="break-words">Google Sync Error: {errorDetail}</span>
+                        </div>
+                        <a
+                          href="/api/calendar/auth/start"
+                          className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white transition-colors"
+                        >
+                          <Icon name="sync" className="text-sm" /> Reconnect Now
+                        </a>
                       </div>
                     )}
                     {expanded && (
