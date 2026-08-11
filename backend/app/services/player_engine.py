@@ -51,7 +51,7 @@ class PlayerEngine:
         self._scanner_task: Optional[asyncio.Task] = None
         self._ticker_task: Optional[asyncio.Task] = None
         self._play_task: Optional[asyncio.Task] = None
-        self._stream_tasks: List[asyncio.Task] = []
+        self._stream_procs: Dict[str, subprocess.Popen] = {}
 
     def start(self):
         loop = asyncio.get_event_loop()
@@ -72,10 +72,12 @@ class PlayerEngine:
             self._play_task.cancel()
             self._play_task = None
 
-        for task in self._stream_tasks:
-            if not task.done():
-                task.cancel()
-        self._stream_tasks.clear()
+        for target_id, proc in list(self._stream_procs.items()):
+            try:
+                proc.kill()
+            except Exception:
+                pass
+        self._stream_procs.clear()
 
     async def _device_scanner_loop(self):
         while True:
@@ -109,25 +111,25 @@ class PlayerEngine:
                 discovered_addresses.add(addr)
 
                 dev_id = addr
+                port = conf.port or 7000
                 model = str(conf.device_info.model or "AirPlay Speaker") if conf.device_info else "AirPlay Speaker"
 
                 if dev_id in self.devices:
-                    # Update existing device info while preserving selection & volume
                     dev = self.devices[dev_id]
                     dev.name = name
+                    dev.port = port
                     dev.model = model
                     dev.last_seen = time.time()
                 else:
-                    # Register new discovered device
                     dev = AirPlayDevice(
                         identifier=dev_id,
                         name=name,
                         address=addr,
-                        port=7000,
+                        port=port,
                         model=model
                     )
                     self.devices[dev_id] = dev
-                    logger.info(f"Discovered AirPlay speaker: {name} ({addr})")
+                    logger.info(f"Discovered AirPlay speaker: {name} ({addr}:{port})")
 
             self._broadcast_state()
         except Exception as e:
@@ -190,7 +192,6 @@ class PlayerEngine:
         if queue is not None:
             self.queue = queue
 
-        # Launch transcode and streaming workflow asynchronously in background task
         loop = asyncio.get_running_loop()
         self._play_task = loop.create_task(self._orchestrate_playback(video_id, self.current_track))
 
@@ -206,76 +207,67 @@ class PlayerEngine:
                 self._broadcast_state()
                 return
 
-            mp3_path = f"/tmp/ytmusic_{video_id}.mp3"
-            logger.info(f"Transcoding track '{track_info['title']}' to MP3...")
+            wav_path = f"/tmp/ytmusic_{video_id}.wav"
+            logger.info(f"Transcoding track '{track_info['title']}' to 44.1kHz PCM WAV...")
 
             loop = asyncio.get_running_loop()
-            await loop.run_in_executor(None, self._transcode_to_mp3, stream_url, mp3_path)
+            await loop.run_in_executor(None, self._transcode_to_wav, stream_url, wav_path)
 
-            if not os.path.exists(mp3_path) or os.path.getsize(mp3_path) == 0:
+            if not os.path.exists(wav_path) or os.path.getsize(wav_path) == 0:
                 logger.error(f"Transcoding produced empty file for {video_id}")
                 self.is_playing = False
                 self._broadcast_state()
                 return
 
-            logger.info(f"Transcode complete. Streaming '{track_info['title']}' to {len(self.active_targets)} selected AirPlay speakers")
+            logger.info(f"Transcode complete. Streaming '{track_info['title']}' via airplay2-rs to {len(self.active_targets)} selected AirPlay speakers")
 
             for dev_id in self.active_targets:
                 device = self.devices.get(dev_id)
                 if device:
-                    task = loop.create_task(self._stream_to_device(device, mp3_path, track_info))
-                    self._stream_tasks.append(task)
+                    self._start_airplay2_stream(device, wav_path)
         except Exception as e:
             logger.error(f"Error orchestrating playback: {e}")
             self.is_playing = False
             self._broadcast_state()
 
-    def _transcode_to_mp3(self, stream_url: str, output_path: str):
+    def _transcode_to_wav(self, stream_url: str, output_path: str):
         try:
-            cmd = ["ffmpeg", "-y", "-i", stream_url, "-vn", "-acodec", "libmp3lame", "-b:a", "320k", output_path]
+            cmd = ["ffmpeg", "-y", "-i", stream_url, "-vn", "-ar", "44100", "-ac", "2", "-acodec", "pcm_s16le", output_path]
             subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             logger.info(f"Transcoded audio successfully to {output_path}")
         except Exception as e:
             logger.error(f"FFmpeg transcoding error: {e}")
 
-    async def _stream_to_device(self, device: AirPlayDevice, mp3_path: str, track_info: Dict[str, Any]):
+    def _start_airplay2_stream(self, device: AirPlayDevice, wav_path: str):
         try:
-            import pyatv
-            from pyatv.interface import MediaMetadata
-            loop = asyncio.get_running_loop()
-            results = await pyatv.scan(loop, hosts=[device.address], timeout=3)
-            if results:
-                conf = results[0]
-                atv = await pyatv.connect(conf, loop=loop)
-                try:
-                    device.is_connected = True
-                    self._broadcast_state()
-                    
-                    meta = MediaMetadata(
-                        title=track_info.get("title", "YouTube Music"),
-                        artist=track_info.get("artist", "Nivas"),
-                        album=track_info.get("album") or "YouTube Music",
-                        duration=int(self.duration_seconds)
-                    )
-                    
-                    logger.info(f"Starting pyatv stream to speaker: {device.name} ({device.address})")
-                    await atv.stream.stream_file(mp3_path, metadata=meta, override_missing_metadata=True)
-                    logger.info(f"Finished pyatv stream to speaker: {device.name}")
-                finally:
-                    atv.close()
-                    device.is_connected = False
-                    self._broadcast_state()
+            binary_path = "/usr/local/bin/airplay-play-audio"
+            if not os.path.exists(binary_path):
+                binary_path = "/tmp/airplay2-rs-build/target/release/examples/play_audio"
+
+            cmd = [binary_path, device.address, str(device.port), wav_path, "--airplay2"]
+            proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self._stream_procs[device.id] = proc
+            device.is_connected = True
+            logger.info(f"Started airplay2-rs stream process for speaker {device.name} ({device.address}:{device.port})")
         except Exception as e:
-            logger.warning(f"Error streaming to AirPlay speaker {device.name} ({device.address}): {e}")
+            logger.error(f"Failed to start airplay2-rs stream process for {device.name}: {e}")
 
     async def pause(self):
         self.is_playing = False
+        self._stop_current_stream()
         self._broadcast_state()
         return self.get_state()
 
     async def resume(self):
         if self.current_track:
             self.is_playing = True
+            video_id = self.current_track.get("videoId")
+            wav_path = f"/tmp/ytmusic_{video_id}.wav"
+            if os.path.exists(wav_path):
+                for dev_id in self.active_targets:
+                    device = self.devices.get(dev_id)
+                    if device:
+                        self._start_airplay2_stream(device, wav_path)
         self._broadcast_state()
         return self.get_state()
 
@@ -292,6 +284,7 @@ class PlayerEngine:
             self.is_playing = False
             self.current_track = None
             self.elapsed_seconds = 0
+            self._stop_current_stream()
             self._broadcast_state()
         return self.get_state()
 
@@ -306,16 +299,20 @@ class PlayerEngine:
             self.devices[device_id].is_selected = selected
             if selected and device_id not in self.active_targets:
                 self.active_targets.append(device_id)
+                if self.is_playing and self.current_track:
+                    video_id = self.current_track.get("videoId")
+                    wav_path = f"/tmp/ytmusic_{video_id}.wav"
+                    if os.path.exists(wav_path):
+                        self._start_airplay2_stream(self.devices[device_id], wav_path)
             elif not selected and device_id in self.active_targets:
                 self.active_targets.remove(device_id)
-            
-            if self.is_playing and selected and self.current_track:
-                video_id = self.current_track.get("videoId")
-                mp3_path = f"/tmp/ytmusic_{video_id}.mp3"
-                if os.path.exists(mp3_path) and os.path.getsize(mp3_path) > 0:
-                    loop = asyncio.get_event_loop()
-                    task = loop.create_task(self._stream_to_device(self.devices[device_id], mp3_path, self.current_track))
-                    self._stream_tasks.append(task)
+                if device_id in self._stream_procs:
+                    proc = self._stream_procs.pop(device_id)
+                    try:
+                        proc.kill()
+                    except Exception:
+                        pass
+                self.devices[device_id].is_connected = False
 
         self._broadcast_state()
         return self.get_state()
