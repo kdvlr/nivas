@@ -9,9 +9,9 @@ RUN npm run build -- --outDir /build/dist --emptyOutDir
 # ---- airplay2-rs build ----
 FROM rust:alpine AS airplay2-builder
 WORKDIR /build
-RUN apk add --no-cache alsa-lib-dev musl-dev gcc g++ pkgconfig git
-COPY airplay2-rs-repo ./
-RUN cargo build --release --example play_audio
+RUN apk add --no-cache alsa-lib-dev musl-dev gcc g++ pkgconfig git \
+    && git clone https://github.com/lmcgartland/airplay2-rs.git /build \
+    && cargo build --release --example play_audio
 
 # ---- backend runtime ----
 FROM python:3.12-slim
