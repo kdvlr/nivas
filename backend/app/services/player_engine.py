@@ -14,9 +14,9 @@ logger = logging.getLogger(__name__)
 
 class AirPlayDevice:
     def __init__(self, identifier: str, name: str, address: str, port: int = 7000, model: str = "AirPlay Speaker"):
-        self.id = identifier
+        self.id = str(identifier)
         self.name = name
-        self.address = address
+        self.address = str(address)
         self.port = port
         self.model = model
         self.is_selected = False
@@ -100,8 +100,8 @@ class PlayerEngine:
             
             discovered_addresses = set()
             for conf in results:
-                addr = conf.address
-                name = conf.name
+                addr = str(conf.address)
+                name = str(conf.name)
                 
                 # Filter out TV and MacBook devices (case-insensitive)
                 name_lower = name.lower()
@@ -116,7 +116,7 @@ class PlayerEngine:
                 model = str(conf.device_info.model or "AirPlay Speaker") if conf.device_info else "AirPlay Speaker"
 
                 if dev_id in self.devices:
-                    # Update existing device info
+                    # Update existing device info while preserving selection & volume
                     dev = self.devices[dev_id]
                     dev.name = name
                     dev.model = model
@@ -202,13 +202,11 @@ class PlayerEngine:
 
         logger.info(f"Starting server-side transcoding for '{self.current_track['title']}'...")
 
-        # Transcode stream URL into PCM WAV file asynchronously
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, self._transcode_to_wav, stream_url, self._current_wav)
 
         logger.info(f"Streaming '{self.current_track['title']}' to {len(self.active_targets)} selected AirPlay speakers")
 
-        # Stream WAV file concurrently to all active AirPlay speakers
         for dev_id in self.active_targets:
             device = self.devices.get(dev_id)
             if device:
@@ -280,6 +278,7 @@ class PlayerEngine:
         return self.get_state()
 
     def toggle_device(self, device_id: str, selected: bool) -> Dict[str, Any]:
+        device_id = str(device_id)
         if device_id in self.devices:
             self.devices[device_id].is_selected = selected
             if selected and device_id not in self.active_targets:
@@ -296,6 +295,7 @@ class PlayerEngine:
         return self.get_state()
 
     def set_device_volume(self, device_id: str, volume: int) -> Dict[str, Any]:
+        device_id = str(device_id)
         if device_id in self.devices:
             self.devices[device_id].volume = max(0, min(100, volume))
         self._broadcast_state()
