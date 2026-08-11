@@ -424,24 +424,51 @@ export default function App() {
 
   const lastMotionTimeRef = useRef<number>(Date.now())
 
-  // Screensaver + kiosk return to home timers
+  // Screensaver + kiosk return to home + Fully Kiosk screen-off & motion wake logic
   useEffect(() => {
-    const IDLE_RETURN_MS = 3 * 60 * 1000              // 3 minutes of inactivity to go Home
-    const SLIDESHOW_TRIGGER_MS = (3 * 60 + 30) * 1000  // 30s later (3m30s total) to start screensaver
-    
+    const IDLE_RETURN_MS = 3 * 60 * 1000               // 3 minutes of inactivity to go Home
+    const SLIDESHOW_TRIGGER_MS = (3 * 60 + 30) * 1000  // 3m30s to start screensaver
+    const NO_MOTION_SCREEN_OFF_MS = 30 * 60 * 1000     // 30 minutes of no motion to turn screen off
+    const TWO_HOURS_MS = 2 * 60 * 60 * 1000            // 2 hours threshold for wake destination
+
     let slideshowTimer = setTimeout(startSlideshow, SLIDESHOW_TRIGGER_MS)
     let homeTimer = setTimeout(goHome, IDLE_RETURN_MS)
-    
+    let screenOffTimer = setTimeout(turnScreenOff, NO_MOTION_SCREEN_OFF_MS)
+
+    function turnScreenOff() {
+      if (typeof (window as any).fully !== 'undefined' && (window as any).fully.turnScreenOff) {
+        try {
+          ;(window as any).fully.turnScreenOff()
+        } catch (e) {
+          console.warn('[Fully Kiosk] turnScreenOff error:', e)
+        }
+      }
+    }
+
+    function turnScreenOn() {
+      if (typeof (window as any).fully !== 'undefined' && (window as any).fully.turnScreenOn) {
+        try {
+          ;(window as any).fully.turnScreenOn()
+        } catch (e) {
+          console.warn('[Fully Kiosk] turnScreenOn error:', e)
+        }
+      }
+    }
+
     function startSlideshow() {
       setSlideshowActive(true)
     }
-    
+
     function goHome() {
       if (slideshowActiveRef.current) return
       if (currentRoute() !== 'home') location.hash = '#/home'
     }
-    
+
     function reset() {
+      lastMotionTimeRef.current = Date.now()
+      clearTimeout(screenOffTimer)
+      screenOffTimer = setTimeout(turnScreenOff, NO_MOTION_SCREEN_OFF_MS)
+
       clearTimeout(slideshowTimer)
       clearTimeout(homeTimer)
       slideshowTimer = setTimeout(startSlideshow, SLIDESHOW_TRIGGER_MS)
@@ -453,18 +480,24 @@ export default function App() {
       const elapsedMs = nowMs - lastMotionTimeRef.current
       lastMotionTimeRef.current = nowMs
 
-      const TWO_HOURS_MS = 2 * 60 * 60 * 1000
+      // Turn screen back on via Fully Kiosk if off
+      turnScreenOn()
 
-      if (slideshowActiveRef.current) {
-        if (elapsedMs > TWO_HOURS_MS) {
-          // More than 2 hours since last motion: exit slideshow & show dashboard directly
-          setSlideshowActive(false)
-          if (currentRoute() !== 'home') location.hash = '#/home'
-        }
+      // Reset the 30-minute screen off timer whenever motion is detected
+      clearTimeout(screenOffTimer)
+      screenOffTimer = setTimeout(turnScreenOff, NO_MOTION_SCREEN_OFF_MS)
+
+      // Motion detected logic:
+      // Over 2 hours of inactivity -> show Home Page
+      // Under/equal 2 hours of inactivity -> show Photos Slideshow
+      if (elapsedMs > TWO_HOURS_MS) {
+        setSlideshowActive(false)
+        if (currentRoute() !== 'home') location.hash = '#/home'
+      } else {
+        setSlideshowActive(true)
       }
-      // Note: Do NOT call reset() here — camera motion must not delay the slideshow timer!
     }
-    
+
     for (const ev of ['pointerdown', 'touchstart', 'keydown']) {
       window.addEventListener(ev, reset, { passive: true })
     }
@@ -483,10 +516,11 @@ export default function App() {
         console.warn('[Fully Kiosk] JS binding notice:', e)
       }
     }
-    
+
     return () => {
       clearTimeout(slideshowTimer)
       clearTimeout(homeTimer)
+      clearTimeout(screenOffTimer)
       for (const ev of ['pointerdown', 'touchstart', 'keydown']) {
         window.removeEventListener(ev, reset)
       }
