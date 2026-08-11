@@ -111,7 +111,9 @@ class PlayerEngine:
                 discovered_addresses.add(addr)
 
                 dev_id = addr
-                port = conf.port or 7000
+                port = 7000
+                if conf.services and len(conf.services) > 0:
+                    port = conf.services[0].port or 7000
                 model = str(conf.device_info.model or "AirPlay Speaker") if conf.device_info else "AirPlay Speaker"
 
                 if dev_id in self.devices:
