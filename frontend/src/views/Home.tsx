@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { api } from '../lib/api'
+import Avatar from '../components/Avatar'
 import CoinIcon from '../components/CoinIcon'
 import Icon from '../components/Icon'
 import Modal from '../components/Modal'
 import WeatherModal from '../components/WeatherModal'
 import { useCelebration } from '../components/celebrations/CelebrationContext'
 import { useClock, useData, todayISO, addDaysISO } from '../lib/hooks'
-import type { CalendarStatus, CalEvent, ChoreItem, MealDay, ShoppingItem, Task, WeatherData } from '../lib/types'
+import type { CalendarStatus, CalEvent, ChoreItem, CoinBalance, MealDay, ShoppingItem, Task, WeatherData } from '../lib/types'
 
 const fmtTime = (iso: string) =>
   new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
@@ -174,6 +175,8 @@ export default function Home() {
     ['tasks'],
   )
   const { data: chores, loading: loadingChores, reload: reloadChores } = useData<ChoreItem[]>('/api/chores', ['chores'])
+  const { data: balances, loading: loadingBalances } = useData<CoinBalance[]>('/api/rewards/balances', ['chores', 'rewards'])
+  const sortedBalances = useMemo(() => [...(balances ?? [])].sort((a, b) => b.balance - a.balance), [balances])
   const { data: shopping, loading: loadingShopping, reload: reloadShopping } = useData<ShoppingItem[]>('/api/shopping', ['shopping'])
   const { data: meals, loading: loadingMeals } = useData<MealDay[]>(`/api/meals?start=${today}&days=1`, ['meals'])
   const { data: weather } = useData<WeatherData>('/api/weather', [], 15 * 60 * 1000)
@@ -713,68 +716,48 @@ export default function Home() {
   )
 
   const renderChores = (isDesktop: boolean) => {
-    const isEmpty = openChores.length === 0
+    const isEmpty = sortedBalances.length === 0
     return (
       <section
-        className={`glass flex flex-col p-4 ${loadingChores ? 'shimmer-loading' : ''} ${isDesktop ? 'min-h-28' : (isEmpty ? 'h-auto' : 'flex-1 min-h-0 overflow-hidden')}`}
-        style={isDesktop ? { flexGrow: Math.max(openChores.length, 1) } : undefined}
+        className={`glass flex flex-col p-4 ${loadingBalances ? 'shimmer-loading' : ''} ${isDesktop ? 'min-h-28' : (isEmpty ? 'h-auto' : 'flex-1 min-h-0 overflow-hidden')}`}
+        style={isDesktop ? { flexGrow: Math.max(sortedBalances.length, 1) } : undefined}
       >
-        <a href="#/chores" className="mb-2 flex items-center gap-3 text-lg font-normal text-ink">
-          <Icon name="family_star" className="text-2xl" /> Chores
+        <a href="#/chores" className="mb-2.5 flex items-center gap-3 text-lg font-normal text-ink group">
+          <Icon name="emoji_events" className="text-2xl text-amber-500" />
+          <span className="font-semibold">Chore Leaderboard</span>
           <span className="ml-auto rounded-full bg-amber-100 dark:bg-amber-900/40 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:text-amber-300">
-            {todayChores.length - openChores.length}/{todayChores.length} chores done
+            {todayChores.length - openChores.length}/{todayChores.length} done today
           </span>
         </a>
         {isEmpty ? (
           <p className="my-auto text-center text-lg text-ink-faint py-3">
-            {todayChores.length === 0 ? "No chores scheduled today" : "All done! 🎉"}
+            No family balances yet
           </p>
         ) : (
-          <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto">
-            <AnimatePresence initial={false}>
-              {openChores.map((c) => (
-                <motion.button
-                  key={c.id}
-                  layout
-                  initial={{ opacity: 1, height: 'auto' }}
-                  exit={{
-                    opacity: 0,
-                    height: 0,
-                    paddingTop: 0,
-                    paddingBottom: 0,
-                    marginTop: 0,
-                    marginBottom: 0,
-                    overflow: 'hidden',
-                    transition: { duration: 0.45, ease: 'easeInOut' }
-                  }}
-                  onClick={() => completeChore(c)}
-                  className="glass-inset flex shrink-0 items-center gap-2.5 px-2.5 py-1.5 text-left active:surface-tile-high"
+          <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+            {sortedBalances.map((b, index) => {
+              const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`
+              return (
+                <a
+                  key={b.person_name}
+                  href="#/chores"
+                  className="glass-inset flex shrink-0 items-center gap-3 px-3 py-2 text-left hover:bg-black/5 dark:hover:bg-white/5 transition-all rounded-xl"
+                  style={{ borderLeft: `4px solid ${b.color}` }}
                 >
-                  <div className="h-6 w-6 shrink-0 rounded-full border-[2.5px] border-amber-300 flex items-center justify-center overflow-hidden relative">
-                    {completingIds.includes(`chore-${c.id}`) && (
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                        className="absolute inset-0 bg-amber-500 flex items-center justify-center"
-                      >
-                        <Icon name="check" className="text-white text-xs font-bold" />
-                      </motion.div>
-                    )}
+                  <span className="text-base font-bold w-6 text-center shrink-0 text-ink-soft">
+                    {medal}
+                  </span>
+                  <Avatar name={b.person_name} color={b.color} src={b.avatar} emoji={b.avatar_emoji} size={30} />
+                  <span className="min-w-0 flex-1 truncate text-base font-bold leading-tight" style={{ color: b.color }}>
+                    {b.person_name}
+                  </span>
+                  <div className="flex items-center gap-1.5 rounded-full bg-amber-500/10 dark:bg-amber-400/15 px-3 py-1 text-amber-700 dark:text-amber-300 font-bold text-sm tabular-nums">
+                    <CoinIcon className="text-sm" />
+                    <span>{b.balance}</span>
                   </div>
-                  <span className="min-w-0 flex-1 truncate text-[0.95rem] font-normal text-ink">
-                    {c.title}
-                  </span>
-                  {c.assigned_to && (
-                    <span className="text-xs font-medium text-ink-soft">{c.assigned_to}</span>
-                  )}
-                  <span className="flex items-center text-xs font-medium text-amber-500">
-                    <CoinIcon />
-                    {c.coins}
-                  </span>
-                </motion.button>
-              ))}
-            </AnimatePresence>
+                </a>
+              )
+            })}
           </div>
         )}
       </section>
