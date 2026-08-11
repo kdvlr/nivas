@@ -111,9 +111,7 @@ class PlayerEngine:
                 discovered_addresses.add(addr)
 
                 dev_id = addr
-                port = 7000
-                if conf.services and len(conf.services) > 0:
-                    port = conf.services[0].port or 7000
+                port = conf.port or 7000
                 model = str(conf.device_info.model or "AirPlay Speaker") if conf.device_info else "AirPlay Speaker"
 
                 if dev_id in self.devices:
@@ -221,7 +219,7 @@ class PlayerEngine:
                 self._broadcast_state()
                 return
 
-            logger.info(f"Transcode complete. Streaming '{track_info['title']}' via airplay2-rs to {len(self.active_targets)} selected AirPlay 2 speakers")
+            logger.info(f"Transcode complete. Streaming '{track_info['title']}' via airplay2-rs to {len(self.active_targets)} selected AirPlay speakers")
 
             for dev_id in self.active_targets:
                 device = self.devices.get(dev_id)
@@ -242,32 +240,13 @@ class PlayerEngine:
 
     def _start_airplay2_stream(self, device: AirPlayDevice, wav_path: str):
         try:
-            if device.id in self._stream_procs:
-                try:
-                    self._stream_procs[device.id].kill()
-                except Exception:
-                    pass
-
             binary_path = "/usr/local/bin/airplay-play-audio"
-            if not os.path.exists(binary_path):
-                binary_path = "/tmp/airplay2-rs-build/target/release/examples/play_audio"
-
             vol_float = max(0.0, min(1.0, device.volume / 100.0))
-
-            cmd = [
-                binary_path,
-                device.address,
-                str(device.port),
-                wav_path,
-                "--airplay2",
-                "--ptp",
-                "--volume",
-                f"{vol_float:.2f}"
-            ]
-            logger.info(f"Launching AirPlay 2 stream for {device.name} ({device.address}:{device.port}) vol={vol_float:.2f}")
+            cmd = [binary_path, device.address, str(device.port), wav_path, "--airplay2", "--volume", f"{vol_float:.2f}"]
             proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             self._stream_procs[device.id] = proc
             device.is_connected = True
+            logger.info(f"Started airplay2-rs stream process for speaker {device.name} ({device.address}:{device.port}) with volume {vol_float:.2f}")
         except Exception as e:
             logger.error(f"Failed to start airplay2-rs stream process for {device.name}: {e}")
 
@@ -340,24 +319,14 @@ class PlayerEngine:
         device_id = str(device_id)
         if device_id in self.devices:
             self.devices[device_id].volume = max(0, min(100, volume))
-            if self.is_playing and self.current_track:
-                video_id = self.current_track.get("videoId")
-                wav_path = f"/tmp/ytmusic_{video_id}.wav"
-                if os.path.exists(wav_path) and device_id in self.active_targets:
-                    self._start_airplay2_stream(self.devices[device_id], wav_path)
         self._broadcast_state()
         return self.get_state()
 
     def set_master_volume(self, volume: int) -> Dict[str, Any]:
         self.master_volume = max(0, min(100, volume))
-        for dev_id, dev in self.devices.items():
+        for dev in self.devices.values():
             if dev.is_selected:
                 dev.volume = self.master_volume
-                if self.is_playing and self.current_track:
-                    video_id = self.current_track.get("videoId")
-                    wav_path = f"/tmp/ytmusic_{video_id}.wav"
-                    if os.path.exists(wav_path) and dev_id in self.active_targets:
-                        self._start_airplay2_stream(dev, wav_path)
         self._broadcast_state()
         return self.get_state()
 

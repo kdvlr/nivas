@@ -61,11 +61,6 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
         .and_then(|v| v.parse().ok())
         .unwrap_or(0);
 
-    let initial_volume: Option<f32> = args.iter()
-        .position(|a| a == "--volume")
-        .and_then(|i| args.get(i + 1))
-        .and_then(|v| v.parse().ok());
-
     // Device ID for identity lookup (pair-verify)
     // If not specified, derive from IP address for consistent identity per device
     let device_id_str: String = args.iter()
@@ -253,15 +248,16 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
 
-            if pos > 10.0 {
+            if pos >= duration_secs - 0.5 || pos >= 9.5 {
                 println!("\nPlayed 10 seconds, stopping...");
                 break;
             }
         }
 
         println!("\n--- Stopping ---");
-        conn.stop().await?;
-        conn.disconnect().await?;
+        let _ = conn.stop().await;
+        let _ = conn.disconnect().await;
+        std::process::exit(0);
     } else {
         // AirPlay 1 / RAOP path: no pairing, plaintext RTSP, AES-CBC audio
         println!("\n--- Connecting (RAOP) ---");
