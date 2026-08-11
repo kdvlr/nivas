@@ -1,8 +1,9 @@
 import asyncio
 import json
 import logging
+import os
+import subprocess
 import time
-import socket
 from typing import Any, Dict, List, Optional
 from pathlib import Path
 
@@ -12,7 +13,7 @@ from .ytmusic import ytmusic_service
 logger = logging.getLogger(__name__)
 
 class AirPlayDevice:
-    def __init__(self, identifier: str, name: str, address: str, port: int, model: str = "AirPlay Speaker"):
+    def __init__(self, identifier: str, name: str, address: str, port: int = 7000, model: str = "AirPlay Speaker"):
         self.id = identifier
         self.name = name
         self.address = address
@@ -47,71 +48,89 @@ class PlayerEngine:
         self.devices: Dict[str, AirPlayDevice] = {}
         self.active_targets: List[str] = []
         
-        self._zeroconf = None
-        self._browser = None
+        self._scanner_task: Optional[asyncio.Task] = None
         self._ticker_task: Optional[asyncio.Task] = None
-        self._stream_process: Optional[asyncio.subprocess.Process] = None
+        self._stream_tasks: List[asyncio.Task] = []
+        self._transcode_proc: Optional[subprocess.Popen] = None
+        self._current_wav: str = "/tmp/ytmusic_current.wav"
 
     def start(self):
-        self.start_mdns_discovery()
+        loop = asyncio.get_event_loop()
+        if self._scanner_task is None or self._scanner_task.done():
+            self._scanner_task = loop.create_task(self._device_scanner_loop())
         if self._ticker_task is None or self._ticker_task.done():
-            loop = asyncio.get_event_loop()
             self._ticker_task = loop.create_task(self._playback_ticker())
 
     def stop(self):
-        self.stop_mdns_discovery()
+        if self._scanner_task and not self._scanner_task.done():
+            self._scanner_task.cancel()
         if self._ticker_task and not self._ticker_task.done():
             self._ticker_task.cancel()
+        self._stop_current_stream()
 
-    def start_mdns_discovery(self):
-        try:
-            from zeroconf import Zeroconf, ServiceBrowser
-
-            class AirPlayListener:
-                def __init__(self, outer):
-                    self.outer = outer
-
-                def remove_service(self, zeroconf, type_, name):
-                    dev_id = name.split(".")[0]
-                    if dev_id in self.outer.devices:
-                        logger.info(f"AirPlay speaker offline: {name}")
-
-                def add_service(self, zeroconf, type_, name):
-                    info = zeroconf.get_service_info(type_, name)
-                    if info:
-                        addresses = [socket.inet_ntoa(addr) for addr in info.addresses if len(addr) == 4]
-                        ip_str = addresses[0] if addresses else "127.0.0.1"
-                        dev_id = info.properties.get(b"deviceid", b"").decode("utf-8") or name.split(".")[0]
-                        dev_name = info.name.split(".")[0].replace("\\", "")
-                        model = info.properties.get(b"model", b"AirPlay Speaker").decode("utf-8")
-                        
-                        device = AirPlayDevice(
-                            identifier=dev_id,
-                            name=dev_name,
-                            address=ip_str,
-                            port=info.port or 7000,
-                            model=model
-                        )
-                        self.outer.devices[dev_id] = device
-                        logger.info(f"Discovered AirPlay speaker on LAN: {dev_name} ({ip_str}:{info.port})")
-                        self.outer._broadcast_state()
-
-                def update_service(self, zeroconf, type_, name):
-                    self.add_service(zeroconf, type_, name)
-
-            self._zeroconf = Zeroconf()
-            self._browser = ServiceBrowser(self._zeroconf, ["_airplay._tcp.local.", "_raop._tcp.local."], AirPlayListener(self))
-            logger.info("Started AirPlay Zeroconf discovery")
-        except Exception as e:
-            logger.error(f"Failed to start AirPlay mDNS discovery: {e}")
-
-    def stop_mdns_discovery(self):
-        if self._zeroconf:
+    def _stop_current_stream(self):
+        if self._transcode_proc:
             try:
-                self._zeroconf.close()
+                self._transcode_proc.kill()
+            except Exception:
+                pass
+            self._transcode_proc = None
+
+        for task in self._stream_tasks:
+            if not task.done():
+                task.cancel()
+        self._stream_tasks.clear()
+
+    async def _device_scanner_loop(self):
+        while True:
+            try:
+                await self.scan_devices()
+                await asyncio.sleep(10)
+            except asyncio.CancelledError:
+                break
             except Exception as e:
-                logger.error(f"Error closing zeroconf: {e}")
-            self._zeroconf = None
+                logger.error(f"Error in pyatv scanner loop: {e}")
+                await asyncio.sleep(10)
+
+    async def scan_devices(self) -> List[Dict[str, Any]]:
+        try:
+            import pyatv
+            loop = asyncio.get_running_loop()
+            results = await pyatv.scan(loop, timeout=3)
+            
+            discovered_addresses = set()
+            for conf in results:
+                addr = conf.address
+                name = conf.name
+                if addr in discovered_addresses:
+                    continue
+                discovered_addresses.add(addr)
+
+                dev_id = addr
+                model = str(conf.device_info.model or "AirPlay Speaker") if conf.device_info else "AirPlay Speaker"
+
+                if dev_id in self.devices:
+                    # Update existing device info
+                    dev = self.devices[dev_id]
+                    dev.name = name
+                    dev.model = model
+                    dev.last_seen = time.time()
+                else:
+                    # Register new discovered device
+                    dev = AirPlayDevice(
+                        identifier=dev_id,
+                        name=name,
+                        address=addr,
+                        port=7000,
+                        model=model
+                    )
+                    self.devices[dev_id] = dev
+                    logger.info(f"Discovered AirPlay speaker: {name} ({addr})")
+
+            self._broadcast_state()
+        except Exception as e:
+            logger.error(f"AirPlay scan error: {e}")
+        return self.get_state()["devices"]
 
     async def _playback_ticker(self):
         while True:
@@ -130,9 +149,9 @@ class PlayerEngine:
 
     def _broadcast_state(self):
         try:
-            data = json.dumps({"type": "player_state", "payload": self.get_state()})
-            manager.broadcast_json({"type": "player_state", "payload": self.get_state()})
-        except Exception as e:
+            state = self.get_state()
+            manager.broadcast_json({"type": "player_state", "payload": state})
+        except Exception:
             pass
 
     def get_state(self) -> Dict[str, Any]:
@@ -152,9 +171,11 @@ class PlayerEngine:
         if not video_id:
             return self.get_state()
 
+        self._stop_current_stream()
+
         stream_url = ytmusic_service.get_stream_url(video_id)
         if not stream_url:
-            logger.error(f"Could not extract stream URL for video: {video_id}")
+            logger.error(f"Could not extract audio stream URL for video: {video_id}")
             return self.get_state()
 
         self.current_track = {
@@ -173,29 +194,52 @@ class PlayerEngine:
         if queue is not None:
             self.queue = queue
 
-        logger.info(f"Server-Side AirPlay Playback started for '{self.current_track['title']}' on {len(self.active_targets)} speakers")
+        logger.info(f"Starting server-side transcoding for '{self.current_track['title']}'...")
 
-        # Spawn pyatv streaming tasks for selected AirPlay devices
+        # Transcode stream URL into PCM WAV file asynchronously
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, self._transcode_to_wav, stream_url, self._current_wav)
+
+        logger.info(f"Streaming '{self.current_track['title']}' to {len(self.active_targets)} selected AirPlay speakers")
+
+        # Stream WAV file concurrently to all active AirPlay speakers
         for dev_id in self.active_targets:
             device = self.devices.get(dev_id)
             if device:
-                asyncio.create_task(self._stream_to_airplay_device(device, stream_url))
+                task = loop.create_task(self._stream_to_device(device, self._current_wav))
+                self._stream_tasks.append(task)
 
         self._broadcast_state()
         return self.get_state()
 
-    async def _stream_to_airplay_device(self, device: AirPlayDevice, stream_url: str):
+    def _transcode_to_wav(self, stream_url: str, output_path: str):
+        try:
+            cmd = ["ffmpeg", "-y", "-i", stream_url, "-vn", "-acodec", "pcm_s16le", "-ar", "44100", "-ac", "2", output_path]
+            subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            logger.info(f"Transcoded audio successfully to {output_path}")
+        except Exception as e:
+            logger.error(f"FFmpeg transcoding error: {e}")
+
+    async def _stream_to_device(self, device: AirPlayDevice, wav_path: str):
         try:
             import pyatv
             loop = asyncio.get_running_loop()
-            atvs = await pyatv.scan(loop=loop, hosts=[device.address], timeout=3)
-            if atvs:
-                atv = await pyatv.connect(atvs[0], loop=loop)
-                await atv.stream.play_url(stream_url)
-                device.is_connected = True
-                logger.info(f"Successfully connected and streaming to AirPlay speaker: {device.name}")
+            results = await pyatv.scan(loop, hosts=[device.address], timeout=3)
+            if results:
+                conf = results[0]
+                atv = await pyatv.connect(conf, loop=loop)
+                try:
+                    device.is_connected = True
+                    self._broadcast_state()
+                    logger.info(f"Starting pyatv stream to speaker: {device.name} ({device.address})")
+                    await atv.stream.stream_file(wav_path)
+                    logger.info(f"Finished pyatv stream to speaker: {device.name}")
+                finally:
+                    atv.close()
+                    device.is_connected = False
+                    self._broadcast_state()
         except Exception as e:
-            logger.warning(f"Server-side AirPlay stream to {device.name} ({device.address}): {e}")
+            logger.warning(f"Error streaming to AirPlay speaker {device.name} ({device.address}): {e}")
 
     async def pause(self):
         self.is_playing = False
@@ -237,11 +281,10 @@ class PlayerEngine:
             elif not selected and device_id in self.active_targets:
                 self.active_targets.remove(device_id)
             
-            # Trigger stream connection if playing
-            if self.is_playing and selected and self.current_track:
-                stream_url = self.current_track.get("streamUrl")
-                if stream_url:
-                    asyncio.create_task(self._stream_to_airplay_device(self.devices[device_id], stream_url))
+            if self.is_playing and selected and os.path.exists(self._current_wav):
+                loop = asyncio.get_event_loop()
+                task = loop.create_task(self._stream_to_device(self.devices[device_id], self._current_wav))
+                self._stream_tasks.append(task)
 
         self._broadcast_state()
         return self.get_state()
