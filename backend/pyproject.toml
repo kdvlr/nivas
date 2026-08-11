@@ -21,6 +21,11 @@ dependencies = [
     "google-genai>=1.0",
     "beautifulsoup4>=4.12",
     "pillow>=10.0",
+    "ytmusicapi>=1.7.0",
+    "yt-dlp>=2024.0.0",
+    "pyatv>=0.14.0",
+    "zeroconf>=0.131.0",
+    "async-lru>=2.0.4",
 ]
 
 [project.optional-dependencies]

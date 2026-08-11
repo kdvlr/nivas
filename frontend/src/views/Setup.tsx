@@ -249,6 +249,9 @@ function SetupInner() {
   const [icCode, setIcCode] = useState('')
   const [icMsg, setIcMsg] = useState('')
   const [busy, setBusy] = useState('')
+  const [ytHeadersText, setYtHeadersText] = useState('')
+  const [ytMsg, setYtMsg] = useState('')
+  const [ytAuthStatus, setYtAuthStatus] = useState<{ authenticated: boolean }>({ authenticated: false })
   const [newPersonName, setNewPersonName] = useState('')
   const [newRewardEmoji, setNewRewardEmoji] = useState('🎁')
   const [newRewardTitle, setNewRewardTitle] = useState('')
@@ -261,6 +264,39 @@ function SetupInner() {
   
   const [confirmDisconnectGoogle, setConfirmDisconnectGoogle] = useState<{ id: number; email: string } | null>(null)
   const [confirmRemovePerson, setConfirmRemovePerson] = useState<Person | null>(null)
+
+  useEffect(() => {
+    api.get<any>('/api/ytmusic/auth').then((res) => setYtAuthStatus(res)).catch(() => {})
+  }, [])
+
+  const saveYtAuth = async () => {
+    if (!ytHeadersText.trim()) return
+    setBusy('ytmusic')
+    setYtMsg('')
+    try {
+      const res = await api.post<any>('/api/ytmusic/auth', { headers: ytHeadersText })
+      setYtAuthStatus(res)
+      setYtMsg('YouTube Music authentication updated successfully!')
+      setYtHeadersText('')
+    } catch (e: any) {
+      setYtMsg(e.message || 'Failed to save YouTube Music headers.')
+    } finally {
+      setBusy('')
+    }
+  }
+
+  const clearYtAuth = async () => {
+    setBusy('ytmusic')
+    try {
+      const res = await api.del<any>('/api/ytmusic/auth')
+      setYtAuthStatus(res)
+      setYtMsg('Reverted to guest mode.')
+    } catch (e: any) {
+      setYtMsg('Failed to clear credentials.')
+    } finally {
+      setBusy('')
+    }
+  }
 
   const renderLastUpdated = (integrationName: string) => {
     const s = status?.sync?.[integrationName]
@@ -399,7 +435,60 @@ function SetupInner() {
         {/* Integration Panel */}
         {section === 'integrations' && (
         <Card title={<><Icon name="cloud_sync" /> Integration</>}>
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-6">
+            {/* YouTube Music Integration */}
+            <div className="rounded-2xl border border-[var(--outline-var)] p-4 bg-slate-50/50 dark:bg-slate-900/30">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-base font-semibold text-ink flex items-center gap-2">
+                  <Icon name="graphic_eq" className="text-lg text-rose-500" />
+                  YouTube Music & Personal Account
+                </h3>
+                <Badge
+                  ok={ytAuthStatus.authenticated}
+                  label={ytAuthStatus.authenticated ? 'authenticated' : 'guest mode'}
+                />
+              </div>
+
+              <p className="text-sm text-ink-soft mb-3 leading-relaxed">
+                Paste your YouTube Music browser request headers or cookie JSON to sync your personal library, history, and custom mixes. Public search and charts work out-of-the-box in Guest Mode.
+              </p>
+
+              {ytMsg && (
+                <p className="mb-3 rounded-xl bg-sky-50 p-2.5 dark:bg-sky-950/60 text-xs font-semibold text-sky-700 dark:text-sky-300">
+                  {ytMsg}
+                </p>
+              )}
+
+              <div className="flex flex-col gap-3">
+                <textarea
+                  rows={3}
+                  value={ytHeadersText}
+                  onChange={(e) => setYtHeadersText(e.target.value)}
+                  placeholder="Paste headers or cookie JSON string here..."
+                  className="w-full rounded-xl border border-[var(--outline-var)] bg-white dark:bg-slate-800 p-3 text-xs font-mono text-ink focus:outline-none focus:border-[var(--primary)]"
+                />
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={saveYtAuth}
+                    disabled={busy === 'ytmusic' || !ytHeadersText.trim()}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-semibold text-xs transition shadow-sm disabled:opacity-50"
+                  >
+                    <Icon name="save" className="text-sm" /> Save Credentials
+                  </button>
+
+                  {ytAuthStatus.authenticated && (
+                    <button
+                      onClick={clearYtAuth}
+                      disabled={busy === 'ytmusic'}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-ink font-semibold text-xs transition"
+                    >
+                      <Icon name="delete" className="text-sm" /> Clear Credentials
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {/* Google Calendar */}
             <div>
               <h3 className="text-base font-semibold text-ink mb-3 flex items-center gap-2">

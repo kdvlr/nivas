@@ -47,6 +47,10 @@ class Settings(BaseSettings):
     def google_client_secret_file(self) -> Path:
         return self.data_dir / "credentials" / "google_client_secret.json"
 
+    @property
+    def ytmusic_headers_file(self) -> Path:
+        return self.data_dir / "credentials" / "ytmusic_headers.json"
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -12,7 +12,8 @@ from fastapi.staticfiles import StaticFiles
 
 from . import scheduler
 from .db import init_db
-from .routers import calendar, chores, meals, recipes, rewards, setup, shopping, tasks, weather, photos
+from .routers import calendar, chores, meals, recipes, rewards, setup, shopping, tasks, weather, photos, ytmusic
+from .services.airplay import airplay_service
 from .ws import manager
 from .config import get_settings
 
@@ -26,13 +27,15 @@ async def lifespan(app: FastAPI):
     init_db()
     manager.set_loop(asyncio.get_running_loop())
     scheduler.start()
+    airplay_service.start_discovery()
     yield
+    airplay_service.stop_discovery()
     scheduler.stop()
 
 
 app = FastAPI(title="Family Dashboard", lifespan=lifespan)
 
-for r in (calendar, tasks, chores, shopping, meals, recipes, rewards, setup, weather, photos):
+for r in (calendar, tasks, chores, shopping, meals, recipes, rewards, setup, weather, photos, ytmusic):
     app.include_router(r.router)
 
 
