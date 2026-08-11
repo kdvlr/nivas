@@ -186,31 +186,72 @@ export default function App() {
   }, [slideshowActive])
   const [photosList, setPhotosList] = useState<any[]>([])
   
-  // YouTube Music Global Player state
+  // YouTube Music Pure Server-Side Synchronized Player State
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null)
   const [isPlaying, setIsPlaying] = useState<boolean>(false)
+  const [elapsedSeconds, setElapsedSeconds] = useState<number>(0)
+  const [durationSeconds, setDurationSeconds] = useState<number>(0)
 
-  const handlePlayTrack = (track: Track) => {
-    setCurrentTrack(track)
-    setIsPlaying(true)
-    api.post('/api/ytmusic/airplay/play', {
+  const syncPlayerState = async () => {
+    try {
+      const state = await api.get<any>('/api/ytmusic/player/state')
+      if (state) {
+        setIsPlaying(state.isPlaying)
+        setCurrentTrack(state.currentTrack)
+        setElapsedSeconds(state.elapsedSeconds || 0)
+        setDurationSeconds(state.durationSeconds || 0)
+      }
+    } catch (e) {
+      // Ignore
+    }
+  }
+
+  useEffect(() => {
+    syncPlayerState()
+    const interval = setInterval(syncPlayerState, 1000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const handlePlayTrack = (track: Track, queue?: Track[]) => {
+    api.post<any>('/api/ytmusic/player/play', {
       videoId: track.videoId,
       title: track.title,
       artist: track.artist,
       thumbnail: track.thumbnail,
       album: track.album,
       duration: track.duration,
+      queue,
+    }).then((res) => {
+      if (res) {
+        setIsPlaying(res.isPlaying)
+        setCurrentTrack(res.currentTrack)
+      }
     }).catch(() => {})
   }
 
   const handleTogglePlay = () => {
-    const nextIsPlaying = !isPlaying
-    setIsPlaying(nextIsPlaying)
-    if (nextIsPlaying) {
-      api.post('/api/ytmusic/airplay/resume').catch(() => {})
-    } else {
-      api.post('/api/ytmusic/airplay/pause').catch(() => {})
-    }
+    const endpoint = isPlaying ? '/api/ytmusic/player/pause' : '/api/ytmusic/player/resume'
+    api.post<any>(endpoint).then((res) => {
+      if (res) setIsPlaying(res.isPlaying)
+    }).catch(() => {})
+  }
+
+  const handleNextTrack = () => {
+    api.post<any>('/api/ytmusic/player/next').then((res) => {
+      if (res) {
+        setIsPlaying(res.isPlaying)
+        setCurrentTrack(res.currentTrack)
+      }
+    }).catch(() => {})
+  }
+
+  const handlePrevTrack = () => {
+    api.post<any>('/api/ytmusic/player/prev').catch(() => {})
+  }
+
+  const handleSeek = (secs: number) => {
+    setElapsedSeconds(secs)
+    api.post<any>('/api/ytmusic/player/seek', { seconds: secs }).catch(() => {})
   }
 
   // Touch gestures for swipe-to-navigate and pull-to-refresh
@@ -731,9 +772,12 @@ export default function App() {
           <MiniPlayerBar
             currentTrack={currentTrack}
             isPlaying={isPlaying}
+            elapsedSeconds={elapsedSeconds}
+            durationSeconds={durationSeconds}
             onTogglePlay={handleTogglePlay}
-            onNextTrack={() => {}}
-            onPrevTrack={() => {}}
+            onNextTrack={handleNextTrack}
+            onPrevTrack={handlePrevTrack}
+            onSeek={handleSeek}
             onOpenFullPlayer={() => { window.location.hash = '#/ytmusic' }}
           />
         </div>

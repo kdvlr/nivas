@@ -1,12 +1,12 @@
 import logging
-from typing import Optional, List
-from fastapi import APIRouter, HTTPException, Query, Response, Request
+from typing import Optional, List, Any, Dict
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import RedirectResponse, StreamingResponse
 from pydantic import BaseModel
 import httpx
 
 from ..services.ytmusic import ytmusic_service
-from ..services.airplay import airplay_service
+from ..services.player_engine import player_engine
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +26,9 @@ class DeviceVolumeRequest(BaseModel):
 class MasterVolumeRequest(BaseModel):
     volume: int
 
+class SeekRequest(BaseModel):
+    seconds: float
+
 class PlayRequest(BaseModel):
     videoId: str
     title: Optional[str] = "Unknown Title"
@@ -33,7 +36,7 @@ class PlayRequest(BaseModel):
     thumbnail: Optional[str] = None
     album: Optional[str] = None
     duration: Optional[int] = 0
-    selectedDeviceIds: Optional[List[str]] = None
+    queue: Optional[List[Dict[str, Any]]] = None
 
 @router.get("/auth")
 def get_auth_status():
@@ -95,73 +98,54 @@ def get_lyrics(video_id: str):
     return ytmusic_service.get_lyrics(video_id)
 
 @router.get("/stream/{video_id}")
-async def get_stream(video_id: str, proxy: bool = Query(False)):
+async def get_stream(video_id: str):
     stream_url = ytmusic_service.get_stream_url(video_id)
     if not stream_url:
         raise HTTPException(status_code=404, detail="Stream URL not found for video")
-    
-    if not proxy:
-        # Fast redirect to CDN audio stream URL
-        return RedirectResponse(url=stream_url, status_code=307)
-    
-    # Proxy audio stream for devices or browser CORS protection
-    async def stream_audio():
-        async with httpx.AsyncClient(follow_redirects=True) as client:
-            async with client.stream("GET", stream_url) as resp:
-                async for chunk in resp.aiter_bytes():
-                    yield chunk
+    return RedirectResponse(url=stream_url, status_code=307)
 
-    return StreamingResponse(stream_audio(), media_type="audio/webm")
+# --- Server-Side AirPlay & Synchronized Player Engine APIs ---
 
-# --- AirPlay Endpoint Control APIs ---
+@router.get("/player/state")
+def get_player_state():
+    return player_engine.get_state()
+
+@router.post("/player/play")
+async def player_play(req: PlayRequest):
+    return await player_engine.play_track(req.model_dump(), req.queue)
+
+@router.post("/player/pause")
+async def player_pause():
+    return await player_engine.pause()
+
+@router.post("/player/resume")
+async def player_resume():
+    return await player_engine.resume()
+
+@router.post("/player/next")
+async def player_next():
+    return await player_engine.next_track()
+
+@router.post("/player/prev")
+async def player_prev():
+    return await player_engine.prev_track()
+
+@router.post("/player/seek")
+async def player_seek(req: SeekRequest):
+    return await player_engine.seek(req.seconds)
 
 @router.get("/airplay/devices")
 def list_airplay_devices():
-    return airplay_service.get_devices()
+    return player_engine.get_state()["devices"]
 
 @router.post("/airplay/devices/toggle")
 def toggle_airplay_device(req: ToggleDeviceRequest):
-    return airplay_service.toggle_device_selection(req.deviceId, req.selected)
+    return player_engine.toggle_device(req.deviceId, req.selected)
 
 @router.post("/airplay/volume/device")
 def set_device_volume(req: DeviceVolumeRequest):
-    updated = airplay_service.set_device_volume(req.deviceId, req.volume)
-    if not updated:
-        raise HTTPException(status_code=404, detail="AirPlay device not found")
-    return updated
+    return player_engine.set_device_volume(req.deviceId, req.volume)
 
 @router.post("/airplay/volume/master")
 def set_master_volume(req: MasterVolumeRequest):
-    new_vol = airplay_service.set_master_volume(req.volume)
-    return {"masterVolume": new_vol, "devices": airplay_service.get_devices()}
-
-@router.post("/airplay/play")
-async def airplay_play(req: PlayRequest):
-    stream_url = ytmusic_service.get_stream_url(req.videoId)
-    if not stream_url:
-        raise HTTPException(status_code=404, detail="Failed to retrieve audio stream URL")
-    
-    track_info = {
-        "videoId": req.videoId,
-        "title": req.title,
-        "artist": req.artist,
-        "thumbnail": req.thumbnail,
-        "album": req.album,
-        "duration": req.duration,
-        "streamUrl": stream_url
-    }
-    
-    status = await airplay_service.play_track(track_info, stream_url, req.selectedDeviceIds)
-    return status
-
-@router.post("/airplay/pause")
-async def airplay_pause():
-    return await airplay_service.pause()
-
-@router.post("/airplay/resume")
-async def airplay_resume():
-    return await airplay_service.resume()
-
-@router.get("/airplay/status")
-def airplay_status():
-    return airplay_service.get_playback_status()
+    return player_engine.set_master_volume(req.volume)

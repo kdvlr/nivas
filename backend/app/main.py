@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from . import scheduler
 from .db import init_db
 from .routers import calendar, chores, meals, recipes, rewards, setup, shopping, tasks, weather, photos, ytmusic
-from .services.airplay import airplay_service
+from .services.player_engine import player_engine
 from .ws import manager
 from .config import get_settings
 
@@ -27,9 +27,9 @@ async def lifespan(app: FastAPI):
     init_db()
     manager.set_loop(asyncio.get_running_loop())
     scheduler.start()
-    airplay_service.start_discovery()
+    player_engine.start()
     yield
-    airplay_service.stop_discovery()
+    player_engine.stop()
     scheduler.stop()
 
 

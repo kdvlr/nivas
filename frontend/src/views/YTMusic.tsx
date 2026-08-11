@@ -39,7 +39,21 @@ export default function YTMusic({
     fetchHome()
     fetchCharts()
     checkAuth()
+    fetchPlayerState()
+    const interval = setInterval(fetchPlayerState, 3000)
+    return () => clearInterval(interval)
   }, [])
+
+  const fetchPlayerState = async () => {
+    try {
+      const state = await api.get<any>('/api/ytmusic/player/state')
+      if (state && Array.isArray(state.queue)) {
+        setQueue(state.queue)
+      }
+    } catch (e) {
+      // Ignore
+    }
+  }
 
   // Fetch lyrics when track changes
   useEffect(() => {
@@ -50,7 +64,7 @@ export default function YTMusic({
 
   const checkAuth = async () => {
     try {
-      const res = await api.get('/api/ytmusic/auth')
+      const res = await api.get<any>('/api/ytmusic/auth')
       setAuthStatus(res)
     } catch (e) {
       console.error('Auth check error', e)

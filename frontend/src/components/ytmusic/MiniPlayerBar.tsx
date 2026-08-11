@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Icon from '../Icon'
 import { api } from '../../lib/api'
@@ -16,66 +16,46 @@ export interface Track {
 interface MiniPlayerBarProps {
   currentTrack: Track | null
   isPlaying: boolean
+  elapsedSeconds: number
+  durationSeconds: number
   onTogglePlay: () => void
   onNextTrack: () => void
   onPrevTrack: () => void
+  onSeek: (seconds: number) => void
   onOpenFullPlayer: () => void
 }
 
 export default function MiniPlayerBar({
   currentTrack,
   isPlaying,
+  elapsedSeconds,
+  durationSeconds,
   onTogglePlay,
   onNextTrack,
   onPrevTrack,
+  onSeek,
   onOpenFullPlayer,
 }: MiniPlayerBarProps) {
   const [showAirPlayModal, setShowAirPlayModal] = useState(false)
   const [activeAirPlayCount, setActiveAirPlayCount] = useState(0)
-  const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(0)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
 
-  // Fetch active AirPlay devices count
   const checkAirPlayStatus = async () => {
     try {
-      const res = await api.get('/api/ytmusic/airplay/devices')
-      if (Array.isArray(res)) {
-        const count = res.filter((d: any) => d.isSelected).length
+      const res = await api.get<any>('/api/ytmusic/player/state')
+      if (res && Array.isArray(res.devices)) {
+        const count = res.devices.filter((d: any) => d.isSelected).length
         setActiveAirPlayCount(count)
       }
     } catch (e) {
-      // Ignore errors if backend service initializing
+      // Ignore
     }
   }
 
   useEffect(() => {
     checkAirPlayStatus()
-    const interval = setInterval(checkAirPlayStatus, 6000)
+    const interval = setInterval(checkAirPlayStatus, 5000)
     return () => clearInterval(interval)
   }, [])
-
-  // Manage local HTML5 audio fallback
-  useEffect(() => {
-    if (!currentTrack || !audioRef.current) return
-    const streamUrl = `/api/ytmusic/stream/${currentTrack.videoId}`
-    if (audioRef.current.src !== window.location.origin + streamUrl) {
-      audioRef.current.src = streamUrl
-      audioRef.current.load()
-      if (isPlaying) {
-        audioRef.current.play().catch((e) => console.log('Audio autoplay blocked', e))
-      }
-    }
-  }, [currentTrack])
-
-  useEffect(() => {
-    if (!audioRef.current) return
-    if (isPlaying) {
-      audioRef.current.play().catch((e) => console.log('Audio play error', e))
-    } else {
-      audioRef.current.pause()
-    }
-  }, [isPlaying])
 
   const formatTime = (secs: number) => {
     if (!secs || isNaN(secs)) return '0:00'
@@ -88,17 +68,6 @@ export default function MiniPlayerBar({
 
   return (
     <>
-      <audio
-        ref={audioRef}
-        onTimeUpdate={() => {
-          if (audioRef.current) {
-            setCurrentTime(audioRef.current.currentTime)
-            setDuration(audioRef.current.duration || currentTrack.duration || 0)
-          }
-        }}
-        onEnded={onNextTrack}
-      />
-
       <motion.div
         initial={{ y: 80, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -168,20 +137,16 @@ export default function MiniPlayerBar({
           </div>
 
           <div className="flex items-center gap-2 w-full text-[11px] font-mono text-slate-400">
-            <span>{formatTime(currentTime)}</span>
+            <span>{formatTime(elapsedSeconds)}</span>
             <input
               type="range"
               min={0}
-              max={duration || 100}
-              value={currentTime}
-              onChange={(e) => {
-                const val = Number(e.target.value)
-                setCurrentTime(val)
-                if (audioRef.current) audioRef.current.currentTime = val
-              }}
+              max={durationSeconds || 100}
+              value={elapsedSeconds}
+              onChange={(e) => onSeek(Number(e.target.value))}
               className="w-full h-1 rounded-lg bg-slate-700 accent-rose-400 cursor-pointer"
             />
-            <span>{formatTime(duration)}</span>
+            <span>{formatTime(durationSeconds)}</span>
           </div>
         </div>
 
