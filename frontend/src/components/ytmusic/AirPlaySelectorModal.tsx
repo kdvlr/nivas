@@ -20,44 +20,46 @@ interface AirPlaySelectorModalProps {
 }
 
 export default function AirPlaySelectorModal({ isOpen, onClose }: AirPlaySelectorModalProps) {
-  const [devices, setDevices] = useState<AirPlayDevice[]>([])
+  const [devices, setDevices] = useState<any[]>([])
   const [masterVolume, setMasterVolume] = useState<number>(70)
   const [loading, setLoading] = useState<boolean>(false)
 
   const fetchDevices = async () => {
-    setLoading(true)
     try {
-      const res = await api.get<any>('/api/ytmusic/airplay/devices')
-      if (Array.isArray(res)) {
-        setDevices(res)
+      const res = await api.get<any>('/api/ytmusic/player/state')
+      if (res && Array.isArray(res.devices)) {
+        setDevices(res.devices)
       }
-      const status = await api.get<any>('/api/ytmusic/airplay/status')
-      if (status && typeof status.masterVolume === 'number') {
-        setMasterVolume(status.masterVolume)
+      if (res && typeof res.masterVolume === 'number') {
+        setMasterVolume(res.masterVolume)
       }
     } catch (e) {
       console.error('Failed to fetch AirPlay devices', e)
-    } finally {
-      setLoading(false)
     }
   }
 
   useEffect(() => {
     if (isOpen) {
-      fetchDevices()
-      const interval = setInterval(fetchDevices, 5000)
+      setLoading(true)
+      fetchDevices().finally(() => setLoading(false))
+      const interval = setInterval(fetchDevices, 4000)
       return () => clearInterval(interval)
     }
   }, [isOpen])
 
   const toggleDevice = async (deviceId: string, currentSelected: boolean) => {
+    const nextSelected = !currentSelected
+    // Optimistic UI state update
+    setDevices((prev) =>
+      prev.map((d) => (d.id === deviceId ? { ...d, isSelected: nextSelected } : d))
+    )
     try {
-      const updated = await api.post<any>('/api/ytmusic/airplay/devices/toggle', {
+      const res = await api.post<any>('/api/ytmusic/airplay/devices/toggle', {
         deviceId,
-        selected: !currentSelected,
+        selected: nextSelected,
       })
-      if (Array.isArray(updated)) {
-        setDevices(updated)
+      if (res && Array.isArray(res.devices)) {
+        setDevices(res.devices)
       }
     } catch (e) {
       console.error('Failed to toggle device', e)
@@ -69,7 +71,10 @@ export default function AirPlaySelectorModal({ isOpen, onClose }: AirPlaySelecto
       prev.map((d) => (d.id === deviceId ? { ...d, volume: vol } : d))
     )
     try {
-      await api.post<any>('/api/ytmusic/airplay/volume/device', { deviceId, volume: vol })
+      const res = await api.post<any>('/api/ytmusic/airplay/volume/device', { deviceId, volume: vol })
+      if (res && Array.isArray(res.devices)) {
+        setDevices(res.devices)
+      }
     } catch (e) {
       console.error('Failed to update device volume', e)
     }
@@ -117,7 +122,8 @@ export default function AirPlaySelectorModal({ isOpen, onClose }: AirPlaySelecto
             </div>
             <button
               onClick={onClose}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition text-slate-300"
+              type="button"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition text-slate-300 cursor-pointer"
             >
               <Icon name="close" className="text-xl" />
             </button>
@@ -147,11 +153,15 @@ export default function AirPlaySelectorModal({ isOpen, onClose }: AirPlaySelecto
             {/* Device List */}
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                <span>Discovered Speakers ({devices.length})</span>
+                <span>Audio Speakers ({devices.length})</span>
                 <button
-                  onClick={fetchDevices}
+                  type="button"
+                  onClick={() => {
+                    setLoading(true)
+                    fetchDevices().finally(() => setLoading(false))
+                  }}
                   disabled={loading}
-                  className="flex items-center gap-1 text-sky-400 hover:text-sky-300 transition"
+                  className="flex items-center gap-1 text-sky-400 hover:text-sky-300 transition cursor-pointer"
                 >
                   <Icon name="sync" className={`text-sm ${loading ? 'animate-spin' : ''}`} />
                   Scan
@@ -161,8 +171,7 @@ export default function AirPlaySelectorModal({ isOpen, onClose }: AirPlaySelecto
               {devices.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 rounded-2xl bg-white/5 text-slate-400 gap-2 border border-dashed border-white/10">
                   <Icon name="speaker_group" className="text-4xl text-slate-500" />
-                  <p className="text-sm font-medium">Scanning local network for AirPlay 2 devices...</p>
-                  <p className="text-xs text-slate-500">Ensure HomePods or Apple TVs are on the same Wi-Fi</p>
+                  <p className="text-sm font-medium">Scanning local network for AirPlay 2 speakers...</p>
                 </div>
               ) : (
                 devices.map((device) => (
@@ -175,9 +184,10 @@ export default function AirPlaySelectorModal({ isOpen, onClose }: AirPlaySelecto
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <div
+                      <button
+                        type="button"
                         onClick={() => toggleDevice(device.id, device.isSelected)}
-                        className="flex items-center gap-3 cursor-pointer select-none flex-1"
+                        className="flex items-center gap-3 cursor-pointer select-none flex-1 text-left bg-transparent border-0 p-0"
                       >
                         <div
                           className={`flex h-6 w-6 items-center justify-center rounded-lg border transition ${
@@ -198,10 +208,10 @@ export default function AirPlaySelectorModal({ isOpen, onClose }: AirPlaySelecto
                             )}
                           </div>
                           <span className="text-xs text-slate-400 font-mono">
-                            {device.model} · {device.address}
+                            {device.address}
                           </span>
                         </div>
-                      </div>
+                      </button>
                     </div>
 
                     {device.isSelected && (
@@ -228,10 +238,11 @@ export default function AirPlaySelectorModal({ isOpen, onClose }: AirPlaySelecto
 
           {/* Footer */}
           <div className="flex items-center justify-between px-6 py-4 bg-white/5 border-t border-white/10 text-xs text-slate-400">
-            <span>Synchronized AirPlay 2 Engine</span>
+            <span>Server-Side Synchronized Audio</span>
             <button
               onClick={onClose}
-              className="px-5 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold transition shadow-lg shadow-sky-500/20"
+              type="button"
+              className="px-5 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold transition shadow-lg shadow-sky-500/20 cursor-pointer"
             >
               Done
             </button>

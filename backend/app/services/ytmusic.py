@@ -135,7 +135,7 @@ class YTMusicService:
             logger.error(f"YTMusic get_home error: {e}")
             return []
 
-    def get_charts(self, country: str = "US") -> Dict[str, Any]:
+    def get_charts(self, country: str = "IN") -> Dict[str, Any]:
         cache_key = f"charts:{country}"
         cached = self._get_cache(cache_key)
         if cached is not None:

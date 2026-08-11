@@ -87,7 +87,7 @@ export default function YTMusic({
 
   const fetchCharts = async () => {
     try {
-      const res = await api.get('/api/ytmusic/charts?country=US')
+      const res = await api.get<any>('/api/ytmusic/charts?country=IN')
       setCharts(res)
     } catch (e) {
       console.error('Failed to load charts', e)
