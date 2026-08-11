@@ -323,7 +323,12 @@ function SetupInner() {
   const savePeople = async (list: Person[]) => {
     await api.put(
       '/api/setup/people',
-      list.map((p) => ({ name: p.name, color: p.color, avatar_emoji: p.avatar_emoji ?? '' })),
+      list.map((p) => ({
+        name: p.name,
+        color: p.color,
+        avatar_emoji: p.avatar_emoji ?? '',
+        chores_enabled: p.chores_enabled !== false,
+      })),
     )
     reloadPeople()
   }
