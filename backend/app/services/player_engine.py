@@ -50,9 +50,8 @@ class PlayerEngine:
         
         self._scanner_task: Optional[asyncio.Task] = None
         self._ticker_task: Optional[asyncio.Task] = None
+        self._play_task: Optional[asyncio.Task] = None
         self._stream_tasks: List[asyncio.Task] = []
-        self._transcode_proc: Optional[subprocess.Popen] = None
-        self._current_mp3: str = "/tmp/ytmusic_current.mp3"
 
     def start(self):
         loop = asyncio.get_event_loop()
@@ -69,12 +68,9 @@ class PlayerEngine:
         self._stop_current_stream()
 
     def _stop_current_stream(self):
-        if self._transcode_proc:
-            try:
-                self._transcode_proc.kill()
-            except Exception:
-                pass
-            self._transcode_proc = None
+        if self._play_task and not self._play_task.done():
+            self._play_task.cancel()
+            self._play_task = None
 
         for task in self._stream_tasks:
             if not task.done():
@@ -116,7 +112,7 @@ class PlayerEngine:
                 model = str(conf.device_info.model or "AirPlay Speaker") if conf.device_info else "AirPlay Speaker"
 
                 if dev_id in self.devices:
-                    # Update existing device info
+                    # Update existing device info while preserving selection & volume
                     dev = self.devices[dev_id]
                     dev.name = name
                     dev.model = model
@@ -179,11 +175,6 @@ class PlayerEngine:
 
         self._stop_current_stream()
 
-        stream_url = ytmusic_service.get_stream_url(video_id)
-        if not stream_url:
-            logger.error(f"Could not extract audio stream URL for video: {video_id}")
-            return self.get_state()
-
         self.current_track = {
             "videoId": video_id,
             "title": track.get("title", "Unknown Title"),
@@ -191,7 +182,6 @@ class PlayerEngine:
             "thumbnail": track.get("thumbnail"),
             "album": track.get("album"),
             "duration": track.get("duration", 0),
-            "streamUrl": stream_url
         }
         self.elapsed_seconds = 0
         self.duration_seconds = track.get("duration", 0) or 180
@@ -200,21 +190,45 @@ class PlayerEngine:
         if queue is not None:
             self.queue = queue
 
-        logger.info(f"Starting server-side MP3 audio transcoding for '{self.current_track['title']}'...")
-
+        # Launch transcode and streaming workflow asynchronously in background task
         loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, self._transcode_to_mp3, stream_url, self._current_mp3)
-
-        logger.info(f"Streaming '{self.current_track['title']}' with track metadata to {len(self.active_targets)} AirPlay speakers")
-
-        for dev_id in self.active_targets:
-            device = self.devices.get(dev_id)
-            if device:
-                task = loop.create_task(self._stream_to_device(device, self._current_mp3))
-                self._stream_tasks.append(task)
+        self._play_task = loop.create_task(self._orchestrate_playback(video_id, self.current_track))
 
         self._broadcast_state()
         return self.get_state()
+
+    async def _orchestrate_playback(self, video_id: str, track_info: Dict[str, Any]):
+        try:
+            stream_url = ytmusic_service.get_stream_url(video_id)
+            if not stream_url:
+                logger.error(f"Could not extract stream URL for track {video_id}")
+                self.is_playing = False
+                self._broadcast_state()
+                return
+
+            mp3_path = f"/tmp/ytmusic_{video_id}.mp3"
+            logger.info(f"Transcoding track '{track_info['title']}' to MP3...")
+
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, self._transcode_to_mp3, stream_url, mp3_path)
+
+            if not os.path.exists(mp3_path) or os.path.getsize(mp3_path) == 0:
+                logger.error(f"Transcoding produced empty file for {video_id}")
+                self.is_playing = False
+                self._broadcast_state()
+                return
+
+            logger.info(f"Transcode complete. Streaming '{track_info['title']}' to {len(self.active_targets)} selected AirPlay speakers")
+
+            for dev_id in self.active_targets:
+                device = self.devices.get(dev_id)
+                if device:
+                    task = loop.create_task(self._stream_to_device(device, mp3_path, track_info))
+                    self._stream_tasks.append(task)
+        except Exception as e:
+            logger.error(f"Error orchestrating playback: {e}")
+            self.is_playing = False
+            self._broadcast_state()
 
     def _transcode_to_mp3(self, stream_url: str, output_path: str):
         try:
@@ -224,7 +238,7 @@ class PlayerEngine:
         except Exception as e:
             logger.error(f"FFmpeg transcoding error: {e}")
 
-    async def _stream_to_device(self, device: AirPlayDevice, mp3_path: str):
+    async def _stream_to_device(self, device: AirPlayDevice, mp3_path: str, track_info: Dict[str, Any]):
         try:
             import pyatv
             from pyatv.interface import MediaMetadata
@@ -238,13 +252,13 @@ class PlayerEngine:
                     self._broadcast_state()
                     
                     meta = MediaMetadata(
-                        title=self.current_track.get("title", "YouTube Music") if self.current_track else "YouTube Music",
-                        artist=self.current_track.get("artist", "Nivas") if self.current_track else "Nivas",
-                        album=self.current_track.get("album") or "YouTube Music",
+                        title=track_info.get("title", "YouTube Music"),
+                        artist=track_info.get("artist", "Nivas"),
+                        album=track_info.get("album") or "YouTube Music",
                         duration=int(self.duration_seconds)
                     )
                     
-                    logger.info(f"Starting pyatv stream with metadata to speaker: {device.name} ({device.address})")
+                    logger.info(f"Starting pyatv stream to speaker: {device.name} ({device.address})")
                     await atv.stream.stream_file(mp3_path, metadata=meta, override_missing_metadata=True)
                     logger.info(f"Finished pyatv stream to speaker: {device.name}")
                 finally:
@@ -295,10 +309,13 @@ class PlayerEngine:
             elif not selected and device_id in self.active_targets:
                 self.active_targets.remove(device_id)
             
-            if self.is_playing and selected and os.path.exists(self._current_mp3):
-                loop = asyncio.get_event_loop()
-                task = loop.create_task(self._stream_to_device(self.devices[device_id], self._current_mp3))
-                self._stream_tasks.append(task)
+            if self.is_playing and selected and self.current_track:
+                video_id = self.current_track.get("videoId")
+                mp3_path = f"/tmp/ytmusic_{video_id}.mp3"
+                if os.path.exists(mp3_path) and os.path.getsize(mp3_path) > 0:
+                    loop = asyncio.get_event_loop()
+                    task = loop.create_task(self._stream_to_device(self.devices[device_id], mp3_path, self.current_track))
+                    self._stream_tasks.append(task)
 
         self._broadcast_state()
         return self.get_state()
