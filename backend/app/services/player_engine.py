@@ -102,6 +102,12 @@ class PlayerEngine:
             for conf in results:
                 addr = conf.address
                 name = conf.name
+                
+                # Filter out TV and MacBook devices (case-insensitive)
+                name_lower = name.lower()
+                if "tv" in name_lower or "macbook" in name_lower:
+                    continue
+
                 if addr in discovered_addresses:
                     continue
                 discovered_addresses.add(addr)
