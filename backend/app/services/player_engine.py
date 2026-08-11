@@ -99,9 +99,9 @@ class PlayerEngine:
                 addr = str(conf.address)
                 name = str(conf.name)
                 
-                # Filter out TV and MacBook devices (case-insensitive)
+                # Filter out TV devices (case-insensitive)
                 name_lower = name.lower()
-                if "tv" in name_lower or "macbook" in name_lower:
+                if "tv" in name_lower:
                     continue
 
                 if addr in discovered_addresses:
