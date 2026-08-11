@@ -11,12 +11,12 @@ FROM rust:alpine AS airplay2-builder
 WORKDIR /build
 RUN apk add --no-cache alsa-lib-dev musl-dev gcc g++ pkgconfig
 COPY airplay2-rs-repo ./
-RUN cargo build --release --example play_audio
+RUN cargo build --release -p airplay-client --example play_audio --example test_group
 
 # ---- backend runtime ----
 FROM python:3.12-slim
 WORKDIR /app
-ENV PYTHONUNBUFFERED=1 DATA_DIR=/data
+ENV PYTHONUNBUFFERED=1 DATA_DIR=/data AIRPLAY_IDENTITY_DIR=/data/airplay-identities
 
 # Install ffmpeg and runtime audio dependencies
 RUN apt-get update \
@@ -28,6 +28,7 @@ COPY backend/app ./app
 RUN pip install --no-cache-dir .
 COPY --from=frontend /build/dist ./static
 COPY --from=airplay2-builder /build/target/release/examples/play_audio /usr/local/bin/airplay-play-audio
+COPY --from=airplay2-builder /build/target/release/examples/test_group /usr/local/bin/airplay-group-play
 
 VOLUME /data
 EXPOSE 8000

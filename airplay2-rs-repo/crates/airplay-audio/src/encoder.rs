@@ -80,25 +80,13 @@ impl AlacEncoder {
     /// Encode a single frame of samples.
     fn encode_frame(&mut self, samples: &[i16]) -> Result<EncodedPacket> {
         let num_samples = samples.len() / self.format.channels as usize;
-
-        // Convert i16 samples to bytes (native endian)
-        let input_bytes: Vec<u8> = samples
-            .iter()
-            .flat_map(|s| s.to_ne_bytes())
-            .collect();
-
-        // Encode using alac-encoder
-        let encoded_size = self.encoder.encode(
-            &self.input_format,
-            &input_bytes,
-            &mut self.output_buffer,
-        );
+        let data = encode_alac_uncompressed_frame(samples);
 
         let timestamp = self.timestamp;
         self.timestamp += num_samples as u64;
 
         Ok(EncodedPacket {
-            data: self.output_buffer[..encoded_size].to_vec(),
+            data,
             samples: num_samples as u32,
             timestamp,
         })
@@ -851,4 +839,39 @@ mod tests {
                 total_packets, total_bytes, test_file);
         }
     }
+}
+
+/// Encode raw 16-bit PCM samples into an uncompressed ALAC escape frame (AirPlay 2 spec / raop_sender.cpp).
+fn encode_alac_uncompressed_frame(samples: &[i16]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(samples.len() * 2 + 8);
+    let mut cur = 0u8;
+    let mut filled = 0;
+
+    let mut put = |val: u32, bits: usize| {
+        for i in (0..bits).rev() {
+            cur = (cur << 1) | (((val >> i) & 1) as u8);
+            filled += 1;
+            if filled == 8 {
+                out.push(cur);
+                cur = 0;
+                filled = 0;
+            }
+        }
+    };
+
+    put(1, 3);    // stereo channel-pair element (CPE)
+    put(0, 4);    // unused
+    put(0, 12);   // unknown
+    put(0, 1);    // hasSize = 0 (use default 352 from magic cookie)
+    put(0, 2);    // wastedBytes = 0
+    put(1, 1);    // isNotCompressed = 1 (uncompressed escape)
+    for &s in samples {
+        put(s as u16 as u32, 16); // 16-bit sample MSB-first
+    }
+    put(7, 3);    // END element tag
+    if filled > 0 {
+        cur <<= 8 - filled;
+        out.push(cur);
+    }
+    out
 }

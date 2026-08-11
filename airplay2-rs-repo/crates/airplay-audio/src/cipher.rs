@@ -41,12 +41,16 @@ pub trait PacketCipher: Send {
 /// a 16-byte tag and 8-byte nonce appended to each packet.
 pub struct ChaChaPacketCipher {
     cipher: AudioCipher,
+    counter: std::sync::atomic::AtomicU64,
 }
 
 impl ChaChaPacketCipher {
     /// Create a new ChaCha20-Poly1305 packet cipher from an existing `AudioCipher`.
     pub fn new(cipher: AudioCipher) -> Self {
-        Self { cipher }
+        Self {
+            cipher,
+            counter: std::sync::atomic::AtomicU64::new(0),
+        }
     }
 }
 
@@ -56,11 +60,12 @@ impl PacketCipher for ChaChaPacketCipher {
         payload: &[u8],
         timestamp: u32,
         ssrc: u32,
-        sequence: u16,
+        _sequence: u16,
     ) -> Result<EncryptedPayload> {
+        let cnt = self.counter.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let (ciphertext, nonce, tag) = self
             .cipher
-            .encrypt_with_seq(payload, timestamp, ssrc, sequence)
+            .encrypt_with_counter(payload, timestamp, ssrc, cnt)
             .map_err(|e| airplay_core::error::Error::Crypto(e))?;
 
         Ok(EncryptedPayload {

@@ -392,6 +392,7 @@ pub struct RtpSender {
     /// Whether the first sync packet has been sent (needs extension bit)
     first_sync_sent: bool,
     /// Ring buffer of recently sent serialized packets, indexed by (sequence % PACKET_HISTORY_SIZE).
+    tcp_stream: Option<std::net::TcpStream>,
     packet_history: Vec<Option<Vec<u8>>>,
 }
 
@@ -408,6 +409,7 @@ impl RtpSender {
             dest,
             control_dest: None,
             control_socket: None,
+            tcp_stream: None,
             sequence: 0,
             ssrc,
             cipher: None,
@@ -415,6 +417,28 @@ impl RtpSender {
             first_sync_sent: false,
             packet_history,
         }
+    }
+
+    /// Connect TCP stream to destination data_port (AirPlay 2 TCP audio streaming).
+    pub fn connect_tcp(&mut self, dest: SocketAddr) -> Result<()> {
+        let stream = std::net::TcpStream::connect_timeout(&dest, std::time::Duration::from_secs(3))?;
+        stream.set_nodelay(true)?;
+        self.dest = dest;
+        self.tcp_stream = Some(stream);
+        Ok(())
+    }
+
+    /// Clone TCP stream for sender thread.
+    pub fn clone_tcp_stream(&self) -> Result<Option<std::net::TcpStream>> {
+        match &self.tcp_stream {
+            Some(s) => Ok(Some(s.try_clone()?)),
+            None => Ok(None),
+        }
+    }
+
+    /// Get destination socket address.
+    pub fn dest(&self) -> SocketAddr {
+        self.dest
     }
 
     /// Set control port destination for sync packets.
@@ -607,11 +631,12 @@ impl RtpSender {
         };
         // Byte 1: 0xd4 = marker bit (0x80) | payload type 84 (0x54)
         packet[1] = 0xd4;
-        // Bytes 2-3: Sync sequence counter (increment after use)
-        packet[2..4].copy_from_slice(&self.sync_sequence.to_be_bytes());
+        // Bytes 2-3: 0x0007 per pyatv / raop_sender.cpp spec
+        packet[2..4].copy_from_slice(&7u16.to_be_bytes());
         self.sync_sequence = self.sync_sequence.wrapping_add(1);
-        // Bytes 4-7: Current playback position (use rtp_timestamp)
-        packet[4..8].copy_from_slice(&rtp_timestamp.to_be_bytes());
+        // Bytes 4-7: Playback position without latency (now - 11025)
+        let render_ts = rtp_timestamp.wrapping_sub(11025);
+        packet[4..8].copy_from_slice(&render_ts.to_be_bytes());
         // Bytes 8-15: NTP timestamp (8 bytes BE)
         packet[8..16].copy_from_slice(&ntp_timestamp.to_be_bytes());
         // Bytes 16-19: RTP timestamp (BE)
@@ -623,8 +648,8 @@ impl RtpSender {
             let ntp_secs = (ntp_timestamp >> 32) as u32;
             let ntp_frac = ntp_timestamp as u32;
             tracing::info!(
-                "DIAG sync #{}: dest={}, rtp_ts={}, ntp_secs={}, ntp_frac={}, first_byte=0x{:02x}, pkt={:02x?}",
-                self.sync_sequence - 1, dest, rtp_timestamp, ntp_secs, ntp_frac,
+                "DIAG sync #{}: dest={}, render_ts={}, rtp_ts={}, ntp_secs={}, ntp_frac={}, first_byte=0x{:02x}, pkt={:02x?}",
+                self.sync_sequence - 1, dest, render_ts, rtp_timestamp, ntp_secs, ntp_frac,
                 packet[0], &packet[..20]
             );
         }
@@ -652,9 +677,10 @@ impl RtpSender {
             0x80
         };
         packet[1] = 0xd4;
-        packet[2..4].copy_from_slice(&self.sync_sequence.to_be_bytes());
+        packet[2..4].copy_from_slice(&7u16.to_be_bytes());
         self.sync_sequence = self.sync_sequence.wrapping_add(1);
-        packet[4..8].copy_from_slice(&rtp_timestamp.to_be_bytes());
+        let render_ts = rtp_timestamp.wrapping_sub(11025);
+        packet[4..8].copy_from_slice(&render_ts.to_be_bytes());
         packet[8..16].copy_from_slice(&ntp_timestamp.to_be_bytes());
         packet[16..20].copy_from_slice(&rtp_timestamp.to_be_bytes());
 
@@ -873,6 +899,14 @@ impl RtpReceiver {
         let port = socket.local_addr()?.port();
         self.socket = Some(socket);
         Ok(port)
+    }
+
+    /// Send dummy UDP packet to punch a hole through stateful VLAN firewall.
+    pub fn hole_punch(&self, target: std::net::SocketAddr) -> Result<()> {
+        if let Some(socket) = &self.socket {
+            let _ = socket.send_to(&[0u8; 8], target);
+        }
+        Ok(())
     }
 
     /// Receive packet with timeout.

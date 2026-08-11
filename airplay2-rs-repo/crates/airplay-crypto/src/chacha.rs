@@ -211,6 +211,25 @@ impl AudioCipher {
         self.encrypt_with_nonce(audio_data, rtp_timestamp, ssrc, nonce_8)
     }
 
+    /// Encrypt audio data using an 8-byte incremental counter (starting at 0 for packet #0).
+    ///
+    /// The 12-byte ChaCha20 nonce is constructed as:
+    /// ```text
+    /// nonce[0..3] = 0x00000000        # First 4 bytes are zero
+    /// nonce[4..11] = counter          # 8-byte little-endian packet counter
+    /// ```
+    /// Matches AirPlay 2 spec (pyatv/raop_sender.cpp counterNonce8 + pad12).
+    pub fn encrypt_with_counter(
+        &self,
+        audio_data: &[u8],
+        rtp_timestamp: u32,
+        ssrc: u32,
+        counter: u64,
+    ) -> Result<(Vec<u8>, [u8; 8], [u8; 16]), CryptoError> {
+        let nonce_8 = counter.to_le_bytes();
+        self.encrypt_with_nonce(audio_data, rtp_timestamp, ssrc, nonce_8)
+    }
+
     /// Encrypt audio data using sequence number in nonce.
     ///
     /// The 12-byte ChaCha20 nonce is constructed as:

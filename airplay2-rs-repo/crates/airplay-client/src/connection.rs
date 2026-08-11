@@ -1,29 +1,34 @@
 //! Device connection management.
 
-use airplay_core::{Device, StreamConfig, error::Result};
 use airplay_core::error::{Error as CoreError, RtspError};
 use airplay_core::features::AuthMethod;
-use airplay_rtsp::{RtspConnection, RtspSession, SessionState, RtspRequest};
-use airplay_pairing::{PairingSession, PairVerify, PairSetup, ControllerIdentity};
+use airplay_core::{error::Result, Device, StreamConfig};
 use airplay_crypto::ed25519::IdentityKeyPair;
-use std::path::PathBuf;
+use airplay_pairing::{ControllerIdentity, PairSetup, PairVerify, PairingSession};
+use airplay_rtsp::{RtspConnection, RtspRequest, RtspSession, SessionState};
 use std::fs;
+use std::path::PathBuf;
 // Timing imports reserved for future use
 // use airplay_timing::{TimingProtocol, NtpTimingClient, PtpClient};
-use airplay_audio::{AudioStreamer, AudioDecoder, LiveAudioDecoder, RtpSender, RtpReceiver, EqConfig, EqParams};
-use airplay_audio::cipher::{PacketCipher, ChaChaPacketCipher};
-use std::sync::Arc;
-use airplay_crypto::chacha::ControlCipher;
-use airplay_crypto::chacha::AudioCipher;
-use airplay_crypto::keys::SharedSecret;
 use crate::PlaybackState;
-use std::net::{IpAddr, SocketAddr, UdpSocket};
-use tracing::{debug, info, warn};
-use airplay_timing::{NtpTimingServer, ClockOffset, PtpMaster, PTP_EVENT_PORT, run_ptp_slave, run_bmca_yield_flow, run_ptp_group_master_flow};
+use airplay_audio::cipher::{ChaChaPacketCipher, PacketCipher};
+use airplay_audio::{
+    AudioDecoder, AudioStreamer, EqConfig, EqParams, LiveAudioDecoder, RtpReceiver, RtpSender,
+};
 use airplay_core::stream::TimingProtocol;
+use airplay_crypto::chacha::AudioCipher;
+use airplay_crypto::chacha::ControlCipher;
+use airplay_crypto::keys::SharedSecret;
+use airplay_timing::{
+    run_bmca_yield_flow, run_ptp_group_master_flow, run_ptp_slave, ClockOffset, NtpTimingServer,
+    PtpMaster, PTP_EVENT_PORT,
+};
+use std::net::{IpAddr, SocketAddr, UdpSocket};
+use std::sync::Arc;
+use tokio::net::TcpStream;
 use tokio::sync::watch;
 use tokio::task::JoinHandle;
-use tokio::net::TcpStream;
+use tracing::{debug, info, warn};
 
 /// Generate a random MAC-like device ID for the client.
 fn generate_device_id() -> String {
@@ -56,7 +61,11 @@ impl PersistentIdentity {
     /// Find identity file for a target device.
     fn identity_file_for(target_device_id: &str) -> PathBuf {
         let suffix = target_device_id.replace(":", "").to_lowercase();
-        PathBuf::from(format!(".airplay_sender_identity_{}.json", suffix))
+        let filename = format!(".airplay_sender_identity_{}.json", suffix);
+        match std::env::var_os("AIRPLAY_IDENTITY_DIR") {
+            Some(directory) => PathBuf::from(directory).join(filename),
+            None => PathBuf::from(filename),
+        }
     }
 
     /// Load identity for a target device if it exists.
@@ -82,7 +91,10 @@ impl PersistentIdentity {
         }
         let seed: [u8; 32] = self.ed25519_secret.clone().try_into().ok()?;
         let keypair = IdentityKeyPair::from_seed(&seed);
-        Some(ControllerIdentity::with_id(keypair, self.controller_id.clone()))
+        Some(ControllerIdentity::with_id(
+            keypair,
+            self.controller_id.clone(),
+        ))
     }
 
     /// Get server LTPK as array if available.
@@ -121,6 +133,19 @@ impl PersistentIdentity {
         let path = Self::identity_file_for(target_device_id);
         match serde_json::to_string_pretty(self) {
             Ok(json) => {
+                if let Some(parent) = path
+                    .parent()
+                    .filter(|parent| !parent.as_os_str().is_empty())
+                {
+                    if let Err(e) = fs::create_dir_all(parent) {
+                        warn!(
+                            "Failed to create identity directory {}: {}",
+                            parent.display(),
+                            e
+                        );
+                        return false;
+                    }
+                }
                 match fs::write(&path, json) {
                     Ok(()) => {
                         info!("Saved identity to {}", path.display());
@@ -241,8 +266,8 @@ impl Connection {
         let identity = IdentityKeyPair::generate();
 
         // 1. TCP connect - prefer IPv4 addresses over link-local IPv6
-        let ip_addr = select_best_address(&device.addresses)
-            .ok_or_else(|| RtspError::ConnectionRefused)?;
+        let ip_addr =
+            select_best_address(&device.addresses).ok_or_else(|| RtspError::ConnectionRefused)?;
         let addr = SocketAddr::new(*ip_addr, device.port);
         info!("Connecting to {} at {}", device.name, addr);
 
@@ -314,10 +339,15 @@ impl Connection {
             }
         }
 
-        // Use the randomly generated shk for audio encryption.
-        // The shk is sent to the receiver in SETUP phase 2.
-        // Don't override with shared secret - that's only for RTSP encryption.
-        tracing::debug!("Using random shk for audio encryption (sent in SETUP phase 2)");
+        if let Some(shared_secret) = pairing.shared_secret() {
+            let secret_bytes = shared_secret.as_bytes();
+            if secret_bytes.len() >= 32 {
+                let mut shk = [0u8; 32];
+                shk.copy_from_slice(&secret_bytes[..32]);
+                session.set_stream_key(shk);
+                tracing::info!("Set stream key (shk) to first 32 bytes of pairing shared secret");
+            }
+        }
 
         session.set_paired()?;
 
@@ -356,18 +386,30 @@ impl Connection {
     /// Use this for devices like Apple TV that require initial pair-setup with
     /// a one-time PIN from `/pair-pin-start`, but then allow pair-verify for
     /// subsequent connections.
-    pub async fn connect_auto(device: Device, config: StreamConfig, fallback_pin: &str) -> Result<Self> {
+    pub async fn connect_auto(
+        device: Device,
+        config: StreamConfig,
+        fallback_pin: &str,
+    ) -> Result<Self> {
         // Check if we have a persisted identity for this device
         let target_device_id = device.id.to_mac_string();
         if let Some(persistent_id) = PersistentIdentity::load_for_device(&target_device_id) {
-            info!("Found persisted identity for {}, attempting pair-verify", target_device_id);
-            match Self::connect_with_pair_verify(device.clone(), config.clone(), &persistent_id).await {
+            info!(
+                "Found persisted identity for {}, attempting pair-verify",
+                target_device_id
+            );
+            match Self::connect_with_pair_verify(device.clone(), config.clone(), &persistent_id)
+                .await
+            {
                 Ok(conn) => {
                     info!("Pair-verify successful");
                     return Ok(conn);
                 }
                 Err(e) => {
-                    warn!("Pair-verify failed: {}, falling back to transient pairing", e);
+                    warn!(
+                        "Pair-verify failed: {}, falling back to transient pairing",
+                        e
+                    );
                 }
             }
         }
@@ -385,17 +427,20 @@ impl Connection {
         // Generate a FRESH random client device ID for this session (like transient pairing)
         // The Ed25519 identity in pair-verify M3 identifies us, not the RTSP device ID
         let client_device_id = generate_device_id();
-        debug!("Using fresh device ID for RTSP session: {}", client_device_id);
+        debug!(
+            "Using fresh device ID for RTSP session: {}",
+            client_device_id
+        );
 
         // Reconstruct the controller identity
-        let controller = persistent_id.to_controller().ok_or_else(|| {
-            RtspError::SetupFailed("Invalid persisted identity".into())
-        })?;
+        let controller = persistent_id
+            .to_controller()
+            .ok_or_else(|| RtspError::SetupFailed("Invalid persisted identity".into()))?;
         let identity = controller.keypair().clone();
 
         // 1. TCP connect
-        let ip_addr = select_best_address(&device.addresses)
-            .ok_or_else(|| RtspError::ConnectionRefused)?;
+        let ip_addr =
+            select_best_address(&device.addresses).ok_or_else(|| RtspError::ConnectionRefused)?;
         let addr = SocketAddr::new(*ip_addr, device.port);
         info!("Connecting to {} at {} (pair-verify)", device.name, addr);
 
@@ -484,6 +529,11 @@ impl Connection {
             }
         }
 
+        if let Some(shk) = pair_verify.shared_secret() {
+            session.set_stream_key(shk);
+            tracing::info!("Set stream key (shk) from pair_verify shared secret");
+        }
+
         session.set_paired()?;
 
         Ok(Self {
@@ -531,15 +581,25 @@ impl Connection {
     /// # Difference from HomeKit Transient
     /// - **Normal (HKP=3)**: User PIN, M1-M6, identity saved, for Apple TV
     /// - **Transient (HKP=4)**: PIN "3939", M1-M4 only, no persistence, for HomePod
-    pub async fn connect_with_pin_pairing(device: Device, config: StreamConfig, pin: &str) -> Result<Self> {
+    pub async fn connect_with_pin_pairing(
+        device: Device,
+        config: StreamConfig,
+        pin: &str,
+    ) -> Result<Self> {
         let client_device_id = generate_device_id();
-        debug!("Using fresh device ID for PIN pairing session: {}", client_device_id);
+        debug!(
+            "Using fresh device ID for PIN pairing session: {}",
+            client_device_id
+        );
 
         // 1. TCP connect
-        let ip_addr = select_best_address(&device.addresses)
-            .ok_or_else(|| RtspError::ConnectionRefused)?;
+        let ip_addr =
+            select_best_address(&device.addresses).ok_or_else(|| RtspError::ConnectionRefused)?;
         let addr = SocketAddr::new(*ip_addr, device.port);
-        info!("Connecting to {} at {} (HomeKit Normal pairing)", device.name, addr);
+        info!(
+            "Connecting to {} at {} (HomeKit Normal pairing)",
+            device.name, addr
+        );
 
         let mut rtsp = RtspConnection::new(addr);
         rtsp.connect().await?;
@@ -573,7 +633,9 @@ impl Connection {
         })?;
         debug!("Pair-setup M1: {} bytes", m1.len());
 
-        let m2_resp = rtsp.send(RtspRequest::pair_setup(m1, &client_device_id, 3)).await?;
+        let m2_resp = rtsp
+            .send(RtspRequest::pair_setup(m1, &client_device_id, 3))
+            .await?;
         let m2_body = m2_resp.body.as_deref().unwrap_or(&[]);
         debug!("Pair-setup M2: {} bytes", m2_body.len());
 
@@ -587,7 +649,9 @@ impl Connection {
         })?;
         debug!("Pair-setup M3: {} bytes", m3.len());
 
-        let m4_resp = rtsp.send(RtspRequest::pair_setup(m3, &client_device_id, 3)).await?;
+        let m4_resp = rtsp
+            .send(RtspRequest::pair_setup(m3, &client_device_id, 3))
+            .await?;
         let m4_body = m4_resp.body.as_deref().unwrap_or(&[]);
         debug!("Pair-setup M4: {} bytes", m4_body.len());
 
@@ -596,12 +660,16 @@ impl Connection {
         })?;
 
         // M5: Send encrypted identity (normal mode - not transient)
-        let m5 = pair_setup.generate_m5_with_controller(&controller).map_err(|e| {
-            RtspError::SetupFailed(format!("Pair-setup M5 generation failed: {}", e))
-        })?;
+        let m5 = pair_setup
+            .generate_m5_with_controller(&controller)
+            .map_err(|e| {
+                RtspError::SetupFailed(format!("Pair-setup M5 generation failed: {}", e))
+            })?;
         debug!("Pair-setup M5: {} bytes", m5.len());
 
-        let m6_resp = rtsp.send(RtspRequest::pair_setup(m5, &client_device_id, 3)).await?;
+        let m6_resp = rtsp
+            .send(RtspRequest::pair_setup(m5, &client_device_id, 3))
+            .await?;
         let m6_body = m6_resp.body.as_deref().unwrap_or(&[]);
         debug!("Pair-setup M6: {} bytes", m6_body.len());
 
@@ -685,6 +753,11 @@ impl Connection {
             }
         }
 
+        if let Some(shk) = pair_verify.shared_secret() {
+            session.set_stream_key(shk);
+            tracing::info!("Set stream key (shk) from pair_verify shared secret");
+        }
+
         session.set_paired()?;
 
         Ok(Self {
@@ -714,7 +787,11 @@ impl Connection {
 
     /// Deprecated alias for `connect_with_pin_pairing`.
     #[deprecated(since = "0.2.0", note = "Use connect_with_pin_pairing instead")]
-    pub async fn connect_with_fruit_pairing(device: Device, config: StreamConfig, pin: &str) -> Result<Self> {
+    pub async fn connect_with_fruit_pairing(
+        device: Device,
+        config: StreamConfig,
+        pin: &str,
+    ) -> Result<Self> {
         Self::connect_with_pin_pairing(device, config, pin).await
     }
 
@@ -730,9 +807,9 @@ impl Connection {
         let local_timing_port = match self.stream_config.timing_protocol {
             TimingProtocol::Ntp => {
                 // For NTP, we run a server that the receiver can sync to
-                let timing_server = NtpTimingServer::start(
-                    self.stream_config.audio_format.sample_rate.as_hz()
-                ).await?;
+                let timing_server =
+                    NtpTimingServer::start(self.stream_config.audio_format.sample_rate.as_hz())
+                        .await?;
                 let port = timing_server.port();
                 tracing::info!("Started NTP timing server on port {}", port);
                 self.timing_server = Some(timing_server);
@@ -752,10 +829,17 @@ impl Connection {
         };
 
         // SETUP Phase 1 (timing/event channels)
-        let local_addresses = self.rtsp.local_addr()
+        if let Some(sa) = self.rtsp.local_addr() {
+            self.session.set_request_host(sa.ip().to_string());
+        }
+        let local_addresses = self
+            .rtsp
+            .local_addr()
             .map(|sa| vec![sa.ip().to_string()])
             .unwrap_or_default();
-        let setup1_body = self.session.build_setup_phase1(local_timing_port, Some(local_addresses))?;
+        let setup1_body = self
+            .session
+            .build_setup_phase1(local_timing_port, Some(local_addresses))?;
         tracing::debug!(
             uri = %self.session.request_uri(),
             body_len = setup1_body.len(),
@@ -773,22 +857,35 @@ impl Connection {
             );
         }
 
-        self.session.process_setup_phase1_response(setup1_resp.body.as_deref().unwrap_or(&[]))?;
+        self.session
+            .process_setup_phase1_response(setup1_resp.body.as_deref().unwrap_or(&[]))?;
 
         // Add RTSP Session header for all subsequent requests (RECORD, SETUP phase 2, etc.)
-        let session_id = setup1_resp.headers.get("Session")
+        let session_id = setup1_resp
+            .headers
+            .get("Session")
             .cloned()
             .unwrap_or_else(|| "1".to_string());
-        self.rtsp.add_session_header("Session", session_id);
+        let session_id_clean = session_id.split(';').next().unwrap_or(&session_id).trim();
+        self.rtsp.add_session_header("Session", session_id_clean);
+        if let Ok(id) = session_id_clean.parse::<u64>() {
+            self.session.set_stream_connection_id(id);
+        } else {
+            self.session.set_stream_connection_id(1);
+        }
 
         // Get device address and ports from SETUP phase 1 response
         // Copy the address value to avoid borrow conflict with later mutable calls
         let addr = *select_best_address(&self.device.addresses)
             .ok_or_else(|| RtspError::ConnectionRefused)?;
-        let ports = self.session.ports()
-            .ok_or_else(|| CoreError::Rtsp(RtspError::InvalidResponse("No ports in SETUP response".into())))?;
+        let ports = self.session.ports().ok_or_else(|| {
+            CoreError::Rtsp(RtspError::InvalidResponse(
+                "No ports in SETUP response".into(),
+            ))
+        })?;
         // Extract port values to avoid borrowing self.session during later mutable calls
         let event_port = ports.event_port;
+        let remote_timing_port = ports.timing_port;
 
         // Establish events connection (reverse connection to device's events port)
         // This MUST be done before SETUP phase 2 or some devices return 500
@@ -801,7 +898,10 @@ impl Connection {
             }
             Err(e) => {
                 // Not fatal - owntone says "proceeding anyway" if this fails
-                warn!("Could not connect to events port {} (proceeding anyway): {}", events_addr, e);
+                warn!(
+                    "Could not connect to events port {} (proceeding anyway): {}",
+                    events_addr, e
+                );
             }
         }
 
@@ -814,6 +914,56 @@ impl Connection {
         tracing::info!("Control port bound to {}", actual_control_port);
         self.control_receiver = Some(Arc::new(control_receiver));
 
+        // Send RECORD right after session SETUP (phase 1) before stream SETUP (phase 2)
+        // owntone / raop_sender.cpp: RECORD tells receiver to enter RECORD state before configuring streams
+        tracing::info!("Sending RECORD request before stream SETUP");
+        let record_req = RtspRequest::record(self.session.request_uri());
+        match tokio::time::timeout(
+            std::time::Duration::from_secs(3),
+            self.rtsp.send(record_req),
+        )
+        .await
+        {
+            Ok(Ok(resp)) => {
+                tracing::info!("RECORD acknowledged with status {}", resp.status_code);
+            }
+            Ok(Err(e)) => warn!("RECORD error (proceeding to SETUP phase 2): {}", e),
+            Err(_) => warn!("RECORD timeout (proceeding to SETUP phase 2)"),
+        }
+
+        // UDP Hole Punching for Cross-VLAN stateful firewalls:
+        // Outbound UDP packets from our local timing & control ports to the receiver's UDP ports
+        // create ESTABLISHED/RELATED entries in stateful routers/firewalls so the receiver's
+        // inbound UDP timing/control probe packets are allowed back through to linsrv.
+        let target_port = if remote_timing_port > 0 {
+            remote_timing_port
+        } else {
+            7001
+        };
+        let target_udp_addr = SocketAddr::new(addr, target_port);
+        tracing::info!(
+            "Hole punching UDP to {} from timing & control sockets",
+            target_udp_addr
+        );
+        if let Some(ref timing_server) = self.timing_server {
+            let _ = timing_server.hole_punch(target_udp_addr).await;
+        }
+        if let Some(ref control_receiver) = self.control_receiver {
+            let _ = control_receiver.hole_punch(target_udp_addr);
+        }
+
+        // RECORD (empty body, standard headers) after session SETUP, BEFORE stream SETUP.
+        // The receiver enters its RECORD state, required before it will render the realtime audio stream.
+        let mut record_req =
+            RtspRequest::new(airplay_rtsp::RtspMethod::Record, self.session.request_uri());
+        if let Some(session_id) = self.session.stream_connection_id() {
+            record_req = record_req.header("Session", session_id.to_string());
+        }
+        match self.rtsp.send(record_req).await {
+            Ok(resp) => tracing::info!("AirPlay 2 RECORD response: status={}", resp.status_code),
+            Err(e) => tracing::warn!("AirPlay 2 RECORD request failed (continuing anyway): {}", e),
+        }
+
         // SETUP Phase 2 (audio stream)
         let setup2_body = self.session.build_setup_phase2()?;
         let setup2_req = RtspRequest::setup(self.session.request_uri(), setup2_body);
@@ -825,30 +975,30 @@ impl Connection {
             setup2_resp.body.is_some()
         );
         if let Some(ref body) = setup2_resp.body {
-            tracing::debug!("SETUP phase2 response body (hex, first 100 bytes): {:02x?}", &body[..body.len().min(100)]);
+            tracing::debug!(
+                "SETUP phase2 response body (hex, first 100 bytes): {:02x?}",
+                &body[..body.len().min(100)]
+            );
         }
-        self.session.process_setup_phase2_response(setup2_resp.body.as_deref().unwrap_or(&[]))?;
+        self.session
+            .process_setup_phase2_response(setup2_resp.body.as_deref().unwrap_or(&[]))?;
 
-        // RECORD — sent after both SETUP phases so the receiver has streams configured
-        tracing::debug!("Sending RECORD request");
-        let record_req = RtspRequest::record_with_info(
-            self.session.request_uri(),
-            0,  // Initial sequence number
-            0,  // Initial RTP time
-        );
-        match tokio::time::timeout(
-            std::time::Duration::from_secs(2),
-            self.rtsp.send(record_req)
-        ).await {
-            Ok(Ok(resp)) => {
-                if resp.status_code == 200 {
-                    tracing::info!("RECORD acknowledged");
-                } else {
-                    warn!("RECORD returned status {} (continuing anyway)", resp.status_code);
-                }
+        if let Some(ports) = self.session.ports() {
+            let data_udp_addr = SocketAddr::new(addr, ports.data_port);
+            let control_udp_addr = SocketAddr::new(addr, ports.control_port);
+            tracing::info!(
+                "Hole punching UDP to data_port {} and control_port {}",
+                data_udp_addr,
+                control_udp_addr
+            );
+            if let Some(ref timing_server) = self.timing_server {
+                let _ = timing_server.hole_punch(data_udp_addr).await;
+                let _ = timing_server.hole_punch(control_udp_addr).await;
             }
-            Ok(Err(e)) => warn!("RECORD error (continuing anyway): {}", e),
-            Err(_) => warn!("RECORD timeout (continuing anyway)"),
+            if let Some(ref control_receiver) = self.control_receiver {
+                let _ = control_receiver.hole_punch(data_udp_addr);
+                let _ = control_receiver.hole_punch(control_udp_addr);
+            }
         }
 
         // SETPEERS disabled — not needed for current receiver targets
@@ -892,22 +1042,26 @@ impl Connection {
                         self.ptp_master_sync_task = Some(tokio::spawn(async move {
                             if let Err(e) = run_bmca_yield_flow(
                                 master_ip,
-                                250,  // Priority1=250 (Mac's value, loses to HomePod's 248)
+                                250, // Priority1=250 (Mac's value, loses to HomePod's 248)
                                 offset_tx,
                                 clock_id_tx,
-                            ).await {
+                            )
+                            .await
+                            {
                                 tracing::error!("BMCA yield flow error: {}", e);
                             }
                         }));
 
                         // Wait for BMCA to complete and get HomePod's clock identity
-                        match tokio::time::timeout(
-                            std::time::Duration::from_secs(5),
-                            clock_id_rx,
-                        ).await {
+                        match tokio::time::timeout(std::time::Duration::from_secs(5), clock_id_rx)
+                            .await
+                        {
                             Ok(Ok(clock_id)) => {
                                 self.ptp_master_clock_id = Some(clock_id);
-                                tracing::info!("BMCA complete: HomePod clock ID = {:02x?}", clock_id);
+                                tracing::info!(
+                                    "BMCA complete: HomePod clock ID = {:02x?}",
+                                    clock_id
+                                );
                             }
                             Ok(Err(_)) => {
                                 tracing::warn!("BMCA: clock ID channel closed unexpectedly");
@@ -922,8 +1076,11 @@ impl Connection {
                         let initial_offset = *offset_rx.borrow_and_update();
                         self.timing_offset = Some(initial_offset);
 
-                        tracing::info!("gPTP BMCA initialized (offset: {} ns, clock_id: {:02x?})",
-                            initial_offset.offset_ns, self.ptp_master_clock_id);
+                        tracing::info!(
+                            "gPTP BMCA initialized (offset: {} ns, clock_id: {:02x?})",
+                            initial_offset.offset_ns,
+                            self.ptp_master_clock_id
+                        );
                     }
                     airplay_core::PtpMode::Slave => {
                         // Slave mode: Receiver (HomePod) is the timing master
@@ -957,7 +1114,10 @@ impl Connection {
                         let initial_offset = *offset_rx.borrow_and_update();
                         self.timing_offset = Some(initial_offset);
 
-                        tracing::info!("PTP slave initialized (initial offset: {} ns)", initial_offset.offset_ns);
+                        tracing::info!(
+                            "PTP slave initialized (initial offset: {} ns)",
+                            initial_offset.offset_ns
+                        );
                     }
                 }
             }
@@ -1027,7 +1187,9 @@ impl Connection {
     pub fn playback_position(&self) -> f64 {
         self.streamer
             .as_ref()
-            .map(|s| s.position() as f64 / self.stream_config.audio_format.sample_rate.as_hz() as f64)
+            .map(|s| {
+                s.position() as f64 / self.stream_config.audio_format.sample_rate.as_hz() as f64
+            })
             .unwrap_or(0.0)
     }
 
@@ -1075,8 +1237,8 @@ impl Connection {
         // starting at the given seq/rtptime.
         let flush_req = RtspRequest::flush_with_info(
             self.session.request_uri(),
-            0,  // Initial sequence number (RtpSender starts at 0)
-            0,  // Initial RTP timestamp
+            0, // Initial sequence number (RtpSender starts at 0)
+            0, // Initial RTP timestamp
         );
         if let Err(e) = self.rtsp.send(flush_req).await {
             tracing::warn!("FLUSH failed (continuing anyway): {}", e);
@@ -1114,7 +1276,10 @@ impl Connection {
                     match control_rx_clone.recv_raw_timeout(std::time::Duration::from_millis(5)) {
                         Ok(Some((data, _addr))) => {
                             if data.len() < 4 {
-                                tracing::debug!("Control channel: ignoring tiny packet ({} bytes)", data.len());
+                                tracing::debug!(
+                                    "Control channel: ignoring tiny packet ({} bytes)",
+                                    data.len()
+                                );
                                 continue;
                             }
 
@@ -1135,32 +1300,50 @@ impl Connection {
                                     // 8-byte compact format
                                     let first_sequence = u16::from_be_bytes([data[4], data[5]]);
                                     let count = u16::from_be_bytes([data[6], data[7]]);
-                                    Some(RetransmitRequest { first_sequence, count })
+                                    Some(RetransmitRequest {
+                                        first_sequence,
+                                        count,
+                                    })
                                 } else if data.len() >= 12 {
                                     RetransmitRequest::parse(&data).ok()
                                 } else {
-                                    let hex: String = data.iter().map(|b| format!("{:02x}", b)).collect::<Vec<_>>().join(" ");
+                                    let hex: String = data
+                                        .iter()
+                                        .map(|b| format!("{:02x}", b))
+                                        .collect::<Vec<_>>()
+                                        .join(" ");
                                     tracing::debug!(
                                         "Control channel: PT=85 unexpected len={}, hex=[{}]",
-                                        data.len(), hex
+                                        data.len(),
+                                        hex
                                     );
                                     None
                                 };
 
                                 if let Some(request) = request {
-                                    stats.rtx_requested.fetch_add(request.count as u64, std::sync::atomic::Ordering::Relaxed);
+                                    stats.rtx_requested.fetch_add(
+                                        request.count as u64,
+                                        std::sync::atomic::Ordering::Relaxed,
+                                    );
                                     tracing::debug!(
                                         "Retransmit request: seq={}, count={}",
-                                        request.first_sequence, request.count
+                                        request.first_sequence,
+                                        request.count
                                     );
                                     // Use block_on to call async handle_retransmit from blocking thread
-                                    match rt_handle.block_on(streamer_clone.handle_retransmit(&request)) {
+                                    match rt_handle
+                                        .block_on(streamer_clone.handle_retransmit(&request))
+                                    {
                                         Ok(retransmitted) => {
                                             if retransmitted > 0 {
-                                                stats.rtx_fulfilled.fetch_add(retransmitted as u64, std::sync::atomic::Ordering::Relaxed);
+                                                stats.rtx_fulfilled.fetch_add(
+                                                    retransmitted as u64,
+                                                    std::sync::atomic::Ordering::Relaxed,
+                                                );
                                                 tracing::info!(
                                                     "Retransmitted {} packets starting from seq {}",
-                                                    retransmitted, request.first_sequence
+                                                    retransmitted,
+                                                    request.first_sequence
                                                 );
                                             }
                                         }
@@ -1171,13 +1354,23 @@ impl Connection {
                                 }
                             } else if payload_type == 84 {
                                 // Sync/timing packet (PT=84) — can ignore
-                                tracing::trace!("Control channel: sync packet (PT=84, {} bytes)", data.len());
+                                tracing::trace!(
+                                    "Control channel: sync packet (PT=84, {} bytes)",
+                                    data.len()
+                                );
                             } else {
                                 // Log unknown packet types with hex dump for debugging
-                                let hex: String = data.iter().take(16).map(|b| format!("{:02x}", b)).collect::<Vec<_>>().join(" ");
+                                let hex: String = data
+                                    .iter()
+                                    .take(16)
+                                    .map(|b| format!("{:02x}", b))
+                                    .collect::<Vec<_>>()
+                                    .join(" ");
                                 tracing::debug!(
                                     "Control channel: unknown PT={}, len={}, hex=[{}]",
-                                    payload_type, data.len(), hex
+                                    payload_type,
+                                    data.len(),
+                                    hex
                                 );
                             }
                         }
@@ -1238,11 +1431,7 @@ impl Connection {
         }
 
         // FLUSH before streaming
-        let flush_req = RtspRequest::flush_with_info(
-            self.session.request_uri(),
-            0,
-            0,
-        );
+        let flush_req = RtspRequest::flush_with_info(self.session.request_uri(), 0, 0);
         if let Err(e) = self.rtsp.send(flush_req).await {
             tracing::warn!("FLUSH failed (continuing anyway): {}", e);
         } else {
@@ -1283,7 +1472,10 @@ impl Connection {
                                 let request = if data.len() == 8 {
                                     let first_sequence = u16::from_be_bytes([data[4], data[5]]);
                                     let count = u16::from_be_bytes([data[6], data[7]]);
-                                    Some(RetransmitRequest { first_sequence, count })
+                                    Some(RetransmitRequest {
+                                        first_sequence,
+                                        count,
+                                    })
                                 } else if data.len() >= 12 {
                                     RetransmitRequest::parse(&data).ok()
                                 } else {
@@ -1291,14 +1483,23 @@ impl Connection {
                                 };
 
                                 if let Some(request) = request {
-                                    stats.rtx_requested.fetch_add(request.count as u64, std::sync::atomic::Ordering::Relaxed);
-                                    match rt_handle.block_on(streamer_clone.handle_retransmit(&request)) {
+                                    stats.rtx_requested.fetch_add(
+                                        request.count as u64,
+                                        std::sync::atomic::Ordering::Relaxed,
+                                    );
+                                    match rt_handle
+                                        .block_on(streamer_clone.handle_retransmit(&request))
+                                    {
                                         Ok(retransmitted) => {
                                             if retransmitted > 0 {
-                                                stats.rtx_fulfilled.fetch_add(retransmitted as u64, std::sync::atomic::Ordering::Relaxed);
+                                                stats.rtx_fulfilled.fetch_add(
+                                                    retransmitted as u64,
+                                                    std::sync::atomic::Ordering::Relaxed,
+                                                );
                                                 tracing::debug!(
                                                     "Retransmitted {} packets starting from seq {}",
-                                                    retransmitted, request.first_sequence
+                                                    retransmitted,
+                                                    request.first_sequence
                                                 );
                                             }
                                         }
@@ -1336,11 +1537,7 @@ impl Connection {
         }
 
         // Send FLUSH with RTP-Info to pause on receiver
-        let flush_req = RtspRequest::flush_with_info(
-            self.session.request_uri(),
-            0,
-            0,
-        );
+        let flush_req = RtspRequest::flush_with_info(self.session.request_uri(), 0, 0);
         self.rtsp.send(flush_req).await?;
 
         // Reset marker/extension bit state so the next RECORD sends them correctly
@@ -1377,11 +1574,7 @@ impl Connection {
 
         // Send FLUSH with RTP-Info to stop on receiver.
         // Using flush_with_info avoids 400 Bad Request from HomePod.
-        let flush_req = RtspRequest::flush_with_info(
-            self.session.request_uri(),
-            0,
-            0,
-        );
+        let flush_req = RtspRequest::flush_with_info(self.session.request_uri(), 0, 0);
         let _ = self.rtsp.send(flush_req).await;
 
         // Reset marker/extension bit state in case streaming resumes later
@@ -1443,9 +1636,54 @@ impl Connection {
 
         // Send SET_PARAMETER with volume
         let volume_body = self.session.build_set_volume(clamped)?;
-        let volume_req = RtspRequest::set_parameter_text(self.session.request_uri(), volume_body);
-        self.rtsp.send(volume_req).await?;
+        let mut volume_req =
+            RtspRequest::set_parameter_text(self.session.request_uri(), volume_body);
+        if let Some(session_id) = self.session.stream_connection_id() {
+            volume_req = volume_req.header("Session", session_id.to_string());
+        }
+        let res = self.rtsp.send(volume_req).await;
+        tracing::debug!("set_volume result: {:?}", res);
 
+        Ok(())
+    }
+
+    /// Send now-playing metadata (title, album, artist) using DMAP-tagged format.
+    pub async fn send_metadata(&mut self, title: &str, album: &str, artist: &str) -> Result<()> {
+        let mut inner = Vec::new();
+        if !title.is_empty() {
+            inner.extend_from_slice(&dmap_tag(b"minm", title.as_bytes()));
+        }
+        if !album.is_empty() {
+            inner.extend_from_slice(&dmap_tag(b"asal", album.as_bytes()));
+        }
+        if !artist.is_empty() {
+            inner.extend_from_slice(&dmap_tag(b"asar", artist.as_bytes()));
+        }
+        if inner.is_empty() {
+            return Ok(());
+        }
+
+        let body = dmap_tag(b"mlit", &inner);
+        let mut req = RtspRequest::new(
+            airplay_rtsp::RtspMethod::SetParameter,
+            self.session.request_uri(),
+        )
+        .header("Content-Type", "application/x-dmap-tagged")
+        .header("RTP-Info", "seq=0;rtptime=0")
+        .body(body);
+
+        if let Some(session_id) = self.session.stream_connection_id() {
+            req = req.header("Session", session_id.to_string());
+        }
+
+        let res = self.rtsp.send(req).await;
+        tracing::info!(
+            "send_metadata ('{}' / '{}' / '{}') result: {:?}",
+            title,
+            artist,
+            album,
+            res
+        );
         Ok(())
     }
 
@@ -1487,24 +1725,32 @@ impl Connection {
 
         // SETUP Phase 1 (timing/event channels)
         let local_timing_port = PTP_EVENT_PORT;
-        let local_addresses = self.rtsp.local_addr()
+        let local_addresses = self
+            .rtsp
+            .local_addr()
             .map(|sa| vec![sa.ip().to_string()])
             .unwrap_or_default();
-        let setup1_body = self.session.build_setup_phase1(local_timing_port, Some(local_addresses))?;
+        let setup1_body = self
+            .session
+            .build_setup_phase1(local_timing_port, Some(local_addresses))?;
         let setup1_req = RtspRequest::setup(self.session.request_uri(), setup1_body);
         let setup1_resp = self.rtsp.send(setup1_req).await?;
 
         if let Some(ref body) = setup1_resp.body {
             tracing::debug!(
                 "SETUP phase 1 response: status={}, body_len={}",
-                setup1_resp.status_code, body.len()
+                setup1_resp.status_code,
+                body.len()
             );
         }
 
-        self.session.process_setup_phase1_response(setup1_resp.body.as_deref().unwrap_or(&[]))?;
+        self.session
+            .process_setup_phase1_response(setup1_resp.body.as_deref().unwrap_or(&[]))?;
 
         // Add RTSP Session header
-        let session_id = setup1_resp.headers.get("Session")
+        let session_id = setup1_resp
+            .headers
+            .get("Session")
             .cloned()
             .unwrap_or_else(|| "1".to_string());
         self.rtsp.add_session_header("Session", session_id);
@@ -1512,8 +1758,11 @@ impl Connection {
         // Establish events connection
         let addr = *select_best_address(&self.device.addresses)
             .ok_or_else(|| RtspError::ConnectionRefused)?;
-        let ports = self.session.ports()
-            .ok_or_else(|| CoreError::Rtsp(RtspError::InvalidResponse("No ports in SETUP response".into())))?;
+        let ports = self.session.ports().ok_or_else(|| {
+            CoreError::Rtsp(RtspError::InvalidResponse(
+                "No ports in SETUP response".into(),
+            ))
+        })?;
         let event_port = ports.event_port;
 
         let events_addr = SocketAddr::new(addr, event_port);
@@ -1524,7 +1773,10 @@ impl Connection {
                 self.events_stream = Some(stream);
             }
             Err(e) => {
-                warn!("Could not connect to events port {} (proceeding anyway): {}", events_addr, e);
+                warn!(
+                    "Could not connect to events port {} (proceeding anyway): {}",
+                    events_addr, e
+                );
             }
         }
 
@@ -1544,17 +1796,17 @@ impl Connection {
             setup2_resp.status_code,
             setup2_resp.body.as_ref().map(|b| b.len()).unwrap_or(0),
         );
-        self.session.process_setup_phase2_response(setup2_resp.body.as_deref().unwrap_or(&[]))?;
+        self.session
+            .process_setup_phase2_response(setup2_resp.body.as_deref().unwrap_or(&[]))?;
 
         // RECORD
-        let record_req = RtspRequest::record_with_info(
-            self.session.request_uri(),
-            0, 0,
-        );
+        let record_req = RtspRequest::record_with_info(self.session.request_uri(), 0, 0);
         match tokio::time::timeout(
             std::time::Duration::from_secs(2),
-            self.rtsp.send(record_req)
-        ).await {
+            self.rtsp.send(record_req),
+        )
+        .await
+        {
             Ok(Ok(resp)) => {
                 if resp.status_code == 200 {
                     tracing::info!("RECORD acknowledged");
@@ -1578,18 +1830,17 @@ impl Connection {
         self.ptp_master_sync_task = Some(tokio::spawn(async move {
             if let Err(e) = run_ptp_group_master_flow(
                 peer_ips_vec,
-                246,  // Priority1=246 — wins against HomePod's 248
+                246, // Priority1=246 — wins against HomePod's 248
                 clock_id_tx,
-            ).await {
+            )
+            .await
+            {
                 tracing::error!("PTP group master flow error: {}", e);
             }
         }));
 
         // Wait for BMCA to complete and get our clock identity
-        match tokio::time::timeout(
-            std::time::Duration::from_secs(8),
-            clock_id_rx,
-        ).await {
+        match tokio::time::timeout(std::time::Duration::from_secs(8), clock_id_rx).await {
             Ok(Ok(clock_id)) => {
                 self.ptp_master_clock_id = Some(clock_id);
                 tracing::info!("PTP master: our clock ID = {:02x?}", clock_id);
@@ -1639,10 +1890,14 @@ impl Connection {
         let local_timing_port = PTP_EVENT_PORT;
 
         // SETUP Phase 1 (timing/event channels)
-        let local_addresses = self.rtsp.local_addr()
+        let local_addresses = self
+            .rtsp
+            .local_addr()
             .map(|sa| vec![sa.ip().to_string()])
             .unwrap_or_default();
-        let setup1_body = self.session.build_setup_phase1(local_timing_port, Some(local_addresses))?;
+        let setup1_body = self
+            .session
+            .build_setup_phase1(local_timing_port, Some(local_addresses))?;
         tracing::debug!(
             uri = %self.session.request_uri(),
             body_len = setup1_body.len(),
@@ -1659,10 +1914,13 @@ impl Connection {
             );
         }
 
-        self.session.process_setup_phase1_response(setup1_resp.body.as_deref().unwrap_or(&[]))?;
+        self.session
+            .process_setup_phase1_response(setup1_resp.body.as_deref().unwrap_or(&[]))?;
 
         // Add RTSP Session header
-        let session_id = setup1_resp.headers.get("Session")
+        let session_id = setup1_resp
+            .headers
+            .get("Session")
             .cloned()
             .unwrap_or_else(|| "1".to_string());
         self.rtsp.add_session_header("Session", session_id);
@@ -1670,19 +1928,28 @@ impl Connection {
         // Establish events connection
         let addr = *select_best_address(&self.device.addresses)
             .ok_or_else(|| RtspError::ConnectionRefused)?;
-        let ports = self.session.ports()
-            .ok_or_else(|| CoreError::Rtsp(RtspError::InvalidResponse("No ports in SETUP response".into())))?;
+        let ports = self.session.ports().ok_or_else(|| {
+            CoreError::Rtsp(RtspError::InvalidResponse(
+                "No ports in SETUP response".into(),
+            ))
+        })?;
         let event_port = ports.event_port;
 
         let events_addr = SocketAddr::new(addr, event_port);
-        tracing::info!("Establishing events connection to {} (group member)", events_addr);
+        tracing::info!(
+            "Establishing events connection to {} (group member)",
+            events_addr
+        );
         match TcpStream::connect(events_addr).await {
             Ok(stream) => {
                 tracing::info!("Events connection established (group member)");
                 self.events_stream = Some(stream);
             }
             Err(e) => {
-                warn!("Could not connect to events port {} (proceeding anyway): {}", events_addr, e);
+                warn!(
+                    "Could not connect to events port {} (proceeding anyway): {}",
+                    events_addr, e
+                );
             }
         }
 
@@ -1690,7 +1957,10 @@ impl Connection {
         let mut control_receiver = RtpReceiver::new();
         let actual_control_port = control_receiver.bind(0)?;
         self.session.set_local_control_port(actual_control_port);
-        tracing::info!("Control port bound to {} (group member)", actual_control_port);
+        tracing::info!(
+            "Control port bound to {} (group member)",
+            actual_control_port
+        );
         self.control_receiver = Some(Arc::new(control_receiver));
 
         // SETUP Phase 2 (audio stream — gets device-specific shk)
@@ -1702,24 +1972,26 @@ impl Connection {
             setup2_resp.status_code,
             setup2_resp.body.as_ref().map(|b| b.len()).unwrap_or(0),
         );
-        self.session.process_setup_phase2_response(setup2_resp.body.as_deref().unwrap_or(&[]))?;
+        self.session
+            .process_setup_phase2_response(setup2_resp.body.as_deref().unwrap_or(&[]))?;
 
         // RECORD
         tracing::debug!("Sending RECORD request (group member)");
-        let record_req = RtspRequest::record_with_info(
-            self.session.request_uri(),
-            0,
-            0,
-        );
+        let record_req = RtspRequest::record_with_info(self.session.request_uri(), 0, 0);
         match tokio::time::timeout(
             std::time::Duration::from_secs(2),
-            self.rtsp.send(record_req)
-        ).await {
+            self.rtsp.send(record_req),
+        )
+        .await
+        {
             Ok(Ok(resp)) => {
                 if resp.status_code == 200 {
                     tracing::info!("RECORD acknowledged (group member)");
                 } else {
-                    warn!("RECORD returned status {} (group member, continuing)", resp.status_code);
+                    warn!(
+                        "RECORD returned status {} (group member, continuing)",
+                        resp.status_code
+                    );
                 }
             }
             Ok(Err(e)) => warn!("RECORD error (group member, continuing): {}", e),
@@ -1744,7 +2016,8 @@ impl Connection {
 
         tracing::info!(
             "Group member RTSP setup complete (clock_id={:02x?}, offset={} ns)",
-            ptp_clock_id, timing_offset.offset_ns
+            ptp_clock_id,
+            timing_offset.offset_ns
         );
         Ok(())
     }
@@ -1755,11 +2028,7 @@ impl Connection {
     /// fresh data starting at the given sequence/timestamp. Should be called
     /// before starting manual streaming loops.
     pub async fn send_flush(&mut self, seq: u16, rtptime: u32) -> Result<()> {
-        let flush_req = RtspRequest::flush_with_info(
-            self.session.request_uri(),
-            seq,
-            rtptime,
-        );
+        let flush_req = RtspRequest::flush_with_info(self.session.request_uri(), seq, rtptime);
         if let Err(e) = self.rtsp.send(flush_req).await {
             tracing::warn!("FLUSH failed (continuing anyway): {}", e);
         } else {
@@ -1790,15 +2059,19 @@ impl Connection {
     /// - ChaCha20-Poly1305 cipher from the session's shk
     /// - SSRC=0 per AirPlay spec
     pub fn build_rtp_sender(&self) -> Result<RtpSender> {
-        let ports = self.session.ports()
+        let ports = self
+            .session
+            .ports()
             .ok_or_else(|| RtspError::SetupFailed("Missing ports from SETUP".into()))?;
         let dest_addr = select_best_address(&self.device.addresses)
             .ok_or_else(|| RtspError::ConnectionRefused)?;
         let dest = SocketAddr::new(*dest_addr, ports.data_port);
         let control_dest = SocketAddr::new(*dest_addr, ports.control_port);
 
-        let mut sender = RtpSender::new(dest, 0); // SSRC=0 per AirPlay spec
+        let mut sender = RtpSender::new(dest, 0); // SSRC = 0 per Apple pcap capture
         sender.set_control_dest(control_dest);
+
+        // Always bind UDP socket for audio streaming
         sender.bind(0)?;
 
         // Clone our control socket so sync packets come from the declared control port
@@ -1824,7 +2097,9 @@ impl Connection {
     /// Returns the destination addresses, per-device cipher, and control socket
     /// needed to send audio to this device from an external loop.
     pub fn streaming_params(&self) -> Result<StreamingParams> {
-        let ports = self.session.ports()
+        let ports = self
+            .session
+            .ports()
             .ok_or_else(|| RtspError::SetupFailed("Missing ports from SETUP".into()))?;
         let dest_addr = select_best_address(&self.device.addresses)
             .ok_or_else(|| RtspError::ConnectionRefused)?;
@@ -1882,7 +2157,8 @@ impl Connection {
     /// Returns a cloned `UdpSocket` from the control receiver, which can be used
     /// to poll for retransmit requests in the group streaming path.
     pub fn clone_control_socket_for_recv(&self) -> Option<UdpSocket> {
-        self.control_receiver.as_ref()
+        self.control_receiver
+            .as_ref()
             .and_then(|rx| rx.try_clone_socket().ok().flatten())
     }
 }
@@ -1946,9 +2222,9 @@ mod tests {
         #[test]
         fn prefers_ipv4_over_ipv6() {
             let addresses = vec![
-                "fe80::1".parse::<IpAddr>().unwrap(),  // link-local IPv6
-                "192.168.1.100".parse().unwrap(),       // IPv4
-                "2001:db8::1".parse().unwrap(),         // global IPv6
+                "fe80::1".parse::<IpAddr>().unwrap(), // link-local IPv6
+                "192.168.1.100".parse().unwrap(),     // IPv4
+                "2001:db8::1".parse().unwrap(),       // global IPv6
             ];
 
             let selected = select_best_address(&addresses);
@@ -1960,9 +2236,9 @@ mod tests {
         #[test]
         fn selects_global_ipv6_when_no_ipv4() {
             let addresses = vec![
-                "fe80::1".parse::<IpAddr>().unwrap(),  // link-local IPv6
-                "2001:db8::1".parse().unwrap(),         // global IPv6
-                "fe80::2".parse().unwrap(),             // another link-local
+                "fe80::1".parse::<IpAddr>().unwrap(), // link-local IPv6
+                "2001:db8::1".parse().unwrap(),       // global IPv6
+                "fe80::2".parse().unwrap(),           // another link-local
             ];
 
             let selected = select_best_address(&addresses);
@@ -1974,8 +2250,8 @@ mod tests {
         #[test]
         fn avoids_link_local_ipv6() {
             let addresses = vec![
-                "fe80::1".parse::<IpAddr>().unwrap(),  // link-local
-                "fe80::2".parse().unwrap(),             // link-local
+                "fe80::1".parse::<IpAddr>().unwrap(), // link-local
+                "fe80::2".parse().unwrap(),           // link-local
             ];
 
             let selected = select_best_address(&addresses);
@@ -1985,9 +2261,7 @@ mod tests {
 
         #[test]
         fn returns_first_address_as_fallback() {
-            let addresses = vec![
-                "fe80::1".parse::<IpAddr>().unwrap(),
-            ];
+            let addresses = vec!["fe80::1".parse::<IpAddr>().unwrap()];
 
             let selected = select_best_address(&addresses);
             assert!(selected.is_some());
@@ -2018,8 +2292,8 @@ mod tests {
         #[test]
         fn avoids_ipv6_loopback() {
             let addresses = vec![
-                "::1".parse::<IpAddr>().unwrap(),      // IPv6 loopback
-                "2001:db8::1".parse().unwrap(),         // global IPv6
+                "::1".parse::<IpAddr>().unwrap(), // IPv6 loopback
+                "2001:db8::1".parse().unwrap(),   // global IPv6
             ];
 
             let selected = select_best_address(&addresses);
@@ -2088,7 +2362,11 @@ mod tests {
 
     mod connection_state {
         use super::*;
-        use airplay_core::{codec::{AudioCodec, AudioFormat, SampleRate}, stream::StreamType, DeviceId};
+        use airplay_core::{
+            codec::{AudioCodec, AudioFormat, SampleRate},
+            stream::StreamType,
+            DeviceId,
+        };
 
         fn make_test_device() -> Device {
             Device {
@@ -2409,4 +2687,12 @@ mod tests {
             assert_eq!(stopped, PlaybackState::Stopped);
         }
     }
+}
+
+fn dmap_tag(code: &[u8; 4], payload: &[u8]) -> Vec<u8> {
+    let mut tag = Vec::with_capacity(8 + payload.len());
+    tag.extend_from_slice(code);
+    tag.extend_from_slice(&(payload.len() as u32).to_be_bytes());
+    tag.extend_from_slice(payload);
+    tag
 }

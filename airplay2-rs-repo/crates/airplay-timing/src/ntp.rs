@@ -393,6 +393,12 @@ impl NtpTimingServer {
         self.port
     }
 
+    /// Send dummy UDP packet to punch a hole through stateful VLAN firewall.
+    pub async fn hole_punch(&self, target: SocketAddr) -> Result<()> {
+        let _ = self.socket.send_to(&[0u8; 8], target).await;
+        Ok(())
+    }
+
     /// Stop the timing server.
     pub async fn stop(&mut self) {
         let _ = self.shutdown_tx.send(true);

@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import subprocess
+import threading
 import time
 from typing import Any, Dict, List, Optional
 from pathlib import Path
@@ -11,6 +12,8 @@ from ..ws import manager
 from .ytmusic import ytmusic_service
 
 logger = logging.getLogger(__name__)
+
+GROUP_STREAM_ID = "__airplay_group__"
 
 class AirPlayDevice:
     def __init__(self, identifier: str, name: str, address: str, port: int = 7000, model: str = "AirPlay Speaker"):
@@ -78,6 +81,8 @@ class PlayerEngine:
             except Exception:
                 pass
         self._stream_procs.clear()
+        for device in self.devices.values():
+            device.is_connected = False
 
     async def _device_scanner_loop(self):
         while True:
@@ -221,10 +226,7 @@ class PlayerEngine:
 
             logger.info(f"Transcode complete. Streaming '{track_info['title']}' via airplay2-rs to {len(self.active_targets)} selected AirPlay speakers")
 
-            for dev_id in self.active_targets:
-                device = self.devices.get(dev_id)
-                if device:
-                    self._start_airplay2_stream(device, wav_path)
+            self._start_airplay_streams(wav_path)
         except Exception as e:
             logger.error(f"Error orchestrating playback: {e}")
             self.is_playing = False
@@ -238,6 +240,61 @@ class PlayerEngine:
         except Exception as e:
             logger.error(f"FFmpeg transcoding error: {e}")
 
+    def _selected_devices(self) -> List[AirPlayDevice]:
+        return [self.devices[device_id] for device_id in self.active_targets if device_id in self.devices]
+
+    def _start_airplay_streams(self, wav_path: str):
+        """Use one PTP group sender for multi-room playback.
+
+        The group sender owns the shared clock and must be the only process
+        binding the PTP ports. A single target continues to use the normal
+        AirPlay 2 sender, which does not need group timing.
+        """
+        devices = self._selected_devices()
+        if len(devices) > 1:
+            self._start_airplay_group_stream(devices, wav_path)
+        elif devices:
+            self._start_airplay2_stream(devices[0], wav_path)
+        else:
+            logger.warning("Playback requested without an AirPlay target")
+
+    def _watch_stream_process(self, stream_id: str, proc: subprocess.Popen, device_ids: List[str]):
+        exit_code = proc.wait()
+        if self._stream_procs.get(stream_id) is not proc:
+            return
+
+        self._stream_procs.pop(stream_id, None)
+        for device_id in device_ids:
+            if device_id in self.devices:
+                self.devices[device_id].is_connected = False
+        if self.is_playing:
+            logger.warning("AirPlay stream %s exited with code %s", stream_id, exit_code)
+            self.is_playing = False
+        self._broadcast_state()
+
+    def _monitor_stream_process(self, stream_id: str, proc: subprocess.Popen, device_ids: List[str]):
+        threading.Thread(
+            target=self._watch_stream_process,
+            args=(stream_id, proc, device_ids),
+            daemon=True,
+            name=f"airplay-monitor-{stream_id}",
+        ).start()
+
+    def _start_airplay_group_stream(self, devices: List[AirPlayDevice], wav_path: str):
+        try:
+            binary_path = "/usr/local/bin/airplay-group-play"
+            target_specs = [f"{device.address}:{device.port}" for device in devices]
+            volume = max(0.0, min(1.0, self.master_volume / 100.0))
+            cmd = [binary_path, *target_specs, "--volume", f"{volume:.2f}", wav_path]
+            proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self._stream_procs[GROUP_STREAM_ID] = proc
+            for device in devices:
+                device.is_connected = True
+            self._monitor_stream_process(GROUP_STREAM_ID, proc, [device.id for device in devices])
+            logger.info("Started synchronized AirPlay 2 PTP group stream for %s", ", ".join(device.name for device in devices))
+        except Exception as e:
+            logger.error(f"Failed to start AirPlay group stream: {e}")
+
     def _start_airplay2_stream(self, device: AirPlayDevice, wav_path: str):
         try:
             binary_path = "/usr/local/bin/airplay-play-audio"
@@ -246,6 +303,7 @@ class PlayerEngine:
             proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             self._stream_procs[device.id] = proc
             device.is_connected = True
+            self._monitor_stream_process(device.id, proc, [device.id])
             logger.info(f"Started airplay2-rs stream process for speaker {device.name} ({device.address}:{device.port}) with volume {vol_float:.2f}")
         except Exception as e:
             logger.error(f"Failed to start airplay2-rs stream process for {device.name}: {e}")
@@ -262,10 +320,7 @@ class PlayerEngine:
             video_id = self.current_track.get("videoId")
             wav_path = f"/tmp/ytmusic_{video_id}.wav"
             if os.path.exists(wav_path):
-                for dev_id in self.active_targets:
-                    device = self.devices.get(dev_id)
-                    if device:
-                        self._start_airplay2_stream(device, wav_path)
+                self._start_airplay_streams(wav_path)
         self._broadcast_state()
         return self.get_state()
 
@@ -297,20 +352,18 @@ class PlayerEngine:
             self.devices[device_id].is_selected = selected
             if selected and device_id not in self.active_targets:
                 self.active_targets.append(device_id)
-                if self.is_playing and self.current_track:
-                    video_id = self.current_track.get("videoId")
-                    wav_path = f"/tmp/ytmusic_{video_id}.wav"
-                    if os.path.exists(wav_path):
-                        self._start_airplay2_stream(self.devices[device_id], wav_path)
             elif not selected and device_id in self.active_targets:
                 self.active_targets.remove(device_id)
-                if device_id in self._stream_procs:
-                    proc = self._stream_procs.pop(device_id)
-                    try:
-                        proc.kill()
-                    except Exception:
-                        pass
-                self.devices[device_id].is_connected = False
+
+            # Group membership is negotiated at sender startup. Recreate the
+            # shared sender when changing rooms so an old member is never left
+            # playing from the prior group session.
+            if self.is_playing and self.current_track:
+                video_id = self.current_track.get("videoId")
+                wav_path = f"/tmp/ytmusic_{video_id}.wav"
+                if os.path.exists(wav_path):
+                    self._stop_current_stream()
+                    self._start_airplay_streams(wav_path)
 
         self._broadcast_state()
         return self.get_state()

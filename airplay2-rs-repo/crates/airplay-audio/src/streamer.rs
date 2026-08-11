@@ -143,8 +143,9 @@ fn monotonic_now_ns() -> u64 {
 /// socket/dest for sync packets. In single-device mode there is one target;
 /// in group mode there is one per device.
 struct SendTarget {
-    data_socket: UdpSocket,
+    data_socket: Option<UdpSocket>,
     data_dest: SocketAddr,
+    tcp_stream: Option<std::net::TcpStream>,
     control_socket: Option<UdpSocket>,
     control_dest: Option<SocketAddr>,
 }
@@ -160,7 +161,7 @@ struct SendTarget {
 /// For example, burst_size=4 sends 4 packets rapidly, then waits 4*frame_duration.
 fn sender_thread_main(
     rx: Receiver<SenderMessage>,
-    targets: Vec<SendTarget>,
+    mut targets: Vec<SendTarget>,
     frame_duration: std::time::Duration,
     burst_size: usize,
 ) {
@@ -317,21 +318,30 @@ fn sender_thread_main(
                     // Send sync packet to ALL targets' control dests
                     if let Some(ref sync) = sync_data {
                         for target in &targets {
-                            let sock = target.control_socket.as_ref()
-                                .unwrap_or(&target.data_socket);
-                            let dest = target.control_dest
-                                .unwrap_or(target.data_dest);
-                            if let Err(e) = sock.send_to(sync, dest) {
-                                tracing::error!("Failed to send sync packet to {}: {}", dest, e);
+                            if let Some(sock) = target.control_socket.as_ref().or(target.data_socket.as_ref()) {
+                                let dest = target.control_dest.unwrap_or(target.data_dest);
+                                if let Err(e) = sock.send_to(sync, dest) {
+                                    tracing::error!("Failed to send sync packet to {}: {}", dest, e);
+                                }
                             }
                         }
                     }
 
                     // Send per-target audio packets
-                    for (i, target) in targets.iter().enumerate() {
+                    for (i, target) in targets.iter_mut().enumerate() {
                         if let Some(wire_data) = wire_packets.get(i) {
-                            if let Err(e) = target.data_socket.send_to(wire_data, target.data_dest) {
-                                tracing::error!("Failed to send audio packet to {}: {}", target.data_dest, e);
+                            if let Some(ref mut tcp) = target.tcp_stream {
+                                use std::io::Write;
+                                let len = (wire_data.len() as u16).to_be_bytes();
+                                if let Err(e) = tcp.write_all(&len) {
+                                    tracing::error!("Failed to write length header to TCP {}: {}", target.data_dest, e);
+                                } else if let Err(e) = tcp.write_all(wire_data) {
+                                    tracing::error!("Failed to write audio packet to TCP {}: {}", target.data_dest, e);
+                                }
+                            } else if let Some(ref sock) = target.data_socket {
+                                if let Err(e) = sock.send_to(wire_data, target.data_dest) {
+                                    tracing::error!("Failed to send audio packet to UDP {}: {}", target.data_dest, e);
+                                }
                             }
                         }
                     }
@@ -586,7 +596,9 @@ impl AudioStreamer {
                 let inner = self.inner.lock().await;
                 let mut targets = Vec::new();
                 for sender in &inner.rtp_senders {
-                    if let Ok(Some((data_sock, data_dest))) = sender.clone_data_socket() {
+                    let tcp = sender.clone_tcp_stream().ok().flatten();
+                    let data_sock = sender.clone_data_socket().ok().flatten().map(|(s, _)| s);
+                    if tcp.is_some() || data_sock.is_some() {
                         let ctrl = sender.clone_control_socket().ok().flatten();
                         let (ctrl_sock, ctrl_dest) = match ctrl {
                             Some((s, d)) => (Some(s), Some(d)),
@@ -594,7 +606,8 @@ impl AudioStreamer {
                         };
                         targets.push(SendTarget {
                             data_socket: data_sock,
-                            data_dest,
+                            data_dest: sender.dest(),
+                            tcp_stream: tcp,
                             control_socket: ctrl_sock,
                             control_dest: ctrl_dest,
                         });
@@ -727,7 +740,9 @@ impl AudioStreamer {
                 let inner = self.inner.lock().await;
                 let mut targets = Vec::new();
                 for sender in &inner.rtp_senders {
-                    if let Ok(Some((data_sock, data_dest))) = sender.clone_data_socket() {
+                    let tcp = sender.clone_tcp_stream().ok().flatten();
+                    let data_sock = sender.clone_data_socket().ok().flatten().map(|(s, _)| s);
+                    if tcp.is_some() || data_sock.is_some() {
                         let ctrl = sender.clone_control_socket().ok().flatten();
                         let (ctrl_sock, ctrl_dest) = match ctrl {
                             Some((s, d)) => (Some(s), Some(d)),
@@ -735,7 +750,8 @@ impl AudioStreamer {
                         };
                         targets.push(SendTarget {
                             data_socket: data_sock,
-                            data_dest,
+                            data_dest: sender.dest(),
+                            tcp_stream: tcp,
                             control_socket: ctrl_sock,
                             control_dest: ctrl_dest,
                         });

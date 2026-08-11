@@ -45,5 +45,10 @@ class ConnectionManager:
         if self._loop is not None and self._loop.is_running():
             asyncio.run_coroutine_threadsafe(self.broadcast(scope), self._loop)
 
+    def broadcast_json(self, data: dict) -> None:
+        """Send a typed event from either a request or worker thread."""
+        if self._loop is not None and self._loop.is_running():
+            asyncio.run_coroutine_threadsafe(self.broadcast_custom(data), self._loop)
+
 
 manager = ConnectionManager()

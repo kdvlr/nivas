@@ -135,10 +135,23 @@ impl RtspSession {
         self.local_control_port = port;
     }
 
+    /// Set stream_connection_id to match RTSP session ID (required by Sonos/WiiM).
+    pub fn set_stream_connection_id(&mut self, id: u64) {
+        self.stream_connection_id = id as u32;
+    }
+
+    /// Get stream_connection_id.
+    pub fn stream_connection_id(&self) -> Option<u64> {
+        if self.stream_connection_id > 0 {
+            Some(self.stream_connection_id as u64)
+        } else {
+            None
+        }
+    }
+
     /// Build RTSP request URI for this session.
     ///
-    /// The session UUID in the URI must match the case of sessionUUID in the plist payload.
-    /// We use uppercase to match the sessionUUID field in SetupPhase1Request.
+    /// Phase 1 uses uppercase UUID. Subsequent phases (RECORD, SETUP phase 2) use numeric session_id (e.g. rtsp://<local_ip>/1).
     pub fn request_uri(&self) -> String {
         let host = self.request_host.as_deref().unwrap_or("local");
         let host = if host.contains(':') && !host.starts_with('[') {
@@ -146,8 +159,11 @@ impl RtspSession {
         } else {
             host.to_string()
         };
-        // Use uppercase UUID to match sessionUUID in plist payload
-        format!("rtsp://{}/{}", host, self.session_id.to_string().to_uppercase())
+        if self.state == SessionState::Disconnected || self.state == SessionState::Paired {
+            format!("rtsp://{}/{}", host, self.session_id.to_string().to_uppercase())
+        } else {
+            format!("rtsp://{}/{}", host, self.stream_connection_id)
+        }
     }
 
     /// Get stream config.
@@ -357,45 +373,50 @@ impl RtspSession {
             .into());
         }
 
-        // Generate AudioSpecificConfig for AAC codecs.
-        // Use ASC from StreamConfig if provided (e.g. ALAC magic cookie),
-        // otherwise generate for AAC if needed
-        let asc = if let Some(ref asc) = self.stream_config.asc {
-            Some(asc.clone())
-        } else {
-            match self.stream_config.audio_format.codec {
-                AudioCodec::Aac | AudioCodec::AacEld => {
-                    // ASC is a 2-byte value that tells the receiver how to decode AAC audio:
-                    // - Object type (AAC-LC = 2) in 5 bits
-                    // - Sample rate index in 4 bits
-                    // - Channel configuration in 4 bits
-                    // For 44100Hz stereo AAC-LC: 0x12, 0x10
-                    // Object type: AAC-LC = 2 (5 bits)
-                    // Sample rate index: 4 = 44100Hz (4 bits)
-                    // Channel config: 2 = stereo (4 bits)
-                    // Byte 0: (object_type << 3) | (sample_rate_index >> 1) = (2 << 3) | (4 >> 1) = 0x12
-                    // Byte 1: ((sample_rate_index & 1) << 7) | (channel_config << 3) = ((4 & 1) << 7) | (2 << 3) = 0x10
-                    Some(vec![0x12, 0x10])
-                }
-                _ => None,
-            }
+        let (stream_type, audio_format, ct, spf, asc) = match self.stream_config.audio_format.codec {
+            AudioCodec::Aac => (
+                103u32,      // 0x67 buffered audio stream
+                0x200000u32, // AAC-ELD / AAC format
+                4u32,        // ct=4 (AAC)
+                1024u32,     // 1024 samples per frame
+                Some(vec![0x12, 0x10]), // 2-byte AAC AudioSpecificConfig for 44.1kHz stereo
+            ),
+            _ => (
+                96u32,       // 0x60 realtime audio stream
+                0x40000u32,  // ALAC 44100/16/2
+                2u32,        // ct=2 (ALAC)
+                352u32,      // 352 samples per frame
+                Some(vec![
+                    0x00, 0x00, 0x01, 0x60, // frameLength = 352
+                    0x00,                   // compatibleVersion = 0
+                    0x0e,                   // bitDepth = 14
+                    0x10,                   // pb = 16
+                    0x28,                   // mb = 40
+                    0x0a,                   // kb = 10
+                    0x02,                   // numChannels = 2
+                    0x00,                   // maxRun = 0
+                    0x00, 0x00, 0x00, 0x00, // maxFrameBytes = 0
+                    0x00, 0x00, 0x00, 0x00, // bitRate = 0
+                    0x00, 0xac, 0x44, 0x00, // sampleRate = 44100
+                ]),
+            ),
         };
 
         let stream_def = StreamDef {
-            stream_type: self.stream_config.stream_type as u32,
-            audio_format: self.stream_config.audio_format.codec.audio_format_value(),
+            stream_type: (self.stream_config.stream_type as u32).max(stream_type),
+            audio_format,
             audio_mode: "default".to_string(),
             sample_rate: self.stream_config.audio_format.sample_rate.as_hz(),
-            ct: self.stream_config.audio_format.codec.compression_type(),
+            ct: ct as u8,
             control_port: self.local_control_port,
             is_media: true,
-            latency_min: self.stream_config.latency_min,
+            latency_min: 11025,
             latency_max: self.stream_config.latency_max,
             shk: self.shk.to_vec(),
             asc,
-            spf: self.stream_config.audio_format.frames_per_packet,
-            supports_dynamic_stream_id: self.stream_config.supports_dynamic_stream_id,
-            stream_connection_id: self.stream_connection_id,
+            spf,
+            supports_dynamic_stream_id: false,
+            stream_connection_id: self.stream_connection_id as u64,
         };
 
         let request = SetupPhase2Request {
@@ -509,16 +530,10 @@ impl RtspSession {
 
     /// Build SET_PARAMETER request for volume.
     pub fn build_set_volume(&self, volume: f32) -> Result<Vec<u8>> {
-        // Volume is sent as text/parameters: "volume: -xx.xx"
-        // AirPlay uses a dB scale; use -144 for mute.
-        let volume_db = if volume <= 0.0 {
-            -144.0_f32 // Mute
-        } else if volume >= 1.0 {
-            0.0_f32 // Max volume
-        } else {
-            20.0 * volume.log10()
-        };
-        Ok(format!("volume: {:.2}\r\n", volume_db).into_bytes())
+        let clamped = volume.clamp(0.0, 1.0);
+        let pct = (clamped * 100.0) as f64;
+        let dbfs = if pct < 0.01 { -144.0 } else { -30.0 + 0.3 * pct };
+        Ok(format!("volume: {:.6}", dbfs).into_bytes())
     }
 
     /// Build SETPEERS request for multi-room.

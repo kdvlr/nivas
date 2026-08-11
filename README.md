@@ -25,6 +25,17 @@ docker compose up -d --build
 
 Open `http://<server-ip>:8080` → **Setup** tab.
 
+### AirPlay 2 multi-room networking
+
+The synchronized AirPlay 2 sender uses mDNS discovery and PTP over UDP ports
+319 and 320. When the dashboard runs in Docker on a Linux LAN server, use host
+networking for AirPlay playback; Docker bridge networking prevents reliable PTP
+and multicast discovery. In that mode, remove the `ports` mapping and expose
+the dashboard directly at `http://<server-ip>:8000` (the container's native
+application port). macOS Docker Desktop has
+different host-networking behavior, so run the server directly or use a Linux
+host for real multi-room playback.
+
 ### Google Calendar
 
 1. In [Google Cloud Console](https://console.cloud.google.com/) create a project → enable the **Google Calendar API**.

@@ -1,18 +1,18 @@
-//! Multi-speaker group streaming test.
+//! Multi-speaker AirPlay 2 group player.
 //!
-//! Streams audio to 2+ HomePods simultaneously using shared PTP clock synchronization.
+//! Streams audio to 2+ AirPlay speakers using shared PTP clock synchronization.
 //! The primary device runs BMCA yield flow; secondary devices share the same clock state.
 //!
 //! Run with: sudo cargo run --example test_group -- <ip1[:port]> <ip2[:port]> [<ip3[:port]> ...] <audio-file>
 //! Example: sudo cargo run --example test_group -- 192.168.1.10 192.168.1.11:33330 test.mp3
 
 #[allow(unused_imports)]
-use airplay_audio::{AudioDecoder, AlacEncoder};
+use airplay_audio::{AlacEncoder, AudioDecoder};
 use airplay_client::Connection;
 use airplay_core::device::{Device, DeviceId};
 use airplay_core::features::Features;
-use airplay_core::{StreamConfig, AudioFormat, AudioCodec};
-use airplay_core::stream::{StreamType, TimingProtocol, PtpMode};
+use airplay_core::stream::{PtpMode, StreamType, TimingProtocol};
+use airplay_core::{AudioCodec, AudioFormat, StreamConfig};
 use std::net::IpAddr;
 use std::time::{Duration, Instant};
 
@@ -34,9 +34,15 @@ fn make_device(ip: IpAddr, port: u16, name: &str) -> Result<Device, Box<dyn std:
         }
         IpAddr::V6(v6) => {
             let s = v6.segments();
-            format!("{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
-                (s[0] >> 8) as u8, s[0] as u8, (s[1] >> 8) as u8, s[1] as u8,
-                (s[2] >> 8) as u8, s[2] as u8)
+            format!(
+                "{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
+                (s[0] >> 8) as u8,
+                s[0] as u8,
+                (s[1] >> 8) as u8,
+                s[1] as u8,
+                (s[2] >> 8) as u8,
+                s[2] as u8
+            )
         }
     };
 
@@ -126,12 +132,22 @@ fn build_ptp_sync_packet(
 
 /// Build an RTP audio packet header (12 bytes).
 #[allow(dead_code)]
-fn build_rtp_header(seq: u16, timestamp: u32, payload_type: u8, ssrc: u32, marker: bool) -> [u8; 12] {
+fn build_rtp_header(
+    seq: u16,
+    timestamp: u32,
+    payload_type: u8,
+    ssrc: u32,
+    marker: bool,
+) -> [u8; 12] {
     let mut header = [0u8; 12];
     // V=2, P=0, X=0, CC=0
     header[0] = 0x80;
     // Marker + PT
-    header[1] = if marker { 0x80 | payload_type } else { payload_type };
+    header[1] = if marker {
+        0x80 | payload_type
+    } else {
+        payload_type
+    };
     // Sequence
     header[2..4].copy_from_slice(&seq.to_be_bytes());
     // Timestamp
@@ -149,18 +165,43 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
 
     let args: Vec<String> = std::env::args().collect();
     if args.len() < 4 {
-        eprintln!("Usage: {} <ip1[:port]> <ip2[:port]> [<ip3[:port]> ...] <audio-file>", args[0]);
-        eprintln!("Example: sudo {} 192.168.1.10 192.168.1.11:33330 test.mp3", args[0]);
+        eprintln!("Usage: {} <ip1[:port]> <ip2[:port]> [<ip3[:port]> ...] <audio-file> [--volume 0.0-1.0]", args[0]);
+        eprintln!(
+            "Example: sudo {} 192.168.1.10 192.168.1.11:33330 test.mp3",
+            args[0]
+        );
         eprintln!("\nStreams audio to multiple AirPlay devices simultaneously.");
         eprintln!("Port defaults to 7000 if not specified.");
         eprintln!("Requires root for PTP ports 319/320.");
         std::process::exit(1);
     }
 
-    // Last arg is audio file, everything else is ip[:port] specs
-    let audio_path = &args[args.len() - 1];
+    // The final positional argument is the audio file. Options may appear
+    // before or after it, so remove them before collecting target addresses.
+    let initial_volume: Option<f32> = args
+        .iter()
+        .position(|arg| arg == "--volume")
+        .and_then(|index| args.get(index + 1))
+        .and_then(|value| value.parse().ok());
+    let mut positional_args = Vec::new();
+    let mut skip_next = false;
+    for arg in args.iter().skip(1) {
+        if skip_next {
+            skip_next = false;
+            continue;
+        }
+        if arg == "--volume" {
+            skip_next = true;
+            continue;
+        }
+        positional_args.push(arg);
+    }
+    if positional_args.len() < 3 {
+        return Err("expected at least two targets and an audio file".into());
+    }
+    let audio_path = positional_args[positional_args.len() - 1];
     let mut targets: Vec<(IpAddr, u16)> = Vec::new();
-    for arg in &args[1..args.len() - 1] {
+    for arg in &positional_args[..positional_args.len() - 1] {
         // Try parsing as ip:port first, fallback to plain IP with default port 7000
         if let Some(colon_pos) = arg.rfind(':') {
             // Could be ip:port or just an IPv6 address
@@ -197,10 +238,16 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Open audio file and inspect format
     let decoder = AudioDecoder::open(audio_path)?;
-    let duration_secs = decoder.duration_samples()
+    let duration_secs = decoder
+        .duration_samples()
         .map(|s| s as f64 / decoder.sample_rate() as f64)
         .unwrap_or(0.0);
-    println!("\nAudio: {}Hz, {} ch, {:.1}s", decoder.sample_rate(), decoder.channels(), duration_secs);
+    println!(
+        "\nAudio: {}Hz, {} ch, {:.1}s",
+        decoder.sample_rate(),
+        decoder.channels(),
+        duration_secs
+    );
 
     // Build stream config
     let audio_format = AudioFormat::default();
@@ -223,7 +270,9 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Create devices
-    let devices: Vec<Device> = targets.iter().enumerate()
+    let devices: Vec<Device> = targets
+        .iter()
+        .enumerate()
         .map(|(i, (ip, port))| make_device(*ip, *port, &format!("Group Device {}", i + 1)))
         .collect::<Result<Vec<_>, _>>()?;
 
@@ -236,7 +285,11 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     for (i, device) in devices.iter().enumerate() {
         let connect_start = Instant::now();
         let conn = Connection::connect_auto(device.clone(), config.clone(), "3939").await?;
-        println!("  Device {} connected + paired in {:.1}s", i + 1, connect_start.elapsed().as_secs_f64());
+        println!(
+            "  Device {} connected + paired in {:.1}s",
+            i + 1,
+            connect_start.elapsed().as_secs_f64()
+        );
         connections.push(conn);
     }
 
@@ -253,16 +306,21 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n--- Phase 2: SETUP Primary (BMCA Yield) ---");
     let setup_start = Instant::now();
     connections[0].setup().await?;
-    println!("  Primary setup complete in {:.1}s", setup_start.elapsed().as_secs_f64());
+    println!(
+        "  Primary setup complete in {:.1}s",
+        setup_start.elapsed().as_secs_f64()
+    );
 
     // Send SETPEERS to primary
     connections[0].send_setpeers(&peer_addresses).await?;
     println!("  SETPEERS sent to primary: {:?}", peer_addresses);
 
     // Get PTP state from primary
-    let ptp_clock_id = connections[0].ptp_master_clock_id()
+    let ptp_clock_id = connections[0]
+        .ptp_master_clock_id()
         .ok_or("Primary has no PTP clock ID — BMCA may have failed")?;
-    let timing_offset = connections[0].timing_offset()
+    let timing_offset = connections[0]
+        .timing_offset()
         .ok_or("Primary has no timing offset")?;
 
     println!("  PTP clock ID: {:02x?}", ptp_clock_id);
@@ -274,10 +332,17 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n--- Phase 3: SETUP Secondary Devices ---");
     for i in 1..connections.len() {
         let setup_start = Instant::now();
-        let timing_rx = connections[0].timing_rx()
+        let timing_rx = connections[0]
+            .timing_rx()
             .ok_or("Primary has no timing channel for group member")?;
-        connections[i].setup_for_group(ptp_clock_id, timing_offset, timing_rx).await?;
-        println!("  Device {} group setup in {:.1}s", i + 1, setup_start.elapsed().as_secs_f64());
+        connections[i]
+            .setup_for_group(ptp_clock_id, timing_offset, timing_rx)
+            .await?;
+        println!(
+            "  Device {} group setup in {:.1}s",
+            i + 1,
+            setup_start.elapsed().as_secs_f64()
+        );
 
         // Send SETPEERS to secondary
         connections[i].send_setpeers(&peer_addresses).await?;
@@ -288,7 +353,12 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n--- Phase 4: Verify Streaming Params ---");
     for (i, conn) in connections.iter().enumerate() {
         let params = conn.streaming_params()?;
-        println!("  Device {}: data={}, control={}", i + 1, params.data_dest, params.control_dest);
+        println!(
+            "  Device {}: data={}, control={}",
+            i + 1,
+            params.data_dest,
+            params.control_dest
+        );
     }
 
     // ===== Phase 5: Stream to ALL devices =====
@@ -300,16 +370,18 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     for i in 0..connections.len() {
         let decoder = AudioDecoder::open(audio_path)?;
         connections[i].start_streaming(decoder).await?;
+        if let Some(volume) = initial_volume {
+            connections[i].set_volume(volume).await?;
+        }
         println!("  Streaming started on device {}!", i + 1);
     }
 
-    let stream_duration_secs = 15u64;
     let mut feedback_timer = Instant::now();
-    for elapsed in 1..=stream_duration_secs {
+    loop {
         tokio::time::sleep(Duration::from_secs(1)).await;
         let pos = connections[0].playback_position();
         let state = connections[0].playback_state();
-        println!("  [{}/{}s] Position: {:.1}s, State: {:?}", elapsed, stream_duration_secs, pos, state);
+        println!("  Position: {:.1}s, State: {:?}", pos, state);
 
         if feedback_timer.elapsed() >= Duration::from_secs(2) {
             for conn in &mut connections {
@@ -318,6 +390,11 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             feedback_timer = Instant::now();
+        }
+
+        if duration_secs > 0.0 && pos >= duration_secs - 0.5 {
+            println!("  Reached end of audio.");
+            break;
         }
     }
 
@@ -337,7 +414,10 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n========================================");
     println!(" Group Test Complete");
     println!("========================================");
-    println!("If audio played on all {} devices in sync, group streaming works!", targets.len());
+    println!(
+        "If audio played on all {} devices in sync, group streaming works!",
+        targets.len()
+    );
 
     Ok(())
 }

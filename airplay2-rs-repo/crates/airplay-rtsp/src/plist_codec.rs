@@ -147,7 +147,7 @@ pub struct StreamDef {
     #[serde(rename = "supportsDynamicStreamID")]
     pub supports_dynamic_stream_id: bool,
     #[serde(rename = "streamConnectionID")]
-    pub stream_connection_id: u32,
+    pub stream_connection_id: u64,
 }
 
 /// SETUP phase 2 request body.
