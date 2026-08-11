@@ -40,6 +40,7 @@ interface Person {
   color: string
   avatar?: string
   avatar_emoji?: string
+  chores_enabled?: boolean
 }
 
 // Kid-friendly display-picture options.
@@ -675,6 +676,22 @@ function SetupInner() {
                 <div className="flex items-center gap-3">
                   <Avatar name={p.name} color={p.color} src={p.avatar} emoji={p.avatar_emoji} size={38} />
                   <span className="min-w-0 flex-1 truncate text-base font-medium">{p.name}</span>
+                  <button
+                    onClick={() => {
+                      const next = [...(people ?? [])]
+                      next[i] = { ...p, chores_enabled: p.chores_enabled === false ? true : false }
+                      savePeople(next)
+                    }}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer ${
+                      p.chores_enabled !== false
+                        ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                        : 'bg-slate-200/60 text-slate-500 dark:bg-slate-800/60 dark:text-slate-400 border border-transparent'
+                    }`}
+                    title={p.chores_enabled !== false ? 'Included in chores & leaderboard' : 'Skipped for chores'}
+                  >
+                    <Icon name={p.chores_enabled !== false ? 'task_alt' : 'do_not_distribute'} className="text-sm" />
+                    <span>{p.chores_enabled !== false ? 'Chores Active' : 'Skipped for Chores'}</span>
+                  </button>
                   <button
                     onClick={() => setColorEditing(colorEditing === p.id ? null : p.id)}
                     className="btn-glass flex items-center gap-2 px-3 py-1.5 text-sm"

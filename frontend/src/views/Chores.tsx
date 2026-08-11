@@ -17,6 +17,8 @@ interface Person {
   name: string
   color: string
   avatar?: string
+  avatar_emoji?: string
+  chores_enabled?: boolean
 }
 
 const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -538,7 +540,7 @@ export default function Chores() {
               >
                 Family
               </button>
-              {(people ?? []).map((p) => {
+              {(people ?? []).filter((p) => p.chores_enabled !== false).map((p) => {
                 const isSelected = draft.people.includes(p.name)
                 return (
                   <button

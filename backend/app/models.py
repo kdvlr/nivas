@@ -149,6 +149,7 @@ class Person(Base):
     name: Mapped[str] = mapped_column(String, unique=True)
     color: Mapped[str] = mapped_column(String, default="#6366f1")
     avatar_emoji: Mapped[str] = mapped_column(String, default="")  # chosen display picture
+    chores_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
 class Chore(Base):

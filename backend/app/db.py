@@ -51,6 +51,10 @@ def init_db() -> None:
         except Exception:
             pass
         try:
+            conn.execute(text("ALTER TABLE people ADD COLUMN chores_enabled BOOLEAN DEFAULT 1"))
+        except Exception:
+            pass
+        try:
             conn.execute(
                 text("ALTER TABLE photo_metadata ADD COLUMN file_type VARCHAR DEFAULT 'image'")
             )

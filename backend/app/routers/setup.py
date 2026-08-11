@@ -82,6 +82,7 @@ class PersonPut(BaseModel):
     name: str
     color: str
     avatar_emoji: str = ""
+    chores_enabled: bool = True
 
 
 class PinVerify(BaseModel):
@@ -187,6 +188,7 @@ def get_people(db: Session = Depends(get_db)):
             "color": p.color,
             "avatar_emoji": p.avatar_emoji or "",
             "avatar": avatars.get(p.name.lower(), ""),
+            "chores_enabled": p.chores_enabled if p.chores_enabled is not None else True,
         }
         for p in db.query(Person).all()
     ]
@@ -197,7 +199,14 @@ async def put_people(people: list[PersonPut], db: Session = Depends(get_db)):
     db.query(Person).delete()
     for p in people:
         if p.name.strip():
-            db.add(Person(name=p.name.strip(), color=p.color, avatar_emoji=p.avatar_emoji or ""))
+            db.add(
+                Person(
+                    name=p.name.strip(),
+                    color=p.color,
+                    avatar_emoji=p.avatar_emoji or "",
+                    chores_enabled=p.chores_enabled,
+                )
+            )
     db.commit()
     await manager.broadcast("tasks")
     await manager.broadcast("chores")

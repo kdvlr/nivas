@@ -112,7 +112,12 @@ def person_avatars(db: Session) -> dict[str, str]:
 
 @router.get("/balances")
 def get_balances(db: Session = Depends(get_db)):
-    people = db.query(Person).order_by(Person.name).all()
+    people = (
+        db.query(Person)
+        .filter(Person.chores_enabled != False)
+        .order_by(Person.name)
+        .all()
+    )
     avatars = person_avatars(db)
     result = []
     for p in people:
