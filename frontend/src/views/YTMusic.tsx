@@ -266,10 +266,13 @@ export default function YTMusic({
       ) : (
         <main className="grid min-h-[calc(100vh-7rem)] grid-cols-1 xl:grid-cols-[minmax(30rem,1.12fr)_minmax(27rem,0.88fr)]">
           <section className="flex min-w-0 flex-col items-center justify-start px-5 py-8 md:px-10 xl:py-14">
-            <div className="w-full max-w-[47rem]">
+            <div
+              className="max-w-full"
+              style={{ width: 'min(100%, max(16rem, calc(100dvh - 12.5rem)))' }}
+            >
               <div className="aspect-square w-full overflow-hidden rounded-md bg-[#181818] shadow-2xl shadow-black">
                 {currentTrack?.thumbnail ? (
-                  <img src={highResolutionArtwork(currentTrack.thumbnail)} alt={currentTrack.title} className="h-full w-full object-cover" />
+                  <img src={highResolutionArtwork(currentTrack.thumbnail)} alt={currentTrack.title} className="h-full w-full object-contain" />
                 ) : (
                   <div className="flex h-full flex-col items-center justify-center text-white/25">
                     <Icon name="album" className="text-8xl" />
