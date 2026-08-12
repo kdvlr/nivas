@@ -1,3 +1,4 @@
+import asyncio
 import io
 import json
 import time
@@ -6,7 +7,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from app.services.player_engine import AirPlayDevice, GROUP_STREAM_ID, PlayerEngine
+from app.services.player_engine import AirPlayDevice, GROUP_STREAM_ID, MUSIC_UI_IDLE_TIMEOUT_SECONDS, PlayerEngine
 
 
 class FakeProcess:
@@ -157,6 +158,30 @@ def test_hidden_speakers_persist_and_are_deselected(tmp_path):
     restarted = PlayerEngine()
     restarted._preferences_path = engine._preferences_path
     assert restarted._load_hidden_device_ids() == {kitchen.id}
+
+
+@pytest.mark.asyncio
+async def test_idle_music_session_clears_after_thirty_minutes(monkeypatch):
+    engine, _, _ = configured_engine()
+    engine.current_track = {"videoId": "paused", "title": "Paused"}
+    engine.queue = [{"videoId": "next", "title": "Next"}]
+    engine.is_playing = False
+    engine._last_audio_at = 100.0
+
+    sleeps = 0
+    async def one_tick(_seconds):
+        nonlocal sleeps
+        sleeps += 1
+        if sleeps > 1:
+            raise asyncio.CancelledError
+
+    monkeypatch.setattr("app.services.player_engine.asyncio.sleep", one_tick)
+    monkeypatch.setattr("app.services.player_engine.time.monotonic", lambda: 100.0 + MUSIC_UI_IDLE_TIMEOUT_SECONDS)
+
+    await engine._playback_ticker()
+
+    assert engine.current_track is None
+    assert engine.queue == []
 
 
 def test_expired_pause_stops_process_and_releases_devices():

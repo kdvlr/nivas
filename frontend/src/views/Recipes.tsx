@@ -23,7 +23,7 @@ function RecipeDetail({ id, onBack }: { id: number; onBack: () => void }) {
   const listening = useVoiceCommands(step >= 0, (cmd) => {
     if (cmd === 'next') setStep((s) => Math.min(s + 1, stepCount - 1))
     else if (cmd === 'previous') setStep((s) => Math.max(s - 1, 0))
-    else setStep(-1)
+    else if (cmd === 'exit') setStep(-1)
   })
 
   if (error) {

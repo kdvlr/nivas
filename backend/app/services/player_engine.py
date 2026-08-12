@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 GROUP_STREAM_ID = "__airplay_group__"
 DEFAULT_PAUSED_SESSION_TIMEOUT_SECONDS = 15 * 60
+MUSIC_UI_IDLE_TIMEOUT_SECONDS = 30 * 60
 
 class AirPlayDevice:
     def __init__(self, identifier: str, name: str, address: str, port: int = 7000, model: str = "AirPlay Speaker"):
@@ -60,6 +61,7 @@ class PlayerEngine:
         self.devices: Dict[str, AirPlayDevice] = {}
         self.active_targets: List[str] = []
         self.autoplay_enabled: bool = True
+        self._last_audio_at: Optional[float] = None
         self._preferences_path = Path(get_settings().data_dir) / "airplay_preferences.json"
         self._hidden_device_ids = self._load_hidden_device_ids()
         
@@ -267,11 +269,23 @@ class PlayerEngine:
             try:
                 await asyncio.sleep(1)
                 if self.is_playing and self.current_track:
+                    self._last_audio_at = time.monotonic()
                     self.elapsed_seconds += 1
                     if self.duration_seconds > 0 and self.elapsed_seconds >= self.duration_seconds:
                         await self.next_track()
                     else:
                         self._broadcast_state()
+                elif (
+                    self.current_track
+                    and self._last_audio_at is not None
+                    and time.monotonic() - self._last_audio_at >= MUSIC_UI_IDLE_TIMEOUT_SECONDS
+                ):
+                    self.current_track = None
+                    self.queue = []
+                    self.elapsed_seconds = 0
+                    self.duration_seconds = 0
+                    self._last_audio_at = None
+                    self._broadcast_state()
                 elif self._cleanup_expired_paused_session():
                     self._broadcast_state()
             except asyncio.CancelledError:
@@ -341,6 +355,7 @@ class PlayerEngine:
         self.elapsed_seconds = 0
         self.duration_seconds = track.get("duration", 0) or 180
         self.is_playing = True
+        self._last_audio_at = time.monotonic()
 
         self.queue = [
             normalized

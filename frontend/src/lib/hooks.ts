@@ -46,9 +46,11 @@ export function useData<T>(path: string, scopes: string[], pollMs = 120000) {
  * "next" / "previous" (or "back") / "exit" (or "stop"). Returns whether the
  * mic is actually listening (false when unsupported or permission denied).
  */
+export type VoiceCommand = 'next' | 'previous' | 'play' | 'pause' | 'mute' | 'exit'
+
 export function useVoiceCommands(
   active: boolean,
-  onCommand: (cmd: 'next' | 'previous' | 'exit') => void,
+  onCommand: (cmd: VoiceCommand) => void,
 ) {
   const cbRef = useRef(onCommand)
   cbRef.current = onCommand
@@ -83,6 +85,9 @@ export function useVoiceCommands(
         const text = e.results[0][0].transcript.toLowerCase()
         if (/\b(next|forward|continue)\b/.test(text)) cbRef.current('next')
         else if (/\b(previous|back|backward|before)\b/.test(text)) cbRef.current('previous')
+        else if (/\b(pause|hold)\b/.test(text)) cbRef.current('pause')
+        else if (/\b(play|resume)\b/.test(text)) cbRef.current('play')
+        else if (/\b(mute|silence|quiet)\b/.test(text)) cbRef.current('mute')
         else if (/\b(exit|close|stop|done|quit)\b/.test(text)) cbRef.current('exit')
         // The r.onend will trigger the restart
       }

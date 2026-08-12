@@ -35,6 +35,7 @@ import Photos from './views/Photos'
 import YTMusic from './views/YTMusic'
 import MiniPlayerBar, { Track } from './components/ytmusic/MiniPlayerBar'
 import Slideshow, { hasSkyOverride } from './components/Slideshow'
+import MusicNowPlayingScreen from './components/ytmusic/MusicNowPlayingScreen'
 
 const NAV = [
   { id: 'home', label: 'Home', icon: 'home', view: Home, active: 'bg-sky-200 text-sky-950 dark:bg-sky-900 dark:text-sky-100', activeText: 'text-sky-600 dark:text-sky-400' },
@@ -256,6 +257,10 @@ export default function App() {
   const handleSeek = (secs: number) => {
     setElapsedSeconds(secs)
     api.post<any>('/api/ytmusic/player/seek', { seconds: secs }).catch(() => {})
+  }
+
+  const handleMute = () => {
+    api.post('/api/ytmusic/airplay/volume/master', { volume: 0 }).catch(() => {})
   }
 
   const handleQueueTrack = (track: Track, playNext: boolean) => {
@@ -922,7 +927,21 @@ export default function App() {
             </div>
           </div>
         </motion.div>
-        {slideshowActive && photosList.length > 0 && (
+        {slideshowActive && currentTrack && (
+          <MusicNowPlayingScreen
+            currentTrack={currentTrack}
+            queue={playQueue}
+            isPlaying={isPlaying}
+            elapsedSeconds={elapsedSeconds}
+            durationSeconds={durationSeconds}
+            onTogglePlay={handleTogglePlay}
+            onNext={handleNextTrack}
+            onPrevious={handlePrevTrack}
+            onMute={handleMute}
+            onDismiss={() => setSlideshowActive(false)}
+          />
+        )}
+        {slideshowActive && !currentTrack && photosList.length > 0 && (
           <Slideshow
             photos={photosList}
             onDismiss={() => setSlideshowActive(false)}

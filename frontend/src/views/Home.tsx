@@ -180,12 +180,43 @@ export default function Home() {
   const { data: shopping, loading: loadingShopping, reload: reloadShopping } = useData<ShoppingItem[]>('/api/shopping', ['shopping'])
   const { data: meals, loading: loadingMeals } = useData<MealDay[]>(`/api/meals?start=${today}&days=1`, ['meals'])
   const { data: weather } = useData<WeatherData>('/api/weather', [], 15 * 60 * 1000)
+  const { data: usMusicCharts } = useData<any>('/api/ytmusic/charts?country=US', [], 30 * 60 * 1000)
+  const { data: indiaMusicCharts } = useData<any>('/api/ytmusic/charts?country=IN', [], 30 * 60 * 1000)
   const { data: calStatus } = useData<CalendarStatus>('/api/calendar/status', ['calendar'])
   const { data: config } = useData<{ family_name: string; secondary_tz: string; secondary_tz_emoji: string }>(
     '/api/setup/config',
     ['setup'],
   )
   const { celebrate } = useCelebration()
+
+  const renderTrendingMusic = () => {
+    const playlists = [
+      { country: 'United States', flag: '🇺🇸', data: usMusicCharts },
+      { country: 'India', flag: '🇮🇳', data: indiaMusicCharts },
+    ]
+    return (
+      <div className="grid grid-cols-2 gap-3">
+        {playlists.map(({ country, flag, data }) => {
+          const songs = Array.isArray(data?.songs?.items) ? data.songs.items.slice(0, 4) : []
+          return (
+            <a key={country} href="#/ytmusic" className="glass flex min-w-0 items-center gap-3 px-3 py-2 transition hover:bg-white/10">
+              <div className="flex h-12 w-20 shrink-0 -space-x-5 overflow-hidden rounded-lg bg-black/10 p-1">
+                {songs.map((song: any, index: number) => {
+                  const thumbnail = song.thumbnails?.at(-1)?.url || song.thumbnail
+                  return thumbnail ? <img key={`${song.videoId}-${index}`} src={thumbnail} alt="" className="h-10 w-10 rounded-md border border-white/20 object-cover" /> : null
+                })}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-ink">{flag} Trending Music</p>
+                <p className="truncate text-xs text-ink-soft">YouTube Music · {country}</p>
+              </div>
+              <Icon name="chevron_right" className="ml-auto text-ink-faint" />
+            </a>
+          )
+        })}
+      </div>
+    )
+  }
 
   // Reset completing/removed tracking when data reloads
   useEffect(() => {
@@ -958,6 +989,7 @@ export default function Home() {
       {/* Desktop view */}
       <div className="hidden lg:flex h-full flex-col gap-4">
         {renderHeader()}
+        {renderTrendingMusic()}
         <div className="grid min-h-0 flex-1 grid-cols-3 gap-4">
           {renderSchedule(true)}
           <div className="flex min-h-0 flex-col gap-4 overflow-hidden">
@@ -974,6 +1006,7 @@ export default function Home() {
         {/* Slide 1: Header + Schedule */}
         <div className="min-h-[100dvh] w-full flex flex-col p-4 gap-3 overflow-hidden">
           {renderHeader()}
+          {renderTrendingMusic()}
           <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
             {renderSchedule(false)}
           </div>
