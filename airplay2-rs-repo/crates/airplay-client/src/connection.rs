@@ -1884,12 +1884,13 @@ impl Connection {
         }
 
         let body = dmap_tag(b"mlit", &inner);
+        let current_rtp = self.current_metadata_rtp_timestamp();
         let mut req = RtspRequest::new(
             airplay_rtsp::RtspMethod::SetParameter,
             self.session.request_uri(),
         )
         .header("Content-Type", "application/x-dmap-tagged")
-        .header("RTP-Info", "seq=0;rtptime=0")
+        .header("RTP-Info", format!("rtptime={}", current_rtp))
         .body(body);
 
         if let Some(session_id) = self.session.stream_connection_id() {
@@ -1904,6 +1905,53 @@ impl Connection {
             album,
             res
         );
+        Ok(())
+    }
+
+    fn current_metadata_rtp_timestamp(&self) -> u32 {
+        let elapsed_samples = (
+            self.playback_position() * self.stream_config.audio_format.sample_rate.as_hz() as f64
+        ) as u32;
+        self.initial_rtp_timestamp.wrapping_add(elapsed_samples)
+    }
+
+    /// Send now-playing artwork associated with the current RTP timeline.
+    pub async fn send_artwork(&mut self, artwork: Vec<u8>, content_type: &str) -> Result<()> {
+        if artwork.is_empty() {
+            return Ok(());
+        }
+        let current_rtp = self.current_metadata_rtp_timestamp();
+        let mut req = RtspRequest::new(
+            airplay_rtsp::RtspMethod::SetParameter,
+            self.session.request_uri(),
+        )
+        .header("Content-Type", content_type)
+        .header("RTP-Info", format!("rtptime={}", current_rtp))
+        .body(artwork);
+        if let Some(session_id) = self.session.stream_connection_id() {
+            req = req.header("Session", session_id.to_string());
+        }
+        let response = self.rtsp.send(req).await?;
+        tracing::info!("send_artwork result: {}", response.status_code);
+        Ok(())
+    }
+
+    /// Send receiver-visible elapsed and total playback time in RTP samples.
+    pub async fn send_progress(&mut self, duration_seconds: f64) -> Result<()> {
+        if duration_seconds <= 0.0 {
+            return Ok(());
+        }
+        let sample_rate = self.stream_config.audio_format.sample_rate.as_hz() as f64;
+        let start = self.initial_rtp_timestamp;
+        let current = self.current_metadata_rtp_timestamp();
+        let end = start.wrapping_add((duration_seconds * sample_rate) as u32);
+        let body = format!("progress: {}/{}/{}\r\n", start, current, end).into_bytes();
+        let mut req = RtspRequest::set_parameter_text(self.session.request_uri(), body);
+        if let Some(session_id) = self.session.stream_connection_id() {
+            req = req.header("Session", session_id.to_string());
+        }
+        let response = self.rtsp.send(req).await?;
+        tracing::debug!("send_progress result: {}", response.status_code);
         Ok(())
     }
 

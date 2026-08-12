@@ -54,6 +54,32 @@ def test_build_command_uses_mixed_timing_and_runtime_volume():
     assert command[command.index("--ptp-targets") + 1] == "192.168.120.111"
 
 
+def test_single_sonos_uses_verified_ptp_master_and_track_metadata():
+    engine, kitchen, _ = configured_engine()
+    track = {
+        "title": "Test Song",
+        "artist": "Test Artist",
+        "album": "Test Album",
+        "duration": 245,
+    }
+
+    command = engine._build_airplay_command(
+        [kitchen],
+        "/tmp/song.wav",
+        track,
+        "/tmp/artwork.jpg",
+    )
+
+    assert "--ptp" in command
+    assert "--ptp-master" in command
+    assert "--ptp-targets" not in command
+    assert command[command.index("--title") + 1] == "Test Song"
+    assert command[command.index("--artist") + 1] == "Test Artist"
+    assert command[command.index("--album") + 1] == "Test Album"
+    assert command[command.index("--duration") + 1] == "245.0"
+    assert command[command.index("--artwork") + 1] == "/tmp/artwork.jpg"
+
+
 @pytest.mark.asyncio
 async def test_pause_and_resume_keep_the_same_sender_process():
     engine, _, _ = configured_engine()

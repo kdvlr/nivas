@@ -249,6 +249,11 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
         eprintln!("  --device-id ID   Device ID for pair-verify (e.g., 4E:44:4C:1E:C3:B5)");
         eprintln!("  --force-transient Force transient pairing (skip pair-verify even if identity exists)");
         eprintln!("  --control-stdin Read pause/resume/volume/stop commands from stdin");
+        eprintln!("  --title TEXT     Now-playing track title");
+        eprintln!("  --artist TEXT    Now-playing artist");
+        eprintln!("  --album TEXT     Now-playing album");
+        eprintln!("  --artwork PATH   JPEG artwork to show on receivers");
+        eprintln!("  --duration SEC   Track duration for receiver progress display");
         std::process::exit(1);
     }
 
@@ -301,6 +306,18 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
         .position(|a| a == "--volume")
         .and_then(|i| args.get(i + 1))
         .and_then(|v| v.parse().ok());
+    let option_value = |name: &str| {
+        args.iter()
+            .position(|argument| argument == name)
+            .and_then(|index| args.get(index + 1))
+            .cloned()
+    };
+    let metadata_title = option_value("--title").unwrap_or_else(|| "YouTube Music".to_string());
+    let metadata_artist = option_value("--artist").unwrap_or_else(|| "Nivas AirPlay".to_string());
+    let metadata_album = option_value("--album").unwrap_or_else(|| "Nivas".to_string());
+    let artwork_path = option_value("--artwork");
+    let metadata_duration = option_value("--duration")
+        .and_then(|value| value.parse::<f64>().ok());
     let volume_steps: Vec<(f64, f32)> = args
         .iter()
         .position(|a| a == "--volume-steps")
@@ -540,9 +557,6 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
                 conn.set_render_delay_ms(render_delay_ms);
             }
             conn.setup().await?;
-            if let Some(vol) = initial_volume {
-                let _ = conn.set_volume(vol).await;
-            }
             conns.push(conn);
         }
         println!("All {} devices connected and setup complete!", conns.len());
@@ -551,12 +565,23 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
         for (idx, conn) in conns.iter_mut().enumerate() {
             let dec = AudioDecoder::open(audio_path)?;
             conn.start_streaming(dec).await?;
+            let _ = conn
+                .send_metadata(&metadata_title, &metadata_album, &metadata_artist)
+                .await;
+            if let Some(path) = artwork_path.as_ref() {
+                match std::fs::read(path) {
+                    Ok(artwork) => {
+                        let _ = conn.send_artwork(artwork, "image/jpeg").await;
+                    }
+                    Err(error) => tracing::warn!("Could not read artwork {}: {}", path, error),
+                }
+            }
+            let progress_duration = metadata_duration.unwrap_or(duration_secs);
+            let _ = conn.send_progress(progress_duration).await;
+            // Sonos expects volume to be the final parameter update.
             if let Some(vol) = initial_volume {
                 let _ = conn.set_volume(vol).await;
             }
-            let _ = conn
-                .send_metadata("YouTube Music", "Nivas", "Nivas AirPlay")
-                .await;
             println!("Speaker {} ({}) streaming started!", idx + 1, ips[idx]);
         }
 
@@ -573,6 +598,13 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
             let state = conns[0].playback_state();
             if feedback_counter % 4 == 0 {
                 println!("Position: {:.1}s, State: {:?}", pos, state);
+            }
+
+            if feedback_counter % 8 == 0 {
+                let progress_duration = metadata_duration.unwrap_or(duration_secs);
+                for conn in conns.iter_mut() {
+                    let _ = conn.send_progress(progress_duration).await;
+                }
             }
 
             while let Ok(command) = source_commands.try_recv() {

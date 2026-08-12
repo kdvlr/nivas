@@ -1,4 +1,5 @@
 import asyncio
+import io
 import json
 import logging
 import os
@@ -8,6 +9,9 @@ import threading
 import time
 from typing import Any, Dict, List, Optional
 from pathlib import Path
+
+import httpx
+from PIL import Image
 
 from ..ws import manager
 from .ytmusic import ytmusic_service
@@ -343,7 +347,18 @@ class PlayerEngine:
 
             logger.info(f"Transcode complete. Streaming '{track_info['title']}' via airplay2-rs to {len(self.active_targets)} selected AirPlay speakers")
 
-            started = self._start_airplay_streams(wav_path)
+            artwork_path = f"/tmp/ytmusic_{video_id}_artwork.jpg"
+            artwork_path = await loop.run_in_executor(
+                None,
+                self._download_artwork,
+                track_info.get("thumbnail"),
+                artwork_path,
+            )
+            started = self._start_airplay_streams(
+                wav_path,
+                track_info,
+                artwork_path,
+            )
             if not started:
                 self.is_playing = False
                 self._broadcast_state()
@@ -367,13 +382,18 @@ class PlayerEngine:
     def _selected_devices(self) -> List[AirPlayDevice]:
         return [self.devices[device_id] for device_id in self.active_targets if device_id in self.devices]
 
-    def _start_airplay_streams(self, wav_path: str):
+    def _start_airplay_streams(
+        self,
+        wav_path: str,
+        track_info: Optional[Dict[str, Any]] = None,
+        artwork_path: Optional[str] = None,
+    ):
         """Start one controllable sender for one room or a synchronized group."""
         devices = self._selected_devices()
         if not devices:
             logger.warning("Playback requested without an AirPlay target")
             return False
-        return self._start_airplay_process(devices, wav_path)
+        return self._start_airplay_process(devices, wav_path, track_info, artwork_path)
 
     def _watch_stream_process(self, stream_id: str, proc: subprocess.Popen, device_ids: List[str]):
         exit_code = proc.wait()
@@ -408,7 +428,13 @@ class PlayerEngine:
         identity = f"{device.name} {device.model}".lower()
         return "sonos" in identity or "era " in identity
 
-    def _build_airplay_command(self, devices: List[AirPlayDevice], wav_path: str) -> List[str]:
+    def _build_airplay_command(
+        self,
+        devices: List[AirPlayDevice],
+        wav_path: str,
+        track_info: Optional[Dict[str, Any]] = None,
+        artwork_path: Optional[str] = None,
+    ) -> List[str]:
         ports = {device.port for device in devices}
         if len(ports) != 1:
             raise ValueError("A synchronized AirPlay group must use one RTSP port")
@@ -427,13 +453,38 @@ class PlayerEngine:
             f"{volume:.4f}",
         ]
         ptp_targets = [device.address for device in devices if self._device_uses_ptp(device)]
-        if ptp_targets:
+        if ptp_targets and len(ptp_targets) == len(devices):
+            # Match the command that is verified to work with the Sonos Era:
+            # global PTP master mode, not merely a per-target timing override.
+            cmd.extend(["--ptp", "--ptp-master"])
+        elif ptp_targets:
             cmd.extend(["--ptp-targets", ",".join(ptp_targets)])
+
+        if track_info:
+            for flag, key in (
+                ("--title", "title"),
+                ("--artist", "artist"),
+                ("--album", "album"),
+            ):
+                value = track_info.get(key)
+                if value:
+                    cmd.extend([flag, str(value)])
+            duration = track_info.get("duration")
+            if duration:
+                cmd.extend(["--duration", str(float(duration))])
+        if artwork_path:
+            cmd.extend(["--artwork", artwork_path])
         return cmd
 
-    def _start_airplay_process(self, devices: List[AirPlayDevice], wav_path: str) -> bool:
+    def _start_airplay_process(
+        self,
+        devices: List[AirPlayDevice],
+        wav_path: str,
+        track_info: Optional[Dict[str, Any]] = None,
+        artwork_path: Optional[str] = None,
+    ) -> bool:
         try:
-            cmd = self._build_airplay_command(devices, wav_path)
+            cmd = self._build_airplay_command(devices, wav_path, track_info, artwork_path)
             log_path = os.getenv("AIRPLAY_LOG_PATH", "/tmp/nivas-airplay.log")
             log_handle = open(log_path, "a", encoding="utf-8", buffering=1)
             proc = subprocess.Popen(
@@ -471,6 +522,20 @@ class PlayerEngine:
                 pass
             return False
 
+    @staticmethod
+    def _download_artwork(url: Optional[str], output_path: str) -> Optional[str]:
+        if not url:
+            return None
+        try:
+            response = httpx.get(url, timeout=15, follow_redirects=True)
+            response.raise_for_status()
+            with Image.open(io.BytesIO(response.content)) as image:
+                image.convert("RGB").save(output_path, format="JPEG", quality=90)
+            return output_path
+        except Exception as error:
+            logger.warning("Could not prepare AirPlay artwork: %s", error)
+            return None
+
     async def pause(self):
         if self._stream_procs:
             self._write_stream_command("pause")
@@ -493,7 +558,12 @@ class PlayerEngine:
                     # A deliberately expired session cannot retain its RTP
                     # timeline. Recreate it cleanly and restart the local file.
                     self.elapsed_seconds = 0
-                    self.is_playing = self._start_airplay_streams(wav_path)
+                    artwork_path = f"/tmp/ytmusic_{video_id}_artwork.jpg"
+                    self.is_playing = self._start_airplay_streams(
+                        wav_path,
+                        self.current_track,
+                        artwork_path if os.path.exists(artwork_path) else None,
+                    )
                     self._paused_stream_expired = False
         self._broadcast_state()
         return self.get_state()
@@ -538,7 +608,12 @@ class PlayerEngine:
                 if os.path.exists(wav_path):
                     was_paused = not self.is_playing
                     self._stop_current_stream()
-                    self._start_airplay_streams(wav_path)
+                    artwork_path = f"/tmp/ytmusic_{video_id}_artwork.jpg"
+                    self._start_airplay_streams(
+                        wav_path,
+                        self.current_track,
+                        artwork_path if os.path.exists(artwork_path) else None,
+                    )
                     if was_paused:
                         self._write_stream_command("pause")
                         self._paused_at = time.monotonic()
