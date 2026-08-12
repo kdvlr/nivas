@@ -75,3 +75,46 @@ def test_watch_playlist_returns_client_recommendations():
     watch = service.get_watch_playlist(video_id="current")
 
     assert watch["tracks"][0]["videoId"] == "related"
+
+
+def test_normalize_song_accepts_watch_thumbnail_array():
+    track = YTMusicService.normalize_song({
+        "videoId": "related",
+        "title": "Related",
+        "artist": "Artist",
+        "thumbnail": [{"url": "small"}, {"url": "large"}],
+    })
+
+    assert track is not None
+    assert track["thumbnail"] == "large"
+
+
+def test_playlist_songs_resolves_music_videos_to_audio():
+    service = YTMusicService()
+    service.get_playlist = lambda *args, **kwargs: {
+        "title": "Top videos",
+        "tracks": [{
+            "videoId": "video",
+            "title": "Song",
+            "artists": [{"name": "Artist"}],
+            "videoType": "MUSIC_VIDEO_TYPE_OMV",
+        }],
+    }
+    service.search = lambda *args, **kwargs: [{
+        "videoId": "audio",
+        "title": "Song",
+        "artists": [{"name": "Artist"}],
+        "videoType": "MUSIC_VIDEO_TYPE_ATV",
+        "thumbnails": [{"url": "art"}],
+    }]
+
+    playlist = service.get_playlist_songs("top", limit=1)
+
+    assert playlist["tracks"] == [{
+        "videoId": "audio",
+        "title": "Song",
+        "artist": "Artist",
+        "thumbnail": "art",
+        "album": "",
+        "duration": 0,
+    }]

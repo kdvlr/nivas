@@ -77,6 +77,10 @@ def search(q: str = Query(..., min_length=1), filter: Optional[str] = None):
 def get_home(limit: int = Query(6, ge=1, le=20)):
     return ytmusic_service.get_home(limit=limit)
 
+@router.get("/explore")
+def get_explore():
+    return ytmusic_service.get_explore()
+
 @router.get("/charts")
 def get_charts(country: str = Query("US", min_length=2, max_length=5)):
     return ytmusic_service.get_charts(country=country)
@@ -98,6 +102,13 @@ def get_album(browse_id: str):
 @router.get("/playlist/{playlist_id}")
 def get_playlist(playlist_id: str, limit: int = Query(100, ge=1, le=500)):
     data = ytmusic_service.get_playlist(playlist_id, limit=limit)
+    if not data:
+        raise HTTPException(status_code=404, detail="Playlist not found")
+    return data
+
+@router.get("/playlist/{playlist_id}/songs")
+def get_playlist_songs(playlist_id: str, limit: int = Query(12, ge=1, le=50)):
+    data = ytmusic_service.get_playlist_songs(playlist_id, limit=limit)
     if not data:
         raise HTTPException(status_code=404, detail="Playlist not found")
     return data

@@ -22,10 +22,42 @@ interface YTMusicViewProps {
 type PlayerTab = 'queue' | 'lyrics' | 'related'
 type MusicView = 'browse' | 'now-playing'
 
+const CURATED_PLAYLISTS = [
+  { id: 'RDCLAK5uy_nTbyVypdXPQd00z15bTWjZr7pG-26yyQ4', title: 'Kollywood Hitlist' },
+  { id: 'RDCLAK5uy_lhIiKLMQM6_gokxx581SC-xQBSfJm9gqc', title: 'Bollywood Essentials' },
+  { id: 'RDCLAK5uy_n9Fbdw7e6ap-98_A-8JYBmPv64v-Uaq1g', title: 'Bollywood Hitlist' },
+  { id: 'RDCLAK5uy_lyVnWI5JnuwKJiuE-n1x-Un0mj9WlEyZw', title: 'Tollywood Hitlist' },
+  { id: 'PL4fGSI1pDJn69On1f-8NAvX_CYlx7QyZc', title: 'Top 100 United States · Audio' },
+] as const
+
+interface DiscoverySection {
+  id: string
+  title: string
+  tracks: Track[]
+}
+
+interface DiscoveryCard {
+  id: string
+  title: string
+  subtitle?: string
+  thumbnail?: string
+  kind: 'playlist' | 'album'
+}
+
 const isSong = (item: any) => {
   if (!item?.videoId || item.resultType === 'video') return false
   const videoType = String(item.videoType || '').toUpperCase()
   return !videoType.includes('_OMV') && !videoType.includes('_UGC')
+}
+
+const thumbnailUrl = (item: any): string | undefined => {
+  const value = item?.thumbnails || item?.thumbnail
+  if (typeof value === 'string') return value
+  if (Array.isArray(value)) {
+    const image = [...value].reverse().find((entry) => typeof entry === 'string' || entry?.url)
+    return typeof image === 'string' ? image : image?.url
+  }
+  return value?.url
 }
 
 const toTrack = (item: any): Track | null => {
@@ -41,7 +73,7 @@ const toTrack = (item: any): Track | null => {
     artist: Array.isArray(item.artists)
       ? item.artists.map((artist: any) => artist.name).filter(Boolean).join(', ')
       : item.artist?.name || item.artist || 'Unknown Artist',
-    thumbnail: item.thumbnails?.at(-1)?.url || item.thumbnail,
+    thumbnail: thumbnailUrl(item),
     album: item.album?.name || item.album || '',
     duration,
   }
@@ -116,8 +148,11 @@ export default function YTMusic({
 }: YTMusicViewProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
-  const [charts, setCharts] = useState<any>(null)
-  const [usCharts, setUsCharts] = useState<any>(null)
+  const [discoverySections, setDiscoverySections] = useState<DiscoverySection[]>([])
+  const [mixCards, setMixCards] = useState<DiscoveryCard[]>([])
+  const [releaseCards, setReleaseCards] = useState<DiscoveryCard[]>([])
+  const [discoveryLoading, setDiscoveryLoading] = useState(true)
+  const [openingCardId, setOpeningCardId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<MusicView>(() => currentTrack ? 'now-playing' : 'browse')
   const [loading, setLoading] = useState(false)
   const [showAirPlayModal, setShowAirPlayModal] = useState(false)
@@ -176,10 +211,52 @@ export default function YTMusic({
 
   useEffect(() => {
     Promise.all([
-      api.get<any>('/api/ytmusic/charts?country=IN').then(setCharts),
-      api.get<any>('/api/ytmusic/charts?country=US').then(setUsCharts),
-    ]).catch(() => {})
+      Promise.all(CURATED_PLAYLISTS.map(async (playlist) => {
+        try {
+          const value = await api.get<any>(`/api/ytmusic/playlist/${playlist.id}/songs?limit=12`)
+          const tracks = (Array.isArray(value?.tracks) ? value.tracks : []).map(toTrack).filter((track: Track | null): track is Track => Boolean(track))
+          return { id: playlist.id, title: playlist.title, tracks }
+        } catch {
+          return { id: playlist.id, title: playlist.title, tracks: [] }
+        }
+      })),
+      api.get<any[]>('/api/ytmusic/home?limit=20').catch(() => []),
+      api.get<any>('/api/ytmusic/explore').catch(() => ({})),
+    ]).then(([sections, home, explore]) => {
+      setDiscoverySections(sections)
+      const seenMixes = new Set<string>()
+      setMixCards((Array.isArray(home) ? home : []).flatMap((section: any) => section?.contents || [])
+        .filter((item: any) => item?.playlistId && !seenMixes.has(item.playlistId) && seenMixes.add(item.playlistId))
+        .slice(0, 10)
+        .map((item: any) => ({ id: item.playlistId, title: item.title || 'Mix', subtitle: item.description || 'YouTube Music', thumbnail: thumbnailUrl(item), kind: 'playlist' as const })))
+
+      const homeReleases = (Array.isArray(home) ? home : []).find((section: any) => String(section?.title || '').toLowerCase().includes('new releases'))?.contents || []
+      const releases = Array.isArray(explore?.new_releases) && explore.new_releases.length ? explore.new_releases : homeReleases
+      setReleaseCards(releases.filter((item: any) => item?.browseId).slice(0, 10).map((item: any) => ({
+        id: item.browseId,
+        title: item.title || 'New release',
+        subtitle: Array.isArray(item.artists) ? item.artists.map((artist: any) => artist.name).filter(Boolean).join(', ') : item.artist || item.type || 'Album',
+        thumbnail: thumbnailUrl(item),
+        kind: 'album' as const,
+      })))
+    }).finally(() => setDiscoveryLoading(false))
   }, [])
+
+  const playDiscoveryCard = async (card: DiscoveryCard) => {
+    setOpeningCardId(card.id)
+    try {
+      const value = card.kind === 'playlist'
+        ? await api.get<any>(`/api/ytmusic/playlist/${card.id}/songs?limit=25`)
+        : await api.get<any>(`/api/ytmusic/album/${card.id}`)
+      const tracks = (Array.isArray(value?.tracks) ? value.tracks : []).map(toTrack).filter((track: Track | null): track is Track => Boolean(track))
+      if (tracks.length) {
+        setViewMode('now-playing')
+        onPlayTrack(tracks[0], tracks.slice(1))
+      }
+    } finally {
+      setOpeningCardId(null)
+    }
+  }
 
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -224,9 +301,6 @@ export default function YTMusic({
       .catch(() => setRelatedTracks([]))
       .finally(() => setRelatedLoading(false))
   }, [currentTrack?.videoId, activeTab])
-
-  const indiaTrending = useMemo<Track[]>(() => (charts?.songs?.items || []).map(toTrack).filter((track: Track | null): track is Track => Boolean(track)).slice(0, 12), [charts])
-  const usTrending = useMemo<Track[]>(() => (usCharts?.songs?.items || []).map(toTrack).filter((track: Track | null): track is Track => Boolean(track)).slice(0, 12), [usCharts])
 
   const resultTracks = useMemo(
     () => searchResults.map(toTrack).filter((track): track is Track => Boolean(track)),
@@ -278,9 +352,31 @@ export default function YTMusic({
             <div className="py-24 text-center text-white/45">No audio-only songs found.</div>
           )}</> : (
             <div className="space-y-10">
-              {([{ title: 'Trending in the United States', flag: '🇺🇸', tracks: usTrending }, { title: 'Trending in India', flag: '🇮🇳', tracks: indiaTrending }] as const).map((section) => (
+              {discoveryLoading && <div className="flex items-center justify-center gap-3 py-16 text-white/50"><Icon name="progress_activity" className="animate-spin text-2xl" /> Loading YouTube Music…</div>}
+
+              {mixCards.length > 0 && <section>
+                <div className="mb-4"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/40">Personalized</p><h1 className="text-2xl font-bold">Mixed for You</h1></div>
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+                  {mixCards.map((card) => <button key={card.id} onClick={() => playDiscoveryCard(card)} className="group min-w-0 rounded-lg bg-white/[0.05] p-3 text-left transition hover:bg-white/[0.1]">
+                    <div className="relative aspect-square overflow-hidden rounded-md bg-white/10">{card.thumbnail ? <img src={card.thumbnail} alt="" className="h-full w-full object-cover" /> : <Icon name="album" className="absolute inset-0 m-auto text-5xl text-white/25" />}{openingCardId === card.id && <span className="absolute inset-0 flex items-center justify-center bg-black/55"><Icon name="progress_activity" className="animate-spin text-3xl" /></span>}</div>
+                    <p className="mt-3 truncate font-semibold">{card.title}</p><p className="mt-0.5 truncate text-sm text-white/45">{card.subtitle}</p>
+                  </button>)}
+                </div>
+              </section>}
+
+              {releaseCards.length > 0 && <section>
+                <div className="mb-4"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/40">Albums</p><h1 className="text-2xl font-bold">New Releases</h1></div>
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+                  {releaseCards.map((card) => <button key={card.id} onClick={() => playDiscoveryCard(card)} className="group min-w-0 rounded-lg bg-white/[0.05] p-3 text-left transition hover:bg-white/[0.1]">
+                    <div className="relative aspect-square overflow-hidden rounded-md bg-white/10">{card.thumbnail ? <img src={card.thumbnail} alt="" className="h-full w-full object-cover" /> : <Icon name="album" className="absolute inset-0 m-auto text-5xl text-white/25" />}{openingCardId === card.id && <span className="absolute inset-0 flex items-center justify-center bg-black/55"><Icon name="progress_activity" className="animate-spin text-3xl" /></span>}</div>
+                    <p className="mt-3 truncate font-semibold">{card.title}</p><p className="mt-0.5 truncate text-sm text-white/45">{card.subtitle}</p>
+                  </button>)}
+                </div>
+              </section>}
+
+              {discoverySections.map((section) => (
                 <section key={section.title}>
-                  <div className="mb-4 flex items-center gap-3"><span className="text-3xl">{section.flag}</span><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/40">YouTube Music</p><h1 className="text-2xl font-bold">{section.title}</h1></div></div>
+                  <div className="mb-4"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/40">YouTube Music playlist</p><h1 className="text-2xl font-bold">{section.title}</h1></div>
                   {section.tracks.length ? <div className="grid grid-cols-1 gap-x-5 lg:grid-cols-2">{section.tracks.map((track, index) => <SongRow key={track.videoId} track={track} index={index} onPlay={() => { setViewMode('now-playing'); onPlayTrack(track, section.tracks.slice(index + 1)) }} onQueue={(playNext) => onQueueTrack(track, playNext)} />)}</div> : <div className="rounded-xl bg-white/[0.04] p-8 text-center text-white/40">Trending songs are loading…</div>}
                 </section>
               ))}

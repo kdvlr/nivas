@@ -137,6 +137,23 @@ class YTMusicService:
             logger.error(f"YTMusic get_home error: {e}")
             return []
 
+    def get_explore(self) -> Dict[str, Any]:
+        cache_key = "explore"
+        cached = self._get_cache(cache_key)
+        if cached is not None:
+            return cached
+
+        if not self._ytmusic:
+            return {}
+
+        try:
+            explore = self._ytmusic.get_explore()
+            self._set_cache(cache_key, explore, CACHE_TTL["home"])
+            return explore
+        except Exception as e:
+            logger.error(f"YTMusic get_explore error: {e}")
+            return {}
+
     def get_charts(self, country: str = "IN") -> Dict[str, Any]:
         cache_key = f"charts:{country}"
         cached = self._get_cache(cache_key)
@@ -205,6 +222,46 @@ class YTMusicService:
             logger.error(f"YTMusic get_playlist error '{playlist_id}': {e}")
             return {}
 
+    def get_playlist_songs(self, playlist_id: str, limit: int = 12) -> Dict[str, Any]:
+        """Return playable audio songs, resolving music-video chart entries to songs."""
+        cache_key = f"playlist-songs:{playlist_id}:{limit}"
+        cached = self._get_cache(cache_key)
+        if cached is not None:
+            return cached
+
+        playlist = self.get_playlist(playlist_id, limit=max(limit, 25))
+        if not playlist:
+            return {}
+
+        songs: List[Dict[str, Any]] = []
+        seen = set()
+        for item in playlist.get("tracks", []):
+            song = self.normalize_song(item)
+            if song is None and item.get("videoId"):
+                artists = self._artist_text(item)
+                query = " ".join(value for value in (item.get("title"), artists) if value)
+                candidates = self.search(query)
+                for candidate in candidates:
+                    song = self.normalize_song(candidate)
+                    if song:
+                        break
+            if not song or song["videoId"] in seen:
+                continue
+            seen.add(song["videoId"])
+            songs.append(song)
+            if len(songs) >= limit:
+                break
+
+        result = {
+            "id": playlist.get("id") or playlist_id,
+            "title": playlist.get("title") or "Playlist",
+            "description": playlist.get("description") or "",
+            "thumbnail": self._thumbnail_url(playlist),
+            "tracks": songs,
+        }
+        self._set_cache(cache_key, result, CACHE_TTL["playlist"])
+        return result
+
     def get_watch_playlist(self, video_id: Optional[str] = None, playlist_id: Optional[str] = None) -> Dict[str, Any]:
         cache_key = f"watch:{video_id}:{playlist_id}"
         cached = self._get_cache(cache_key)
@@ -232,21 +289,38 @@ class YTMusicService:
         return not any(marker in video_type for marker in ("_OMV", "_UGC"))
 
     @staticmethod
-    def normalize_song(item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        if not YTMusicService.is_song(item):
-            return None
+    def _artist_text(item: Dict[str, Any]) -> str:
         artists = item.get("artists")
         if isinstance(artists, list):
-            artist = ", ".join(
+            return ", ".join(
                 str(value.get("name"))
                 for value in artists
                 if isinstance(value, dict) and value.get("name")
             )
-        else:
-            raw_artist = item.get("artist")
-            artist = raw_artist.get("name", "") if isinstance(raw_artist, dict) else raw_artist
-        thumbnails = item.get("thumbnails") or []
-        thumbnail = thumbnails[-1].get("url") if thumbnails and isinstance(thumbnails[-1], dict) else item.get("thumbnail")
+        raw_artist = item.get("artist")
+        return str(raw_artist.get("name", "")) if isinstance(raw_artist, dict) else str(raw_artist or "")
+
+    @staticmethod
+    def _thumbnail_url(item: Dict[str, Any]) -> Optional[str]:
+        raw = item.get("thumbnails") or item.get("thumbnail")
+        if isinstance(raw, str):
+            return raw
+        if isinstance(raw, dict):
+            return raw.get("url")
+        if isinstance(raw, list):
+            for image in reversed(raw):
+                if isinstance(image, dict) and image.get("url"):
+                    return image["url"]
+                if isinstance(image, str):
+                    return image
+        return None
+
+    @staticmethod
+    def normalize_song(item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        if not YTMusicService.is_song(item):
+            return None
+        artist = YTMusicService._artist_text(item)
+        thumbnail = YTMusicService._thumbnail_url(item)
         album = item.get("album")
         if isinstance(album, dict):
             album = album.get("name")
