@@ -19,7 +19,7 @@ interface YTMusicViewProps {
   onQueueChange: (queue: Track[]) => void
 }
 
-type PlayerTab = 'queue' | 'lyrics' | 'related'
+type PlayerTab = 'queue' | 'lyrics'
 type MusicView = 'browse' | 'now-playing'
 
 const CURATED_PLAYLISTS = [
@@ -285,24 +285,6 @@ export default function YTMusic({
       .finally(() => setLyricsLoading(false))
   }, [currentTrack?.videoId, activeTab])
 
-  useEffect(() => {
-    setRelatedTracks([])
-    if (!currentTrack || activeTab !== 'related') return
-    setRelatedLoading(true)
-    api.get<any>(`/api/ytmusic/watch?video_id=${encodeURIComponent(currentTrack.videoId)}`)
-      .then((value) => {
-        const tracks: any[] = Array.isArray(value?.tracks) ? value.tracks : []
-        const seen = new Set([currentTrack.videoId])
-        setRelatedTracks(tracks.map(toTrack).filter((track): track is Track => {
-          if (!track || seen.has(track.videoId)) return false
-          seen.add(track.videoId)
-          return true
-        }).slice(0, 20))
-      })
-      .catch(() => setRelatedTracks([]))
-      .finally(() => setRelatedLoading(false))
-  }, [currentTrack?.videoId, activeTab])
-
   const resultTracks = useMemo(
     () => searchResults.map(toTrack).filter((track): track is Track => Boolean(track)),
     [searchResults],
@@ -386,7 +368,7 @@ export default function YTMusic({
           {loading ? (
             <div className="flex items-center justify-center gap-3 py-24 text-white/50"><Icon name="progress_activity" className="animate-spin text-2xl" /> Finding songs…</div>
           ) : resultTracks.length ? (
-            <div>{resultTracks.map((track, index) => <SongRow key={`${track.videoId}-${index}`} track={track} index={index} onPlay={() => { setSearchQuery(''); setViewMode('now-playing'); onPlayTrack(track, resultTracks.slice(index + 1)) }} onQueue={(playNext) => onQueueTrack(track, playNext)} />)}</div>
+            <div>{resultTracks.map((track, index) => <SongRow key={`${track.videoId}-${index}`} track={track} index={index} onPlay={() => { setSearchQuery(''); setViewMode('now-playing'); onPlayTrack(track) }} onQueue={(playNext) => onQueueTrack(track, playNext)} />)}</div>
           ) : (
             <div className="py-24 text-center text-white/45">No audio-only songs found.</div>
           )}</> : (
@@ -416,7 +398,7 @@ export default function YTMusic({
               {discoverySections.map((section) => (
                 <section key={section.title}>
                   <div className="mb-4"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/40">YouTube Music playlist</p><h1 className="text-2xl font-bold">{section.title}</h1></div>
-                  {section.tracks.length ? <div className="grid grid-cols-1 gap-x-5 lg:grid-cols-2">{section.tracks.map((track, index) => <SongRow key={track.videoId} track={track} index={index} onPlay={() => { setViewMode('now-playing'); onPlayTrack(track, section.tracks.slice(index + 1)) }} onQueue={(playNext) => onQueueTrack(track, playNext)} />)}</div> : <div className="rounded-xl bg-white/[0.04] p-8 text-center text-white/40">Trending songs are loading…</div>}
+                  {section.tracks.length ? <div className="grid grid-cols-1 gap-x-5 lg:grid-cols-2">{section.tracks.map((track, index) => <SongRow key={track.videoId} track={track} index={index} onPlay={() => { setViewMode('now-playing'); onPlayTrack(track) }} onQueue={(playNext) => onQueueTrack(track, playNext)} />)}</div> : <div className="rounded-xl bg-white/[0.04] p-8 text-center text-white/40">Trending songs are loading…</div>}
                 </section>
               ))}
             </div>
@@ -507,8 +489,8 @@ export default function YTMusic({
             )}
 
             {/* Tabs Row */}
-            <div className="grid shrink-0 grid-cols-3 border-b border-white/15">
-              {([['queue', 'Up next'], ['lyrics', 'Lyrics'], ['related', 'Related']] as [PlayerTab, string][]).map(([tab, label]) => (
+            <div className="grid shrink-0 grid-cols-2 border-b border-white/15">
+              {([['queue', 'Up next'], ['lyrics', 'Lyrics']] as [PlayerTab, string][]).map(([tab, label]) => (
                 <button key={tab} onClick={() => setActiveTab(tab)} className={`relative py-3 text-xs font-semibold uppercase tracking-wide transition md:py-4 md:text-sm ${activeTab === tab ? 'text-white' : 'text-white/50 hover:text-white/80'}`}>
                   {label}
                   {activeTab === tab && <span className="absolute inset-x-4 bottom-0 h-0.5 bg-white" />}
@@ -562,14 +544,6 @@ export default function YTMusic({
                   {lyricsLoading ? <div className="flex items-center gap-2 text-white/45"><Icon name="progress_activity" className="animate-spin" /> Loading lyrics…</div>
                     : lyrics ? <p className="whitespace-pre-line text-lg md:text-xl font-medium leading-relaxed text-white/85">{lyrics}</p>
                       : <p className="py-12 text-center text-white/45">Lyrics are not available for this song.</p>}
-                </div>
-              )}
-
-              {activeTab === 'related' && (
-                <div>
-                  {relatedLoading ? <p className="px-3 py-12 text-center text-sm text-white/45">Loading recommendations…</p> : relatedTracks.length ? relatedTracks.map((track, index) => (
-                    <SongRow key={`${track.videoId}-${index}`} track={track} onPlay={() => onPlayTrack(track, relatedTracks.slice(index + 1))} onQueue={(playNext) => onQueueTrack(track, playNext)} />
-                  )) : <p className="px-3 py-12 text-center text-sm text-white/45">No related songs were returned for this track.</p>}
                 </div>
               )}
             </div>
