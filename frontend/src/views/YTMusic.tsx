@@ -50,6 +50,13 @@ const formatTime = (seconds = 0) => {
   return `${Math.floor(value / 60)}:${String(Math.floor(value % 60)).padStart(2, '0')}`
 }
 
+const highResolutionArtwork = (url?: string) => {
+  if (!url) return ''
+  return url
+    .replace(/=w\d+-h\d+[^?&]*/, '=w1200-h1200-l90-rj')
+    .replace(/=s\d+[^?&]*/, '=s1200')
+}
+
 function SongRow({
   track,
   index,
@@ -213,7 +220,7 @@ export default function YTMusic({
             <div className="w-full max-w-[47rem]">
               <div className="aspect-square w-full overflow-hidden rounded-md bg-[#181818] shadow-2xl shadow-black">
                 {currentTrack?.thumbnail ? (
-                  <img src={currentTrack.thumbnail} alt={currentTrack.title} className="h-full w-full object-cover" />
+                  <img src={highResolutionArtwork(currentTrack.thumbnail)} alt={currentTrack.title} className="h-full w-full object-cover" />
                 ) : (
                   <div className="flex h-full flex-col items-center justify-center text-white/25">
                     <Icon name="album" className="text-8xl" />
@@ -222,31 +229,31 @@ export default function YTMusic({
                 )}
               </div>
 
-              {currentTrack && (
-                <div className="pt-5">
-                  <div className="flex items-start gap-4">
-                    <div className="min-w-0 flex-1">
-                      <h1 className="truncate text-xl font-bold md:text-2xl">{currentTrack.title}</h1>
-                      <p className="mt-1 truncate text-base text-white/55">{currentTrack.artist}{currentTrack.album ? ` · ${currentTrack.album}` : ''}</p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-1">
-                      <button onClick={onPrevTrack} className="flex h-12 w-12 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"><Icon name="skip_previous" className="text-3xl" /></button>
-                      <button onClick={onTogglePlay} className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-black transition hover:scale-105"><Icon name={isPlaying ? 'pause' : 'play_arrow'} filled className="text-3xl" /></button>
-                      <button onClick={onNextTrack} className="flex h-12 w-12 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"><Icon name="skip_next" className="text-3xl" /></button>
-                    </div>
-                  </div>
-                  <div className="mt-4 flex items-center gap-3 text-xs tabular-nums text-white/45">
-                    <span>{formatTime(elapsedSeconds)}</span>
-                    <input type="range" min={0} max={progressDuration || 100} value={Math.min(elapsedSeconds, progressDuration || 100)} onChange={(event) => onSeek(Number(event.target.value))} className="h-1 flex-1 cursor-pointer accent-white" />
-                    <span>{formatTime(progressDuration)}</span>
-                  </div>
-                </div>
-              )}
             </div>
           </section>
 
           <aside className="min-w-0 border-t border-white/15 px-4 py-7 md:px-7 xl:border-l xl:border-t-0 xl:pt-12">
             <div className="sticky top-[7rem]">
+              {currentTrack && (
+                <div className="border-b border-white/15 px-3 pb-5">
+                  <div className="flex items-center gap-4">
+                    <div className="min-w-0 flex-1">
+                      <h1 className="truncate text-xl font-bold">{currentTrack.title}</h1>
+                      <p className="mt-1 truncate text-sm text-white/55">{currentTrack.artist}{currentTrack.album ? ` · ${currentTrack.album}` : ''}</p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <button onClick={onPrevTrack} aria-label="Previous song" className="flex h-12 w-12 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"><Icon name="skip_previous" className="text-3xl" /></button>
+                      <button onClick={onTogglePlay} aria-label={isPlaying ? 'Pause' : 'Play'} className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-black transition hover:scale-105"><Icon name={isPlaying ? 'pause' : 'play_arrow'} filled className="text-3xl" /></button>
+                      <button onClick={onNextTrack} aria-label="Next song" className="flex h-12 w-12 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"><Icon name="skip_next" className="text-3xl" /></button>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex items-center gap-3 text-xs tabular-nums text-white/45">
+                    <span>{formatTime(elapsedSeconds)}</span>
+                    <input type="range" min={0} max={progressDuration || 100} value={Math.min(elapsedSeconds, progressDuration || 100)} onChange={(event) => onSeek(Number(event.target.value))} aria-label="Playback position" className="h-1 flex-1 cursor-pointer accent-white" />
+                    <span>{formatTime(progressDuration)}</span>
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-3 border-b border-white/15">
                 {([['queue', 'Up next'], ['lyrics', 'Lyrics'], ['related', 'Related']] as [PlayerTab, string][]).map(([tab, label]) => (
                   <button key={tab} onClick={() => setActiveTab(tab)} className={`relative py-4 text-sm font-semibold uppercase tracking-wide transition ${activeTab === tab ? 'text-white' : 'text-white/50 hover:text-white/80'}`}>
