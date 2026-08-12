@@ -33,7 +33,7 @@ export default function TopClockHeader({ now, config, route }: TopClockHeaderPro
     try {
       secondaryDateFormatted = new Intl.DateTimeFormat('en-US', {
         timeZone: secondaryTz,
-        month: 'long',
+        month: 'short',
         day: 'numeric',
       }).format(now)
     } catch (e) {}
@@ -53,19 +53,19 @@ export default function TopClockHeader({ now, config, route }: TopClockHeaderPro
   return (
     <header className="flex flex-col px-6 py-4 lg:px-8">
       <div className="flex flex-col">
-        <div className="flex items-baseline gap-3">
-          <span className="text-2xl font-normal tabular-nums tracking-tight text-[var(--primary)]">
+        <div className="flex items-baseline gap-4">
+          <span className="text-4xl lg:text-5xl font-bold tabular-nums tracking-tight text-[var(--primary)] leading-none">
             {now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
           </span>
-          <span className="text-lg font-medium text-ink-soft">
+          <span className="text-xl lg:text-2xl font-medium text-ink-soft">
             {now.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
           </span>
         </div>
-        <div className={`mt-1 flex gap-6 font-semibold text-ink-soft ${route === 'setup' ? 'text-base' : 'text-lg'}`}>
+        <div className="mt-1.5 flex gap-6 font-semibold text-ink-soft text-lg lg:text-xl">
           <span>
             {secondaryEmoji} {secondaryTimeFormatted}
             {hasDateDiff && secondaryDateFormatted && (
-              <span className={`ml-1 opacity-80 ${route === 'setup' ? 'text-xs' : 'text-sm'}`}>
+              <span className="ml-1 text-sm lg:text-base opacity-80">
                 ({secondaryDateFormatted})
               </span>
             )}

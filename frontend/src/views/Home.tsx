@@ -442,7 +442,7 @@ export default function Home() {
       </button>
 
       <div className="flex flex-col items-end shrink-0">
-        <div className="text-xl font-normal tabular-nums tracking-tight text-[var(--primary)] lg:text-4xl leading-none">
+        <div className="text-4xl lg:text-6xl font-bold tabular-nums tracking-tight text-[var(--primary)] leading-none">
           {now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
         </div>
         {(() => {
@@ -476,11 +476,11 @@ export default function Home() {
           }
 
           return (
-            <div className="mt-1 flex gap-3 text-xs lg:text-base font-semibold text-ink-soft">
+            <div className="mt-1.5 flex gap-3 text-base lg:text-xl font-semibold text-ink-soft">
               <span>
                 {secondaryEmoji} {secondaryTimeFormatted}
                 {hasDateDiff && secondaryDateFormatted && (
-                  <span className="ml-1 text-[10px] lg:text-xs opacity-85">
+                  <span className="ml-1 text-xs lg:text-sm opacity-85">
                     ({secondaryDateFormatted})
                   </span>
                 )}

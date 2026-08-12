@@ -359,10 +359,10 @@ export default function YTMusic({
 
             <div className="ml-auto flex shrink-0 items-center gap-2 md:gap-3">
               {/* Glass Clock Pill */}
-              <div className="hidden sm:flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3.5 py-1.5 text-xs font-semibold tabular-nums text-white/90 shadow-sm">
-                <span>{now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span>
-                <span className="opacity-40">•</span>
-                <span>🇮🇳 {secondaryTimeFormatted}</span>
+              <div className="hidden sm:flex items-center gap-2.5 rounded-full border border-white/20 bg-white/15 px-4 py-2 text-base md:text-xl font-bold tabular-nums text-white shadow-md backdrop-blur-md">
+                <span className="tracking-tight">{now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span>
+                <span className="opacity-45 text-sm">•</span>
+                <span className="text-white/90 font-semibold text-sm md:text-base">🇮🇳 {secondaryTimeFormatted}</span>
               </div>
 
               {/* Mobile Search Icon Toggle */}
