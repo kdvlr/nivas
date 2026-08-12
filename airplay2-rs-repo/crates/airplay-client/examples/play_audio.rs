@@ -9,8 +9,208 @@ use airplay_core::device::{Device, DeviceId};
 use airplay_core::features::Features;
 use airplay_core::stream::{PtpMode, StreamType, TimingProtocol};
 use airplay_core::{AudioCodec, AudioFormat, StreamConfig};
+use mdns_sd::{ServiceDaemon, ServiceInfo};
 use std::net::IpAddr;
-use std::time::Duration;
+use std::time::{Duration, Instant};
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
+use tokio::net::TcpListener;
+use tokio::sync::mpsc;
+
+#[derive(Debug)]
+enum DacpCommand {
+    Pause,
+    Play,
+    PlayPause,
+}
+
+#[derive(Debug)]
+enum SourceCommand {
+    Pause,
+    Resume,
+    Volume { target: Option<IpAddr>, value: f32 },
+    Stop,
+}
+
+fn parse_source_command(line: &str) -> Option<SourceCommand> {
+    let mut parts = line.split_whitespace();
+    match parts.next()?.to_ascii_lowercase().as_str() {
+        "pause" => Some(SourceCommand::Pause),
+        "resume" | "play" => Some(SourceCommand::Resume),
+        "stop" | "quit" | "exit" => Some(SourceCommand::Stop),
+        "volume" => {
+            let first = parts.next()?;
+            if let Ok(value) = first.parse::<f32>() {
+                Some(SourceCommand::Volume {
+                    target: None,
+                    value: value.clamp(0.0, 1.0),
+                })
+            } else {
+                let target = first.parse::<IpAddr>().ok()?;
+                let value = parts.next()?.parse::<f32>().ok()?.clamp(0.0, 1.0);
+                Some(SourceCommand::Volume {
+                    target: Some(target),
+                    value,
+                })
+            }
+        }
+        _ => None,
+    }
+}
+
+fn start_source_control(command_tx: mpsc::UnboundedSender<SourceCommand>) {
+    tokio::spawn(async move {
+        let mut lines = BufReader::new(tokio::io::stdin()).lines();
+        loop {
+            match lines.next_line().await {
+                Ok(Some(line)) => match parse_source_command(&line) {
+                    Some(command) => {
+                        if command_tx.send(command).is_err() {
+                            break;
+                        }
+                    }
+                    None => tracing::warn!("Ignoring invalid source command: {}", line),
+                },
+                Ok(None) => {
+                    // The owning Nivas process closed the control pipe. Treat
+                    // that as a stop so RTSP, RTP, PTP, and event sockets are
+                    // released instead of becoming an orphaned session.
+                    let _ = command_tx.send(SourceCommand::Stop);
+                    break;
+                }
+                Err(error) => {
+                    tracing::warn!("Source control input failed: {}", error);
+                    let _ = command_tx.send(SourceCommand::Stop);
+                    break;
+                }
+            }
+        }
+    });
+}
+
+fn start_shutdown_handler(command_tx: mpsc::UnboundedSender<SourceCommand>) {
+    tokio::spawn(async move {
+        #[cfg(unix)]
+        {
+            use tokio::signal::unix::{signal, SignalKind};
+            let mut terminate = signal(SignalKind::terminate()).ok();
+            let mut interrupt = signal(SignalKind::interrupt()).ok();
+            tokio::select! {
+                _ = async {
+                    if let Some(signal) = terminate.as_mut() {
+                        signal.recv().await;
+                    } else {
+                        std::future::pending::<()>().await;
+                    }
+                } => {}
+                _ = async {
+                    if let Some(signal) = interrupt.as_mut() {
+                        signal.recv().await;
+                    } else {
+                        std::future::pending::<()>().await;
+                    }
+                } => {}
+            }
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = tokio::signal::ctrl_c().await;
+        }
+        let _ = command_tx.send(SourceCommand::Stop);
+    });
+}
+
+fn airplay_event_command(data: &[u8]) -> Option<DacpCommand> {
+    // These are the four-character MediaRemote command values in the binary
+    // plist body of POST /command. The leading `T` is the binary-plist marker
+    // for a four-byte ASCII string.
+    if data.windows(5).any(|value| value == b"Tpaus") {
+        Some(DacpCommand::Pause)
+    } else if data.windows(5).any(|value| value == b"Tplay") {
+        Some(DacpCommand::Play)
+    } else {
+        None
+    }
+}
+
+async fn start_dacp_server(
+    dacp_id: &str,
+    active_remote: &str,
+    receiver_ip: IpAddr,
+) -> Result<(ServiceDaemon, mpsc::UnboundedReceiver<DacpCommand>), Box<dyn std::error::Error>> {
+    let listener = TcpListener::bind("0.0.0.0:0").await?;
+    let port = listener.local_addr()?.port();
+    let route_socket = std::net::UdpSocket::bind("0.0.0.0:0")?;
+    route_socket.connect((receiver_ip, 7000))?;
+    let advertised_ip = route_socket.local_addr()?.ip().to_string();
+    let mdns = ServiceDaemon::new()?;
+    let instance = format!("iTunes_Ctrl_{}", dacp_id);
+    let properties = [("txtvers", "1"), ("DbId", dacp_id)];
+    let service = ServiceInfo::new(
+        "_dacp._tcp.local.",
+        &instance,
+        "nivas-dacp.local.",
+        &advertised_ip,
+        port,
+        &properties[..],
+    )?;
+    mdns.register(service)?;
+
+    let expected_active_remote = active_remote.to_string();
+    let (command_tx, command_rx) = mpsc::unbounded_channel();
+    tokio::spawn(async move {
+        loop {
+            let Ok((mut stream, peer)) = listener.accept().await else {
+                break;
+            };
+            let command_tx = command_tx.clone();
+            let expected_active_remote = expected_active_remote.clone();
+            tokio::spawn(async move {
+                let mut request = vec![0u8; 8192];
+                let Ok(length) = stream.read(&mut request).await else {
+                    return;
+                };
+                request.truncate(length);
+                let text = String::from_utf8_lossy(&request);
+                let request_line = text.lines().next().unwrap_or_default();
+                let authorized = text.lines().any(|line| {
+                    line.trim()
+                        .eq_ignore_ascii_case(&format!("Active-Remote: {}", expected_active_remote))
+                });
+                tracing::info!(
+                    "DACP request from {}: {} (authorized={})",
+                    peer,
+                    request_line,
+                    authorized
+                );
+
+                let command = if request_line.contains("/ctrl-int/1/playpause") {
+                    Some(DacpCommand::PlayPause)
+                } else if request_line.contains("/ctrl-int/1/pause") {
+                    Some(DacpCommand::Pause)
+                } else if request_line.contains("/ctrl-int/1/play") {
+                    Some(DacpCommand::Play)
+                } else {
+                    None
+                };
+                if authorized {
+                    if let Some(command) = command {
+                        let _ = command_tx.send(command);
+                    }
+                }
+
+                let _ = stream
+                    .write_all(b"HTTP/1.1 204 No Content\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+                    .await;
+            });
+        }
+    });
+
+    println!(
+        "DACP service {} published at {}:{}",
+        instance, advertised_ip, port
+    );
+    Ok((mdns, command_rx))
+}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Configure Tokio runtime with 4 worker threads for Pi's 4 cores
@@ -25,7 +225,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
     tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::DEBUG)
+        .with_max_level(tracing::Level::INFO)
         .with_target(true)
         .init();
 
@@ -48,6 +248,7 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
         eprintln!("  --render-delay N Render delay in ms (shifts NTP timestamps forward for retransmit headroom)");
         eprintln!("  --device-id ID   Device ID for pair-verify (e.g., 4E:44:4C:1E:C3:B5)");
         eprintln!("  --force-transient Force transient pairing (skip pair-verify even if identity exists)");
+        eprintln!("  --control-stdin Read pause/resume/volume/stop commands from stdin");
         std::process::exit(1);
     }
 
@@ -55,12 +256,38 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
         .split(',')
         .map(|s| s.trim().parse().expect("Invalid IP address"))
         .collect();
+
+    let use_dacp = args.iter().any(|a| a == "--dacp");
+    let active_remote = "1234567890";
+    let dacp_device_id = "4E:49:56:41:53:01";
+    let dacp_id = dacp_device_id.replace(':', "");
+    let (_dacp_daemon, mut dacp_commands) = if use_dacp {
+        std::env::set_var("AIRPLAY_CLIENT_DEVICE_ID", dacp_device_id);
+        let (daemon, receiver) = start_dacp_server(&dacp_id, active_remote, ips[0]).await?;
+        (Some(daemon), Some(receiver))
+    } else {
+        (None, None)
+    };
     let port: u16 = args[2].parse()?;
     let audio_path = &args[3];
 
     // Parse optional protocol flags (default: airplay1/RAOP with NTP)
     let use_airplay2 = args.iter().any(|a| a == "--airplay2");
+    let control_stdin = args.iter().any(|a| a == "--control-stdin");
+    let source_pause_test = args.iter().any(|a| a == "--source-pause-test");
+    let handle_remote_events = args.iter().any(|a| a == "--remote-control-events");
     let use_ptp = args.iter().any(|a| a == "--ptp");
+    let ptp_targets: Vec<IpAddr> = args
+        .iter()
+        .position(|a| a == "--ptp-targets")
+        .and_then(|i| args.get(i + 1))
+        .map(|value| {
+            value
+                .split(',')
+                .map(|ip| ip.trim().parse().expect("Invalid --ptp-targets IP"))
+                .collect()
+        })
+        .unwrap_or_default();
     let ptp_slave = args.iter().any(|a| a == "--ptp-slave");
     let ptp_master = args.iter().any(|a| a == "--ptp-master");
     let render_delay_ms: u32 = args
@@ -74,6 +301,31 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
         .position(|a| a == "--volume")
         .and_then(|i| args.get(i + 1))
         .and_then(|v| v.parse().ok());
+    let volume_steps: Vec<(f64, f32)> = args
+        .iter()
+        .position(|a| a == "--volume-steps")
+        .and_then(|i| args.get(i + 1))
+        .map(|value| {
+            value
+                .split(',')
+                .map(|step| {
+                    let (seconds, volume) = step
+                        .split_once(':')
+                        .expect("Volume step must be SECONDS:VOLUME");
+                    (
+                        seconds.parse().expect("Invalid volume-step time"),
+                        volume.parse().expect("Invalid volume-step value"),
+                    )
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let (source_command_tx, mut source_commands) = mpsc::unbounded_channel();
+    if control_stdin {
+        start_source_control(source_command_tx.clone());
+    }
+    start_shutdown_handler(source_command_tx);
 
     // Device ID for identity lookup (pair-verify)
     // If not specified, derive from IP address for consistent identity per device
@@ -184,15 +436,21 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
         StreamType::Realtime
     };
 
+    let asc = if audio_format.codec == AudioCodec::Alac {
+        Some(AlacEncoder::new(audio_format.clone())?.magic_cookie())
+    } else {
+        None
+    };
+
     let config = StreamConfig {
         stream_type,
         audio_format,
         timing_protocol,
         ptp_mode,
-        latency_min: 11025, // ~250ms
+        latency_min: 22050, // 500ms; matches the previously working AirPlay 2 setup
         latency_max: 88200, // ~2s
         supports_dynamic_stream_id: true,
-        asc: None,
+        asc,
     };
 
     let default_features = Features::from_raw(0x445F8A00_0801C340);
@@ -271,7 +529,13 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
             };
 
             println!("Connecting to {} ({:?})...", target_ip, dev_id_str);
-            let mut conn = Connection::connect_auto(dev, config.clone(), "3939").await?;
+            let mut target_config = config.clone();
+            if ptp_targets.contains(target_ip) {
+                target_config.timing_protocol = TimingProtocol::Ptp;
+                target_config.ptp_mode = PtpMode::Master;
+                println!("Using PTP timing for {}", target_ip);
+            }
+            let mut conn = Connection::connect_auto(dev, target_config, "3939").await?;
             if render_delay_ms > 0 {
                 conn.set_render_delay_ms(render_delay_ms);
             }
@@ -297,14 +561,153 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         let mut feedback_counter = 0u32;
+        let mut next_volume_step = 0usize;
+        let source_test_started = Instant::now();
+        let mut source_test_paused = false;
+        let mut source_test_resumed = false;
+        let mut stop_requested = false;
         loop {
-            tokio::time::sleep(Duration::from_secs(1)).await;
+            tokio::time::sleep(Duration::from_millis(250)).await;
+            feedback_counter += 1;
             let pos = conns[0].playback_position();
             let state = conns[0].playback_state();
-            println!("Position: {:.1}s, State: {:?}", pos, state);
+            if feedback_counter % 4 == 0 {
+                println!("Position: {:.1}s, State: {:?}", pos, state);
+            }
 
-            feedback_counter += 1;
-            if feedback_counter % 2 == 0 {
+            while let Ok(command) = source_commands.try_recv() {
+                tracing::info!("Applying source command: {:?}", command);
+                match command {
+                    SourceCommand::Pause => {
+                        for conn in &mut conns {
+                            conn.pause().await?;
+                        }
+                    }
+                    SourceCommand::Resume => {
+                        for conn in &mut conns {
+                            conn.resume().await?;
+                        }
+                    }
+                    SourceCommand::Volume { target, value } => {
+                        for (index, conn) in conns.iter_mut().enumerate() {
+                            if target.is_none() || target == Some(ips[index]) {
+                                conn.set_volume(value).await?;
+                            }
+                        }
+                    }
+                    SourceCommand::Stop => {
+                        stop_requested = true;
+                    }
+                }
+            }
+
+            if stop_requested {
+                println!("Source requested shutdown");
+                break;
+            }
+
+            let mut airplay_command = None;
+            for (index, conn) in conns.iter_mut().enumerate() {
+                let event_data = conn.poll_event_data()?;
+                if !event_data.is_empty() {
+                    if handle_remote_events {
+                        if let Some(command) = airplay_event_command(&event_data) {
+                            airplay_command = Some(command);
+                        }
+                    }
+                    println!(
+                        "EVENT DATA speaker {} ({} bytes): hex={:02x?} text={}",
+                        index + 1,
+                        event_data.len(),
+                        event_data,
+                        String::from_utf8_lossy(&event_data)
+                    );
+                }
+            }
+
+            if let Some(command) = airplay_command {
+                println!(
+                    "Applying AirPlay event command to all speakers: {:?}",
+                    command
+                );
+                match command {
+                    DacpCommand::Pause => {
+                        for conn in &mut conns {
+                            conn.pause_from_remote().await?;
+                        }
+                    }
+                    DacpCommand::Play => {
+                        for conn in &mut conns {
+                            conn.resume_from_remote().await?;
+                        }
+                    }
+                    DacpCommand::PlayPause => unreachable!(),
+                }
+            }
+
+            if source_pause_test
+                && !source_test_paused
+                && source_test_started.elapsed() >= Duration::from_secs(8)
+            {
+                println!("SOURCE TEST: pausing all speakers");
+                for conn in &mut conns {
+                    conn.pause().await?;
+                }
+                source_test_paused = true;
+            }
+            if source_pause_test
+                && source_test_paused
+                && !source_test_resumed
+                && source_test_started.elapsed() >= Duration::from_secs(13)
+            {
+                println!("SOURCE TEST: resuming all speakers");
+                for conn in &mut conns {
+                    conn.resume().await?;
+                }
+                source_test_resumed = true;
+            }
+
+            while let Some(&(step_time, step_volume)) = volume_steps.get(next_volume_step) {
+                if pos < step_time {
+                    break;
+                }
+                println!("Applying volume step at {:.1}s: {:.2}", pos, step_volume);
+                for conn in &mut conns {
+                    conn.set_volume(step_volume).await?;
+                }
+                next_volume_step += 1;
+            }
+
+            if let Some(commands) = dacp_commands.as_mut() {
+                while let Ok(command) = commands.try_recv() {
+                    let command = match command {
+                        DacpCommand::PlayPause => {
+                            if conns[0].playback_state() == airplay_client::PlaybackState::Paused {
+                                DacpCommand::Play
+                            } else {
+                                DacpCommand::Pause
+                            }
+                        }
+                        command => command,
+                    };
+                    println!("Applying DACP command to all speakers: {:?}", command);
+                    match command {
+                        DacpCommand::Pause => {
+                            for conn in &mut conns {
+                                conn.pause().await?;
+                            }
+                        }
+                        DacpCommand::Play => {
+                            for conn in &mut conns {
+                                conn.resume().await?;
+                            }
+                        }
+                        DacpCommand::PlayPause => unreachable!(),
+                    }
+                }
+            }
+
+            if feedback_counter % 8 == 0 {
                 for conn in conns.iter_mut() {
                     let _ = conn.send_feedback().await;
                 }
@@ -406,4 +809,41 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Done!");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{parse_source_command, SourceCommand};
+    use std::net::{IpAddr, Ipv4Addr};
+
+    #[test]
+    fn parses_lifecycle_commands() {
+        assert!(matches!(
+            parse_source_command("pause"),
+            Some(SourceCommand::Pause)
+        ));
+        assert!(matches!(
+            parse_source_command("resume"),
+            Some(SourceCommand::Resume)
+        ));
+        assert!(matches!(
+            parse_source_command("stop"),
+            Some(SourceCommand::Stop)
+        ));
+    }
+
+    #[test]
+    fn parses_global_and_targeted_volume() {
+        assert!(matches!(
+            parse_source_command("volume 0.42"),
+            Some(SourceCommand::Volume { target: None, value }) if (value - 0.42).abs() < f32::EPSILON
+        ));
+        assert!(matches!(
+            parse_source_command("volume 192.168.120.111 0.37"),
+            Some(SourceCommand::Volume {
+                target: Some(IpAddr::V4(address)),
+                value,
+            }) if address == Ipv4Addr::new(192, 168, 120, 111) && (value - 0.37).abs() < f32::EPSILON
+        ));
+    }
 }

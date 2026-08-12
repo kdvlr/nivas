@@ -1,8 +1,8 @@
 //! RTP packet formatting and transmission.
 
+use crate::cipher::PacketCipher;
 use airplay_core::error::{Error, Result};
 use airplay_crypto::chacha::AudioCipher;
-use crate::cipher::PacketCipher;
 use std::net::{SocketAddr, UdpSocket};
 use std::time::Duration;
 
@@ -30,7 +30,10 @@ fn set_socket_qos(socket: &UdpSocket) {
             std::mem::size_of::<libc::c_int>() as libc::socklen_t,
         );
         if ret != 0 {
-            tracing::debug!("Failed to set IP_TOS (DSCP EF): errno={}", std::io::Error::last_os_error());
+            tracing::debug!(
+                "Failed to set IP_TOS (DSCP EF): errno={}",
+                std::io::Error::last_os_error()
+            );
         }
     }
 
@@ -46,7 +49,10 @@ fn set_socket_qos(socket: &UdpSocket) {
             std::mem::size_of::<libc::c_int>() as libc::socklen_t,
         );
         if ret != 0 {
-            tracing::debug!("Failed to set SO_SNDBUF: errno={}", std::io::Error::last_os_error());
+            tracing::debug!(
+                "Failed to set SO_SNDBUF: errno={}",
+                std::io::Error::last_os_error()
+            );
         }
     }
 
@@ -62,7 +68,10 @@ fn set_socket_qos(socket: &UdpSocket) {
             std::mem::size_of::<libc::c_int>() as libc::socklen_t,
         );
         if ret != 0 {
-            tracing::debug!("Failed to set SO_PRIORITY: errno={}", std::io::Error::last_os_error());
+            tracing::debug!(
+                "Failed to set SO_PRIORITY: errno={}",
+                std::io::Error::last_os_error()
+            );
         }
     }
 }
@@ -159,7 +168,7 @@ impl RtpHeader {
     pub fn parse(data: &[u8]) -> Result<Self> {
         if data.len() < 12 {
             return Err(Error::Parse(
-                airplay_core::error::ParseError::InvalidFormat("RTP header too short".into())
+                airplay_core::error::ParseError::InvalidFormat("RTP header too short".into()),
             ));
         }
 
@@ -201,12 +210,14 @@ impl RtpPacket {
 
     /// Encrypt payload and add nonce/tag.
     pub fn encrypt(mut self, cipher: &AudioCipher) -> Result<Self> {
-        let (ciphertext, nonce, tag) = cipher.encrypt_with_seq(
-            &self.payload,
-            self.header.timestamp,
-            self.header.ssrc,
-            self.header.sequence,
-        ).map_err(|e| Error::Crypto(e))?;
+        let (ciphertext, nonce, tag) = cipher
+            .encrypt_with_seq(
+                &self.payload,
+                self.header.timestamp,
+                self.header.ssrc,
+                self.header.sequence,
+            )
+            .map_err(|e| Error::Crypto(e))?;
 
         self.payload = ciphertext;
         self.nonce = Some(nonce);
@@ -243,7 +254,7 @@ impl RtpPacket {
     pub fn parse(data: &[u8]) -> Result<Self> {
         if data.len() < 12 {
             return Err(Error::Parse(
-                airplay_core::error::ParseError::InvalidFormat("RTP packet too short".into())
+                airplay_core::error::ParseError::InvalidFormat("RTP packet too short".into()),
             ));
         }
 
@@ -263,7 +274,9 @@ impl RtpPacket {
         // Minimum: 12 header + 8 nonce + 16 tag = 36 bytes
         if data.len() < 36 {
             return Err(Error::Parse(
-                airplay_core::error::ParseError::InvalidFormat("Encrypted RTP packet too short".into())
+                airplay_core::error::ParseError::InvalidFormat(
+                    "Encrypted RTP packet too short".into(),
+                ),
             ));
         }
 
@@ -327,9 +340,10 @@ impl RetransmitRequest {
         let payload_type = data[1] & 0x7F;
         if payload_type != payload_types::RETRANSMIT_REQUEST {
             return Err(Error::Parse(
-                airplay_core::error::ParseError::InvalidFormat(
-                    format!("Expected payload type 85, got {}", payload_type),
-                ),
+                airplay_core::error::ParseError::InvalidFormat(format!(
+                    "Expected payload type 85, got {}",
+                    payload_type
+                )),
             ));
         }
 
@@ -385,6 +399,8 @@ pub struct RtpSender {
     /// and the receiver ignores them.
     control_socket: Option<UdpSocket>,
     sequence: u16,
+    /// Per-session RTP timestamp origin advertised in RECORD/FLUSH.
+    timestamp_offset: u32,
     ssrc: u32,
     cipher: Option<Box<dyn PacketCipher>>,
     /// Sync packet sequence counter (increments each sync)
@@ -401,6 +417,16 @@ impl RtpSender {
     ///
     /// Sequence starts at 0 to match what's advertised in RECORD RTP-Info header.
     pub fn new(dest: SocketAddr, ssrc: u32) -> Self {
+        Self::new_with_origin(dest, ssrc, 0, 0)
+    }
+
+    /// Create a sender with an explicit per-session RTP origin.
+    pub fn new_with_origin(
+        dest: SocketAddr,
+        ssrc: u32,
+        sequence: u16,
+        timestamp_offset: u32,
+    ) -> Self {
         let mut packet_history = Vec::with_capacity(PACKET_HISTORY_SIZE);
         packet_history.resize_with(PACKET_HISTORY_SIZE, || None);
 
@@ -410,7 +436,8 @@ impl RtpSender {
             control_dest: None,
             control_socket: None,
             tcp_stream: None,
-            sequence: 0,
+            sequence,
+            timestamp_offset,
             ssrc,
             cipher: None,
             sync_sequence: 0,
@@ -421,7 +448,8 @@ impl RtpSender {
 
     /// Connect TCP stream to destination data_port (AirPlay 2 TCP audio streaming).
     pub fn connect_tcp(&mut self, dest: SocketAddr) -> Result<()> {
-        let stream = std::net::TcpStream::connect_timeout(&dest, std::time::Duration::from_secs(3))?;
+        let stream =
+            std::net::TcpStream::connect_timeout(&dest, std::time::Duration::from_secs(3))?;
         stream.set_nodelay(true)?;
         self.dest = dest;
         self.tcp_stream = Some(stream);
@@ -480,10 +508,11 @@ impl RtpSender {
 
     /// Send a raw packet.
     pub fn send(&mut self, packet: &RtpPacket) -> Result<()> {
-        let socket = self.socket.as_ref()
-            .ok_or_else(|| Error::Streaming(
-                airplay_core::error::StreamingError::Encoding("Socket not bound".into())
-            ))?;
+        let socket = self.socket.as_ref().ok_or_else(|| {
+            Error::Streaming(airplay_core::error::StreamingError::Encoding(
+                "Socket not bound".into(),
+            ))
+        })?;
 
         socket.send_to(&packet.serialize(), self.dest)?;
         Ok(())
@@ -498,20 +527,22 @@ impl RtpSender {
         payload: &[u8],
         marker: bool,
     ) -> Result<Vec<u8>> {
-        let header = RtpHeader::new(payload_type, self.sequence, timestamp, self.ssrc)
+        let wire_timestamp = timestamp.wrapping_add(self.timestamp_offset);
+        let header = RtpHeader::new(payload_type, self.sequence, wire_timestamp, self.ssrc)
             .with_marker(marker);
 
         // Encrypt if cipher is set, then build serialized packet
         let serialized = if let Some(cipher) = &self.cipher {
             let seq_before = self.sequence;
-            let encrypted = cipher.encrypt_payload(payload, timestamp, self.ssrc, self.sequence)?;
+            let encrypted =
+                cipher.encrypt_payload(payload, wire_timestamp, self.ssrc, self.sequence)?;
 
             // Debug: log nonce and tag for first few packets
             if seq_before % 500 == 0 {
                 if let (Some(nonce), Some(tag)) = (&encrypted.nonce, &encrypted.tag) {
                     tracing::info!(
                         "Encrypted packet: seq={}, ts={}, ssrc={:08x}, nonce={:02x?}, tag_first4={:02x?}, payload_len={}",
-                        seq_before, timestamp, self.ssrc, nonce, &tag[..4], payload.len()
+                        seq_before, wire_timestamp, self.ssrc, nonce, &tag[..4], payload.len()
                     );
                 }
             }
@@ -544,9 +575,14 @@ impl RtpSender {
             tracing::info!(
                 "DIAG first audio packet: wire_len={}, payload_len={}, encrypted={}, dest={}, \
                  header_first4={:02x?}, pt={}, marker={}, ssrc={:08x}",
-                serialized.len(), payload.len(), has_cipher, self.dest,
+                serialized.len(),
+                payload.len(),
+                has_cipher,
+                self.dest,
                 &serialized[..4.min(serialized.len())],
-                payload_type, marker, self.ssrc,
+                payload_type,
+                marker,
+                self.ssrc,
             );
         }
 
@@ -554,7 +590,12 @@ impl RtpSender {
         let idx = self.sequence as usize % PACKET_HISTORY_SIZE;
         self.packet_history[idx] = Some(serialized);
 
-        tracing::debug!("Audio packet prepared: seq={}, ts={}, len={}", self.sequence, timestamp, payload.len());
+        tracing::debug!(
+            "Audio packet prepared: seq={}, ts={}, len={}",
+            self.sequence,
+            timestamp,
+            payload.len()
+        );
         self.sequence = self.sequence.wrapping_add(1);
 
         // Return a reference to the stored copy (avoids clone since we just stored it)
@@ -571,10 +612,11 @@ impl RtpSender {
     ) -> Result<()> {
         let serialized = self.serialize_audio(payload_type, timestamp, payload, marker)?;
 
-        let socket = self.socket.as_ref()
-            .ok_or_else(|| Error::Streaming(
-                airplay_core::error::StreamingError::Encoding("Socket not bound".into())
-            ))?;
+        let socket = self.socket.as_ref().ok_or_else(|| {
+            Error::Streaming(airplay_core::error::StreamingError::Encoding(
+                "Socket not bound".into(),
+            ))
+        })?;
         socket.send_to(&serialized, self.dest)?;
 
         Ok(())
@@ -597,11 +639,12 @@ impl RtpSender {
     /// Owntone's sync packet format (20 bytes):
     /// - Byte 0: Type (0x90 = start sync, 0x80 = regular sync)
     /// - Byte 1: 0xd4 (payload type 84 with marker bit)
-    /// - Bytes 2-3: 0x00, 0x07 (fixed values)
-    /// - Bytes 4-7: Current playback position in samples (BE)
+    /// - Bytes 2-3: Incrementing sync sequence number (BE)
+    /// - Bytes 4-7: Current RTP timestamp (BE)
     /// - Bytes 8-15: NTP timestamp (8 bytes BE - seconds + fraction)
-    /// - Bytes 16-19: RTP timestamp (BE)
+    /// - Bytes 16-19: Next RTP timestamp (BE)
     pub fn send_sync(&mut self, rtp_timestamp: u32, ntp_timestamp: u64) -> Result<()> {
+        let rtp_timestamp = rtp_timestamp.wrapping_add(self.timestamp_offset);
         // Get the destination - control port if set, otherwise data port
         let dest = self.control_dest.unwrap_or(self.dest);
 
@@ -613,54 +656,95 @@ impl RtpSender {
 
         // Use control socket if available (sends from our declared control port),
         // otherwise fall back to data socket.
-        let socket = self.control_socket.as_ref()
+        let socket = self
+            .control_socket
+            .as_ref()
             .or(self.socket.as_ref())
-            .ok_or_else(|| Error::Streaming(
-                airplay_core::error::StreamingError::Encoding("Socket not bound".into())
-            ))?;
+            .ok_or_else(|| {
+                Error::Streaming(airplay_core::error::StreamingError::Encoding(
+                    "Socket not bound".into(),
+                ))
+            })?;
 
-        // Build owntone-style sync packet (20 bytes)
-        let mut packet = [0u8; 20];
-
-        // Byte 0: 0x90 for first sync (extension bit set), 0x80 for subsequent
-        packet[0] = if !self.first_sync_sent {
-            self.first_sync_sent = true;
-            0x90
-        } else {
-            0x80
-        };
-        // Byte 1: 0xd4 = marker bit (0x80) | payload type 84 (0x54)
-        packet[1] = 0xd4;
-        // Bytes 2-3: 0x0007 per pyatv / raop_sender.cpp spec
-        packet[2..4].copy_from_slice(&7u16.to_be_bytes());
+        let sync_sequence = self.sync_sequence;
         self.sync_sequence = self.sync_sequence.wrapping_add(1);
-        // Bytes 4-7: Playback position without latency (now - 11025)
-        let render_ts = rtp_timestamp.wrapping_sub(11025);
-        packet[4..8].copy_from_slice(&render_ts.to_be_bytes());
-        // Bytes 8-15: NTP timestamp (8 bytes BE)
-        packet[8..16].copy_from_slice(&ntp_timestamp.to_be_bytes());
-        // Bytes 16-19: RTP timestamp (BE)
-        packet[16..20].copy_from_slice(&rtp_timestamp.to_be_bytes());
 
-        socket.send_to(&packet, dest)?;
-        // Diagnostic: log first sync packet in detail
-        if self.sync_sequence <= 2 {
-            let ntp_secs = (ntp_timestamp >> 32) as u32;
-            let ntp_frac = ntp_timestamp as u32;
+        // NTP sync remains legacy PT84 even when AirPlay 2 audio is encrypted.
+        // PTP sessions take the separate prepare_ptp_sync() path.
+        let packet_data = if false {
+            let cipher = self
+                .cipher
+                .as_ref()
+                .expect("unreachable encrypted NTP sync");
+            // AirPlay 2 Encrypted Sync Packet (PT 96, 68 bytes wire format)
+            // 40-byte plaintext sync payload:
+            // - Bytes 0..3: Current RTP timestamp (BE)
+            // - Bytes 4..11: NTP/PTP timestamp (BE seconds + fraction)
+            // - Bytes 12..15: Render RTP timestamp (BE, timestamp + latency offset)
+            // - Bytes 16..39: PTP clock identity & padding (24 bytes)
+            let mut sync_payload = [0u8; 40];
+            sync_payload[0..4].copy_from_slice(&rtp_timestamp.to_be_bytes());
+            sync_payload[4..12].copy_from_slice(&ntp_timestamp.to_be_bytes());
+            let render_ts = rtp_timestamp.wrapping_add(11025);
+            sync_payload[12..16].copy_from_slice(&render_ts.to_be_bytes());
+
+            // Build encrypted RTP packet with PT 96 and current sync sequence
+            let header = RtpHeader::new(96, sync_sequence, rtp_timestamp, self.ssrc);
+            let encrypted =
+                cipher.encrypt_payload(&sync_payload, rtp_timestamp, self.ssrc, sync_sequence)?;
+
+            let mut wire_pkt = Vec::with_capacity(12 + encrypted.data.len() + 16);
+            wire_pkt.extend_from_slice(&header.serialize());
+            wire_pkt.extend_from_slice(&encrypted.data);
+            if let Some(tag) = &encrypted.tag {
+                wire_pkt.extend_from_slice(tag);
+            }
+            wire_pkt
+        } else {
+            // Legacy AirPlay 1 / RAOP unencrypted 20-byte Sync packet (PT 84)
+            let mut packet = [0u8; 20];
+            packet[0] = if !self.first_sync_sent {
+                self.first_sync_sent = true;
+                0x90
+            } else {
+                0x80
+            };
+            packet[1] = 0xd4; // PT 84 with marker bit
+            packet[2..4].copy_from_slice(&sync_sequence.to_be_bytes());
+            packet[4..8].copy_from_slice(&rtp_timestamp.to_be_bytes());
+            packet[8..16].copy_from_slice(&ntp_timestamp.to_be_bytes());
+            packet[16..20].copy_from_slice(&rtp_timestamp.to_be_bytes());
+            packet.to_vec()
+        };
+
+        socket.send_to(&packet_data, dest)?;
+        if sync_sequence <= 2 {
             tracing::info!(
-                "DIAG sync #{}: dest={}, render_ts={}, rtp_ts={}, ntp_secs={}, ntp_frac={}, first_byte=0x{:02x}, pkt={:02x?}",
-                self.sync_sequence - 1, dest, render_ts, rtp_timestamp, ntp_secs, ntp_frac,
-                packet[0], &packet[..20]
+                "DIAG AirPlay 2 Sync #{}: dest={}, rtp_ts={}, len={}",
+                sync_sequence,
+                dest,
+                rtp_timestamp,
+                packet_data.len()
             );
         }
-        tracing::debug!("Sync packet sent to {}: rtp_ts={}, ntp_ts={}", dest, rtp_timestamp, ntp_timestamp);
+        tracing::debug!(
+            "Sync packet sent to {}: rtp_ts={}, ntp_ts={}",
+            dest,
+            rtp_timestamp,
+            ntp_timestamp
+        );
 
         Ok(())
     }
 
     /// Prepare a sync packet without sending. Returns the 20-byte packet data,
     /// or None if the control port is 0 (buffered mode skips sync).
-    pub fn prepare_sync(&mut self, rtp_timestamp: u32, ntp_timestamp: u64) -> Result<Option<Vec<u8>>> {
+    pub fn prepare_sync(
+        &mut self,
+        rtp_timestamp: u32,
+        ntp_timestamp: u64,
+    ) -> Result<Option<Vec<u8>>> {
+        let rtp_timestamp = rtp_timestamp.wrapping_add(self.timestamp_offset);
         let dest = self.control_dest.unwrap_or(self.dest);
 
         if dest.port() == 0 {
@@ -668,33 +752,49 @@ impl RtpSender {
             return Ok(None);
         }
 
-        let mut packet = [0u8; 20];
-
-        packet[0] = if !self.first_sync_sent {
-            self.first_sync_sent = true;
-            0x90
-        } else {
-            0x80
-        };
-        packet[1] = 0xd4;
-        packet[2..4].copy_from_slice(&7u16.to_be_bytes());
+        let sync_sequence = self.sync_sequence;
         self.sync_sequence = self.sync_sequence.wrapping_add(1);
-        let render_ts = rtp_timestamp.wrapping_sub(11025);
-        packet[4..8].copy_from_slice(&render_ts.to_be_bytes());
-        packet[8..16].copy_from_slice(&ntp_timestamp.to_be_bytes());
-        packet[16..20].copy_from_slice(&rtp_timestamp.to_be_bytes());
 
-        if self.sync_sequence <= 2 {
-            let ntp_secs = (ntp_timestamp >> 32) as u32;
-            let ntp_frac = ntp_timestamp as u32;
-            tracing::info!(
-                "DIAG sync #{}: dest={}, rtp_ts={}, ntp_secs={}, ntp_frac={}, first_byte=0x{:02x}, pkt={:02x?}",
-                self.sync_sequence - 1, dest, rtp_timestamp, ntp_secs, ntp_frac,
-                packet[0], &packet[..20]
-            );
-        }
+        // NTP sync remains legacy PT84 even when AirPlay 2 audio is encrypted.
+        let packet_data = if false {
+            let cipher = self
+                .cipher
+                .as_ref()
+                .expect("unreachable encrypted NTP sync");
+            let mut sync_payload = [0u8; 40];
+            sync_payload[0..4].copy_from_slice(&rtp_timestamp.to_be_bytes());
+            sync_payload[4..12].copy_from_slice(&ntp_timestamp.to_be_bytes());
+            let render_ts = rtp_timestamp.wrapping_add(11025);
+            sync_payload[12..16].copy_from_slice(&render_ts.to_be_bytes());
 
-        Ok(Some(packet.to_vec()))
+            let header = RtpHeader::new(96, sync_sequence, rtp_timestamp, self.ssrc);
+            let encrypted =
+                cipher.encrypt_payload(&sync_payload, rtp_timestamp, self.ssrc, sync_sequence)?;
+
+            let mut wire_pkt = Vec::with_capacity(12 + encrypted.data.len() + 16);
+            wire_pkt.extend_from_slice(&header.serialize());
+            wire_pkt.extend_from_slice(&encrypted.data);
+            if let Some(tag) = &encrypted.tag {
+                wire_pkt.extend_from_slice(tag);
+            }
+            wire_pkt
+        } else {
+            let mut packet = [0u8; 20];
+            packet[0] = if !self.first_sync_sent {
+                self.first_sync_sent = true;
+                0x90
+            } else {
+                0x80
+            };
+            packet[1] = 0xd4;
+            packet[2..4].copy_from_slice(&sync_sequence.to_be_bytes());
+            packet[4..8].copy_from_slice(&rtp_timestamp.to_be_bytes());
+            packet[8..16].copy_from_slice(&ntp_timestamp.to_be_bytes());
+            packet[16..20].copy_from_slice(&rtp_timestamp.to_be_bytes());
+            packet.to_vec()
+        };
+
+        Ok(Some(packet_data))
     }
 
     /// Prepare a PTP-mode sync packet (PT=87, 28 bytes) without sending.
@@ -720,6 +820,8 @@ impl RtpSender {
         next_rtp_ts: u32,
         master_clock_id: &[u8; 8],
     ) -> Result<Option<Vec<u8>>> {
+        let current_rtp_ts = current_rtp_ts.wrapping_add(self.timestamp_offset);
+        let next_rtp_ts = next_rtp_ts.wrapping_add(self.timestamp_offset);
         let dest = self.control_dest.unwrap_or(self.dest);
 
         if dest.port() == 0 {
@@ -762,7 +864,12 @@ impl RtpSender {
         if self.sync_sequence <= 2 {
             tracing::info!(
                 "DIAG PTP sync #{}: dest={}, rtp_ts={}, ptp_secs={}, ptp_frac={}, clock_id={:02x?}",
-                self.sync_sequence - 1, dest, current_rtp_ts, ptp_secs, ptp_frac, master_clock_id
+                self.sync_sequence - 1,
+                dest,
+                current_rtp_ts,
+                ptp_secs,
+                ptp_frac,
+                master_clock_id
             );
         }
 
@@ -777,20 +884,33 @@ impl RtpSender {
         next_rtp_ts: u32,
         master_clock_id: &[u8; 8],
     ) -> Result<()> {
-        let packet = match self.prepare_ptp_sync(current_rtp_ts, ptp_clock_ns, next_rtp_ts, master_clock_id)? {
+        let packet = match self.prepare_ptp_sync(
+            current_rtp_ts,
+            ptp_clock_ns,
+            next_rtp_ts,
+            master_clock_id,
+        )? {
             Some(p) => p,
             None => return Ok(()),
         };
 
         let dest = self.control_dest.unwrap_or(self.dest);
-        let socket = self.control_socket.as_ref()
+        let socket = self
+            .control_socket
+            .as_ref()
             .or(self.socket.as_ref())
-            .ok_or_else(|| Error::Streaming(
-                airplay_core::error::StreamingError::Encoding("Socket not bound".into())
-            ))?;
+            .ok_or_else(|| {
+                Error::Streaming(airplay_core::error::StreamingError::Encoding(
+                    "Socket not bound".into(),
+                ))
+            })?;
 
         socket.send_to(&packet, dest)?;
-        tracing::debug!("PTP sync packet sent to {}: rtp_ts={}", dest, current_rtp_ts);
+        tracing::debug!(
+            "PTP sync packet sent to {}: rtp_ts={}",
+            dest,
+            current_rtp_ts
+        );
 
         Ok(())
     }
@@ -816,6 +936,14 @@ impl RtpSender {
         self.sequence
     }
 
+    /// Return the RTP sequence and wire timestamp for the next audio packet.
+    pub fn rtp_info(&self, stream_timestamp: u64) -> (u16, u32) {
+        (
+            self.sequence,
+            (stream_timestamp as u32).wrapping_add(self.timestamp_offset),
+        )
+    }
+
     /// Get SSRC.
     pub fn ssrc(&self) -> u32 {
         self.ssrc
@@ -823,7 +951,9 @@ impl RtpSender {
 
     /// Get local port (after bind).
     pub fn local_port(&self) -> Option<u16> {
-        self.socket.as_ref().and_then(|s| s.local_addr().ok().map(|a| a.port()))
+        self.socket
+            .as_ref()
+            .and_then(|s| s.local_addr().ok().map(|a| a.port()))
     }
 
     /// Handle a retransmit request by resending the requested packets.
@@ -833,11 +963,15 @@ impl RtpSender {
     /// Returns the number of packets successfully retransmitted.
     pub fn handle_retransmit(&self, request: &RetransmitRequest) -> Result<u16> {
         // Use control socket for retransmit responses (same port as sync)
-        let socket = self.control_socket.as_ref()
+        let socket = self
+            .control_socket
+            .as_ref()
             .or(self.socket.as_ref())
-            .ok_or_else(|| Error::Streaming(
-                airplay_core::error::StreamingError::Encoding("Socket not bound".into())
-            ))?;
+            .ok_or_else(|| {
+                Error::Streaming(airplay_core::error::StreamingError::Encoding(
+                    "Socket not bound".into(),
+                ))
+            })?;
 
         let dest = self.control_dest.unwrap_or(self.dest);
         let mut retransmitted = 0u16;
@@ -853,7 +987,8 @@ impl RtpSender {
                     if stored_seq != seq {
                         tracing::debug!(
                             "Retransmit: seq {} not in history (slot has seq {})",
-                            seq, stored_seq
+                            seq,
+                            stored_seq
                         );
                         continue;
                     }
@@ -870,7 +1005,8 @@ impl RtpSender {
         if retransmitted > 0 {
             tracing::debug!(
                 "Retransmitted {}/{} packets (seq {}..{})",
-                retransmitted, request.count,
+                retransmitted,
+                request.count,
                 request.first_sequence,
                 request.first_sequence.wrapping_add(request.count - 1)
             );
@@ -911,10 +1047,11 @@ impl RtpReceiver {
 
     /// Receive packet with timeout.
     pub fn recv_timeout(&self, timeout: Duration) -> Result<Option<RtpPacket>> {
-        let socket = self.socket.as_ref()
-            .ok_or_else(|| Error::Streaming(
-                airplay_core::error::StreamingError::Encoding("Socket not bound".into())
-            ))?;
+        let socket = self.socket.as_ref().ok_or_else(|| {
+            Error::Streaming(airplay_core::error::StreamingError::Encoding(
+                "Socket not bound".into(),
+            ))
+        })?;
 
         socket.set_read_timeout(Some(timeout))?;
 
@@ -930,11 +1067,15 @@ impl RtpReceiver {
     /// Receive raw bytes with timeout (for packets that may not be standard RTP).
     ///
     /// Returns `Ok(Some((data, addr)))` on success, `Ok(None)` on timeout.
-    pub fn recv_raw_timeout(&self, timeout: Duration) -> Result<Option<(Vec<u8>, std::net::SocketAddr)>> {
-        let socket = self.socket.as_ref()
-            .ok_or_else(|| Error::Streaming(
-                airplay_core::error::StreamingError::Encoding("Socket not bound".into())
-            ))?;
+    pub fn recv_raw_timeout(
+        &self,
+        timeout: Duration,
+    ) -> Result<Option<(Vec<u8>, std::net::SocketAddr)>> {
+        let socket = self.socket.as_ref().ok_or_else(|| {
+            Error::Streaming(airplay_core::error::StreamingError::Encoding(
+                "Socket not bound".into(),
+            ))
+        })?;
 
         socket.set_read_timeout(Some(timeout))?;
 
@@ -949,7 +1090,9 @@ impl RtpReceiver {
 
     /// Get local port (after bind).
     pub fn local_port(&self) -> Option<u16> {
-        self.socket.as_ref().and_then(|s| s.local_addr().ok().map(|a| a.port()))
+        self.socket
+            .as_ref()
+            .and_then(|s| s.local_addr().ok().map(|a| a.port()))
     }
 
     /// Clone the underlying socket (for sharing with RtpSender for sync packets).
@@ -1049,8 +1192,7 @@ mod tests {
 
         #[test]
         fn parse_serialize_roundtrip() {
-            let original = RtpHeader::new(96, 12345, 0xDEADBEEF, 0x12345678)
-                .with_marker(true);
+            let original = RtpHeader::new(96, 12345, 0xDEADBEEF, 0x12345678).with_marker(true);
 
             let bytes = original.serialize();
             let parsed = RtpHeader::parse(&bytes).unwrap();
@@ -1180,7 +1322,9 @@ mod tests {
             // Listener to receive the sync packet
             let listener = UdpSocket::bind("127.0.0.1:0").unwrap();
             let listener_addr = listener.local_addr().unwrap();
-            listener.set_read_timeout(Some(Duration::from_secs(1))).unwrap();
+            listener
+                .set_read_timeout(Some(Duration::from_secs(1)))
+                .unwrap();
 
             // Create sender with data socket on one port
             let mut sender = RtpSender::new(listener_addr, 0xABCD);
@@ -1202,12 +1346,15 @@ mod tests {
 
             // Sync must arrive from the control port, NOT the data port
             assert_eq!(
-                src_addr.port(), control_port,
+                src_addr.port(),
+                control_port,
                 "sync packet came from port {} but expected control port {}",
-                src_addr.port(), control_port
+                src_addr.port(),
+                control_port
             );
             assert_ne!(
-                src_addr.port(), data_port,
+                src_addr.port(),
+                data_port,
                 "sync packet must NOT come from the data port"
             );
         }
@@ -1217,7 +1364,9 @@ mod tests {
             // When no control_socket is set, sync should still work via the data socket.
             let listener = UdpSocket::bind("127.0.0.1:0").unwrap();
             let listener_addr = listener.local_addr().unwrap();
-            listener.set_read_timeout(Some(Duration::from_secs(1))).unwrap();
+            listener
+                .set_read_timeout(Some(Duration::from_secs(1)))
+                .unwrap();
 
             let mut sender = RtpSender::new(listener_addr, 0xABCD);
             sender.set_control_dest(listener_addr);
@@ -1237,7 +1386,9 @@ mod tests {
         fn sync_packet_is_20_bytes_with_correct_format() {
             let listener = UdpSocket::bind("127.0.0.1:0").unwrap();
             let listener_addr = listener.local_addr().unwrap();
-            listener.set_read_timeout(Some(Duration::from_secs(1))).unwrap();
+            listener
+                .set_read_timeout(Some(Duration::from_secs(1)))
+                .unwrap();
 
             let mut sender = RtpSender::new(listener_addr, 0xABCD);
             sender.set_control_dest(listener_addr);
@@ -1256,11 +1407,13 @@ mod tests {
             assert_eq!(buf[0], 0x90);
             // Byte 1: 0xD4 = marker (0x80) | PT 84 (0x54)
             assert_eq!(buf[1], 0xD4);
-            // Bytes 4-7: RTP timestamp (big-endian)
+            // Bytes 2-3: first monotonically increasing sync sequence number
+            assert_eq!(&buf[2..4], &0u16.to_be_bytes());
+            // Bytes 4-7: current RTP timestamp (big-endian)
             assert_eq!(&buf[4..8], &rtp_ts.to_be_bytes());
             // Bytes 8-15: NTP timestamp (big-endian)
             assert_eq!(&buf[8..16], &ntp_ts.to_be_bytes());
-            // Bytes 16-19: RTP timestamp again
+            // Bytes 16-19: next RTP timestamp at the transmit leading edge
             assert_eq!(&buf[16..20], &rtp_ts.to_be_bytes());
         }
 
@@ -1268,7 +1421,9 @@ mod tests {
         fn second_sync_clears_extension_bit() {
             let listener = UdpSocket::bind("127.0.0.1:0").unwrap();
             let listener_addr = listener.local_addr().unwrap();
-            listener.set_read_timeout(Some(Duration::from_secs(1))).unwrap();
+            listener
+                .set_read_timeout(Some(Duration::from_secs(1)))
+                .unwrap();
 
             let mut sender = RtpSender::new(listener_addr, 0xABCD);
             sender.set_control_dest(listener_addr);
@@ -1283,7 +1438,11 @@ mod tests {
             // Second sync
             sender.send_sync(352, 1000).unwrap();
             listener.recv_from(&mut buf).unwrap();
-            assert_eq!(buf[0], 0x80, "subsequent syncs should NOT have extension bit");
+            assert_eq!(
+                buf[0], 0x80,
+                "subsequent syncs should NOT have extension bit"
+            );
+            assert_eq!(&buf[2..4], &1u16.to_be_bytes());
         }
     }
 
@@ -1340,7 +1499,9 @@ mod tests {
             // Set up a listener to receive the sync
             let listener = UdpSocket::bind("127.0.0.1:0").unwrap();
             let listener_addr = listener.local_addr().unwrap();
-            listener.set_read_timeout(Some(Duration::from_secs(1))).unwrap();
+            listener
+                .set_read_timeout(Some(Duration::from_secs(1)))
+                .unwrap();
 
             // Create sender and give it the cloned control socket
             let mut sender = RtpSender::new(listener_addr, 0x1234);
@@ -1355,9 +1516,11 @@ mod tests {
             let mut buf = [0u8; 64];
             let (_len, src_addr) = listener.recv_from(&mut buf).unwrap();
             assert_eq!(
-                src_addr.port(), control_port,
+                src_addr.port(),
+                control_port,
                 "sync must arrive from control port {}, got {}",
-                control_port, src_addr.port()
+                control_port,
+                src_addr.port()
             );
         }
     }
@@ -1410,9 +1573,9 @@ mod tests {
             let mut data = [0u8; 12];
             data[0] = 0x80; // V=2
             data[1] = 0x80 | payload_types::RETRANSMIT_REQUEST; // M=1, PT=85
-            // Bytes 2-3: sequence (irrelevant for parsing)
-            // Bytes 4-7: timestamp (irrelevant)
-            // Bytes 8-9: first lost sequence = 100
+                                                                // Bytes 2-3: sequence (irrelevant for parsing)
+                                                                // Bytes 4-7: timestamp (irrelevant)
+                                                                // Bytes 8-9: first lost sequence = 100
             data[8..10].copy_from_slice(&100u16.to_be_bytes());
             // Bytes 10-11: count = 3
             data[10..12].copy_from_slice(&3u16.to_be_bytes());
@@ -1482,14 +1645,18 @@ mod tests {
         fn ptp_sync_packet_is_28_bytes() {
             let listener = UdpSocket::bind("127.0.0.1:0").unwrap();
             let listener_addr = listener.local_addr().unwrap();
-            listener.set_read_timeout(Some(Duration::from_secs(1))).unwrap();
+            listener
+                .set_read_timeout(Some(Duration::from_secs(1)))
+                .unwrap();
 
             let mut sender = RtpSender::new(listener_addr, 0xABCD);
             sender.set_control_dest(listener_addr);
             sender.bind(0).unwrap();
 
             let clock_id = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x00, 0x11];
-            sender.send_ptp_sync(44100, 188_748_000_000_000, 44100 + 352, &clock_id).unwrap();
+            sender
+                .send_ptp_sync(44100, 188_748_000_000_000, 44100 + 352, &clock_id)
+                .unwrap();
 
             let mut buf = [0u8; 64];
             let (len, _) = listener.recv_from(&mut buf).unwrap();
@@ -1500,7 +1667,9 @@ mod tests {
         fn ptp_sync_has_pt_87() {
             let listener = UdpSocket::bind("127.0.0.1:0").unwrap();
             let listener_addr = listener.local_addr().unwrap();
-            listener.set_read_timeout(Some(Duration::from_secs(1))).unwrap();
+            listener
+                .set_read_timeout(Some(Duration::from_secs(1)))
+                .unwrap();
 
             let mut sender = RtpSender::new(listener_addr, 0xABCD);
             sender.set_control_dest(listener_addr);
@@ -1522,7 +1691,9 @@ mod tests {
         fn ptp_sync_first_has_extension_bit() {
             let listener = UdpSocket::bind("127.0.0.1:0").unwrap();
             let listener_addr = listener.local_addr().unwrap();
-            listener.set_read_timeout(Some(Duration::from_secs(1))).unwrap();
+            listener
+                .set_read_timeout(Some(Duration::from_secs(1)))
+                .unwrap();
 
             let mut sender = RtpSender::new(listener_addr, 0xABCD);
             sender.set_control_dest(listener_addr);
@@ -1537,16 +1708,23 @@ mod tests {
             assert_eq!(buf[0], 0x90, "first PTP sync should have extension bit");
 
             // Second PTP sync: no extension bit
-            sender.send_ptp_sync(352, 1000000000, 704, &clock_id).unwrap();
+            sender
+                .send_ptp_sync(352, 1000000000, 704, &clock_id)
+                .unwrap();
             listener.recv_from(&mut buf).unwrap();
-            assert_eq!(buf[0], 0x80, "subsequent PTP syncs should NOT have extension bit");
+            assert_eq!(
+                buf[0], 0x80,
+                "subsequent PTP syncs should NOT have extension bit"
+            );
         }
 
         #[test]
         fn ptp_sync_timestamp_encoding() {
             let listener = UdpSocket::bind("127.0.0.1:0").unwrap();
             let listener_addr = listener.local_addr().unwrap();
-            listener.set_read_timeout(Some(Duration::from_secs(1))).unwrap();
+            listener
+                .set_read_timeout(Some(Duration::from_secs(1)))
+                .unwrap();
 
             let mut sender = RtpSender::new(listener_addr, 0xABCD);
             sender.set_control_dest(listener_addr);
@@ -1555,7 +1733,9 @@ mod tests {
             let clock_id = [0x01; 8];
             // 188748.5 seconds = 188748500000000 ns
             let ptp_ns: u64 = 188_748_500_000_000;
-            sender.send_ptp_sync(44100, ptp_ns, 44452, &clock_id).unwrap();
+            sender
+                .send_ptp_sync(44100, ptp_ns, 44452, &clock_id)
+                .unwrap();
 
             let mut buf = [0u8; 64];
             listener.recv_from(&mut buf).unwrap();
@@ -1566,14 +1746,19 @@ mod tests {
 
             // Bytes 12-15: PTP fraction (0.5s = 0x80000000)
             let frac = u32::from_be_bytes([buf[12], buf[13], buf[14], buf[15]]);
-            assert_eq!(frac, 0x80000000, "PTP fraction for 0.5s should be 0x80000000");
+            assert_eq!(
+                frac, 0x80000000,
+                "PTP fraction for 0.5s should be 0x80000000"
+            );
         }
 
         #[test]
         fn ptp_sync_clock_id_placement() {
             let listener = UdpSocket::bind("127.0.0.1:0").unwrap();
             let listener_addr = listener.local_addr().unwrap();
-            listener.set_read_timeout(Some(Duration::from_secs(1))).unwrap();
+            listener
+                .set_read_timeout(Some(Duration::from_secs(1)))
+                .unwrap();
 
             let mut sender = RtpSender::new(listener_addr, 0xABCD);
             sender.set_control_dest(listener_addr);
@@ -1586,14 +1771,20 @@ mod tests {
             listener.recv_from(&mut buf).unwrap();
 
             // Bytes 20-27: master clock ID
-            assert_eq!(&buf[20..28], &clock_id, "master clock ID must be in bytes 20-27");
+            assert_eq!(
+                &buf[20..28],
+                &clock_id,
+                "master clock ID must be in bytes 20-27"
+            );
         }
 
         #[test]
         fn ptp_sync_rtp_timestamps() {
             let listener = UdpSocket::bind("127.0.0.1:0").unwrap();
             let listener_addr = listener.local_addr().unwrap();
-            listener.set_read_timeout(Some(Duration::from_secs(1))).unwrap();
+            listener
+                .set_read_timeout(Some(Duration::from_secs(1)))
+                .unwrap();
 
             let mut sender = RtpSender::new(listener_addr, 0xABCD);
             sender.set_control_dest(listener_addr);
@@ -1602,7 +1793,9 @@ mod tests {
             let clock_id = [0x01; 8];
             let current_rtp: u32 = 44100;
             let next_rtp: u32 = 44452;
-            sender.send_ptp_sync(current_rtp, 0, next_rtp, &clock_id).unwrap();
+            sender
+                .send_ptp_sync(current_rtp, 0, next_rtp, &clock_id)
+                .unwrap();
 
             let mut buf = [0u8; 64];
             listener.recv_from(&mut buf).unwrap();

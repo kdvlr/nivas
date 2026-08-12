@@ -160,7 +160,11 @@ impl RtspSession {
             host.to_string()
         };
         if self.state == SessionState::Disconnected || self.state == SessionState::Paired {
-            format!("rtsp://{}/{}", host, self.session_id.to_string().to_uppercase())
+            format!(
+                "rtsp://{}/{}",
+                host,
+                self.session_id.to_string().to_uppercase()
+            )
         } else {
             format!("rtsp://{}/{}", host, self.stream_connection_id)
         }
@@ -209,11 +213,9 @@ impl RtspSession {
     /// Transition to paired state.
     pub fn set_paired(&mut self) -> Result<()> {
         if self.state != SessionState::Connected {
-            return Err(RtspError::SetupFailed(format!(
-                "Cannot pair from state {:?}",
-                self.state
-            ))
-            .into());
+            return Err(
+                RtspError::SetupFailed(format!("Cannot pair from state {:?}", self.state)).into(),
+            );
         }
         self.state = SessionState::Paired;
         Ok(())
@@ -254,7 +256,11 @@ impl RtspSession {
     ///
     /// `local_timing_port` should be the port of a pre-bound UDP socket
     /// that will be used for timing synchronization.
-    pub fn build_setup_phase1(&self, local_timing_port: u16, local_addresses: Option<Vec<String>>) -> Result<Vec<u8>> {
+    pub fn build_setup_phase1(
+        &self,
+        local_timing_port: u16,
+        local_addresses: Option<Vec<String>>,
+    ) -> Result<Vec<u8>> {
         let timing_protocol = match self.stream_config.timing_protocol {
             TimingProtocol::Ntp => "NTP",
             TimingProtocol::Ptp => "PTP",
@@ -262,25 +268,36 @@ impl RtspSession {
 
         // Build timing peer info for PTP — must contain the SENDER's addresses
         // so the receiver knows where to find our PTP master clock.
-        let (timing_peer_info, timing_peer_list) = if self.stream_config.timing_protocol == TimingProtocol::Ptp {
-            let addresses = local_addresses.unwrap_or_default();
+        let (timing_peer_info, timing_peer_list) =
+            if self.stream_config.timing_protocol == TimingProtocol::Ptp {
+                let addresses = local_addresses.unwrap_or_default();
 
-            let peer_info = TimingPeerInfo {
-                addresses,
-                id: self.session_id.to_string(),
-                supports_clock_port_matching_override: true,
+                let peer_info = TimingPeerInfo {
+                    addresses,
+                    id: self.session_id.to_string(),
+                    supports_clock_port_matching_override: true,
+                };
+                let peer_list = vec![peer_info.clone()];
+                (Some(peer_info), Some(peer_list))
+            } else {
+                (None, None)
             };
-            let peer_list = vec![peer_info.clone()];
-            (Some(peer_info), Some(peer_list))
-        } else {
-            (None, None)
-        };
 
         let request = SetupPhase1Request {
             device_id: self.client_device_id.clone(),
             session_uuid: self.session_id.to_string().to_uppercase(),
             timing_port: local_timing_port,
             timing_protocol: timing_protocol.to_string(),
+            is_multi_select_airplay: true,
+            group_contains_group_leader: false,
+            mac_address: self.client_device_id.clone(),
+            model: "iPhone14,3".to_string(),
+            name: "Nivas".to_string(),
+            os_build_version: "20F66".to_string(),
+            os_name: "iPhone OS".to_string(),
+            os_version: "16.5".to_string(),
+            sender_supports_relay: false,
+            source_version: "745.83".to_string(),
             timing_peer_info,
             timing_peer_list,
         };
@@ -297,18 +314,27 @@ impl RtspSession {
         // Log the full plist for debugging
         let encoded = plist_codec::encode(&request)?;
         if let Ok(dict) = plist_codec::decode::<plist::Dictionary>(&encoded) {
-            tracing::debug!("SETUP phase1 plist keys: {:?}", dict.keys().collect::<Vec<_>>());
+            tracing::debug!(
+                "SETUP phase1 plist keys: {:?}",
+                dict.keys().collect::<Vec<_>>()
+            );
             // Log the decoded values
             for (key, value) in dict.iter() {
                 match value {
                     plist::Value::String(s) => tracing::debug!("  {}: \"{}\"", key, s),
-                    plist::Value::Integer(i) => tracing::debug!("  {}: {}", key, i.as_unsigned().unwrap_or(0)),
+                    plist::Value::Integer(i) => {
+                        tracing::debug!("  {}: {}", key, i.as_unsigned().unwrap_or(0))
+                    }
                     _ => tracing::debug!("  {}: {:?}", key, value),
                 }
             }
         }
         // Log first 64 bytes of the binary plist
-        let hex: String = encoded.iter().take(64).map(|b| format!("{:02x}", b)).collect();
+        let hex: String = encoded
+            .iter()
+            .take(64)
+            .map(|b| format!("{:02x}", b))
+            .collect();
         tracing::debug!("SETUP phase1 plist hex (first 64 bytes): {}", hex);
 
         Ok(encoded)
@@ -341,7 +367,9 @@ impl RtspSession {
                 peer_info.id
             );
             // For PTP: timing_port should be 0 (PTP uses ports 319/320 directly)
-            if self.stream_config.timing_protocol == TimingProtocol::Ptp && phase1_response.timing_port != 0 {
+            if self.stream_config.timing_protocol == TimingProtocol::Ptp
+                && phase1_response.timing_port != 0
+            {
                 tracing::warn!(
                     "Receiver reported timing_port={} for PTP (expected 0)",
                     phase1_response.timing_port
@@ -373,32 +401,35 @@ impl RtspSession {
             .into());
         }
 
-        let (stream_type, audio_format, ct, spf, asc) = match self.stream_config.audio_format.codec {
+        let (stream_type, audio_format, ct, spf, asc) = match self.stream_config.audio_format.codec
+        {
             AudioCodec::Aac => (
-                103u32,      // 0x67 buffered audio stream
-                0x200000u32, // AAC-ELD / AAC format
-                4u32,        // ct=4 (AAC)
-                1024u32,     // 1024 samples per frame
+                103u32,                 // 0x67 buffered audio stream
+                0x200000u32,            // AAC-ELD / AAC format
+                4u32,                   // ct=4 (AAC)
+                1024u32,                // 1024 samples per frame
                 Some(vec![0x12, 0x10]), // 2-byte AAC AudioSpecificConfig for 44.1kHz stereo
             ),
             _ => (
-                96u32,       // 0x60 realtime audio stream
-                0x40000u32,  // ALAC 44100/16/2
-                2u32,        // ct=2 (ALAC)
-                352u32,      // 352 samples per frame
-                Some(vec![
-                    0x00, 0x00, 0x01, 0x60, // frameLength = 352
-                    0x00,                   // compatibleVersion = 0
-                    0x0e,                   // bitDepth = 14
-                    0x10,                   // pb = 16
-                    0x28,                   // mb = 40
-                    0x0a,                   // kb = 10
-                    0x02,                   // numChannels = 2
-                    0x00,                   // maxRun = 0
-                    0x00, 0x00, 0x00, 0x00, // maxFrameBytes = 0
-                    0x00, 0x00, 0x00, 0x00, // bitRate = 0
-                    0x00, 0xac, 0x44, 0x00, // sampleRate = 44100
-                ]),
+                96u32,      // 0x60 realtime audio stream
+                0x40000u32, // ALAC 44100/16/2
+                2u32,       // ct=2 (ALAC)
+                352u32,     // 352 samples per frame
+                self.stream_config.asc.clone().or_else(|| {
+                    Some(vec![
+                        0x00, 0x00, 0x01, 0x60, // frameLength = 352 (u32 BE)
+                        0x00, // compatibleVersion = 0 (u8)
+                        0x10, // bitDepth = 16 (u8)
+                        0x28, // pb = 40 (u8)
+                        0x0a, // mb = 10 (u8)
+                        0x0e, // kb = 14 (u8)
+                        0x02, // numChannels = 2 (u8)
+                        0x00, 0xff, // maxRun = 255 (u16 BE)
+                        0x00, 0x00, 0x00, 0x00, // maxFrameBytes = 0 (u32 BE)
+                        0x00, 0x00, 0x00, 0x00, // avgBitRate = 0 (u32 BE)
+                        0x00, 0x00, 0xac, 0x44, // sampleRate = 44100 (u32 BE)
+                    ])
+                }),
             ),
         };
 
@@ -410,12 +441,12 @@ impl RtspSession {
             ct: ct as u8,
             control_port: self.local_control_port,
             is_media: true,
-            latency_min: 11025,
+            latency_min: self.stream_config.latency_min,
             latency_max: self.stream_config.latency_max,
             shk: self.shk.to_vec(),
             asc,
             spf,
-            supports_dynamic_stream_id: false,
+            supports_dynamic_stream_id: self.stream_config.supports_dynamic_stream_id,
             stream_connection_id: self.stream_connection_id as u64,
         };
 
@@ -532,8 +563,12 @@ impl RtspSession {
     pub fn build_set_volume(&self, volume: f32) -> Result<Vec<u8>> {
         let clamped = volume.clamp(0.0, 1.0);
         let pct = (clamped * 100.0) as f64;
-        let dbfs = if pct < 0.01 { -144.0 } else { -30.0 + 0.3 * pct };
-        Ok(format!("volume: {:.6}", dbfs).into_bytes())
+        let dbfs = if pct < 0.01 {
+            -144.0
+        } else {
+            -30.0 + 0.3 * pct
+        };
+        Ok(format!("volume: {:.6}\r\n", dbfs).into_bytes())
     }
 
     /// Build SETPEERS request for multi-room.
@@ -541,7 +576,6 @@ impl RtspSession {
         // SETPEERS body is a simple plist array of peer addresses
         plist_codec::encode(&peer_addresses.to_vec())
     }
-
 }
 
 #[cfg(test)]
@@ -621,10 +655,7 @@ mod tests {
             let session = RtspSession::new(device.clone(), config.clone());
 
             assert_eq!(session.device().name, device.name);
-            assert_eq!(
-                session.stream_config().stream_type,
-                StreamType::Buffered
-            );
+            assert_eq!(session.stream_config().stream_type, StreamType::Buffered);
         }
     }
 
@@ -666,7 +697,9 @@ mod tests {
             };
             let response_data = plist_codec::encode(&response).unwrap();
 
-            assert!(session.process_setup_phase1_response(&response_data).is_ok());
+            assert!(session
+                .process_setup_phase1_response(&response_data)
+                .is_ok());
             assert_eq!(session.state(), SessionState::SetupPhase1);
         }
 
@@ -842,7 +875,9 @@ mod tests {
 
             // timingPort should be the port we passed
             assert_eq!(
-                decoded.get("timingPort").and_then(|v| v.as_unsigned_integer()),
+                decoded
+                    .get("timingPort")
+                    .and_then(|v| v.as_unsigned_integer()),
                 Some(54321)
             );
         }
@@ -868,11 +903,20 @@ mod tests {
             assert!(!decoded.contains_key("eiv"), "Should not have eiv");
             assert!(!decoded.contains_key("ekey"), "Should not have ekey");
             assert!(!decoded.contains_key("et"), "Should not have et");
-            assert!(!decoded.contains_key("groupUUID"), "Should not have groupUUID");
-            assert!(!decoded.contains_key("macAddress"), "Should not have macAddress");
+            assert!(
+                !decoded.contains_key("groupUUID"),
+                "Should not have groupUUID"
+            );
+            assert!(
+                !decoded.contains_key("macAddress"),
+                "Should not have macAddress"
+            );
             assert!(!decoded.contains_key("model"), "Should not have model");
             assert!(!decoded.contains_key("name"), "Should not have name");
-            assert!(!decoded.contains_key("sourceVersion"), "Should not have sourceVersion");
+            assert!(
+                !decoded.contains_key("sourceVersion"),
+                "Should not have sourceVersion"
+            );
         }
 
         #[test]
@@ -889,7 +933,9 @@ mod tests {
             };
             let response_data = plist_codec::encode(&response).unwrap();
 
-            session.process_setup_phase1_response(&response_data).unwrap();
+            session
+                .process_setup_phase1_response(&response_data)
+                .unwrap();
 
             assert_eq!(session.ports().unwrap().event_port, 58168);
         }
@@ -908,7 +954,9 @@ mod tests {
             };
             let response_data = plist_codec::encode(&response).unwrap();
 
-            session.process_setup_phase1_response(&response_data).unwrap();
+            session
+                .process_setup_phase1_response(&response_data)
+                .unwrap();
 
             assert_eq!(session.ports().unwrap().timing_port, 58169);
         }
@@ -958,7 +1006,9 @@ mod tests {
 
             // Default is ALAC = 0x40000
             assert_eq!(
-                stream.get("audioFormat").and_then(|v| v.as_unsigned_integer()),
+                stream
+                    .get("audioFormat")
+                    .and_then(|v| v.as_unsigned_integer()),
                 Some(0x40000)
             );
         }

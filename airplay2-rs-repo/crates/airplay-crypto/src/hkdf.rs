@@ -46,6 +46,10 @@ pub mod constants {
     pub const CONTROL_WRITE_KEY_INFO: &[u8] = b"Control-Write-Encryption-Key";
     pub const CONTROL_READ_KEY_INFO: &[u8] = b"Control-Read-Encryption-Key";
 
+    pub const EVENTS_SALT: &[u8] = b"Events-Salt";
+    pub const EVENTS_WRITE_KEY_INFO: &[u8] = b"Events-Write-Encryption-Key";
+    pub const EVENTS_READ_KEY_INFO: &[u8] = b"Events-Read-Encryption-Key";
+
     // Placeholder constants for FairPlay-derived stream keys.
     // TODO: Replace with real FairPlay key derivation parameters.
     pub const FAIRPLAY_EKEY_INFO: &[u8] = b"AirPlay-FairPlay-EKEY";
@@ -96,10 +100,28 @@ pub fn derive_control_read_key(shared_secret: &[u8]) -> Result<[u8; 32], CryptoE
     )
 }
 
+/// Derive the key used by the receiver to write to the reverse event channel.
+pub fn derive_events_write_key(shared_secret: &[u8]) -> Result<[u8; 32], CryptoError> {
+    derive_key_32(
+        shared_secret,
+        constants::EVENTS_SALT,
+        constants::EVENTS_WRITE_KEY_INFO,
+    )
+}
+
+/// Derive the key used by the receiver to read from the reverse event channel.
+pub fn derive_events_read_key(shared_secret: &[u8]) -> Result<[u8; 32], CryptoError> {
+    derive_key_32(
+        shared_secret,
+        constants::EVENTS_SALT,
+        constants::EVENTS_READ_KEY_INFO,
+    )
+}
+
 /// Simple SHA-512 hash of two byte arrays concatenated.
 /// Used by fruit pairing: SHA512(info || secret)
 pub fn hash_ab(a: &[u8], b: &[u8]) -> [u8; 64] {
-    use sha2::{Sha512, Digest};
+    use sha2::{Digest, Sha512};
     let mut hasher = Sha512::new();
     hasher.update(a);
     hasher.update(b);

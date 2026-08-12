@@ -1,16 +1,19 @@
 //! High-level audio streaming orchestrator.
 
-use airplay_core::{StreamConfig, error::Result};
-use crate::{AudioBuffer, AudioDecoder, RtpSender, LiveAudioDecoder};
 use crate::encoder::{create_encoder, AudioEncoder};
 use crate::eq::{EqConfig, EqParams, Equalizer};
-use airplay_timing::{Clock, ClockOffset, unix_to_ntp};
-use std::sync::{Arc, atomic::{AtomicU64, AtomicU8, Ordering}};
-use tokio::sync::{Mutex, watch};
+use crate::{AudioBuffer, AudioDecoder, LiveAudioDecoder, RtpSender};
+use airplay_core::{error::Result, StreamConfig};
+use airplay_timing::{unix_to_ntp, Clock, ClockOffset};
+use crossbeam_channel::{bounded, Receiver, Sender};
+use std::net::{SocketAddr, UdpSocket};
+use std::sync::{
+    atomic::{AtomicU64, AtomicU8, Ordering},
+    Arc,
+};
+use tokio::sync::{watch, Mutex};
 use tokio::task::JoinHandle;
 use tokio::time::{sleep, Duration, Instant};
-use crossbeam_channel::{bounded, Sender, Receiver};
-use std::net::{SocketAddr, UdpSocket};
 
 /// Streaming state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -47,8 +50,10 @@ fn set_realtime_priority() {
         if result == 0 {
             tracing::info!("Set real-time priority (SCHED_FIFO, priority 50)");
         } else {
-            tracing::warn!("Failed to set RT priority (need CAP_SYS_NICE or root): errno={}",
-                *libc::__errno_location());
+            tracing::warn!(
+                "Failed to set RT priority (need CAP_SYS_NICE or root): errno={}",
+                *libc::__errno_location()
+            );
         }
     }
 }
@@ -68,7 +73,10 @@ fn disable_wifi_power_save() {
     use std::process::Command;
     // Try common wireless interface names
     for iface in &["wlan0", "wlp2s0", "wlp3s0"] {
-        match Command::new("iw").args([*iface, "set", "power_save", "off"]).output() {
+        match Command::new("iw")
+            .args([*iface, "set", "power_save", "off"])
+            .output()
+        {
             Ok(output) if output.status.success() => {
                 tracing::info!("Disabled WiFi power save on {}", iface);
                 return;
@@ -76,7 +84,9 @@ fn disable_wifi_power_save() {
             _ => {}
         }
     }
-    tracing::debug!("Could not disable WiFi power save (no wireless interface found or no permissions)");
+    tracing::debug!(
+        "Could not disable WiFi power save (no wireless interface found or no permissions)"
+    );
 }
 
 #[cfg(not(target_os = "linux"))]
@@ -195,7 +205,11 @@ fn sender_thread_main(
         target_count,
         frame_duration.as_secs_f64() * 1000.0,
         burst_size,
-        if cfg!(target_os = "linux") { "clock_nanosleep(TIMER_ABSTIME)" } else { "spin_sleep" }
+        if cfg!(target_os = "linux") {
+            "clock_nanosleep(TIMER_ABSTIME)"
+        } else {
+            "spin_sleep"
+        }
     );
 
     loop {
@@ -221,9 +235,13 @@ fn sender_thread_main(
                         Ok(SenderMessage::Resume) => {
                             tracing::debug!("Sender thread: resumed");
                             #[cfg(target_os = "linux")]
-                            { next_deadline_ns = monotonic_now_ns(); }
+                            {
+                                next_deadline_ns = monotonic_now_ns();
+                            }
                             #[cfg(not(target_os = "linux"))]
-                            { next_deadline = std::time::Instant::now(); }
+                            {
+                                next_deadline = std::time::Instant::now();
+                            }
                             break;
                         }
                         Ok(SenderMessage::Stop) => {
@@ -237,12 +255,19 @@ fn sender_thread_main(
             }
             SenderMessage::Resume => {
                 #[cfg(target_os = "linux")]
-                { next_deadline_ns = monotonic_now_ns(); }
+                {
+                    next_deadline_ns = monotonic_now_ns();
+                }
                 #[cfg(not(target_os = "linux"))]
-                { next_deadline = std::time::Instant::now(); }
+                {
+                    next_deadline = std::time::Instant::now();
+                }
                 continue;
             }
-            SenderMessage::Packet { wire_packets, sync_data } => {
+            SenderMessage::Packet {
+                wire_packets,
+                sync_data,
+            } => {
                 // Buffer packet for burst sending
                 burst_buffer.push((wire_packets, sync_data));
 
@@ -253,9 +278,13 @@ fn sender_thread_main(
 
                 if !started {
                     #[cfg(target_os = "linux")]
-                    { next_deadline_ns = monotonic_now_ns(); }
+                    {
+                        next_deadline_ns = monotonic_now_ns();
+                    }
                     #[cfg(not(target_os = "linux"))]
-                    { next_deadline = std::time::Instant::now(); }
+                    {
+                        next_deadline = std::time::Instant::now();
+                    }
                     last_send = std::time::Instant::now();
                     started = true;
                 } else {
@@ -296,14 +325,21 @@ fn sender_thread_main(
                     if abs_jitter > 2.0 * burst_size as f64 {
                         tracing::warn!(
                             "JITTER burst#{}: interval={:.3}ms target={:.3}ms jitter={:+.3}ms",
-                            packet_count / burst_size as u64, interval_ms, target_ms, jitter_ms
+                            packet_count / burst_size as u64,
+                            interval_ms,
+                            target_ms,
+                            jitter_ms
                         );
                     }
 
                     // Log stats every 500 packets (~4s)
                     if packet_count % 500 < burst_size as u64 {
                         let bursts = packet_count / burst_size as u64;
-                        let avg_jitter = if bursts > 1 { jitter_sum_ms / (bursts - 1) as f64 } else { 0.0 };
+                        let avg_jitter = if bursts > 1 {
+                            jitter_sum_ms / (bursts - 1) as f64
+                        } else {
+                            0.0
+                        };
                         tracing::info!(
                             "TIMING STATS after {} pkts ({} bursts): avg_jitter={:.3}ms max_jitter={:.3}ms exceeds={}",
                             packet_count, bursts, avg_jitter, max_jitter_ms, jitter_exceed_count
@@ -318,10 +354,18 @@ fn sender_thread_main(
                     // Send sync packet to ALL targets' control dests
                     if let Some(ref sync) = sync_data {
                         for target in &targets {
-                            if let Some(sock) = target.control_socket.as_ref().or(target.data_socket.as_ref()) {
+                            if let Some(sock) = target
+                                .control_socket
+                                .as_ref()
+                                .or(target.data_socket.as_ref())
+                            {
                                 let dest = target.control_dest.unwrap_or(target.data_dest);
                                 if let Err(e) = sock.send_to(sync, dest) {
-                                    tracing::error!("Failed to send sync packet to {}: {}", dest, e);
+                                    tracing::error!(
+                                        "Failed to send sync packet to {}: {}",
+                                        dest,
+                                        e
+                                    );
                                 }
                             }
                         }
@@ -334,13 +378,25 @@ fn sender_thread_main(
                                 use std::io::Write;
                                 let len = (wire_data.len() as u16).to_be_bytes();
                                 if let Err(e) = tcp.write_all(&len) {
-                                    tracing::error!("Failed to write length header to TCP {}: {}", target.data_dest, e);
+                                    tracing::error!(
+                                        "Failed to write length header to TCP {}: {}",
+                                        target.data_dest,
+                                        e
+                                    );
                                 } else if let Err(e) = tcp.write_all(wire_data) {
-                                    tracing::error!("Failed to write audio packet to TCP {}: {}", target.data_dest, e);
+                                    tracing::error!(
+                                        "Failed to write audio packet to TCP {}: {}",
+                                        target.data_dest,
+                                        e
+                                    );
                                 }
                             } else if let Some(ref sock) = target.data_socket {
                                 if let Err(e) = sock.send_to(wire_data, target.data_dest) {
-                                    tracing::error!("Failed to send audio packet to UDP {}: {}", target.data_dest, e);
+                                    tracing::error!(
+                                        "Failed to send audio packet to UDP {}: {}",
+                                        target.data_dest,
+                                        e
+                                    );
                                 }
                             }
                         }
@@ -516,7 +572,10 @@ impl AudioStreamer {
         let mut inner = self.inner.lock().await;
         let sample_rate = inner.config.audio_format.sample_rate.as_hz();
         inner.equalizer = Some(Equalizer::new(config, params, sample_rate));
-        tracing::info!("Equalizer enabled with {} bands", inner.equalizer.as_ref().unwrap().config().num_bands());
+        tracing::info!(
+            "Equalizer enabled with {} bands",
+            inner.equalizer.as_ref().unwrap().config().num_bands()
+        );
     }
 
     /// Get a clone of the EQ params if the equalizer is set up.
@@ -526,7 +585,10 @@ impl AudioStreamer {
     }
 
     /// Handle retransmit request from control channel (delegates to first sender).
-    pub async fn handle_retransmit(&self, request: &crate::rtp::RetransmitRequest) -> airplay_core::error::Result<u16> {
+    pub async fn handle_retransmit(
+        &self,
+        request: &crate::rtp::RetransmitRequest,
+    ) -> airplay_core::error::Result<u16> {
         self.handle_retransmit_for_target(0, request).await
     }
 
@@ -534,7 +596,11 @@ impl AudioStreamer {
     ///
     /// Each RtpSender has its own packet history ring buffer, so retransmit
     /// responses are per-device (encrypted with the correct device key).
-    pub async fn handle_retransmit_for_target(&self, index: usize, request: &crate::rtp::RetransmitRequest) -> airplay_core::error::Result<u16> {
+    pub async fn handle_retransmit_for_target(
+        &self,
+        index: usize,
+        request: &crate::rtp::RetransmitRequest,
+    ) -> airplay_core::error::Result<u16> {
         let inner = self.inner.lock().await;
         if let Some(sender) = inner.rtp_senders.get(index) {
             sender.handle_retransmit(request)
@@ -577,14 +643,16 @@ impl AudioStreamer {
                 * 1_000_000_000u64
                 / inner.config.audio_format.sample_rate.as_hz() as u64;
         }
-        self.state_cache.store(StreamerState::Buffering as u8, Ordering::Relaxed);
+        self.state_cache
+            .store(StreamerState::Buffering as u8, Ordering::Relaxed);
 
         // Prime the buffer
         self.decode_some().await?;
         let level = self.buffer_level().await;
         if level > 10.0 {
             self.inner.lock().await.state = StreamerState::Streaming;
-            self.state_cache.store(StreamerState::Streaming as u8, Ordering::Relaxed);
+            self.state_cache
+                .store(StreamerState::Streaming as u8, Ordering::Relaxed);
         }
 
         if self.task.is_none() {
@@ -625,12 +693,7 @@ impl AudioStreamer {
                     let thread = std::thread::Builder::new()
                         .name("rt-sender".into())
                         .spawn(move || {
-                            sender_thread_main(
-                                rx,
-                                targets,
-                                frame_duration,
-                                burst_size,
-                            );
+                            sender_thread_main(rx, targets, frame_duration, burst_size);
                         })
                         .expect("Failed to spawn sender thread");
                     self.sender_thread = Some(thread);
@@ -647,7 +710,16 @@ impl AudioStreamer {
             let underruns = self.underruns.clone();
             let sender_tx = self.sender_tx.clone();
             self.task = Some(tokio::spawn(async move {
-                match run_streamer(inner.clone(), state_cache.clone(), timestamp_cache, packets_sent, underruns, sender_tx).await {
+                match run_streamer(
+                    inner.clone(),
+                    state_cache.clone(),
+                    timestamp_cache,
+                    packets_sent,
+                    underruns,
+                    sender_tx,
+                )
+                .await
+                {
                     Ok(()) => tracing::debug!("Streaming task completed normally"),
                     Err(e) => {
                         tracing::error!("Streaming task error: {}", e);
@@ -681,7 +753,8 @@ impl AudioStreamer {
                 * 1_000_000_000u64
                 / inner.config.audio_format.sample_rate.as_hz() as u64;
         }
-        self.state_cache.store(StreamerState::Buffering as u8, Ordering::Relaxed);
+        self.state_cache
+            .store(StreamerState::Buffering as u8, Ordering::Relaxed);
 
         // For live streaming, wait for initial buffer fill before streaming.
         // This prevents startup artifacts from sending packets before we have
@@ -703,27 +776,32 @@ impl AudioStreamer {
                 if fill_pct >= target_fill_pct {
                     tracing::info!(
                         "Live streaming: buffer ready at {:.1}% ({} frames), starting playback",
-                        fill_pct, frame_count
+                        fill_pct,
+                        frame_count
                     );
                     guard.state = StreamerState::Streaming;
-                    self.state_cache.store(StreamerState::Streaming as u8, Ordering::Relaxed);
+                    self.state_cache
+                        .store(StreamerState::Streaming as u8, Ordering::Relaxed);
                     break;
                 }
 
                 if buffer_start.elapsed() > max_wait {
                     tracing::warn!(
                         "Live streaming: buffer timeout at {:.1}% ({} frames), starting anyway",
-                        fill_pct, frame_count
+                        fill_pct,
+                        frame_count
                     );
                     guard.state = StreamerState::Streaming;
-                    self.state_cache.store(StreamerState::Streaming as u8, Ordering::Relaxed);
+                    self.state_cache
+                        .store(StreamerState::Streaming as u8, Ordering::Relaxed);
                     break;
                 }
 
                 if buffer_start.elapsed().as_millis() % 500 == 0 {
                     tracing::debug!(
                         "Live streaming: buffering {:.1}% ({} frames)...",
-                        fill_pct, frame_count
+                        fill_pct,
+                        frame_count
                     );
                 }
             }
@@ -764,12 +842,7 @@ impl AudioStreamer {
                     let thread = std::thread::Builder::new()
                         .name("rt-sender".into())
                         .spawn(move || {
-                            sender_thread_main(
-                                rx,
-                                targets,
-                                frame_duration,
-                                burst_size,
-                            );
+                            sender_thread_main(rx, targets, frame_duration, burst_size);
                         })
                         .expect("Failed to spawn sender thread");
                     self.sender_thread = Some(thread);
@@ -786,7 +859,16 @@ impl AudioStreamer {
             let underruns = self.underruns.clone();
             let sender_tx = self.sender_tx.clone();
             self.task = Some(tokio::spawn(async move {
-                match run_streamer(inner.clone(), state_cache.clone(), timestamp_cache, packets_sent, underruns, sender_tx).await {
+                match run_streamer(
+                    inner.clone(),
+                    state_cache.clone(),
+                    timestamp_cache,
+                    packets_sent,
+                    underruns,
+                    sender_tx,
+                )
+                .await
+                {
                     Ok(()) => tracing::debug!("Live streaming task completed normally"),
                     Err(e) => {
                         tracing::error!("Live streaming task error: {}", e);
@@ -811,7 +893,8 @@ impl AudioStreamer {
                 let _ = tx.try_send(SenderMessage::Pause);
             }
             inner.state = StreamerState::Paused;
-            self.state_cache.store(StreamerState::Paused as u8, Ordering::Relaxed);
+            self.state_cache
+                .store(StreamerState::Paused as u8, Ordering::Relaxed);
         }
         Ok(())
     }
@@ -824,7 +907,8 @@ impl AudioStreamer {
                 let _ = tx.try_send(SenderMessage::Resume);
             }
             inner.state = StreamerState::Streaming;
-            self.state_cache.store(StreamerState::Streaming as u8, Ordering::Relaxed);
+            self.state_cache
+                .store(StreamerState::Streaming as u8, Ordering::Relaxed);
         }
         Ok(())
     }
@@ -843,7 +927,8 @@ impl AudioStreamer {
     pub async fn stop(&mut self) -> Result<()> {
         // Set state to Stopped FIRST so run_streamer breaks out of its loop
         // and stops producing into the bounded channel.
-        self.state_cache.store(StreamerState::Stopped as u8, Ordering::Relaxed);
+        self.state_cache
+            .store(StreamerState::Stopped as u8, Ordering::Relaxed);
 
         // Signal sender thread to stop
         if let Some(ref tx) = self.sender_tx {
@@ -858,7 +943,8 @@ impl AudioStreamer {
         if let Some(handle) = self.sender_thread.take() {
             let _ = tokio::task::spawn_blocking(move || {
                 let _ = handle.join();
-            }).await;
+            })
+            .await;
         }
 
         // Cancel the run_streamer task if still running
@@ -886,13 +972,23 @@ impl AudioStreamer {
             eq.reset();
         }
         inner.current_timestamp = position_samples;
-        self.timestamp_cache.store(position_samples, Ordering::Relaxed);
+        self.timestamp_cache
+            .store(position_samples, Ordering::Relaxed);
         Ok(())
     }
 
     /// Get current playback position in samples.
     pub fn position(&self) -> u64 {
         self.timestamp_cache.load(Ordering::Relaxed)
+    }
+
+    /// Return the sequence and wire timestamp of the next RTP audio packet.
+    pub async fn rtp_info(&self) -> Option<(u16, u32)> {
+        let inner = self.inner.lock().await;
+        inner
+            .rtp_senders
+            .first()
+            .map(|sender| sender.rtp_info(inner.current_timestamp))
     }
 
     /// Get buffer fill level percentage.
@@ -1039,7 +1135,8 @@ async fn run_streamer(
 
                     // Only stop if we have a decoder and it's exhausted with empty buffer
                     // For live decoders, we keep waiting unless explicitly marked EOF
-                    if has_any_decoder && decoder_eof && live_decoder_eof && guard.buffer.is_empty() {
+                    if has_any_decoder && decoder_eof && live_decoder_eof && guard.buffer.is_empty()
+                    {
                         // Decoder exhausted and buffer empty - playback complete
                         tracing::info!("Decoder EOF and buffer empty - stopping");
                         guard.state = StreamerState::Stopped;
@@ -1059,7 +1156,8 @@ async fn run_streamer(
             let frame = guard.buffer.pop();
             if let Some(frame) = frame {
                 // Diagnostic: log PCM sample energy for first few frames
-                static DIAG_COUNT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+                static DIAG_COUNT: std::sync::atomic::AtomicU32 =
+                    std::sync::atomic::AtomicU32::new(0);
                 let diag = DIAG_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                 if diag < 5 || diag % 500 == 0 {
                     let rms: f64 = if frame.samples.is_empty() {
@@ -1068,10 +1166,18 @@ async fn run_streamer(
                         let sum: f64 = frame.samples.iter().map(|&s| (s as f64).powi(2)).sum();
                         (sum / frame.samples.len() as f64).sqrt()
                     };
-                    let max_abs = frame.samples.iter().map(|s| s.unsigned_abs()).max().unwrap_or(0);
+                    let max_abs = frame
+                        .samples
+                        .iter()
+                        .map(|s| s.unsigned_abs())
+                        .max()
+                        .unwrap_or(0);
                     tracing::info!(
                         "DIAG PCM frame #{}: samples={}, rms={:.1}, max_abs={}, first_4={:?}",
-                        diag, frame.samples.len(), rms, max_abs,
+                        diag,
+                        frame.samples.len(),
+                        rms,
+                        max_abs,
                         &frame.samples[..frame.samples.len().min(4)]
                     );
                 }
@@ -1087,10 +1193,9 @@ async fn run_streamer(
 
                 // Encode synchronously
                 let encode_start = Instant::now();
-                let encoder = guard
-                    .encoder
-                    .as_mut()
-                    .ok_or_else(|| airplay_core::error::StreamingError::Encoding("Encoder missing".into()))?;
+                let encoder = guard.encoder.as_mut().ok_or_else(|| {
+                    airplay_core::error::StreamingError::Encoding("Encoder missing".into())
+                })?;
                 let packet = encoder.encode(&samples_to_encode)?;
                 let encode_elapsed = encode_start.elapsed();
 
@@ -1136,17 +1241,16 @@ async fn run_streamer(
                 let render_adjusted = adjusted + guard.render_delay_ns;
                 let ntp = unix_to_ntp(render_adjusted);
 
-                // Set marker bit on first audio packet (required by some receivers)
+                // Apple sends realtime audio with PT=96 and the marker bit clear,
+                // including the first packet (RTP byte 1 is 0x60, not 0xe0).
                 let first_packet = !guard.first_packet_sent;
-                let marker = first_packet;
-                if marker {
-                    tracing::info!("Sending first audio packet with marker bit set");
-                }
+                let marker = false;
 
                 let rtp_ts = packet.timestamp as u32;
 
                 // Determine if sync is needed BEFORE borrowing rtp_sender
-                let need_sync = first_packet || last_sync_rtp == 0
+                let need_sync = first_packet
+                    || last_sync_rtp == 0
                     || rtp_ts.wrapping_sub(last_sync_rtp) >= sample_rate;
 
                 // Extract PTP sync mode state before borrowing rtp_sender
@@ -1160,7 +1264,12 @@ async fn run_streamer(
                         let sync_data = if need_sync {
                             if use_ptp_sync {
                                 let next_rtp_ts = rtp_ts.wrapping_add(sample_rate / 44100 * 352);
-                                guard.rtp_senders[0].prepare_ptp_sync(rtp_ts, render_adjusted, next_rtp_ts, &ptp_clock_id)?
+                                guard.rtp_senders[0].prepare_ptp_sync(
+                                    rtp_ts,
+                                    render_adjusted,
+                                    next_rtp_ts,
+                                    &ptp_clock_id,
+                                )?
                             } else {
                                 guard.rtp_senders[0].prepare_sync(rtp_ts, ntp)?
                             }
@@ -1170,7 +1279,12 @@ async fn run_streamer(
 
                         let mut wire_packets = Vec::with_capacity(guard.rtp_senders.len());
                         for sender in &mut guard.rtp_senders {
-                            wire_packets.push(sender.prepare_audio(payload_type, rtp_ts, &packet.data, marker)?);
+                            wire_packets.push(sender.prepare_audio(
+                                payload_type,
+                                rtp_ts,
+                                &packet.data,
+                                marker,
+                            )?);
                         }
 
                         if diag < 5 || diag % 500 == 0 {
@@ -1196,12 +1310,14 @@ async fn run_streamer(
                         // Drop the mutex guard first so other async tasks can proceed
                         drop(guard);
                         let tx_clone = tx.clone();
-                        let msg = SenderMessage::Packet { wire_packets, sync_data };
-                        let send_result = tokio::task::spawn_blocking(move || {
-                            tx_clone.send(msg)
-                        }).await;
+                        let msg = SenderMessage::Packet {
+                            wire_packets,
+                            sync_data,
+                        };
+                        let send_result =
+                            tokio::task::spawn_blocking(move || tx_clone.send(msg)).await;
                         match send_result {
-                            Ok(Ok(())) => {},
+                            Ok(Ok(())) => {}
                             _ => {
                                 tracing::error!("Sender thread disconnected");
                                 state_cache.store(StreamerState::Error as u8, Ordering::Relaxed);
@@ -1215,7 +1331,12 @@ async fn run_streamer(
                         if need_sync {
                             if use_ptp_sync {
                                 let next_rtp_ts = rtp_ts.wrapping_add(sample_rate / 44100 * 352);
-                                guard.rtp_senders[0].send_ptp_sync(rtp_ts, render_adjusted, next_rtp_ts, &ptp_clock_id)?;
+                                guard.rtp_senders[0].send_ptp_sync(
+                                    rtp_ts,
+                                    render_adjusted,
+                                    next_rtp_ts,
+                                    &ptp_clock_id,
+                                )?;
                             } else {
                                 guard.rtp_senders[0].send_sync(rtp_ts, ntp)?;
                             }
@@ -1326,7 +1447,9 @@ mod tests {
                 let mut inner = streamer.inner.lock().await;
                 inner.state = StreamerState::Streaming;
             }
-            streamer.state_cache.store(StreamerState::Streaming as u8, Ordering::Relaxed);
+            streamer
+                .state_cache
+                .store(StreamerState::Streaming as u8, Ordering::Relaxed);
             streamer.pause().await.unwrap();
             assert_eq!(streamer.state(), StreamerState::Paused);
         }
@@ -1338,7 +1461,9 @@ mod tests {
                 let mut inner = streamer.inner.lock().await;
                 inner.state = StreamerState::Paused;
             }
-            streamer.state_cache.store(StreamerState::Paused as u8, Ordering::Relaxed);
+            streamer
+                .state_cache
+                .store(StreamerState::Paused as u8, Ordering::Relaxed);
             streamer.resume().await.unwrap();
             assert_eq!(streamer.state(), StreamerState::Streaming);
         }
@@ -1350,7 +1475,9 @@ mod tests {
                 let mut inner = streamer.inner.lock().await;
                 inner.state = StreamerState::Streaming;
             }
-            streamer.state_cache.store(StreamerState::Streaming as u8, Ordering::Relaxed);
+            streamer
+                .state_cache
+                .store(StreamerState::Streaming as u8, Ordering::Relaxed);
             streamer.stop().await.unwrap();
             assert_eq!(streamer.state(), StreamerState::Stopped);
         }
@@ -1407,7 +1534,9 @@ mod tests {
                 let mut inner = streamer.inner.lock().await;
                 inner.state = StreamerState::Paused;
             }
-            streamer.state_cache.store(StreamerState::Paused as u8, Ordering::Relaxed);
+            streamer
+                .state_cache
+                .store(StreamerState::Paused as u8, Ordering::Relaxed);
             streamer.seek(22050).await.unwrap();
             assert_eq!(streamer.position(), 22050);
             assert_eq!(streamer.state(), StreamerState::Paused);

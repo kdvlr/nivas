@@ -326,6 +326,61 @@ impl PtpTimestamp {
     }
 }
 
+/// Calculate the remote clock offset and one-way path delay from a complete
+/// PTP exchange. `ClockOffset` is defined as remote minus local, so adding it
+/// to a local timestamp produces a timestamp in the receiver's clock domain.
+fn clock_offset_from_exchange(
+    t1_remote: PtpTimestamp,
+    t2_local: PtpTimestamp,
+    t3_local: PtpTimestamp,
+    t4_remote: PtpTimestamp,
+) -> ClockOffset {
+    let t1 = t1_remote.to_nanos() as i128;
+    let t2 = t2_local.to_nanos() as i128;
+    let t3 = t3_local.to_nanos() as i128;
+    let t4 = t4_remote.to_nanos() as i128;
+
+    let offset = ((t1 - t2) + (t4 - t3)) / 2;
+    let delay = ((t2 - t1) - (t3 - t4)) / 2;
+
+    ClockOffset {
+        offset_ns: offset as i64,
+        error_ns: (delay.abs() / 2) as u64,
+        rtt_ns: delay.abs() as u64,
+    }
+}
+
+fn clock_offset_from_delay_response(
+    data: &[u8],
+    t1: Option<PtpTimestamp>,
+    t2: Option<PtpTimestamp>,
+    t3: Option<PtpTimestamp>,
+) -> Option<ClockOffset> {
+    let t4 = PtpTimestamp::parse(data.get(34..44)?).ok()?;
+    Some(clock_offset_from_exchange(t1?, t2?, t3?, t4))
+}
+
+/// Build the Delay_Req shape emitted by macOS for AirPlay gPTP. Sonos checks
+/// these header details before returning Delay_Resp.
+fn build_airplay_delay_request(
+    clock_identity: &[u8; 8],
+    sequence_id: u16,
+) -> ([u8; 44], PtpTimestamp) {
+    let mut header = PtpHeader::new(PtpMessageType::DelayReq, sequence_id);
+    header.flags = 0x0408; // PTP timescale + unicast
+    header.control_field = 0;
+    header.log_message_interval = -3;
+    header.source_port_identity[..8].copy_from_slice(clock_identity);
+    header.source_port_identity[8..10].copy_from_slice(&0x800eu16.to_be_bytes());
+
+    let local_send_time = PtpTimestamp::now();
+    let mut packet = [0u8; 44];
+    packet[..34].copy_from_slice(&header.serialize());
+    packet[0] |= 0x10; // transportSpecific = 1 (802.1AS / gPTP)
+    // macOS leaves the Delay_Req originTimestamp zero. t3 is recorded locally.
+    (packet, local_send_time)
+}
+
 /// PTP header (34 bytes).
 #[derive(Debug, Clone)]
 pub struct PtpHeader {
@@ -533,22 +588,7 @@ impl PtpClient {
     /// Calculate offset from timestamps.
     fn calculate_offset(&mut self) {
         if let (Some(t1), Some(t2), Some(t3), Some(t4)) = (self.t1, self.t2, self.t3, self.t4) {
-            // offset = ((t2 - t1) + (t3 - t4)) / 2
-            // delay = ((t2 - t1) - (t3 - t4)) / 2
-
-            let t1_ns = t1.to_nanos() as i128;
-            let t2_ns = t2.to_nanos() as i128;
-            let t3_ns = t3.to_nanos() as i128;
-            let t4_ns = t4.to_nanos() as i128;
-
-            let offset = ((t2_ns - t1_ns) + (t3_ns - t4_ns)) / 2;
-            let delay = ((t2_ns - t1_ns) - (t3_ns - t4_ns)) / 2;
-
-            self.offset = ClockOffset {
-                offset_ns: offset as i64,
-                error_ns: (delay.abs() / 2) as u64,
-                rtt_ns: delay.abs() as u64,
-            };
+            self.offset = clock_offset_from_exchange(t1, t2, t3, t4);
 
             self.state = PtpState::Synchronized;
 
@@ -752,19 +792,7 @@ impl PtpMaster {
                                                     tracing::info!("gPTP: Parsed t4 timestamp: {}.{:09}s", t4.seconds, t4.nanoseconds);
                                                     tracing::info!("gPTP: Current timestamps - t1={:?}, t2={:?}, t3={:?}", t1, t2, t3);
                                                     if let (Some(t1v), Some(t2v), Some(t3v)) = (t1, t2, t3) {
-                                                        let t1_ns = t1v.to_nanos() as i128;
-                                                        let t2_ns = t2v.to_nanos() as i128;
-                                                        let t3_ns = t3v.to_nanos() as i128;
-                                                        let t4_ns = t4.to_nanos() as i128;
-
-                                                        let offset_val = ((t2_ns - t1_ns) + (t3_ns - t4_ns)) / 2;
-                                                        let delay = ((t2_ns - t1_ns) - (t3_ns - t4_ns)) / 2;
-
-                                                        let clock_offset = ClockOffset {
-                                                            offset_ns: offset_val as i64,
-                                                            error_ns: (delay.abs() / 2) as u64,
-                                                            rtt_ns: delay.abs() as u64,
-                                                        };
+                                                        let clock_offset = clock_offset_from_exchange(t1v, t2v, t3v, t4);
 
                                                         tracing::info!("gPTP: Synchronized to HomePod: offset={}ns, delay={}ns",
                                                             clock_offset.offset_ns, clock_offset.rtt_ns);
@@ -873,14 +901,11 @@ impl PtpMaster {
                                                     // Send Delay_Req to complete the timing exchange
                                                     if let Some(master) = master_addr {
                                                         delay_req_seq = delay_req_seq.wrapping_add(1);
-                                                        let delay_header = PtpHeader::new(PtpMessageType::DelayReq, delay_req_seq);
-
-                                                        // Capture t3 before sending
-                                                        t3 = Some(PtpTimestamp::now());
-
-                                                        let mut delay_packet = [0u8; 44];
-                                                        delay_packet[..34].copy_from_slice(&delay_header.serialize());
-                                                        delay_packet[34..44].copy_from_slice(&t3.unwrap().serialize());
+                                                        let (delay_packet, local_t3) = build_airplay_delay_request(
+                                                            &clock_identity,
+                                                            delay_req_seq,
+                                                        );
+                                                        t3 = Some(local_t3);
 
                                                         let master_event = std::net::SocketAddr::new(master.ip(), PTP_EVENT_PORT);
                                                         if let Err(e) = event_clone.send_to(&delay_packet, master_event).await {
@@ -892,6 +917,23 @@ impl PtpMaster {
                                                         tracing::warn!("gPTP: Cannot send Delay_Req - master_addr is None");
                                                     }
                                                 }
+                                            }
+                                        }
+                                        PtpMessageType::DelayResp => {
+                                            if let Some(clock_offset) = clock_offset_from_delay_response(
+                                                &general_buf[..len], t1, t2, t3,
+                                            ) {
+                                                tracing::info!(
+                                                    "gPTP: Synchronized from port 320: offset={}ns, delay={}ns",
+                                                    clock_offset.offset_ns,
+                                                    clock_offset.rtt_ns
+                                                );
+                                                if let Some(ref tx) = offset_tx {
+                                                    let _ = tx.send(clock_offset);
+                                                }
+                                                t1 = None;
+                                                t2 = None;
+                                                t3 = None;
                                             }
                                         }
                                         PtpMessageType::Signaling => {
@@ -1439,6 +1481,11 @@ pub async fn run_bmca_yield_flow(
     let mut remote_priority1: u8 = 255;
     let mut general_buf = [0u8; 256];
     let mut event_buf = [0u8; 256];
+    let mut t1: Option<PtpTimestamp> = None;
+    let mut t2: Option<PtpTimestamp> = None;
+    let mut t3: Option<PtpTimestamp> = None;
+    let mut delay_req_seq: u16 = 0;
+    let mut have_initial_offset = false;
     let bmca_deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(3);
 
     loop {
@@ -1454,11 +1501,46 @@ pub async fn run_bmca_yield_flow(
                         continue;
                     }
                     if let Ok(header) = PtpHeader::parse(&general_buf[..len]) {
-                        if header.message_type == PtpMessageType::Announce && len >= 61 {
-                            remote_priority1 = general_buf[47];
-                            remote_clock_id.copy_from_slice(&general_buf[53..61]);
-                            tracing::info!("BMCA: Received Announce from {}: priority1={}, clock_id={:02x?}",
-                                src.ip(), remote_priority1, remote_clock_id);
+                        match header.message_type {
+                            PtpMessageType::Announce if len >= 61 => {
+                                remote_priority1 = general_buf[47];
+                                remote_clock_id.copy_from_slice(&general_buf[53..61]);
+                                tracing::info!("BMCA: Received Announce from {}: priority1={}, clock_id={:02x?}",
+                                    src.ip(), remote_priority1, remote_clock_id);
+                            }
+                            PtpMessageType::FollowUp if len >= 44 => {
+                                if let Ok(ts) = PtpTimestamp::parse(&general_buf[34..44]) {
+                                    t1 = Some(ts);
+                                    delay_req_seq = delay_req_seq.wrapping_add(1);
+                                    let (delay_packet, local_t3) = build_airplay_delay_request(
+                                        &clock_identity,
+                                        delay_req_seq,
+                                    );
+                                    t3 = Some(local_t3);
+                                    event_socket.send_to(&delay_packet, event_dest).await?;
+                                    tracing::debug!("BMCA: Sent Delay_Req during negotiation (seq={})", delay_req_seq);
+                                }
+                            }
+                            PtpMessageType::DelayResp => {
+                                if let Some(clock_offset) = clock_offset_from_delay_response(
+                                    &general_buf[..len], t1, t2, t3,
+                                ) {
+                                    tracing::info!(
+                                        "BMCA: Initial receiver offset={}ns, delay={}ns",
+                                        clock_offset.offset_ns,
+                                        clock_offset.rtt_ns
+                                    );
+                                    let _ = offset_tx.send(clock_offset);
+                                    have_initial_offset = true;
+                                    t1 = None;
+                                    t2 = None;
+                                    t3 = None;
+                                }
+                            }
+                            _ => {}
+                        }
+
+                        if remote_clock_id != [0u8; 8] && have_initial_offset {
                             break;
                         }
                     }
@@ -1473,6 +1555,9 @@ pub async fn run_bmca_yield_flow(
                     }
                     if let Ok(header) = PtpHeader::parse(&event_buf[..len]) {
                         tracing::debug!("BMCA: Received {:?} on event port during negotiation from {}", header.message_type, src.ip());
+                        if header.message_type == PtpMessageType::Sync {
+                            t2 = Some(PtpTimestamp::now());
+                        }
                     }
                 }
             }
@@ -1485,9 +1570,11 @@ pub async fn run_bmca_yield_flow(
         priority1, remote_priority1, we_are_master);
 
     if !we_are_master {
-        // Yield: send stop Signaling, transition to slave
-        send_stop_signaling(&general_socket, general_dest, &clock_identity, &mut signaling_seq).await?;
-        tracing::info!("BMCA: Yielded master to remote, transitioning to slave mode");
+        // Transition to slave without sending the all-0x7e interval request.
+        // Sonos interprets that request as "stop PTP" and immediately ceases
+        // Sync/Follow_Up transmission. macOS keeps the timing exchange alive
+        // after the receiver wins BMCA.
+        tracing::info!("BMCA: Yielded master to remote, keeping PTP exchange active");
     }
 
     // Report remote clock identity to caller
@@ -1496,11 +1583,6 @@ pub async fn run_bmca_yield_flow(
     // Phase 4: Slave loop (receive Sync/Follow_Up, send Delay_Req, calculate offset)
     // Filter all incoming PTP by source IP — only process messages from our master.
     // Messages from other peers (secondary HomePods sharing ports 319/320) are drained.
-    let mut t1: Option<PtpTimestamp> = None;
-    let mut t2: Option<PtpTimestamp> = None;
-    let mut t3: Option<PtpTimestamp> = None;
-    let mut delay_req_seq: u16 = 0;
-
     tracing::info!("BMCA: Entering slave loop, syncing to {} (filtering other peers)", master_ip);
 
     loop {
@@ -1521,19 +1603,7 @@ pub async fn run_bmca_yield_flow(
                                 if len >= 44 {
                                     if let Ok(t4) = PtpTimestamp::parse(&event_buf[34..44]) {
                                         if let (Some(t1v), Some(t2v), Some(t3v)) = (t1, t2, t3) {
-                                            let t1_ns = t1v.to_nanos() as i128;
-                                            let t2_ns = t2v.to_nanos() as i128;
-                                            let t3_ns = t3v.to_nanos() as i128;
-                                            let t4_ns = t4.to_nanos() as i128;
-
-                                            let offset_val = ((t2_ns - t1_ns) + (t3_ns - t4_ns)) / 2;
-                                            let delay = ((t2_ns - t1_ns) - (t3_ns - t4_ns)) / 2;
-
-                                            let clock_offset = ClockOffset {
-                                                offset_ns: offset_val as i64,
-                                                error_ns: (delay.abs() / 2) as u64,
-                                                rtt_ns: delay.abs() as u64,
-                                            };
+                                            let clock_offset = clock_offset_from_exchange(t1v, t2v, t3v, t4);
 
                                             tracing::debug!(
                                                 "BMCA slave: synchronized offset={}ns, delay={}ns",
@@ -1559,25 +1629,20 @@ pub async fn run_bmca_yield_flow(
                         continue;
                     }
                     if let Ok(header) = PtpHeader::parse(&general_buf[..len]) {
-                        if header.message_type == PtpMessageType::FollowUp && len >= 44 {
-                            if let Ok(ts) = PtpTimestamp::parse(&general_buf[34..44]) {
+                        match header.message_type {
+                            PtpMessageType::FollowUp if len >= 44 => {
+                              if let Ok(ts) = PtpTimestamp::parse(&general_buf[34..44]) {
                                 t1 = Some(ts);
                                 tracing::trace!("BMCA slave: Received Follow_Up from {} (seq={}, t1={}.{:09}s)",
                                     src.ip(), header.sequence_id, ts.seconds, ts.nanoseconds);
 
                                 // Send Delay_Req
                                 delay_req_seq = delay_req_seq.wrapping_add(1);
-                                let mut delay_header = PtpHeader::new(PtpMessageType::DelayReq, delay_req_seq);
-                                let mut delay_src_port = [0u8; 10];
-                                delay_src_port[..8].copy_from_slice(&clock_identity);
-                                delay_src_port[8..10].copy_from_slice(&1u16.to_be_bytes());
-                                delay_header.source_port_identity = delay_src_port;
-
-                                t3 = Some(PtpTimestamp::now());
-
-                                let mut delay_packet = [0u8; 44];
-                                delay_packet[..34].copy_from_slice(&delay_header.serialize());
-                                delay_packet[34..44].copy_from_slice(&t3.unwrap().serialize());
+                                let (delay_packet, local_t3) = build_airplay_delay_request(
+                                    &clock_identity,
+                                    delay_req_seq,
+                                );
+                                t3 = Some(local_t3);
 
                                 if let Err(e) = event_socket.send_to(&delay_packet, event_dest).await {
                                     tracing::warn!("BMCA slave: Failed to send Delay_Req: {}", e);
@@ -1585,6 +1650,23 @@ pub async fn run_bmca_yield_flow(
                                     tracing::trace!("BMCA slave: Sent Delay_Req (seq={})", delay_req_seq);
                                 }
                             }
+                            }
+                            PtpMessageType::DelayResp => {
+                                if let Some(clock_offset) = clock_offset_from_delay_response(
+                                    &general_buf[..len], t1, t2, t3,
+                                ) {
+                                    tracing::info!(
+                                        "BMCA slave: synchronized from port 320 offset={}ns, delay={}ns",
+                                        clock_offset.offset_ns,
+                                        clock_offset.rtt_ns
+                                    );
+                                    let _ = offset_tx.send(clock_offset);
+                                    t1 = None;
+                                    t2 = None;
+                                    t3 = None;
+                                }
+                            }
+                            _ => {}
                         }
                     }
                 }
@@ -1954,21 +2036,9 @@ pub async fn run_ptp_slave(
                                             if let (Some(t1v), Some(t2v), Some(t3v)) =
                                                 (t1, t2, t3)
                                             {
-                                                let t1_ns = t1v.to_nanos() as i128;
-                                                let t2_ns = t2v.to_nanos() as i128;
-                                                let t3_ns = t3v.to_nanos() as i128;
-                                                let t4_ns = t4.to_nanos() as i128;
-
-                                                let offset_val =
-                                                    ((t2_ns - t1_ns) + (t3_ns - t4_ns)) / 2;
-                                                let delay =
-                                                    ((t2_ns - t1_ns) - (t3_ns - t4_ns)) / 2;
-
-                                                let clock_offset = ClockOffset {
-                                                    offset_ns: offset_val as i64,
-                                                    error_ns: (delay.abs() / 2) as u64,
-                                                    rtt_ns: delay.abs() as u64,
-                                                };
+                                                let clock_offset = clock_offset_from_exchange(
+                                                    t1v, t2v, t3v, t4,
+                                                );
 
                                                 tracing::debug!(
                                                     "PTP synchronized: offset={}ns, delay={}ns",
@@ -1997,8 +2067,9 @@ pub async fn run_ptp_slave(
                 match result {
                     Ok((len, _src)) => {
                         if let Ok(header) = PtpHeader::parse(&general_buf[..len]) {
-                            if header.message_type == PtpMessageType::FollowUp && len >= 44 {
-                                if let Ok(ts) = PtpTimestamp::parse(&general_buf[34..44]) {
+                            match header.message_type {
+                              PtpMessageType::FollowUp if len >= 44 => {
+                               if let Ok(ts) = PtpTimestamp::parse(&general_buf[34..44]) {
                                     t1 = Some(ts);
                                     tracing::trace!(
                                         "PTP: Received Follow_Up (seq={}, t1={:?})",
@@ -2008,20 +2079,11 @@ pub async fn run_ptp_slave(
 
                                     // Send Delay_Req after receiving Follow_Up
                                     sequence_id = sequence_id.wrapping_add(1);
-                                    let delay_header = PtpHeader::new(
-                                        PtpMessageType::DelayReq,
+                                    let (delay_packet, local_t3) = build_airplay_delay_request(
+                                        &clock_identity,
                                         sequence_id,
                                     );
-
-                                    // Capture timestamp just before send (t3)
-                                    // Note: Unlike Sync, Delay_Req includes timestamp in the packet
-                                    t3 = Some(PtpTimestamp::now());
-
-                                    let mut delay_packet = [0u8; 44];
-                                    delay_packet[..34]
-                                        .copy_from_slice(&delay_header.serialize());
-                                    delay_packet[34..44]
-                                        .copy_from_slice(&t3.unwrap().serialize());
+                                    t3 = Some(local_t3);
 
                                     if let Err(e) = event_socket
                                         .send_to(&delay_packet, master_event)
@@ -2038,6 +2100,23 @@ pub async fn run_ptp_slave(
                                         );
                                     }
                                 }
+                               }
+                              PtpMessageType::DelayResp => {
+                                if let Some(clock_offset) = clock_offset_from_delay_response(
+                                    &general_buf[..len], t1, t2, t3,
+                                ) {
+                                    tracing::info!(
+                                        "PTP synchronized from port 320: offset={}ns, delay={}ns",
+                                        clock_offset.offset_ns,
+                                        clock_offset.rtt_ns
+                                    );
+                                    let _ = offset_tx.send(clock_offset);
+                                    t1 = None;
+                                    t2 = None;
+                                    t3 = None;
+                                }
+                              }
+                              _ => {}
                             }
                         }
                     }
@@ -2266,9 +2345,8 @@ mod tests {
 
             client.calculate_offset();
 
-            // offset = ((10-15) + (20-25)) / 2 = (-5 + (-5)) / 2 = -5ms
-            // Negative means local is behind (master is ahead)
-            assert!(client.offset.offset_ns < 0);
+            // Remote minus local = +5ms when the master is ahead.
+            assert_eq!(client.offset.offset_ns, 5_000_000);
         }
 
         #[test]
@@ -2284,9 +2362,8 @@ mod tests {
 
             client.calculate_offset();
 
-            // offset = ((10-5) + (20-15)) / 2 = (5 + 5) / 2 = 5ms
-            // Positive means local is ahead (master is behind)
-            assert!(client.offset.offset_ns > 0);
+            // Remote minus local = -5ms when the master is behind.
+            assert_eq!(client.offset.offset_ns, -5_000_000);
         }
 
         #[test]

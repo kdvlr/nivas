@@ -1,0 +1,13 @@
+.git
+**/.git
+**/target
+**/.venv
+**/__pycache__
+**/.pytest_cache
+frontend/node_modules
+backend/static
+backend/*.log
+*.pcap
+*.pcapng
+checkpoints
+data

@@ -41,6 +41,7 @@ pub trait PacketCipher: Send {
 /// a 16-byte tag and 8-byte nonce appended to each packet.
 pub struct ChaChaPacketCipher {
     cipher: AudioCipher,
+    /// Apple uses odd packet nonces for the sender-to-receiver direction.
     counter: std::sync::atomic::AtomicU64,
 }
 
@@ -49,7 +50,7 @@ impl ChaChaPacketCipher {
     pub fn new(cipher: AudioCipher) -> Self {
         Self {
             cipher,
-            counter: std::sync::atomic::AtomicU64::new(0),
+            counter: std::sync::atomic::AtomicU64::new(1),
         }
     }
 }
@@ -62,7 +63,7 @@ impl PacketCipher for ChaChaPacketCipher {
         ssrc: u32,
         _sequence: u16,
     ) -> Result<EncryptedPayload> {
-        let cnt = self.counter.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let cnt = self.counter.fetch_add(2, std::sync::atomic::Ordering::Relaxed);
         let (ciphertext, nonce, tag) = self
             .cipher
             .encrypt_with_counter(payload, timestamp, ssrc, cnt)

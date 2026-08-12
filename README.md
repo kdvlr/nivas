@@ -36,6 +36,14 @@ application port). macOS Docker Desktop has
 different host-networking behavior, so run the server directly or use a Linux
 host for real multi-room playback.
 
+Nivas keeps the native AirPlay session open during pause so playback can resume
+on the same RTP timeline. To prevent an unattended wall tablet from retaining
+stale RTSP/PTP connections forever, paused sessions are closed after 15 minutes
+by default. Set `AIRPLAY_PAUSE_TIMEOUT_SECONDS` in `.env` to change that limit.
+Normal stop, track replacement, backend shutdown, and a closed control pipe all
+perform graceful receiver teardown; unresponsive senders are then terminated as
+a process group. Sender diagnostics are retained in `/tmp/nivas-airplay.log`.
+
 ### Google Calendar
 
 1. In [Google Cloud Console](https://console.cloud.google.com/) create a project → enable the **Google Calendar API**.

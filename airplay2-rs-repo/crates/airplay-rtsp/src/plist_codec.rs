@@ -1,6 +1,6 @@
 //! Binary plist encoding/decoding for RTSP payloads.
 
-use airplay_core::error::{RtspError, Result};
+use airplay_core::error::{Result, RtspError};
 use serde::{Deserialize, Serialize};
 
 /// Encode value to binary plist.
@@ -13,8 +13,7 @@ pub fn encode<T: Serialize>(value: &T) -> Result<Vec<u8>> {
 
 /// Decode binary plist to value.
 pub fn decode<T: for<'de> Deserialize<'de>>(data: &[u8]) -> Result<T> {
-    plist::from_bytes(data)
-        .map_err(|e| RtspError::PlistError(e.to_string()).into())
+    plist::from_bytes(data).map_err(|e| RtspError::PlistError(e.to_string()).into())
 }
 
 /// Device info response from /info endpoint.
@@ -40,7 +39,9 @@ pub struct InfoResponse {
 }
 
 /// Deserializer for optional plist Data to Vec<u8>
-fn deserialize_data_option<'de, D>(deserializer: D) -> std::result::Result<Option<Vec<u8>>, D::Error>
+fn deserialize_data_option<'de, D>(
+    deserializer: D,
+) -> std::result::Result<Option<Vec<u8>>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
@@ -99,6 +100,24 @@ pub struct SetupPhase1Request {
     pub timing_port: u16,
     #[serde(rename = "timingProtocol")]
     pub timing_protocol: String,
+    #[serde(rename = "isMultiSelectAirPlay")]
+    pub is_multi_select_airplay: bool,
+    #[serde(rename = "groupContainsGroupLeader")]
+    pub group_contains_group_leader: bool,
+    #[serde(rename = "macAddress")]
+    pub mac_address: String,
+    pub model: String,
+    pub name: String,
+    #[serde(rename = "osBuildVersion")]
+    pub os_build_version: String,
+    #[serde(rename = "osName")]
+    pub os_name: String,
+    #[serde(rename = "osVersion")]
+    pub os_version: String,
+    #[serde(rename = "senderSupportsRelay")]
+    pub sender_supports_relay: bool,
+    #[serde(rename = "sourceVersion")]
+    pub source_version: String,
     /// Optional PTP peer info (only for PTP timing protocol).
     #[serde(rename = "timingPeerInfo", skip_serializing_if = "Option::is_none")]
     pub timing_peer_info: Option<TimingPeerInfo>,
@@ -226,7 +245,10 @@ mod tests {
         fn decode_minimal_info() {
             // Create a minimal plist with just a few fields
             let mut dict = Dictionary::new();
-            dict.insert("model".to_string(), plist::Value::String("AppleTV5,3".to_string()));
+            dict.insert(
+                "model".to_string(),
+                plist::Value::String("AppleTV5,3".to_string()),
+            );
 
             let encoded = encode_raw(&dict).unwrap();
             let info: InfoResponse = decode(&encoded).unwrap();
@@ -239,14 +261,35 @@ mod tests {
         #[test]
         fn decode_full_info() {
             let mut dict = Dictionary::new();
-            dict.insert("model".to_string(), plist::Value::String("AppleTV5,3".to_string()));
-            dict.insert("sourceVersion".to_string(), plist::Value::String("366.0".to_string()));
-            dict.insert("features".to_string(), plist::Value::Integer(0x445F8A00i64.into()));
-            dict.insert("statusFlags".to_string(), plist::Value::Integer(0x404i64.into()));
+            dict.insert(
+                "model".to_string(),
+                plist::Value::String("AppleTV5,3".to_string()),
+            );
+            dict.insert(
+                "sourceVersion".to_string(),
+                plist::Value::String("366.0".to_string()),
+            );
+            dict.insert(
+                "features".to_string(),
+                plist::Value::Integer(0x445F8A00i64.into()),
+            );
+            dict.insert(
+                "statusFlags".to_string(),
+                plist::Value::Integer(0x404i64.into()),
+            );
             dict.insert("pk".to_string(), plist::Value::Data(vec![0xAAu8; 32]));
-            dict.insert("pi".to_string(), plist::Value::String("abc-123".to_string()));
-            dict.insert("deviceID".to_string(), plist::Value::String("AA:BB:CC:DD:EE:FF".to_string()));
-            dict.insert("name".to_string(), plist::Value::String("Living Room".to_string()));
+            dict.insert(
+                "pi".to_string(),
+                plist::Value::String("abc-123".to_string()),
+            );
+            dict.insert(
+                "deviceID".to_string(),
+                plist::Value::String("AA:BB:CC:DD:EE:FF".to_string()),
+            );
+            dict.insert(
+                "name".to_string(),
+                plist::Value::String("Living Room".to_string()),
+            );
 
             let encoded = encode_raw(&dict).unwrap();
             let info: InfoResponse = decode(&encoded).unwrap();
@@ -360,18 +403,66 @@ mod tests {
             assert_eq!(streams.len(), 1);
 
             let stream = streams[0].as_dictionary().unwrap();
-            assert_eq!(stream.get("type").and_then(|v| v.as_unsigned_integer()), Some(96));
-            assert_eq!(stream.get("audioFormat").and_then(|v| v.as_unsigned_integer()), Some(0x40000));
-            assert_eq!(stream.get("audioMode").and_then(|v| v.as_string()), Some("default"));
-            assert_eq!(stream.get("sr").and_then(|v| v.as_unsigned_integer()), Some(44100));
-            assert_eq!(stream.get("ct").and_then(|v| v.as_unsigned_integer()), Some(2));
-            assert_eq!(stream.get("controlPort").and_then(|v| v.as_unsigned_integer()), Some(60242));
-            assert_eq!(stream.get("isMedia").and_then(|v| v.as_boolean()), Some(true));
-            assert_eq!(stream.get("latencyMin").and_then(|v| v.as_unsigned_integer()), Some(11025));
-            assert_eq!(stream.get("latencyMax").and_then(|v| v.as_unsigned_integer()), Some(88200));
-            assert_eq!(stream.get("spf").and_then(|v| v.as_unsigned_integer()), Some(352));
-            assert_eq!(stream.get("supportsDynamicStreamID").and_then(|v| v.as_boolean()), Some(true));
-            assert_eq!(stream.get("streamConnectionID").and_then(|v| v.as_unsigned_integer()), Some(1234));
+            assert_eq!(
+                stream.get("type").and_then(|v| v.as_unsigned_integer()),
+                Some(96)
+            );
+            assert_eq!(
+                stream
+                    .get("audioFormat")
+                    .and_then(|v| v.as_unsigned_integer()),
+                Some(0x40000)
+            );
+            assert_eq!(
+                stream.get("audioMode").and_then(|v| v.as_string()),
+                Some("default")
+            );
+            assert_eq!(
+                stream.get("sr").and_then(|v| v.as_unsigned_integer()),
+                Some(44100)
+            );
+            assert_eq!(
+                stream.get("ct").and_then(|v| v.as_unsigned_integer()),
+                Some(2)
+            );
+            assert_eq!(
+                stream
+                    .get("controlPort")
+                    .and_then(|v| v.as_unsigned_integer()),
+                Some(60242)
+            );
+            assert_eq!(
+                stream.get("isMedia").and_then(|v| v.as_boolean()),
+                Some(true)
+            );
+            assert_eq!(
+                stream
+                    .get("latencyMin")
+                    .and_then(|v| v.as_unsigned_integer()),
+                Some(11025)
+            );
+            assert_eq!(
+                stream
+                    .get("latencyMax")
+                    .and_then(|v| v.as_unsigned_integer()),
+                Some(88200)
+            );
+            assert_eq!(
+                stream.get("spf").and_then(|v| v.as_unsigned_integer()),
+                Some(352)
+            );
+            assert_eq!(
+                stream
+                    .get("supportsDynamicStreamID")
+                    .and_then(|v| v.as_boolean()),
+                Some(true)
+            );
+            assert_eq!(
+                stream
+                    .get("streamConnectionID")
+                    .and_then(|v| v.as_unsigned_integer()),
+                Some(1234)
+            );
         }
     }
 
@@ -381,8 +472,14 @@ mod tests {
         #[test]
         fn setup_phase1_response_extracts_ports() {
             let mut dict = Dictionary::new();
-            dict.insert("eventPort".to_string(), plist::Value::Integer(58168i64.into()));
-            dict.insert("timingPort".to_string(), plist::Value::Integer(58169i64.into()));
+            dict.insert(
+                "eventPort".to_string(),
+                plist::Value::Integer(58168i64.into()),
+            );
+            dict.insert(
+                "timingPort".to_string(),
+                plist::Value::Integer(58169i64.into()),
+            );
 
             let encoded = encode_raw(&dict).unwrap();
             let response: SetupPhase1Response = decode(&encoded).unwrap();
@@ -396,13 +493,20 @@ mod tests {
         fn setup_phase2_response_extracts_streams() {
             let mut stream_dict = Dictionary::new();
             stream_dict.insert("type".to_string(), plist::Value::Integer(96i64.into()));
-            stream_dict.insert("dataPort".to_string(), plist::Value::Integer(58170i64.into()));
-            stream_dict.insert("controlPort".to_string(), plist::Value::Integer(58171i64.into()));
+            stream_dict.insert(
+                "dataPort".to_string(),
+                plist::Value::Integer(58170i64.into()),
+            );
+            stream_dict.insert(
+                "controlPort".to_string(),
+                plist::Value::Integer(58171i64.into()),
+            );
 
             let mut dict = Dictionary::new();
-            dict.insert("streams".to_string(), plist::Value::Array(vec![
-                plist::Value::Dictionary(stream_dict),
-            ]));
+            dict.insert(
+                "streams".to_string(),
+                plist::Value::Array(vec![plist::Value::Dictionary(stream_dict)]),
+            );
 
             let encoded = encode_raw(&dict).unwrap();
             let response: SetupPhase2Response = decode(&encoded).unwrap();

@@ -18,15 +18,16 @@ use airplay_audio::{
 use airplay_core::stream::TimingProtocol;
 use airplay_crypto::chacha::AudioCipher;
 use airplay_crypto::chacha::ControlCipher;
-use airplay_crypto::keys::SharedSecret;
+use airplay_crypto::hkdf::{derive_events_read_key, derive_events_write_key};
 use airplay_timing::{
     run_bmca_yield_flow, run_ptp_group_master_flow, run_ptp_slave, ClockOffset, NtpTimingServer,
     PtpMaster, PTP_EVENT_PORT,
 };
 use std::net::{IpAddr, SocketAddr, UdpSocket};
 use std::sync::Arc;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
-use tokio::sync::watch;
+use tokio::sync::{mpsc, watch};
 use tokio::task::JoinHandle;
 use tracing::{debug, info, warn};
 
@@ -43,6 +44,10 @@ fn generate_device_id() -> String {
         rng.gen::<u8>(),
         rng.gen::<u8>()
     )
+}
+
+fn session_device_id() -> String {
+    std::env::var("AIRPLAY_CLIENT_DEVICE_ID").unwrap_or_else(|_| generate_device_id())
 }
 
 /// Persisted sender identity for pair-verify after initial pair-setup.
@@ -237,8 +242,12 @@ pub struct Connection {
     ptp_master_sync_task: Option<JoinHandle<()>>,
     /// Control port receiver (keeps the UDP socket alive so HomePod doesn't get ICMP unreachable)
     control_receiver: Option<Arc<RtpReceiver>>,
-    /// Reverse connection to device's events port (required before RECORD)
-    events_stream: Option<TcpStream>,
+    /// Keys and background handler for the encrypted reverse event channel.
+    event_encrypt_key: [u8; 32],
+    event_decrypt_key: [u8; 32],
+    event_task: Option<JoinHandle<()>>,
+    event_tx: mpsc::UnboundedSender<Vec<u8>>,
+    event_rx: mpsc::UnboundedReceiver<Vec<u8>>,
     /// Remote PTP master clock identity (from BMCA yield flow)
     ptp_master_clock_id: Option<[u8; 8]>,
     /// Render delay in ms added to NTP timestamps for extra retransmit headroom.
@@ -249,6 +258,11 @@ pub struct Connection {
     eq_params: Option<Arc<EqParams>>,
     /// Stream statistics (shared with control channel threads).
     stream_stats: Arc<crate::stats::StreamStats>,
+    /// Randomized RTP origin for this connection, matching Apple senders.
+    initial_rtp_sequence: u16,
+    initial_rtp_timestamp: u32,
+    /// RTP position captured at pause and used to re-anchor FLUSH/RECORD.
+    paused_rtp_info: Option<(u16, u32)>,
 }
 
 impl Connection {
@@ -260,7 +274,7 @@ impl Connection {
     /// Create connection with PIN for protected devices.
     pub async fn connect_with_pin(device: Device, config: StreamConfig, pin: &str) -> Result<Self> {
         // Generate a stable client device ID for this session
-        let client_device_id = generate_device_id();
+        let client_device_id = session_device_id();
 
         // Generate a stable identity keypair for pairing
         let identity = IdentityKeyPair::generate();
@@ -314,6 +328,11 @@ impl Connection {
             pairing.continue_transient_pairing(m4_body)?;
         }
 
+        let pairing_secret = pairing.shared_secret().ok_or_else(|| {
+            RtspError::SetupFailed("Missing shared secret after transient pairing".into())
+        })?;
+        let event_decrypt_key = derive_events_write_key(pairing_secret.as_bytes())?;
+        let event_encrypt_key = derive_events_read_key(pairing_secret.as_bytes())?;
         let session_keys = pairing.take_session_keys().ok_or_else(|| {
             RtspError::SetupFailed("Missing session keys after transient pairing".into())
         })?;
@@ -339,18 +358,14 @@ impl Connection {
             }
         }
 
-        if let Some(shared_secret) = pairing.shared_secret() {
-            let secret_bytes = shared_secret.as_bytes();
-            if secret_bytes.len() >= 32 {
-                let mut shk = [0u8; 32];
-                shk.copy_from_slice(&secret_bytes[..32]);
-                session.set_stream_key(shk);
-                tracing::info!("Set stream key (shk) to first 32 bytes of pairing shared secret");
-            }
-        }
+        // Keep the independently generated audio stream key. It is sent to
+        // the receiver as `shk` in SETUP phase 2 and is distinct from the
+        // pairing secret used to protect RTSP control traffic.
+        tracing::debug!("Using random shk for audio encryption (sent in SETUP phase 2)");
 
         session.set_paired()?;
 
+        let (event_tx, event_rx) = mpsc::unbounded_channel();
         Ok(Self {
             device,
             rtsp,
@@ -368,11 +383,18 @@ impl Connection {
             ptp_master_clock_id: None,
             control_receiver: None,
             control_task: None,
-            events_stream: None,
+            event_encrypt_key,
+            event_decrypt_key,
+            event_task: None,
+            event_tx,
+            event_rx,
             render_delay_ms: 0,
             eq_config: None,
             eq_params: None,
             stream_stats: crate::stats::StreamStats::new(),
+            initial_rtp_sequence: rand::random(),
+            initial_rtp_timestamp: rand::random(),
+            paused_rtp_info: None,
         })
     }
 
@@ -426,7 +448,7 @@ impl Connection {
     ) -> Result<Self> {
         // Generate a FRESH random client device ID for this session (like transient pairing)
         // The Ed25519 identity in pair-verify M3 identifies us, not the RTSP device ID
-        let client_device_id = generate_device_id();
+        let client_device_id = session_device_id();
         debug!(
             "Using fresh device ID for RTSP session: {}",
             client_device_id
@@ -506,6 +528,11 @@ impl Connection {
         let session_keys = pair_verify.process_m4(m4_body).map_err(|e| {
             RtspError::SetupFailed(format!("Pair-verify M4 processing failed: {}", e))
         })?;
+        let verify_secret = pair_verify.shared_secret().ok_or_else(|| {
+            RtspError::SetupFailed("Missing shared secret after pair-verify".into())
+        })?;
+        let event_decrypt_key = derive_events_write_key(&verify_secret)?;
+        let event_encrypt_key = derive_events_read_key(&verify_secret)?;
 
         info!("Pair-verify complete, establishing encrypted session");
 
@@ -529,13 +556,11 @@ impl Connection {
             }
         }
 
-        if let Some(shk) = pair_verify.shared_secret() {
-            session.set_stream_key(shk);
-            tracing::info!("Set stream key (shk) from pair_verify shared secret");
-        }
+        tracing::debug!("Using random shk for audio encryption (sent in SETUP phase 2)");
 
         session.set_paired()?;
 
+        let (event_tx, event_rx) = mpsc::unbounded_channel();
         Ok(Self {
             device,
             rtsp,
@@ -553,11 +578,18 @@ impl Connection {
             ptp_master_clock_id: None,
             control_receiver: None,
             control_task: None,
-            events_stream: None,
+            event_encrypt_key,
+            event_decrypt_key,
+            event_task: None,
+            event_tx,
+            event_rx,
             render_delay_ms: 0,
             eq_config: None,
             eq_params: None,
             stream_stats: crate::stats::StreamStats::new(),
+            initial_rtp_sequence: rand::random(),
+            initial_rtp_timestamp: rand::random(),
+            paused_rtp_info: None,
         })
     }
 
@@ -586,7 +618,7 @@ impl Connection {
         config: StreamConfig,
         pin: &str,
     ) -> Result<Self> {
-        let client_device_id = generate_device_id();
+        let client_device_id = session_device_id();
         debug!(
             "Using fresh device ID for PIN pairing session: {}",
             client_device_id
@@ -730,6 +762,11 @@ impl Connection {
         let session_keys = pair_verify.process_m4(pv_m4_body).map_err(|e| {
             RtspError::SetupFailed(format!("Pair-verify M4 processing failed: {}", e))
         })?;
+        let verify_secret = pair_verify.shared_secret().ok_or_else(|| {
+            RtspError::SetupFailed("Missing shared secret after pair-verify".into())
+        })?;
+        let event_decrypt_key = derive_events_write_key(&verify_secret)?;
+        let event_encrypt_key = derive_events_read_key(&verify_secret)?;
 
         info!("Pair-verify complete, establishing encrypted session");
 
@@ -753,13 +790,11 @@ impl Connection {
             }
         }
 
-        if let Some(shk) = pair_verify.shared_secret() {
-            session.set_stream_key(shk);
-            tracing::info!("Set stream key (shk) from pair_verify shared secret");
-        }
+        tracing::debug!("Using random shk for audio encryption (sent in SETUP phase 2)");
 
         session.set_paired()?;
 
+        let (event_tx, event_rx) = mpsc::unbounded_channel();
         Ok(Self {
             device,
             rtsp,
@@ -777,11 +812,18 @@ impl Connection {
             ptp_master_clock_id: None,
             control_receiver: None,
             control_task: None,
-            events_stream: None,
+            event_encrypt_key,
+            event_decrypt_key,
+            event_task: None,
+            event_tx,
+            event_rx,
             render_delay_ms: 0,
             eq_config: None,
             eq_params: None,
             stream_stats: crate::stats::StreamStats::new(),
+            initial_rtp_sequence: rand::random(),
+            initial_rtp_timestamp: rand::random(),
+            paused_rtp_info: None,
         })
     }
 
@@ -829,9 +871,6 @@ impl Connection {
         };
 
         // SETUP Phase 1 (timing/event channels)
-        if let Some(sa) = self.rtsp.local_addr() {
-            self.session.set_request_host(sa.ip().to_string());
-        }
         let local_addresses = self
             .rtsp
             .local_addr()
@@ -860,7 +899,8 @@ impl Connection {
         self.session
             .process_setup_phase1_response(setup1_resp.body.as_deref().unwrap_or(&[]))?;
 
-        // Add RTSP Session header for all subsequent requests (RECORD, SETUP phase 2, etc.)
+        // Add the RTSP Session header to subsequent requests. This identifier
+        // is independent of the random streamConnectionID in the phase-2 plist.
         let session_id = setup1_resp
             .headers
             .get("Session")
@@ -868,11 +908,6 @@ impl Connection {
             .unwrap_or_else(|| "1".to_string());
         let session_id_clean = session_id.split(';').next().unwrap_or(&session_id).trim();
         self.rtsp.add_session_header("Session", session_id_clean);
-        if let Ok(id) = session_id_clean.parse::<u64>() {
-            self.session.set_stream_connection_id(id);
-        } else {
-            self.session.set_stream_connection_id(1);
-        }
 
         // Get device address and ports from SETUP phase 1 response
         // Copy the address value to avoid borrow conflict with later mutable calls
@@ -894,7 +929,7 @@ impl Connection {
         match TcpStream::connect(events_addr).await {
             Ok(stream) => {
                 tracing::info!("Events connection established");
-                self.events_stream = Some(stream);
+                self.start_event_handler(stream);
             }
             Err(e) => {
                 // Not fatal - owntone says "proceeding anyway" if this fails
@@ -913,23 +948,6 @@ impl Connection {
         self.session.set_local_control_port(actual_control_port);
         tracing::info!("Control port bound to {}", actual_control_port);
         self.control_receiver = Some(Arc::new(control_receiver));
-
-        // Send RECORD right after session SETUP (phase 1) before stream SETUP (phase 2)
-        // owntone / raop_sender.cpp: RECORD tells receiver to enter RECORD state before configuring streams
-        tracing::info!("Sending RECORD request before stream SETUP");
-        let record_req = RtspRequest::record(self.session.request_uri());
-        match tokio::time::timeout(
-            std::time::Duration::from_secs(3),
-            self.rtsp.send(record_req),
-        )
-        .await
-        {
-            Ok(Ok(resp)) => {
-                tracing::info!("RECORD acknowledged with status {}", resp.status_code);
-            }
-            Ok(Err(e)) => warn!("RECORD error (proceeding to SETUP phase 2): {}", e),
-            Err(_) => warn!("RECORD timeout (proceeding to SETUP phase 2)"),
-        }
 
         // UDP Hole Punching for Cross-VLAN stateful firewalls:
         // Outbound UDP packets from our local timing & control ports to the receiver's UDP ports
@@ -952,18 +970,6 @@ impl Connection {
             let _ = control_receiver.hole_punch(target_udp_addr);
         }
 
-        // RECORD (empty body, standard headers) after session SETUP, BEFORE stream SETUP.
-        // The receiver enters its RECORD state, required before it will render the realtime audio stream.
-        let mut record_req =
-            RtspRequest::new(airplay_rtsp::RtspMethod::Record, self.session.request_uri());
-        if let Some(session_id) = self.session.stream_connection_id() {
-            record_req = record_req.header("Session", session_id.to_string());
-        }
-        match self.rtsp.send(record_req).await {
-            Ok(resp) => tracing::info!("AirPlay 2 RECORD response: status={}", resp.status_code),
-            Err(e) => tracing::warn!("AirPlay 2 RECORD request failed (continuing anyway): {}", e),
-        }
-
         // SETUP Phase 2 (audio stream)
         let setup2_body = self.session.build_setup_phase2()?;
         let setup2_req = RtspRequest::setup(self.session.request_uri(), setup2_body);
@@ -982,6 +988,29 @@ impl Connection {
         }
         self.session
             .process_setup_phase2_response(setup2_resp.body.as_deref().unwrap_or(&[]))?;
+
+        // Enter RECORD only after the receiver has created the audio stream,
+        // and anchor its initial RTP sequence/timestamp explicitly.
+        tracing::info!("Sending RECORD after stream SETUP with RTP-Info");
+        let record_req = RtspRequest::record_with_info(
+            self.session.request_uri(),
+            self.initial_rtp_sequence,
+            self.initial_rtp_timestamp,
+        );
+        match tokio::time::timeout(
+            std::time::Duration::from_secs(2),
+            self.rtsp.send(record_req),
+        )
+        .await
+        {
+            Ok(Ok(resp)) if resp.status_code == 200 => tracing::info!("RECORD acknowledged"),
+            Ok(Ok(resp)) => warn!(
+                "RECORD returned status {} (continuing anyway)",
+                resp.status_code
+            ),
+            Ok(Err(e)) => warn!("RECORD error (continuing anyway): {}", e),
+            Err(_) => warn!("RECORD timeout (continuing anyway)"),
+        }
 
         if let Some(ports) = self.session.ports() {
             let data_udp_addr = SocketAddr::new(addr, ports.data_port);
@@ -1071,8 +1100,30 @@ impl Connection {
                             }
                         }
 
-                        // Wait briefly for initial offset calculation
-                        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                        // Do not start audio until the receiver's PTP clock has
+                        // actually been measured. A zero/default offset puts
+                        // render timestamps in the Unix clock domain and Sonos
+                        // silently discards otherwise valid RTP packets.
+                        match tokio::time::timeout(
+                            std::time::Duration::from_secs(5),
+                            offset_rx.changed(),
+                        )
+                        .await
+                        {
+                            Ok(Ok(())) => {}
+                            Ok(Err(_)) => {
+                                return Err(RtspError::SetupFailed(
+                                    "PTP offset channel closed before synchronization".into(),
+                                )
+                                .into());
+                            }
+                            Err(_) => {
+                                return Err(RtspError::SetupFailed(
+                                    "Timed out waiting for receiver PTP clock offset".into(),
+                                )
+                                .into());
+                            }
+                        }
                         let initial_offset = *offset_rx.borrow_and_update();
                         self.timing_offset = Some(initial_offset);
 
@@ -1107,8 +1158,28 @@ impl Connection {
 
                         self.timing_task = Some(ptp_task);
 
-                        // Wait a moment for initial sync before proceeding
-                        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                        // Require a real exchange before constructing render
+                        // timestamps in the receiver's clock domain.
+                        match tokio::time::timeout(
+                            std::time::Duration::from_secs(5),
+                            offset_rx.changed(),
+                        )
+                        .await
+                        {
+                            Ok(Ok(())) => {}
+                            Ok(Err(_)) => {
+                                return Err(RtspError::SetupFailed(
+                                    "PTP offset channel closed before synchronization".into(),
+                                )
+                                .into());
+                            }
+                            Err(_) => {
+                                return Err(RtspError::SetupFailed(
+                                    "Timed out waiting for receiver PTP clock offset".into(),
+                                )
+                                .into());
+                            }
+                        }
 
                         // Get the current offset from the channel
                         let initial_offset = *offset_rx.borrow_and_update();
@@ -1198,6 +1269,109 @@ impl Connection {
         self.volume
     }
 
+    /// Read any receiver-originated data waiting on the negotiated AirPlay
+    /// events connection. The background event task has already decrypted and
+    /// acknowledged the request before it is returned here.
+    pub fn poll_event_data(&mut self) -> Result<Vec<u8>> {
+        Ok(self.event_rx.try_recv().unwrap_or_default())
+    }
+
+    fn start_event_handler(&mut self, mut stream: TcpStream) {
+        if let Some(task) = self.event_task.take() {
+            task.abort();
+        }
+        let mut cipher = ControlCipher::new(self.event_encrypt_key, self.event_decrypt_key);
+        let event_tx = self.event_tx.clone();
+        self.event_task = Some(tokio::spawn(async move {
+            let mut plaintext = Vec::new();
+            loop {
+                let mut length_bytes = [0u8; 2];
+                if let Err(error) = stream.read_exact(&mut length_bytes).await {
+                    if error.kind() != std::io::ErrorKind::UnexpectedEof {
+                        warn!("AirPlay event channel read failed: {}", error);
+                    }
+                    break;
+                }
+                let block_len = u16::from_le_bytes(length_bytes);
+                if block_len == 0 || block_len > 0x400 {
+                    warn!(
+                        "AirPlay event channel sent invalid frame length {}",
+                        block_len
+                    );
+                    break;
+                }
+                let mut encrypted = vec![0u8; block_len as usize + 16];
+                if let Err(error) = stream.read_exact(&mut encrypted).await {
+                    warn!("AirPlay event channel frame read failed: {}", error);
+                    break;
+                }
+                let block = match cipher.decrypt_block(&encrypted, block_len) {
+                    Ok(block) => block,
+                    Err(error) => {
+                        warn!("AirPlay event channel decrypt failed: {}", error);
+                        break;
+                    }
+                };
+                plaintext.extend_from_slice(&block);
+                if plaintext.len() > 1024 * 1024 {
+                    warn!("AirPlay event request exceeded 1 MiB limit");
+                    break;
+                }
+
+                while let Some(header_end) = plaintext.windows(4).position(|w| w == b"\r\n\r\n") {
+                    let headers_end = header_end + 4;
+                    let headers = &plaintext[..header_end];
+                    let header_text = String::from_utf8_lossy(headers).into_owned();
+                    let mut content_length = 0usize;
+                    let mut cseq = None;
+                    for line in header_text.lines() {
+                        if let Some((name, value)) = line.split_once(':') {
+                            if name.eq_ignore_ascii_case("content-length") {
+                                content_length = value.trim().parse().unwrap_or(0);
+                            } else if name.eq_ignore_ascii_case("cseq") {
+                                cseq = Some(value.trim().to_string());
+                            }
+                        }
+                    }
+                    let request_len = headers_end.saturating_add(content_length);
+                    if plaintext.len() < request_len {
+                        break;
+                    }
+                    let request: Vec<u8> = plaintext.drain(..request_len).collect();
+                    info!(
+                        "AirPlay event request: {}",
+                        header_text.lines().next().unwrap_or("<empty>")
+                    );
+
+                    // The event socket is a reverse connection. Sonos expects a
+                    // minimal RTSP response encrypted with Events-Read and the
+                    // channel's independent send counter.
+                    let mut response =
+                        String::from("RTSP/1.0 200 OK\r\nServer: AirTunes/745.83\r\n");
+                    if let Some(cseq) = cseq {
+                        response.push_str("CSeq: ");
+                        response.push_str(&cseq);
+                        response.push_str("\r\n");
+                    }
+                    response.push_str("\r\n");
+                    let encrypted_response = match cipher.encrypt(response.as_bytes()) {
+                        Ok(data) => data,
+                        Err(error) => {
+                            warn!("AirPlay event response encryption failed: {}", error);
+                            return;
+                        }
+                    };
+                    if let Err(error) = stream.write_all(&encrypted_response).await {
+                        warn!("AirPlay event response write failed: {}", error);
+                        return;
+                    }
+                    let _ = event_tx.send(request);
+                }
+            }
+            info!("AirPlay event channel closed");
+        }));
+    }
+
     /// Start audio streaming from a decoder source.
     pub async fn start_streaming(&mut self, decoder: AudioDecoder) -> Result<()> {
         // Ensure setup is complete
@@ -1237,8 +1411,8 @@ impl Connection {
         // starting at the given seq/rtptime.
         let flush_req = RtspRequest::flush_with_info(
             self.session.request_uri(),
-            0, // Initial sequence number (RtpSender starts at 0)
-            0, // Initial RTP timestamp
+            self.initial_rtp_sequence,
+            self.initial_rtp_timestamp,
         );
         if let Err(e) = self.rtsp.send(flush_req).await {
             tracing::warn!("FLUSH failed (continuing anyway): {}", e);
@@ -1251,10 +1425,10 @@ impl Connection {
         // RECORD was sent at the end of setup(), just update state
         self.session.start_playing()?;
 
-        // Send SET_PARAMETER volume to ensure HomePod is not muted
-        tracing::info!("Sending SET_PARAMETER volume");
+        // Send initial volume parameter to ensure Sonos/HomePod is not muted (session starts at -144 dB)
+        tracing::info!("Sending SET_PARAMETER volume (unmuting session)");
         if let Err(e) = self.set_volume(self.volume).await {
-            tracing::warn!("Failed to set volume: {}", e);
+            tracing::warn!("Failed to set initial volume: {}", e);
         }
 
         // Spawn control channel on a dedicated blocking thread for low-latency
@@ -1532,12 +1706,24 @@ impl Connection {
 
     /// Pause streaming.
     pub async fn pause(&mut self) -> Result<()> {
+        if self.playback_state == PlaybackState::Paused {
+            return Ok(());
+        }
         if let Some(ref mut streamer) = self.streamer {
             streamer.pause().await?;
         }
 
-        // Send FLUSH with RTP-Info to pause on receiver
-        let flush_req = RtspRequest::flush_with_info(self.session.request_uri(), 0, 0);
+        // Anchor FLUSH at the next packet, not at an unrelated zero origin.
+        let rtp_info = if let Some(ref streamer) = self.streamer {
+            streamer.rtp_info().await
+        } else {
+            None
+        }
+        .unwrap_or((self.initial_rtp_sequence, self.initial_rtp_timestamp));
+        self.paused_rtp_info = Some(rtp_info);
+        tracing::info!("Pausing at RTP seq={}, rtptime={}", rtp_info.0, rtp_info.1);
+        let flush_req =
+            RtspRequest::flush_with_info(self.session.request_uri(), rtp_info.0, rtp_info.1);
         self.rtsp.send(flush_req).await?;
 
         // Reset marker/extension bit state so the next RECORD sends them correctly
@@ -1553,16 +1739,50 @@ impl Connection {
 
     /// Resume streaming.
     pub async fn resume(&mut self) -> Result<()> {
+        if self.playback_state == PlaybackState::Playing {
+            return Ok(());
+        }
+        // Re-anchor the receiver before packet production resumes. Sending a
+        // bare RECORD leaves strict receivers such as Sonos on the old RTP
+        // timeline, so they silently discard the new packets.
+        let rtp_info = self
+            .paused_rtp_info
+            .or_else(|| Some((self.initial_rtp_sequence, self.initial_rtp_timestamp)))
+            .unwrap();
+        tracing::info!("Resuming at RTP seq={}, rtptime={}", rtp_info.0, rtp_info.1);
+        let record_req =
+            RtspRequest::record_with_info(self.session.request_uri(), rtp_info.0, rtp_info.1);
+        self.rtsp.send(record_req).await?;
+
         if let Some(ref mut streamer) = self.streamer {
             streamer.resume().await?;
         }
 
-        // Send RECORD to resume
-        let record_req = RtspRequest::record(self.session.request_uri());
-        self.rtsp.send(record_req).await?;
         self.session.start_playing()?;
         self.playback_state = PlaybackState::Playing;
+        self.paused_rtp_info = None;
 
+        Ok(())
+    }
+
+    /// Apply a pause command that the receiver has already enacted locally.
+    /// Unlike `pause`, this must not send FLUSH back to the receiver.
+    pub async fn pause_from_remote(&mut self) -> Result<()> {
+        if let Some(ref mut streamer) = self.streamer {
+            streamer.pause().await?;
+        }
+        self.playback_state = PlaybackState::Paused;
+        Ok(())
+    }
+
+    /// Apply a play command that the receiver has already enacted locally.
+    /// The AirPlay session remains recorded, so resume packet production
+    /// without issuing a second RECORD request.
+    pub async fn resume_from_remote(&mut self) -> Result<()> {
+        if let Some(ref mut streamer) = self.streamer {
+            streamer.resume().await?;
+        }
+        self.playback_state = PlaybackState::Playing;
         Ok(())
     }
 
@@ -1636,13 +1856,13 @@ impl Connection {
 
         // Send SET_PARAMETER with volume
         let volume_body = self.session.build_set_volume(clamped)?;
-        let mut volume_req =
-            RtspRequest::set_parameter_text(self.session.request_uri(), volume_body);
-        if let Some(session_id) = self.session.stream_connection_id() {
-            volume_req = volume_req.header("Session", session_id.to_string());
-        }
-        let res = self.rtsp.send(volume_req).await;
-        tracing::debug!("set_volume result: {:?}", res);
+        let volume_req = RtspRequest::set_parameter_text(self.session.request_uri(), volume_body);
+        let response = self.rtsp.send(volume_req).await?;
+        tracing::debug!(
+            "set_volume accepted: requested={:.3}, rtsp_status={}",
+            clamped,
+            response.status_code
+        );
 
         Ok(())
     }
@@ -1770,7 +1990,7 @@ impl Connection {
         match tokio::net::TcpStream::connect(events_addr).await {
             Ok(stream) => {
                 tracing::info!("Events connection established");
-                self.events_stream = Some(stream);
+                self.start_event_handler(stream);
             }
             Err(e) => {
                 warn!(
@@ -1943,7 +2163,7 @@ impl Connection {
         match TcpStream::connect(events_addr).await {
             Ok(stream) => {
                 tracing::info!("Events connection established (group member)");
-                self.events_stream = Some(stream);
+                self.start_event_handler(stream);
             }
             Err(e) => {
                 warn!(
@@ -2068,7 +2288,12 @@ impl Connection {
         let dest = SocketAddr::new(*dest_addr, ports.data_port);
         let control_dest = SocketAddr::new(*dest_addr, ports.control_port);
 
-        let mut sender = RtpSender::new(dest, 0); // SSRC = 0 per Apple pcap capture
+        let mut sender = RtpSender::new_with_origin(
+            dest,
+            0, // SSRC = 0 per Apple pcap capture
+            self.initial_rtp_sequence,
+            self.initial_rtp_timestamp,
+        );
         sender.set_control_dest(control_dest);
 
         // Always bind UDP socket for audio streaming
