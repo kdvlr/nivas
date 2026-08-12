@@ -28,7 +28,10 @@ RUN pip wheel --no-cache-dir --wheel-dir /wheels .
 # ---- backend runtime ----
 FROM python:3.12-slim
 WORKDIR /app
-ENV PYTHONUNBUFFERED=1 DATA_DIR=/data AIRPLAY_IDENTITY_DIR=/data/airplay-identities
+ENV PYTHONUNBUFFERED=1 \
+    DATA_DIR=/data \
+    AIRPLAY_IDENTITY_DIR=/data/airplay-identities \
+    STATIC_DIR=/app/static
 
 # Install only runtime audio dependencies.
 RUN apt-get update \

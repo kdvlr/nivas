@@ -19,7 +19,12 @@ from .config import get_settings
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 
-STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+STATIC_DIR = Path(
+    os.getenv(
+        "STATIC_DIR",
+        str(Path(__file__).resolve().parent.parent / "static"),
+    )
+)
 
 
 @asynccontextmanager
