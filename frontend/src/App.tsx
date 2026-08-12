@@ -766,7 +766,9 @@ export default function App() {
               </div>
             )}
             {!isHome && route !== 'ytmusic' && (
-              <TopClockHeader now={now} config={config} route={route} />
+              <header className="flex items-center justify-end px-6 py-4 lg:px-8">
+                <TopClockHeader now={now} config={config} route={route} />
+              </header>
             )}
             <AnimatePresence mode="wait">
               <motion.div

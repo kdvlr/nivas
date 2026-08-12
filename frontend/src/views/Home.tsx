@@ -6,6 +6,7 @@ import CoinIcon from '../components/CoinIcon'
 import Icon from '../components/Icon'
 import Modal from '../components/Modal'
 import WeatherModal from '../components/WeatherModal'
+import TopClockHeader from '../components/TopClockHeader'
 import { useCelebration } from '../components/celebrations/CelebrationContext'
 import { useClock, useData, todayISO, addDaysISO } from '../lib/hooks'
 import type { CalendarStatus, CalEvent, ChoreItem, CoinBalance, MealDay, ShoppingItem, Task, WeatherData } from '../lib/types'
@@ -441,54 +442,7 @@ export default function Home() {
         </span>
       </button>
 
-      <div className="flex flex-col items-end shrink-0">
-        <div className="text-4xl lg:text-6xl font-bold tabular-nums tracking-tight text-[var(--primary)] leading-none">
-          {now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
-        </div>
-        {(() => {
-          const secondaryTz = config?.secondary_tz || 'Asia/Kolkata'
-          const secondaryEmoji = config?.secondary_tz_emoji || '🇮🇳'
-          const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone
-          const localDateStr = getTzDateString(now, localTz)
-          const secondaryDateStr = getTzDateString(now, secondaryTz)
-          const hasDateDiff = localDateStr !== secondaryDateStr && secondaryDateStr !== ''
-
-          let secondaryDateFormatted = ''
-          if (hasDateDiff) {
-            try {
-              secondaryDateFormatted = new Intl.DateTimeFormat('en-US', {
-                timeZone: secondaryTz,
-                month: 'short',
-                day: 'numeric',
-              }).format(now)
-            } catch (e) {}
-          }
-
-          let secondaryTimeFormatted = ''
-          try {
-            secondaryTimeFormatted = now.toLocaleTimeString(undefined, {
-              timeZone: secondaryTz,
-              hour: 'numeric',
-              minute: '2-digit',
-            })
-          } catch (e) {
-            secondaryTimeFormatted = now.toLocaleTimeString()
-          }
-
-          return (
-            <div className="mt-1.5 flex gap-3 text-base lg:text-xl font-semibold text-ink-soft">
-              <span>
-                {secondaryEmoji} {secondaryTimeFormatted}
-                {hasDateDiff && secondaryDateFormatted && (
-                  <span className="ml-1 text-xs lg:text-sm opacity-85">
-                    ({secondaryDateFormatted})
-                  </span>
-                )}
-              </span>
-            </div>
-          )
-        })()}
-      </div>
+      <TopClockHeader now={now} config={config} />
     </header>
     )
   }

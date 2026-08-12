@@ -3,6 +3,7 @@ import Icon from '../components/Icon'
 import { api } from '../lib/api'
 import { Track } from '../components/ytmusic/MiniPlayerBar'
 import AirPlaySelectorModal from '../components/ytmusic/AirPlaySelectorModal'
+import TopClockHeader from '../components/TopClockHeader'
 
 interface YTMusicViewProps {
   currentTrack: Track | null
@@ -358,12 +359,8 @@ export default function YTMusic({
             </div>
 
             <div className="ml-auto flex shrink-0 items-center gap-2 md:gap-3">
-              {/* Glass Clock Pill */}
-              <div className="hidden sm:flex items-center gap-2.5 rounded-full border border-white/20 bg-white/15 px-4 py-2 text-base md:text-xl font-bold tabular-nums text-white shadow-md backdrop-blur-md">
-                <span className="tracking-tight">{now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span>
-                <span className="opacity-45 text-sm">•</span>
-                <span className="text-white/90 font-semibold text-sm md:text-base">🇮🇳 {secondaryTimeFormatted}</span>
-              </div>
+              {/* Standardized Top-Right Wall Clock */}
+              <TopClockHeader now={now} className="hidden sm:flex text-white [&_*]:text-white" />
 
               {/* Mobile Search Icon Toggle */}
               <button

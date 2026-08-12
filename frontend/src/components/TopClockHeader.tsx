@@ -4,6 +4,7 @@ interface TopClockHeaderProps {
   now: Date
   config?: any
   route?: string
+  className?: string
 }
 
 export function getTzDateString(d: Date, tzName: string): string {
@@ -20,7 +21,7 @@ export function getTzDateString(d: Date, tzName: string): string {
   }
 }
 
-export default function TopClockHeader({ now, config, route }: TopClockHeaderProps) {
+export default function TopClockHeader({ now, config, className = '' }: TopClockHeaderProps) {
   const secondaryTz = config?.secondary_tz || 'Asia/Kolkata'
   const secondaryEmoji = config?.secondary_tz_emoji || '🇮🇳'
   const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -51,27 +52,20 @@ export default function TopClockHeader({ now, config, route }: TopClockHeaderPro
   }
 
   return (
-    <header className="flex flex-col px-6 py-4 lg:px-8">
-      <div className="flex flex-col">
-        <div className="flex items-baseline gap-4">
-          <span className="text-4xl lg:text-5xl font-bold tabular-nums tracking-tight text-[var(--primary)] leading-none">
-            {now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
-          </span>
-          <span className="text-xl lg:text-2xl font-medium text-ink-soft">
-            {now.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
-          </span>
-        </div>
-        <div className="mt-1.5 flex gap-6 font-semibold text-ink-soft text-lg lg:text-xl">
-          <span>
-            {secondaryEmoji} {secondaryTimeFormatted}
-            {hasDateDiff && secondaryDateFormatted && (
-              <span className="ml-1 text-sm lg:text-base opacity-80">
-                ({secondaryDateFormatted})
-              </span>
-            )}
-          </span>
-        </div>
+    <div className={`flex flex-col items-end text-right shrink-0 ${className}`}>
+      <div className="text-4xl lg:text-5xl font-bold tabular-nums tracking-tight text-[var(--primary)] leading-none">
+        {now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
       </div>
-    </header>
+      <div className="mt-1 flex items-center gap-2 text-sm lg:text-base font-semibold text-ink-soft">
+        <span>{now.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+        <span className="opacity-40">•</span>
+        <span>
+          {secondaryEmoji} {secondaryTimeFormatted}
+          {hasDateDiff && secondaryDateFormatted && (
+            <span className="ml-1 text-xs opacity-80">({secondaryDateFormatted})</span>
+          )}
+        </span>
+      </div>
+    </div>
   )
 }
