@@ -114,26 +114,48 @@ export default function MiniPlayerBar({
 
         {/* Playback Controls & Progress Bar */}
         <div className="hidden md:flex flex-col items-center gap-1.5 flex-1 max-w-md">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <button
               onClick={onPrevTrack}
-              className="text-slate-400 hover:text-slate-100 transition p-1"
+              className="text-slate-400 hover:text-slate-100 transition p-1 cursor-pointer"
+              title="Previous track"
             >
               <Icon name="skip_previous" className="text-2xl" />
             </button>
 
             <button
               onClick={onTogglePlay}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-500 hover:bg-rose-400 text-slate-950 transition shadow-lg shadow-rose-500/30"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-500 hover:bg-rose-400 text-slate-950 transition shadow-lg shadow-rose-500/30 cursor-pointer"
             >
               <Icon name={isPlaying ? 'pause' : 'play_arrow'} className="text-2xl font-bold" />
             </button>
 
             <button
               onClick={onNextTrack}
-              className="text-slate-400 hover:text-slate-100 transition p-1"
+              className="text-slate-400 hover:text-slate-100 transition p-1 cursor-pointer"
+              title="Next track"
             >
               <Icon name="skip_next" className="text-2xl" />
+            </button>
+
+            {/* AirPlay 2 Trigger Button */}
+            <button
+              ref={airPlayButtonRef}
+              onClick={() => setShowAirPlayModal(true)}
+              className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-full transition border cursor-pointer ${
+                activeAirPlayCount > 0
+                  ? 'bg-sky-500/20 text-sky-300 border-sky-500/40'
+                  : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'
+              }`}
+              title="Choose AirPlay rooms"
+            >
+              <Icon name="airplay" className="text-lg" />
+              <span className="text-xs font-semibold hidden sm:inline">AirPlay</span>
+              {activeAirPlayCount > 0 && (
+                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-sky-500 text-[10px] font-bold text-slate-950">
+                  {activeAirPlayCount}
+                </span>
+              )}
             </button>
           </div>
 
@@ -156,34 +178,25 @@ export default function MiniPlayerBar({
           {/* Mobile Play/Pause */}
           <button
             onClick={onTogglePlay}
-            className="flex md:hidden h-10 w-10 items-center justify-center rounded-full bg-rose-500 text-slate-950 shadow-md"
+            className="flex md:hidden h-10 w-10 items-center justify-center rounded-full bg-rose-500 text-slate-950 shadow-md cursor-pointer"
           >
             <Icon name={isPlaying ? 'pause' : 'play_arrow'} className="text-2xl" />
           </button>
 
-          {/* AirPlay 2 Trigger Button */}
+          {/* Mobile AirPlay Button */}
           <button
-            ref={airPlayButtonRef}
             onClick={() => setShowAirPlayModal(true)}
-            className={`relative flex items-center gap-1.5 px-3 py-2 rounded-2xl transition border ${
-              activeAirPlayCount > 0
-                ? 'bg-sky-500/20 text-sky-300 border-sky-500/40'
-                : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'
-            }`}
+            className="flex md:hidden h-9 w-9 items-center justify-center rounded-2xl bg-white/5 hover:bg-white/10 transition text-slate-300 cursor-pointer"
+            title="Choose AirPlay rooms"
           >
             <Icon name="airplay" className="text-lg" />
-            <span className="text-xs font-semibold hidden sm:inline">AirPlay</span>
-            {activeAirPlayCount > 0 && (
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-500 text-[10px] font-bold text-slate-950">
-                {activeAirPlayCount}
-              </span>
-            )}
           </button>
 
           {/* Expand Full Player */}
           <button
             onClick={onOpenFullPlayer}
-            className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white/5 hover:bg-white/10 transition text-slate-300"
+            className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white/5 hover:bg-white/10 transition text-slate-300 cursor-pointer"
+            title="Open Now Playing"
           >
             <Icon name="open_in_full" className="text-lg" />
           </button>

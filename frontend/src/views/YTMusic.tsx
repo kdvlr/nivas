@@ -368,12 +368,9 @@ export default function YTMusic({
               <button
                 onClick={() => setMobileSearchOpen(true)}
                 title="Search music"
-                className="flex md:hidden h-10 w-10 items-center justify-center rounded-full text-white/85 hover:bg-white/10 hover:text-white"
+                className="flex md:hidden h-10 w-10 items-center justify-center rounded-full text-white/85 hover:bg-white/10 hover:text-white cursor-pointer"
               >
                 <Icon name="search" className="text-2xl" />
-              </button>
-              <button ref={airPlayButtonRef} onClick={() => setShowAirPlayModal(true)} title="Choose AirPlay rooms" className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full text-white/85 hover:bg-white/10 hover:text-white">
-                <Icon name="airplay" className="text-2xl md:text-[2rem]" />
               </button>
             </div>
           </>
@@ -468,14 +465,17 @@ export default function YTMusic({
                     <p className="mt-0.5 truncate text-xs text-white/55">{currentTrack.artist}{currentTrack.album ? ` · ${currentTrack.album}` : ''}</p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
-                    <button onClick={onPrevTrack} aria-label="Previous song" className="flex h-10 w-10 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white">
+                    <button onClick={onPrevTrack} aria-label="Previous song" className="flex h-10 w-10 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white cursor-pointer">
                       <Icon name="skip_previous" className="text-2xl" />
                     </button>
-                    <button onClick={onTogglePlay} aria-label={isPlaying ? 'Pause' : 'Play'} className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-black transition hover:scale-105">
+                    <button onClick={onTogglePlay} aria-label={isPlaying ? 'Pause' : 'Play'} className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-black transition hover:scale-105 cursor-pointer">
                       <Icon name={isPlaying ? 'pause' : 'play_arrow'} filled className="text-2xl" />
                     </button>
-                    <button onClick={onNextTrack} aria-label="Next song" className="flex h-10 w-10 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white">
+                    <button onClick={onNextTrack} aria-label="Next song" className="flex h-10 w-10 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white cursor-pointer">
                       <Icon name="skip_next" className="text-2xl" />
+                    </button>
+                    <button onClick={() => setShowAirPlayModal(true)} title="Choose AirPlay rooms" aria-label="Choose AirPlay rooms" className="flex h-10 w-10 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white cursor-pointer">
+                      <Icon name="airplay" className="text-xl" />
                     </button>
                   </div>
                 </div>
@@ -498,10 +498,11 @@ export default function YTMusic({
                     <h1 className="truncate text-xl font-bold">{currentTrack.title}</h1>
                     <p className="mt-1 truncate text-sm text-white/55">{currentTrack.artist}{currentTrack.album ? ` · ${currentTrack.album}` : ''}</p>
                   </div>
-                  <div className="flex shrink-0 items-center gap-1">
-                    <button onClick={onPrevTrack} aria-label="Previous song" className="flex h-12 w-12 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"><Icon name="skip_previous" className="text-3xl" /></button>
-                    <button onClick={onTogglePlay} aria-label={isPlaying ? 'Pause' : 'Play'} className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-black transition hover:scale-105"><Icon name={isPlaying ? 'pause' : 'play_arrow'} filled className="text-3xl" /></button>
-                    <button onClick={onNextTrack} aria-label="Next song" className="flex h-12 w-12 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"><Icon name="skip_next" className="text-3xl" /></button>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <button onClick={onPrevTrack} aria-label="Previous song" className="flex h-12 w-12 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white cursor-pointer"><Icon name="skip_previous" className="text-3xl" /></button>
+                    <button onClick={onTogglePlay} aria-label={isPlaying ? 'Pause' : 'Play'} className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-black transition hover:scale-105 cursor-pointer"><Icon name={isPlaying ? 'pause' : 'play_arrow'} filled className="text-3xl" /></button>
+                    <button onClick={onNextTrack} aria-label="Next song" className="flex h-12 w-12 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white cursor-pointer"><Icon name="skip_next" className="text-3xl" /></button>
+                    <button ref={airPlayButtonRef} onClick={() => setShowAirPlayModal(true)} title="Choose AirPlay rooms" aria-label="Choose AirPlay rooms" className="flex h-12 w-12 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white cursor-pointer"><Icon name="airplay" className="text-2xl" /></button>
                   </div>
                 </div>
                 <div className="mt-4 flex items-center gap-3 text-xs tabular-nums text-white/45">
