@@ -311,27 +311,26 @@ export default function YTMusic({
   const progressDuration = durationSeconds || currentTrack?.duration || 0
 
   return (
-    <div className="min-h-full bg-black text-white">
-      <header className="sticky top-0 z-20 flex min-h-[5.5rem] items-center gap-4 border-b border-white/15 bg-black/95 px-4 backdrop-blur-xl md:px-8">
+    <div className={`bg-black text-white ${browseIsOpen ? 'min-h-full' : 'h-dvh flex flex-col overflow-hidden'}`}>
+      <header className="flex shrink-0 min-h-[4rem] md:min-h-[4.5rem] items-center gap-3 md:gap-4 border-b border-white/15 bg-black/95 px-3 md:px-8 backdrop-blur-xl">
         <div className="flex shrink-0 rounded-full bg-white/10 p-1">
-          <button onClick={() => { setSearchQuery(''); setViewMode('browse') }} className={`flex h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold ${viewMode === 'browse' && !searchIsOpen ? 'bg-white text-black' : 'text-white/65 hover:text-white'}`}><Icon name="home" className="text-xl" /> Home</button>
-          <button disabled={!currentTrack} onClick={() => { setSearchQuery(''); setViewMode('now-playing') }} className={`flex h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold disabled:opacity-30 ${viewMode === 'now-playing' && !searchIsOpen ? 'bg-white text-black' : 'text-white/65 hover:text-white'}`}><Icon name="graphic_eq" className="text-xl" /> Now Playing</button>
+          <button onClick={() => { setSearchQuery(''); setViewMode('browse') }} className={`flex h-9 md:h-11 items-center gap-1.5 md:gap-2 rounded-full px-3 md:px-4 text-xs md:text-sm font-semibold ${viewMode === 'browse' && !searchIsOpen ? 'bg-white text-black' : 'text-white/65 hover:text-white'}`}><Icon name="home" className="text-lg md:text-xl" /> Home</button>
+          <button disabled={!currentTrack} onClick={() => { setSearchQuery(''); setViewMode('now-playing') }} className={`flex h-9 md:h-11 items-center gap-1.5 md:gap-2 rounded-full px-3 md:px-4 text-xs md:text-sm font-semibold disabled:opacity-30 ${viewMode === 'now-playing' && !searchIsOpen ? 'bg-white text-black' : 'text-white/65 hover:text-white'}`}><Icon name="graphic_eq" className="text-lg md:text-xl" /> <span className="whitespace-nowrap">Now Playing</span></button>
         </div>
-        <div className="relative w-full max-w-[52rem]">
-          <Icon name="search" className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-white/55" />
+        <div className="relative flex-1 max-w-[52rem]">
+          <Icon name="search" className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-xl md:text-2xl text-white/55" />
           <input
             value={searchQuery}
             onChange={(event) => { setSearchQuery(event.target.value); setViewMode('browse') }}
-            placeholder="Search songs, albums, artists"
-            className="h-14 w-full rounded-xl border border-white/20 bg-[#292929] pl-14 pr-12 text-base text-white outline-none placeholder:text-white/50 focus:border-white/45 md:text-lg"
+            placeholder="Search songs, albums..."
+            className="h-10 md:h-14 w-full rounded-xl border border-white/20 bg-[#292929] pl-10 md:pl-14 pr-10 md:pr-12 text-sm md:text-lg text-white outline-none placeholder:text-white/50 focus:border-white/45"
           />
-          {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center text-white/55 hover:text-white"><Icon name="close" /></button>}
+          {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute right-2 md:right-3 top-1/2 flex h-8 w-8 md:h-10 md:w-10 -translate-y-1/2 items-center justify-center text-white/55 hover:text-white"><Icon name="close" /></button>}
         </div>
         <div className="ml-auto flex shrink-0 items-center gap-3">
-          <button ref={airPlayButtonRef} onClick={() => setShowAirPlayModal(true)} title="Choose AirPlay rooms" className="flex h-12 w-12 items-center justify-center rounded-full text-white/85 hover:bg-white/10 hover:text-white">
-            <Icon name="airplay" className="text-[2rem]" />
+          <button ref={airPlayButtonRef} onClick={() => setShowAirPlayModal(true)} title="Choose AirPlay rooms" className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full text-white/85 hover:bg-white/10 hover:text-white">
+            <Icon name="airplay" className="text-2xl md:text-[2rem]" />
           </button>
-          <div className="hidden h-11 w-11 items-center justify-center rounded-full bg-rose-600 text-lg font-semibold sm:flex">N</div>
         </div>
       </header>
 
@@ -384,13 +383,14 @@ export default function YTMusic({
           )}
         </main>
       ) : (
-        <main className="grid h-[calc(100dvh-5.5rem)] grid-cols-1 overflow-hidden xl:grid-cols-[minmax(30rem,1.12fr)_minmax(27rem,0.88fr)]">
-          <section className="flex h-full min-w-0 flex-col items-center justify-center overflow-hidden px-5 py-6 md:px-10">
+        <main className="flex-1 min-h-0 overflow-hidden flex flex-col xl:grid xl:grid-cols-[minmax(24rem,1.1fr)_minmax(24rem,0.9fr)]">
+          {/* Desktop Artwork View (Hidden on mobile) */}
+          <section className="hidden xl:flex h-full min-w-0 flex-col items-center justify-center overflow-hidden p-8">
             <div
               className="max-w-full"
-              style={{ width: 'min(100%, max(16rem, calc(100dvh - 12.5rem)))' }}
+              style={{ width: 'min(100%, max(16rem, calc(100dvh - 12rem)))' }}
             >
-              <div className="aspect-square w-full overflow-hidden rounded-md bg-[#181818] shadow-2xl shadow-black">
+              <div className="aspect-square w-full overflow-hidden rounded-xl bg-[#181818] shadow-2xl shadow-black">
                 {currentTrack?.thumbnail ? (
                   <img src={highResolutionArtwork(currentTrack.thumbnail)} alt={currentTrack.title} className="h-full w-full object-contain" />
                 ) : (
@@ -400,55 +400,97 @@ export default function YTMusic({
                   </div>
                 )}
               </div>
-
             </div>
           </section>
 
-          <aside className="h-full min-w-0 overflow-hidden border-t border-white/15 px-4 py-5 md:px-7 xl:border-l xl:border-t-0">
-            <div className="flex h-full min-h-0 flex-col">
-              {currentTrack && (
-                <div className="border-b border-white/15 px-3 pb-5">
-                  <div className="flex items-center gap-4">
-                    <div className="min-w-0 flex-1">
-                      <h1 className="truncate text-xl font-bold">{currentTrack.title}</h1>
-                      <p className="mt-1 truncate text-sm text-white/55">{currentTrack.artist}{currentTrack.album ? ` · ${currentTrack.album}` : ''}</p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-1">
-                      <button onClick={onPrevTrack} aria-label="Previous song" className="flex h-12 w-12 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"><Icon name="skip_previous" className="text-3xl" /></button>
-                      <button onClick={onTogglePlay} aria-label={isPlaying ? 'Pause' : 'Play'} className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-black transition hover:scale-105"><Icon name={isPlaying ? 'pause' : 'play_arrow'} filled className="text-3xl" /></button>
-                      <button onClick={onNextTrack} aria-label="Next song" className="flex h-12 w-12 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"><Icon name="skip_next" className="text-3xl" /></button>
-                    </div>
+          {/* Mobile Header + Controls Section (Visible only on < xl screens) */}
+          <section className="flex shrink-0 flex-col border-b border-white/15 bg-white/[0.03] p-3 md:p-4 xl:hidden">
+            {currentTrack && (
+              <>
+                <div className="flex items-center gap-3">
+                  <div className="h-14 w-14 md:h-16 md:w-16 shrink-0 overflow-hidden rounded-lg bg-[#181818] shadow-md">
+                    {currentTrack.thumbnail ? (
+                      <img src={highResolutionArtwork(currentTrack.thumbnail)} alt={currentTrack.title} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-white/25">
+                        <Icon name="music_note" className="text-2xl" />
+                      </div>
+                    )}
                   </div>
-                  <div className="mt-4 flex items-center gap-3 text-xs tabular-nums text-white/45">
-                    <span>{formatTime(elapsedSeconds)}</span>
-                    <input type="range" min={0} max={progressDuration || 100} value={Math.min(elapsedSeconds, progressDuration || 100)} onChange={(event) => onSeek(Number(event.target.value))} aria-label="Playback position" className="h-1 flex-1 cursor-pointer accent-white" />
-                    <span>{formatTime(progressDuration)}</span>
+                  <div className="min-w-0 flex-1">
+                    <h1 className="truncate text-base font-bold text-white">{currentTrack.title}</h1>
+                    <p className="mt-0.5 truncate text-xs text-white/55">{currentTrack.artist}{currentTrack.album ? ` · ${currentTrack.album}` : ''}</p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button onClick={onPrevTrack} aria-label="Previous song" className="flex h-10 w-10 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white">
+                      <Icon name="skip_previous" className="text-2xl" />
+                    </button>
+                    <button onClick={onTogglePlay} aria-label={isPlaying ? 'Pause' : 'Play'} className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-black transition hover:scale-105">
+                      <Icon name={isPlaying ? 'pause' : 'play_arrow'} filled className="text-2xl" />
+                    </button>
+                    <button onClick={onNextTrack} aria-label="Next song" className="flex h-10 w-10 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white">
+                      <Icon name="skip_next" className="text-2xl" />
+                    </button>
                   </div>
                 </div>
-              )}
-              <div className="grid grid-cols-3 border-b border-white/15">
-                {([['queue', 'Up next'], ['lyrics', 'Lyrics'], ['related', 'Related']] as [PlayerTab, string][]).map(([tab, label]) => (
-                  <button key={tab} onClick={() => setActiveTab(tab)} className={`relative py-4 text-sm font-semibold uppercase tracking-wide transition ${activeTab === tab ? 'text-white' : 'text-white/50 hover:text-white/80'}`}>
-                    {label}
-                    {activeTab === tab && <span className="absolute inset-x-4 bottom-0 h-0.5 bg-white" />}
-                  </button>
-                ))}
-              </div>
+                <div className="mt-2.5 flex items-center gap-2 text-[11px] tabular-nums text-white/45">
+                  <span>{formatTime(elapsedSeconds)}</span>
+                  <input type="range" min={0} max={progressDuration || 100} value={Math.min(elapsedSeconds, progressDuration || 100)} onChange={(event) => onSeek(Number(event.target.value))} aria-label="Playback position" className="h-1 flex-1 cursor-pointer accent-white" />
+                  <span>{formatTime(progressDuration)}</span>
+                </div>
+              </>
+            )}
+          </section>
 
-              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          {/* Controls & Tabs Section */}
+          <aside className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden xl:border-l xl:border-white/15">
+            {/* Desktop Controls (Visible only on xl screens) */}
+            {currentTrack && (
+              <div className="hidden border-b border-white/15 px-6 py-5 xl:block">
+                <div className="flex items-center gap-4">
+                  <div className="min-w-0 flex-1">
+                    <h1 className="truncate text-xl font-bold">{currentTrack.title}</h1>
+                    <p className="mt-1 truncate text-sm text-white/55">{currentTrack.artist}{currentTrack.album ? ` · ${currentTrack.album}` : ''}</p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button onClick={onPrevTrack} aria-label="Previous song" className="flex h-12 w-12 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"><Icon name="skip_previous" className="text-3xl" /></button>
+                    <button onClick={onTogglePlay} aria-label={isPlaying ? 'Pause' : 'Play'} className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-black transition hover:scale-105"><Icon name={isPlaying ? 'pause' : 'play_arrow'} filled className="text-3xl" /></button>
+                    <button onClick={onNextTrack} aria-label="Next song" className="flex h-12 w-12 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"><Icon name="skip_next" className="text-3xl" /></button>
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center gap-3 text-xs tabular-nums text-white/45">
+                  <span>{formatTime(elapsedSeconds)}</span>
+                  <input type="range" min={0} max={progressDuration || 100} value={Math.min(elapsedSeconds, progressDuration || 100)} onChange={(event) => onSeek(Number(event.target.value))} aria-label="Playback position" className="h-1 flex-1 cursor-pointer accent-white" />
+                  <span>{formatTime(progressDuration)}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Tabs Row */}
+            <div className="grid shrink-0 grid-cols-3 border-b border-white/15">
+              {([['queue', 'Up next'], ['lyrics', 'Lyrics'], ['related', 'Related']] as [PlayerTab, string][]).map(([tab, label]) => (
+                <button key={tab} onClick={() => setActiveTab(tab)} className={`relative py-3 text-xs font-semibold uppercase tracking-wide transition md:py-4 md:text-sm ${activeTab === tab ? 'text-white' : 'text-white/50 hover:text-white/80'}`}>
+                  {label}
+                  {activeTab === tab && <span className="absolute inset-x-4 bottom-0 h-0.5 bg-white" />}
+                </button>
+              ))}
+            </div>
+
+            {/* Scrollable Tab Content */}
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
               {activeTab === 'queue' && (
                 <div>
-                  <div className="flex items-center justify-between px-3 py-6">
+                  <div className="flex items-center justify-between px-3 py-4 md:py-6">
                     <div>
-                      <p className="text-sm text-white/50">Playing from</p>
-                      <p className="mt-0.5 text-lg font-semibold">{currentTrack?.album || 'Autoplay'}</p>
+                      <p className="text-xs md:text-sm text-white/50">Playing from</p>
+                      <p className="mt-0.5 text-sm md:text-lg font-semibold">{currentTrack?.album || 'Autoplay'}</p>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <p className="font-semibold">Autoplay</p>
+                        <p className="text-xs md:text-base font-semibold">Autoplay</p>
                         <p className="hidden text-xs text-white/45 sm:block">Similar songs continue</p>
                       </div>
-                      <span role="switch" aria-checked="true" aria-label="Autoplay enabled" className="relative h-7 w-12 rounded-full bg-sky-500"><span className="absolute right-1 top-1 h-5 w-5 rounded-full bg-white shadow" /></span>
+                      <span role="switch" aria-checked="true" aria-label="Autoplay enabled" className="relative h-6 w-10 md:h-7 md:w-12 rounded-full bg-sky-500"><span className="absolute right-0.5 top-0.5 md:right-1 md:top-1 h-5 w-5 rounded-full bg-white shadow" /></span>
                     </div>
                   </div>
                   {editableQueue.length ? editableQueue.map((track, index) => (
@@ -478,7 +520,7 @@ export default function YTMusic({
               {activeTab === 'lyrics' && (
                 <div className="px-4 py-7">
                   {lyricsLoading ? <div className="flex items-center gap-2 text-white/45"><Icon name="progress_activity" className="animate-spin" /> Loading lyrics…</div>
-                    : lyrics ? <p className="whitespace-pre-line text-xl font-medium leading-relaxed text-white/85">{lyrics}</p>
+                    : lyrics ? <p className="whitespace-pre-line text-lg md:text-xl font-medium leading-relaxed text-white/85">{lyrics}</p>
                       : <p className="py-12 text-center text-white/45">Lyrics are not available for this song.</p>}
                 </div>
               )}
@@ -490,7 +532,6 @@ export default function YTMusic({
                   )) : <p className="px-3 py-12 text-center text-sm text-white/45">No related songs were returned for this track.</p>}
                 </div>
               )}
-              </div>
             </div>
           </aside>
         </main>
