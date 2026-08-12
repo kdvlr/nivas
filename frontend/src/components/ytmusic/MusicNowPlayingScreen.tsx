@@ -1,6 +1,5 @@
 import React from 'react'
 import Icon from '../Icon'
-import { useVoiceCommands } from '../../lib/hooks'
 import { Track } from './MiniPlayerBar'
 
 interface Props {
@@ -20,15 +19,6 @@ const formatTime = (seconds = 0) => `${Math.floor(seconds / 60)}:${String(Math.f
 const artwork = (url?: string) => url?.replace(/=w\d+-h\d+[^?&]*/, '=w1200-h1200-l90-rj').replace(/=s\d+[^?&]*/, '=s1200')
 
 export default function MusicNowPlayingScreen({ currentTrack, queue, isPlaying, elapsedSeconds, durationSeconds, onTogglePlay, onNext, onPrevious, onMute, onDismiss }: Props) {
-  const listening = useVoiceCommands(true, (command) => {
-    if (command === 'next') onNext()
-    else if (command === 'previous') onPrevious()
-    else if (command === 'pause' && isPlaying) onTogglePlay()
-    else if (command === 'play' && !isPlaying) onTogglePlay()
-    else if (command === 'mute') onMute()
-    else if (command === 'exit') onDismiss()
-  })
-
   const duration = durationSeconds || currentTrack.duration || 0
   return (
     <div className="fixed inset-0 z-[120] grid bg-black text-white xl:grid-cols-[1.12fr_0.88fr]" onPointerDown={onDismiss}>
@@ -38,10 +28,6 @@ export default function MusicNowPlayingScreen({ currentTrack, queue, isPlaying, 
         </div>
       </section>
       <aside className="flex min-h-0 flex-col border-l border-white/15 p-8 xl:p-12" onPointerDown={(event) => event.stopPropagation()}>
-        <div className="flex items-center gap-3 text-sm text-white/50">
-          <span className={`h-2.5 w-2.5 rounded-full ${listening ? 'animate-pulse bg-emerald-400' : 'bg-white/25'}`} />
-          {listening ? 'Listening: next · previous · play · pause · resume · mute' : 'Voice control unavailable'}
-        </div>
         <div className="mt-auto">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/40">Now playing</p>
           <h1 className="mt-3 text-4xl font-bold leading-tight">{currentTrack.title}</h1>
