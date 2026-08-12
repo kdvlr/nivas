@@ -62,9 +62,10 @@ class PlayerEngine:
         self.active_targets: List[str] = []
         self.autoplay_enabled: bool = True
         self._last_audio_at: Optional[float] = None
+        self.played_history: Dict[str, float] = {}
         self._preferences_path = Path(get_settings().data_dir) / "airplay_preferences.json"
         self._hidden_device_ids, self._device_volumes = self._load_preferences()
-        
+
         self._scanner_task: Optional[asyncio.Task] = None
         self._ticker_task: Optional[asyncio.Task] = None
         self._play_task: Optional[asyncio.Task] = None
@@ -74,6 +75,24 @@ class PlayerEngine:
         self._paused_at: Optional[float] = None
         self._paused_stream_expired = False
         self._event_loop: Optional[asyncio.AbstractEventLoop] = None
+        self._advancing = False
+        self._paused_session_timeout = max(
+            1,
+            int(os.getenv("AIRPLAY_PAUSE_TIMEOUT_SECONDS", DEFAULT_PAUSED_SESSION_TIMEOUT_SECONDS)),
+        )
+
+    def get_recently_played_ids(self, hours: float = 4.0) -> set[str]:
+        cutoff = time.time() - (hours * 3600)
+        self.played_history = {
+            vid: ts for vid, ts in self.played_history.items()
+            if ts > cutoff
+        }
+        return set(self.played_history.keys())
+
+    def _update_master_volume_from_devices(self) -> None:
+        selected_devs = [dev for dev in self.devices.values() if dev.is_selected]
+        if selected_devs:
+            self.master_volume = round(sum(dev.volume for dev in selected_devs) / len(selected_devs))
         self._advancing = False
         self._paused_session_timeout = max(
             1,
@@ -390,6 +409,7 @@ class PlayerEngine:
             "album": track.get("album"),
             "duration": track.get("duration", 0),
         }
+        self.played_history[video_id] = time.time()
         self.elapsed_seconds = 0
         self.duration_seconds = track.get("duration", 0) or 180
         self.is_playing = True
@@ -417,8 +437,14 @@ class PlayerEngine:
                     ytmusic_service.get_autoplay_tracks,
                     video_id,
                 )
+                recent_ids = self.get_recently_played_ids(hours=4.0)
+                filtered_recs = [r for r in recommendations if r["videoId"] not in recent_ids]
+                if not filtered_recs and recommendations:
+                    recent_1h = self.get_recently_played_ids(hours=1.0)
+                    filtered_recs = [r for r in recommendations if r["videoId"] not in recent_1h] or recommendations
+
                 existing_ids = {video_id, *(item["videoId"] for item in self.queue)}
-                for recommendation in recommendations:
+                for recommendation in filtered_recs:
                     if recommendation["videoId"] not in existing_ids:
                         self.queue.append(recommendation)
                         existing_ids.add(recommendation["videoId"])
@@ -794,6 +820,7 @@ class PlayerEngine:
                             self._write_stream_command("pause")
                             self._paused_at = time.monotonic()
 
+        self._update_master_volume_from_devices()
         self._broadcast_state()
         return self.get_state()
 
@@ -823,18 +850,25 @@ class PlayerEngine:
                 self._write_stream_command(
                     f"volume {device.address} {device.volume / 100.0:.4f}"
                 )
+        self._update_master_volume_from_devices()
         self._save_preferences()
         self._broadcast_state()
         return self.get_state()
 
     def set_master_volume(self, volume: int) -> Dict[str, Any]:
-        self.master_volume = max(0, min(100, volume))
+        target_volume = max(0, min(100, volume))
+        delta = target_volume - self.master_volume
+        self.master_volume = target_volume
         for dev in self.devices.values():
             if dev.is_selected:
-                dev.volume = self.master_volume
-                self._device_volumes[dev.id] = self.master_volume
+                new_vol = max(0, min(100, dev.volume + delta))
+                dev.volume = new_vol
+                self._device_volumes[dev.id] = new_vol
+                if dev.id in self.active_targets:
+                    self._write_stream_command(
+                        f"volume {dev.address} {dev.volume / 100.0:.4f}"
+                    )
         self._save_preferences()
-        self._write_stream_command(f"volume {self.master_volume / 100.0:.4f}")
         self._broadcast_state()
         return self.get_state()
 

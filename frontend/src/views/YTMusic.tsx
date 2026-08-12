@@ -163,10 +163,28 @@ export default function YTMusic({
   const [lyricsLoading, setLyricsLoading] = useState(false)
   const [relatedTracks, setRelatedTracks] = useState<Track[]>([])
   const [relatedLoading, setRelatedLoading] = useState(false)
+  const [now, setNow] = useState(new Date())
   const [editableQueue, setEditableQueue] = useState<Track[]>(queue)
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const dragIndexRef = useRef<number | null>(null)
   const editableQueueRef = useRef<Track[]>(queue)
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  const secondaryTimeFormatted = useMemo(() => {
+    try {
+      return now.toLocaleTimeString(undefined, {
+        timeZone: 'Asia/Kolkata',
+        hour: 'numeric',
+        minute: '2-digit',
+      })
+    } catch {
+      return now.toLocaleTimeString()
+    }
+  }, [now])
 
   useEffect(() => {
     if (dragIndexRef.current === null) {
@@ -340,6 +358,13 @@ export default function YTMusic({
             </div>
 
             <div className="ml-auto flex shrink-0 items-center gap-2 md:gap-3">
+              {/* Glass Clock Pill */}
+              <div className="hidden sm:flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3.5 py-1.5 text-xs font-semibold tabular-nums text-white/90 shadow-sm">
+                <span>{now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span>
+                <span className="opacity-40">•</span>
+                <span>🇮🇳 {secondaryTimeFormatted}</span>
+              </div>
+
               {/* Mobile Search Icon Toggle */}
               <button
                 onClick={() => setMobileSearchOpen(true)}
@@ -501,20 +526,7 @@ export default function YTMusic({
             {/* Scrollable Tab Content */}
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
               {activeTab === 'queue' && (
-                <div>
-                  <div className="flex items-center justify-between px-3 py-4 md:py-6">
-                    <div>
-                      <p className="text-xs md:text-sm text-white/50">Playing from</p>
-                      <p className="mt-0.5 text-sm md:text-lg font-semibold">{currentTrack?.album || 'Autoplay'}</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <p className="text-xs md:text-base font-semibold">Autoplay</p>
-                        <p className="hidden text-xs text-white/45 sm:block">Similar songs continue</p>
-                      </div>
-                      <span role="switch" aria-checked="true" aria-label="Autoplay enabled" className="relative h-6 w-10 md:h-7 md:w-12 rounded-full bg-sky-500"><span className="absolute right-0.5 top-0.5 md:right-1 md:top-1 h-5 w-5 rounded-full bg-white shadow" /></span>
-                    </div>
-                  </div>
+                <div className="py-2">
                   {editableQueue.length ? editableQueue.map((track, index) => (
                     <div key={track.videoId} data-queue-index={index} className={`flex items-center transition ${dragIndex === index ? 'bg-white/[0.14] opacity-80' : ''}`}>
                       <button

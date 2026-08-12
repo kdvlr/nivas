@@ -113,7 +113,8 @@ def test_volume_commands_are_state_driven_and_targetable():
 
     assert process.stdin.getvalue() == (
         "volume 192.168.120.111 0.3700\n"
-        "volume 0.6400\n"
+        "volume 192.168.120.111 0.4700\n"
+        "volume 192.168.100.157 0.8000\n"
     )
 
 
@@ -253,3 +254,15 @@ def test_speaker_volume_persists_in_preferences(tmp_path):
     new_engine._preferences_path = engine._preferences_path
     hidden, volumes = new_engine._load_preferences()
     assert volumes[kitchen.id] == 45
+
+
+def test_played_history_deduplication():
+    engine = PlayerEngine()
+    now = time.time()
+    engine.played_history["recent_track"] = now - 1800  # 30 mins ago
+    engine.played_history["old_track"] = now - (5 * 3600)  # 5 hours ago
+
+    recent_ids = engine.get_recently_played_ids(hours=4.0)
+    assert "recent_track" in recent_ids
+    assert "old_track" not in recent_ids
+

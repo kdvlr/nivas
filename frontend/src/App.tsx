@@ -146,7 +146,8 @@ const getTzDateString = (date: Date, timeZone: string) => {
 }
 
 import { playChime } from './lib/useAudioChime'
-import type { ReminderPayload } from './components/AmbientCalendarOverlay'
+import TopClockHeader from './components/TopClockHeader'
+import AmbientCalendarOverlay, { type ReminderPayload } from './components/AmbientCalendarOverlay'
 
 export default function App() {
   const [route, setRoute] = useState(currentRoute)
@@ -445,16 +446,18 @@ export default function App() {
   }, [])
 
   const lastMotionTimeRef = useRef<number>(Date.now())
+  const isPlayingRef = useRef(false)
+  isPlayingRef.current = Boolean(isPlaying)
   const isMusicActive = Boolean(isPlaying || currentTrack)
   const isMusicActiveRef = useRef(false)
   isMusicActiveRef.current = isMusicActive
 
   // Whenever music starts playing, dismiss screensaver so controls stay visible
   useEffect(() => {
-    if (isMusicActive) {
+    if (isPlaying) {
       setSlideshowActive(false)
     }
-  }, [isMusicActive])
+  }, [isPlaying])
 
   // Screensaver + kiosk return to home + Fully Kiosk screen-off & motion wake logic
   useEffect(() => {
@@ -488,8 +491,8 @@ export default function App() {
     }
 
     function startSlideshow() {
-      // Do NOT trigger screensaver when music is playing so sidebar & topbar remain interactive
-      if (isMusicActiveRef.current) return
+      // Do NOT trigger screensaver when music is ACTIVELY playing so sidebar & topbar remain interactive
+      if (isPlayingRef.current) return
       setSlideshowActive(true)
     }
 
@@ -525,15 +528,15 @@ export default function App() {
       screenOffTimer = setTimeout(turnScreenOff, NO_MOTION_SCREEN_OFF_MS)
 
       // Motion detected logic:
-      // 1. If music is playing -> dismiss slideshow & make sure we're on ytmusic
-      if (isMusicActiveRef.current) {
+      // 1. If music is ACTIVELY playing -> dismiss slideshow & make sure we're on ytmusic
+      if (isPlayingRef.current) {
         setSlideshowActive(false)
         if (currentRoute() !== 'ytmusic') location.hash = '#/ytmusic'
         return
       }
 
       // 2. If the user is actively interacting with the app (slideshow is NOT active),
-      // DO NOT let camera motion interrupt their search or typing with the slideshow!
+      // DO NOT let camera motion interrupt their search, typing, or paused view with the slideshow!
       if (!slideshowActiveRef.current) {
         return
       }
@@ -763,61 +766,7 @@ export default function App() {
               </div>
             )}
             {!isHome && route !== 'ytmusic' && (
-              <header className="flex flex-col px-6 py-4 lg:px-8">
-                <div className="flex flex-col">
-                  <div className="flex items-baseline gap-3">
-                    <span className="text-2xl font-normal tabular-nums tracking-tight text-[var(--primary)]">
-                      {now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
-                    </span>
-                    <span className="text-lg font-medium text-ink-soft">
-                      {now.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
-                    </span>
-                  </div>
-                  {(() => {
-                    const secondaryTz = config?.secondary_tz || 'Asia/Kolkata'
-                    const secondaryEmoji = config?.secondary_tz_emoji || '🇮🇳'
-                    const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone
-                    const localDateStr = getTzDateString(now, localTz)
-                    const secondaryDateStr = getTzDateString(now, secondaryTz)
-                    const hasDateDiff = localDateStr !== secondaryDateStr && secondaryDateStr !== ''
-                    
-                    let secondaryDateFormatted = ''
-                    if (hasDateDiff) {
-                      try {
-                        secondaryDateFormatted = new Intl.DateTimeFormat('en-US', {
-                          timeZone: secondaryTz,
-                          month: 'long',
-                          day: 'numeric',
-                        }).format(now)
-                      } catch (e) {}
-                    }
-                    
-                    let secondaryTimeFormatted = ''
-                    try {
-                      secondaryTimeFormatted = now.toLocaleTimeString(undefined, {
-                        timeZone: secondaryTz,
-                        hour: 'numeric',
-                        minute: '2-digit',
-                      })
-                    } catch (e) {
-                      secondaryTimeFormatted = now.toLocaleTimeString()
-                    }
-
-                    return (
-                      <div className={`mt-1 flex gap-6 font-semibold text-ink-soft ${route === 'setup' ? 'text-base' : 'text-lg'}`}>
-                        <span>
-                          {secondaryEmoji} {secondaryTimeFormatted}
-                          {hasDateDiff && secondaryDateFormatted && (
-                            <span className={`ml-1 opacity-80 ${route === 'setup' ? 'text-xs' : 'text-sm'}`}>
-                              ({secondaryDateFormatted})
-                            </span>
-                          )}
-                        </span>
-                      </div>
-                    )
-                  })()}
-                </div>
-              </header>
+              <TopClockHeader now={now} config={config} route={route} />
             )}
             <AnimatePresence mode="wait">
               <motion.div
