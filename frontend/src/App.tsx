@@ -516,7 +516,6 @@ export default function App() {
     function handleKioskMotion() {
       const nowMs = Date.now()
       const elapsedMs = nowMs - lastMotionTimeRef.current
-      lastMotionTimeRef.current = nowMs
 
       // Turn screen back on via Fully Kiosk if off
       turnScreenOn()
@@ -526,12 +525,24 @@ export default function App() {
       screenOffTimer = setTimeout(turnScreenOff, NO_MOTION_SCREEN_OFF_MS)
 
       // Motion detected logic:
-      // If music is playing -> show YouTube Music / Now Playing view (do not start slideshow)
-      // Otherwise: Over 2 hours -> Home, Under 2 hours -> Photos Slideshow
+      // 1. If music is playing -> dismiss slideshow & make sure we're on ytmusic
       if (isMusicActiveRef.current) {
         setSlideshowActive(false)
         if (currentRoute() !== 'ytmusic') location.hash = '#/ytmusic'
-      } else if (elapsedMs > TWO_HOURS_MS) {
+        return
+      }
+
+      // 2. If the user is actively interacting with the app (slideshow is NOT active),
+      // DO NOT let camera motion interrupt their search or typing with the slideshow!
+      if (!slideshowActiveRef.current) {
+        return
+      }
+
+      // 3. Waking up from an active screensaver:
+      // Over 2 hours of inactivity -> Home Page
+      // Under 2 hours of inactivity -> Photos Slideshow
+      lastMotionTimeRef.current = nowMs
+      if (elapsedMs > TWO_HOURS_MS) {
         setSlideshowActive(false)
         if (currentRoute() !== 'home') location.hash = '#/home'
       } else {
