@@ -597,22 +597,6 @@ export default function App() {
       return
     }
     setPullY(0)
-    
-    if (!touchStart || !touchEnd) return
-    const xDiff = touchStart.x - touchEnd.x
-    const yDiff = Math.abs(touchStart.y - touchEnd.y)
-    
-    // Only trigger horizontal swipe if the swipe is mostly horizontal
-    if (Math.abs(xDiff) > 60 && yDiff < 40) {
-      const currentIndex = NAV.findIndex(n => n.id === activeNav)
-      if (xDiff > 0 && currentIndex < NAV.length - 2) {
-        // Swipe left (next tab, excluding setup at the end)
-        window.location.hash = `#/${NAV[currentIndex + 1].id}`
-      } else if (xDiff < 0 && currentIndex > 0) {
-        // Swipe right (prev tab)
-        window.location.hash = `#/${NAV[currentIndex - 1].id}`
-      }
-    }
     setTouchStart(null)
     setTouchEnd(null)
     setIsPulling(false)
