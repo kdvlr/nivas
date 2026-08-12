@@ -290,11 +290,11 @@ class PlayerEngine:
                 await asyncio.sleep(1)
                 if self.is_playing and self.current_track:
                     self._last_audio_at = time.monotonic()
-                    self.elapsed_seconds += 1
-                    if self.duration_seconds > 0 and self.elapsed_seconds >= self.duration_seconds:
-                        await self.next_track()
+                    if self.duration_seconds > 0:
+                        self.elapsed_seconds = min(self.elapsed_seconds + 1, self.duration_seconds)
                     else:
-                        self._broadcast_state()
+                        self.elapsed_seconds += 1
+                    self._broadcast_state()
                 elif (
                     self.current_track
                     and self._last_audio_at is not None
@@ -443,6 +443,12 @@ class PlayerEngine:
                 self._broadcast_state()
                 return
 
+            file_size = os.path.getsize(wav_path)
+            if file_size > 44:
+                calc_duration = int((file_size - 44) / 176400)
+                if calc_duration > 0:
+                    self.duration_seconds = calc_duration
+
             logger.info(f"Transcode complete. Streaming '{track_info['title']}' via airplay2-rs to {len(self.active_targets)} selected AirPlay speakers")
 
             artwork_path = f"/tmp/ytmusic_{video_id}_artwork.jpg"
@@ -508,8 +514,8 @@ class PlayerEngine:
         for device_id in device_ids:
             if device_id in self.devices:
                 self.devices[device_id].is_connected = False
-        if self.is_playing and exit_code == 0 and self.queue and self._event_loop:
-            logger.info("AirPlay track finished; advancing autoplay queue")
+        if self.is_playing and exit_code == 0 and self._event_loop:
+            logger.info("AirPlay track finished; advancing to next track")
             asyncio.run_coroutine_threadsafe(self.next_track(), self._event_loop)
             return
         if self.is_playing:
@@ -684,6 +690,23 @@ class PlayerEngine:
                 next_t = self.queue.pop(0)
                 remaining = list(self.queue)
                 await self.play_track(next_t, remaining)
+            elif self.autoplay_enabled and self.current_track and self.current_track.get("videoId"):
+                video_id = self.current_track["videoId"]
+                loop = asyncio.get_running_loop()
+                recommendations = await loop.run_in_executor(
+                    None,
+                    ytmusic_service.get_autoplay_tracks,
+                    video_id,
+                )
+                if recommendations:
+                    next_t = recommendations.pop(0)
+                    await self.play_track(next_t, recommendations)
+                else:
+                    self.is_playing = False
+                    self.current_track = None
+                    self.elapsed_seconds = 0
+                    self._stop_current_stream()
+                    self._broadcast_state()
             else:
                 self.is_playing = False
                 self.current_track = None
