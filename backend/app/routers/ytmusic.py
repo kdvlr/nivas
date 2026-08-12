@@ -46,6 +46,9 @@ class QueueRequest(BaseModel):
     album: Optional[str] = None
     duration: Optional[int] = 0
 
+class QueueUpdateRequest(BaseModel):
+    queue: List[Dict[str, Any]]
+
 @router.get("/auth")
 def get_auth_status():
     return ytmusic_service.get_auth_status()
@@ -145,6 +148,13 @@ def player_add_queue(req: QueueRequest):
 def player_play_next(req: QueueRequest):
     try:
         return player_engine.add_to_queue(req.model_dump(), play_next=True)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+@router.put("/player/queue")
+def player_replace_queue(req: QueueUpdateRequest):
+    try:
+        return player_engine.replace_queue(req.queue)
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
 

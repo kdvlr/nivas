@@ -264,6 +264,13 @@ export default function App() {
       .catch(() => {})
   }
 
+  const handleQueueChange = (queue: Track[]) => {
+    setPlayQueue(queue)
+    api.put<any>('/api/ytmusic/player/queue', { queue })
+      .then((res) => setPlayQueue(Array.isArray(res?.queue) ? res.queue : []))
+      .catch(() => syncPlayerState())
+  }
+
   // Touch gestures for swipe-to-navigate and pull-to-refresh
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null)
   const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(null)
@@ -815,6 +822,7 @@ export default function App() {
                   onPrevTrack={handlePrevTrack}
                   onSeek={handleSeek}
                   onQueueTrack={handleQueueTrack}
+                  onQueueChange={handleQueueChange}
                 />
               </motion.div>
             </AnimatePresence>

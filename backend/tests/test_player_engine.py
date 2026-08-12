@@ -127,6 +127,20 @@ def test_add_to_queue_and_play_next_preserve_requested_order():
     assert engine.get_state()["autoplayEnabled"] is True
 
 
+def test_replace_queue_supports_reordering_and_removal():
+    engine, _, _ = configured_engine()
+    engine.queue = [
+        {"videoId": "one", "title": "One", "artist": "Artist"},
+        {"videoId": "two", "title": "Two", "artist": "Artist"},
+        {"videoId": "three", "title": "Three", "artist": "Artist"},
+    ]
+
+    state = engine.replace_queue([engine.queue[2], engine.queue[0]])
+
+    assert [track["videoId"] for track in engine.queue] == ["three", "one"]
+    assert [track["videoId"] for track in state["queue"]] == ["three", "one"]
+
+
 def test_expired_pause_stops_process_and_releases_devices():
     engine, kitchen, family = configured_engine()
     process = FakeProcess()

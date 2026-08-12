@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import Icon from '../components/Icon'
 import { api } from '../lib/api'
 import { Track } from '../components/ytmusic/MiniPlayerBar'
@@ -16,6 +16,7 @@ interface YTMusicViewProps {
   onPrevTrack: () => void
   onSeek: (seconds: number) => void
   onQueueTrack: (track: Track, playNext: boolean) => void
+  onQueueChange: (queue: Track[]) => void
 }
 
 type PlayerTab = 'queue' | 'lyrics' | 'related'
@@ -110,6 +111,7 @@ export default function YTMusic({
   onPrevTrack,
   onSeek,
   onQueueTrack,
+  onQueueChange,
 }: YTMusicViewProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
@@ -120,6 +122,52 @@ export default function YTMusic({
   const [activeTab, setActiveTab] = useState<PlayerTab>('queue')
   const [lyrics, setLyrics] = useState('')
   const [lyricsLoading, setLyricsLoading] = useState(false)
+  const [editableQueue, setEditableQueue] = useState<Track[]>(queue)
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
+  const dragIndexRef = useRef<number | null>(null)
+  const editableQueueRef = useRef<Track[]>(queue)
+
+  useEffect(() => {
+    if (dragIndexRef.current === null) {
+      setEditableQueue(queue)
+      editableQueueRef.current = queue
+    }
+  }, [queue])
+
+  const startQueueDrag = (event: React.PointerEvent<HTMLButtonElement>, index: number) => {
+    event.currentTarget.setPointerCapture(event.pointerId)
+    dragIndexRef.current = index
+    setDragIndex(index)
+  }
+
+  const moveQueueDrag = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const fromIndex = dragIndexRef.current
+    if (fromIndex === null) return
+    const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>('[data-queue-index]')
+    const toIndex = target ? Number(target.dataset.queueIndex) : Number.NaN
+    if (!Number.isInteger(toIndex) || toIndex === fromIndex) return
+    const reordered = [...editableQueueRef.current]
+    const [moved] = reordered.splice(fromIndex, 1)
+    reordered.splice(toIndex, 0, moved)
+    editableQueueRef.current = reordered
+    dragIndexRef.current = toIndex
+    setEditableQueue(reordered)
+    setDragIndex(toIndex)
+  }
+
+  const finishQueueDrag = () => {
+    if (dragIndexRef.current === null) return
+    dragIndexRef.current = null
+    setDragIndex(null)
+    onQueueChange(editableQueueRef.current)
+  }
+
+  const removeQueueTrack = (index: number) => {
+    const nextQueue = editableQueue.filter((_, itemIndex) => itemIndex !== index)
+    editableQueueRef.current = nextQueue
+    setEditableQueue(nextQueue)
+    onQueueChange(nextQueue)
+  }
 
   useEffect(() => {
     Promise.all([
@@ -278,8 +326,26 @@ export default function YTMusic({
                       <span role="switch" aria-checked="true" aria-label="Autoplay enabled" className="relative h-7 w-12 rounded-full bg-sky-500"><span className="absolute right-1 top-1 h-5 w-5 rounded-full bg-white shadow" /></span>
                     </div>
                   </div>
-                  {queue.length ? queue.map((track, index) => (
-                    <SongRow key={`${track.videoId}-${index}`} track={track} active={false} onPlay={() => onPlayTrack(track, queue.slice(index + 1))} onQueue={(playNext) => onQueueTrack(track, playNext)} />
+                  {editableQueue.length ? editableQueue.map((track, index) => (
+                    <div key={track.videoId} data-queue-index={index} className={`flex items-center transition ${dragIndex === index ? 'bg-white/[0.14] opacity-80' : ''}`}>
+                      <button
+                        onPointerDown={(event) => startQueueDrag(event, index)}
+                        onPointerMove={moveQueueDrag}
+                        onPointerUp={finishQueueDrag}
+                        onPointerCancel={finishQueueDrag}
+                        aria-label={`Move ${track.title}`}
+                        title="Drag to reorder"
+                        className="flex h-[4.5rem] w-10 shrink-0 touch-none items-center justify-center text-white/35 hover:text-white"
+                      >
+                        <Icon name="drag_indicator" className="text-2xl" />
+                      </button>
+                      <div className="min-w-0 flex-1">
+                        <SongRow track={track} active={false} onPlay={() => onPlayTrack(track, editableQueue.slice(index + 1))} />
+                      </div>
+                      <button onClick={() => removeQueueTrack(index)} aria-label={`Remove ${track.title} from queue`} title="Remove from queue" className="flex h-[4.5rem] w-11 shrink-0 items-center justify-center text-white/40 hover:text-red-400">
+                        <Icon name="close" className="text-xl" />
+                      </button>
+                    </div>
                   )) : <p className="px-3 py-12 text-center text-sm text-white/45">Recommendations will appear after playback starts.</p>}
                 </div>
               )}
