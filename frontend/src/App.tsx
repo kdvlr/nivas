@@ -736,7 +736,7 @@ export default function App() {
                 </div>
               </div>
             )}
-            {!isHome && (
+            {!isHome && route !== 'ytmusic' && (
               <header className="flex flex-col px-6 py-4 lg:px-8">
                 <div className="flex flex-col">
                   <div className="flex items-baseline gap-3">
@@ -812,23 +812,27 @@ export default function App() {
                   onPlayTrack={handlePlayTrack}
                   onTogglePlay={handleTogglePlay}
                   onNextTrack={handleNextTrack}
+                  onPrevTrack={handlePrevTrack}
+                  onSeek={handleSeek}
                   onQueueTrack={handleQueueTrack}
                 />
               </motion.div>
             </AnimatePresence>
           </main>
 
-          <MiniPlayerBar
-            currentTrack={currentTrack}
-            isPlaying={isPlaying}
-            elapsedSeconds={elapsedSeconds}
-            durationSeconds={durationSeconds}
-            onTogglePlay={handleTogglePlay}
-            onNextTrack={handleNextTrack}
-            onPrevTrack={handlePrevTrack}
-            onSeek={handleSeek}
-            onOpenFullPlayer={() => { window.location.hash = '#/ytmusic' }}
-          />
+          {route !== 'ytmusic' && (
+            <MiniPlayerBar
+              currentTrack={currentTrack}
+              isPlaying={isPlaying}
+              elapsedSeconds={elapsedSeconds}
+              durationSeconds={durationSeconds}
+              onTogglePlay={handleTogglePlay}
+              onNextTrack={handleNextTrack}
+              onPrevTrack={handlePrevTrack}
+              onSeek={handleSeek}
+              onOpenFullPlayer={() => { window.location.hash = '#/ytmusic' }}
+            />
+          )}
         </div>
 
         {/* Mobile quick-settings bottom sheet. Stays mounted; springs on/off
