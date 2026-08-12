@@ -4,6 +4,7 @@ import { SPATIAL_STANDARD_DEFAULT, STANDARD_ENTER, PRESS_SPRING } from '../lib/m
 import Avatar from '../components/Avatar'
 import CoinIcon from '../components/CoinIcon'
 import Icon from '../components/Icon'
+import TopClockHeader from '../components/TopClockHeader'
 import { api } from '../lib/api'
 import { useData } from '../lib/hooks'
 import type { CalendarStatus, SetupStatus, RewardStoreItem, WeatherData } from '../lib/types'
@@ -392,14 +393,17 @@ function SetupInner() {
 
   return (
     <div className="flex h-full flex-col p-4 lg:p-6">
-      <div className="mb-4 flex flex-wrap items-center gap-3 lg:gap-4">
+      <div className="mb-4 flex items-center justify-between gap-3 lg:gap-4">
         <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink">Setup</h1>
-        <button
-          onClick={() => api.post('/api/setup/sync')}
-          className="ml-auto btn-primary px-4 py-2 lg:px-6 lg:py-3 text-base lg:text-lg"
-        >
-          <Icon name="sync" /> Sync everything now
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => api.post('/api/setup/sync')}
+            className="btn-primary px-4 py-2 lg:px-6 lg:py-3 text-base lg:text-lg cursor-pointer"
+          >
+            <Icon name="sync" /> Sync everything now
+          </button>
+          <TopClockHeader now={new Date()} />
+        </div>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row lg:gap-6">

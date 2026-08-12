@@ -5,6 +5,8 @@ import { api, ApiError } from '../lib/api'
 import { useData, useVoiceCommands } from '../lib/hooks'
 import type { Recipe } from '../lib/types'
 import Modal from '../components/Modal'
+import ConfirmModal from '../components/ConfirmModal'
+import TopClockHeader from '../components/TopClockHeader'
 import { PRESS_SPRING } from '../lib/motion'
 
 function detailIdFromHash() {
@@ -379,18 +381,21 @@ export default function Recipes() {
               : `${recipes?.length ?? 0} saved`}
           </span>
         </div>
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          transition={PRESS_SPRING}
-          onClick={() => {
-            resetAddForm()
-            setShowAddModal(true)
-          }}
-          className="btn-primary px-4 py-2 lg:px-6 lg:py-3 text-base lg:text-lg cursor-pointer flex items-center gap-1.5"
-        >
-          <Icon name="add" /> Add
-        </motion.button>
+        <div className="flex items-center gap-3">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            transition={PRESS_SPRING}
+            onClick={() => {
+              resetAddForm()
+              setShowAddModal(true)
+            }}
+            className="btn-primary px-4 py-2 lg:px-6 lg:py-3 text-base lg:text-lg cursor-pointer flex items-center gap-1.5"
+          >
+            <Icon name="add" /> Add
+          </motion.button>
+          <TopClockHeader now={new Date()} />
+        </div>
       </div>
 
       {/* Search Bar */}

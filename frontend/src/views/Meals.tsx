@@ -4,6 +4,7 @@ import { useData, todayISO, addDaysISO, fmtDate } from '../lib/hooks'
 import type { MealDay, MealSlot, Recipe } from '../lib/types'
 import Modal from '../components/Modal'
 import Icon from '../components/Icon'
+import TopClockHeader from '../components/TopClockHeader'
 
 const SLOTS = ['breakfast', 'lunch', 'dinner'] as const
 const SLOT_ICON = { breakfast: '🥞', lunch: '🥪', dinner: '🍝' }
@@ -87,35 +88,38 @@ export default function Meals() {
 
   return (
     <div className="flex h-full flex-col px-4 lg:px-8">
-      <div className="mb-4 lg:mb-5 flex items-center gap-3 lg:gap-4">
-        <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink">Meal Plan</h1>
-        <div className="ml-auto flex items-center gap-2">
-          <button
-            onClick={() => setWeekStart(addDaysISO(weekStart, -visibleDays))}
-            className="btn-glass px-6 py-3 text-lg"
-          >
-            ‹
-          </button>
-          <div className="relative">
-            <input 
-              type="date" 
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
-              value={weekStart} 
-              onChange={(e) => {
-                if (e.target.value) setWeekStart(e.target.value)
-              }} 
-            />
-            <button className="btn-glass px-4 lg:px-6 py-3 text-base pointer-events-none whitespace-nowrap min-w-[120px]">
-              {weekStart === today ? (visibleDays === 3 ? 'Today' : 'This week') : fmtDate(weekStart + 'T12:00:00')}
+      <div className="mb-4 lg:mb-5 flex items-center justify-between gap-3 lg:gap-4">
+        <div className="flex items-center gap-3 lg:gap-4">
+          <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink">Meal Plan</h1>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setWeekStart(addDaysISO(weekStart, -visibleDays))}
+              className="btn-glass px-6 py-3 text-lg"
+            >
+              ‹
+            </button>
+            <div className="relative">
+              <input 
+                type="date" 
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
+                value={weekStart} 
+                onChange={(e) => {
+                  if (e.target.value) setWeekStart(e.target.value)
+                }} 
+              />
+              <button className="btn-glass px-4 lg:px-6 py-3 text-base pointer-events-none whitespace-nowrap min-w-[120px]">
+                {weekStart === today ? (visibleDays === 3 ? 'Today' : 'This week') : fmtDate(weekStart + 'T12:00:00')}
+              </button>
+            </div>
+            <button
+              onClick={() => setWeekStart(addDaysISO(weekStart, visibleDays))}
+              className="btn-glass px-6 py-3 text-lg"
+            >
+              ›
             </button>
           </div>
-          <button
-            onClick={() => setWeekStart(addDaysISO(weekStart, visibleDays))}
-            className="btn-glass px-6 py-3 text-lg"
-          >
-            ›
-          </button>
         </div>
+        <TopClockHeader now={new Date()} />
       </div>
 
       <div className={`grid min-h-0 flex-1 gap-3 overflow-y-auto pb-4 ${

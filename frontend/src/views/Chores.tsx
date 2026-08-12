@@ -11,6 +11,7 @@ import { useCelebration } from '../components/celebrations/CelebrationContext'
 import { useRewardCelebration } from '../components/celebrations/RewardCelebrationContext'
 import Modal from '../components/Modal'
 import ConfirmModal from '../components/ConfirmModal'
+import TopClockHeader from '../components/TopClockHeader'
 
 interface Person {
   id: number
@@ -325,7 +326,7 @@ export default function Chores() {
               </motion.button>
             )}
           </div>
-          <div className="flex gap-2 lg:gap-3">
+          <div className="flex items-center gap-2 lg:gap-3">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -344,6 +345,7 @@ export default function Chores() {
             >
               <Icon name="storefront" /> Rewards
             </motion.button>
+            <TopClockHeader now={new Date()} />
           </div>
         </div>
       </div>

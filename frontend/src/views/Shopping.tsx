@@ -5,6 +5,7 @@ import { api } from '../lib/api'
 import { useData } from '../lib/hooks'
 import type { ShoppingItem } from '../lib/types'
 import Modal from '../components/Modal'
+import TopClockHeader from '../components/TopClockHeader'
 
 const SOURCE_ICON: Record<string, string> = { icloud: '🍎', alexa: '🔵', local: '🖥️' }
 
@@ -128,12 +129,12 @@ export default function Shopping() {
 
   return (
     <div className="flex h-full flex-col px-4 lg:px-8">
-      <div className="mb-4 lg:mb-5 flex flex-wrap items-center gap-2 lg:gap-4">
-        <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink">Shopping</h1>
-        <span className="text-base lg:text-lg font-normal text-ink-soft">{active.length} items</span>
-        <span className="ml-auto text-xs lg:text-base text-ink-soft hidden sm:inline">
-          synced with Reminders + Alexa
-        </span>
+      <div className="mb-4 lg:mb-5 flex items-center justify-between gap-2 lg:gap-4">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink">Shopping</h1>
+          <span className="text-base lg:text-lg font-normal text-ink-soft">{active.length} items</span>
+        </div>
+        <TopClockHeader now={new Date()} />
       </div>
 
       <div className="mb-4 lg:mb-6 flex gap-2 lg:gap-3">

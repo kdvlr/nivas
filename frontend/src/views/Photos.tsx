@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useData } from '../lib/hooks'
 import Icon from '../components/Icon'
+import TopClockHeader from '../components/TopClockHeader'
 
 interface MediaItem {
   url: string
@@ -287,13 +288,13 @@ export default function Photos({ onStartSlideshow }: { onStartSlideshow?: () => 
           {onStartSlideshow && media && media.length > 0 && (
             <button
               onClick={onStartSlideshow}
-              className="btn-glass px-4 py-2.5 shadow-sm text-sm"
+              className="btn-glass px-4 py-2.5 shadow-sm text-sm flex items-center gap-1.5 cursor-pointer"
             >
               <Icon name="play_circle" className="text-lg" />
               <span>Slideshow</span>
             </button>
           )}
-
+          <TopClockHeader now={new Date()} />
           <button
             onClick={reload}
             disabled={loading}

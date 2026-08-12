@@ -13,6 +13,7 @@ import type { CalendarStatus, CalEvent, Selection, WeatherData } from '../lib/ty
 import Modal from '../components/Modal'
 import { useEffect } from 'react'
 import Icon from '../components/Icon'
+import TopClockHeader from '../components/TopClockHeader'
 
 const FAMILY_GRADIENT = 'linear-gradient(115deg, #ef4444, #f97316, #eab308, #22c55e, #3b82f6, #a855f7)'
 const fmtTime = (iso: string) =>
@@ -625,19 +626,25 @@ export default function Calendar() {
 
   return (
     <div className="flex h-full flex-col px-4 lg:px-8">
-      {!isMobile && selections.length > 0 && (
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          {selections.map((s) => (
-            <span
-              key={s.id}
-              className="btn-glass flex items-center gap-2 px-4 py-1.5 text-sm"
-            >
-              <span className="h-3.5 w-3.5 rounded-full" style={{ background: s.color }} />
-              {s.person_name || s.name}
-            </span>
-          ))}
+      <div className="mb-3 flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink">Calendar</h1>
+          {!isMobile && selections.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              {selections.map((s) => (
+                <span
+                  key={s.id}
+                  className="btn-glass flex items-center gap-2 px-3.5 py-1 text-sm"
+                >
+                  <span className="h-3 w-3 rounded-full" style={{ background: s.color }} />
+                  {s.person_name || s.name}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+        <TopClockHeader now={new Date()} />
+      </div>
       {error && (
         <div className="mb-3 flex items-center">
           <span className="font-medium text-rose-500">{error}</span>

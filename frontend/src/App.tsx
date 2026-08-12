@@ -765,11 +765,6 @@ export default function App() {
                 </div>
               </div>
             )}
-            {!isHome && route !== 'ytmusic' && (
-              <header className="flex items-center justify-end px-6 py-4 lg:px-8">
-                <TopClockHeader now={now} config={config} route={route} />
-              </header>
-            )}
             <AnimatePresence mode="wait">
               <motion.div
                 key={route}
@@ -780,6 +775,8 @@ export default function App() {
                 className="flex flex-1 flex-col min-h-0"
               >
                 <View
+                  now={now}
+                  config={config}
                   onStartSlideshow={() => setSlideshowActive(true)}
                   currentTrack={currentTrack}
                   isPlaying={isPlaying}

@@ -7,6 +7,7 @@ import { useData, todayISO, fmtDate } from '../lib/hooks'
 import type { Task } from '../lib/types'
 import Modal from '../components/Modal'
 import ConfirmModal from '../components/ConfirmModal'
+import TopClockHeader from '../components/TopClockHeader'
 
 interface TasksResponse {
   today: string
@@ -260,15 +261,18 @@ export default function ToDos() {
             {open} to do{done ? ` · ${done} done 🎉` : ''}
           </span>
         </div>
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          transition={PRESS_SPRING}
-          onClick={() => setDraft({ source: 'local', title: '', person: '', due: todayISO(), recurrence: '', weekDays: [] })}
-          className="btn-primary px-4 py-2 lg:px-6 lg:py-3 text-base lg:text-lg cursor-pointer"
-        >
-          <Icon name="add" /> Add
-        </motion.button>
+        <div className="flex items-center gap-3">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            transition={PRESS_SPRING}
+            onClick={() => setDraft({ source: 'local', title: '', person: '', due: todayISO(), recurrence: '', weekDays: [] })}
+            className="btn-primary px-4 py-2 lg:px-6 lg:py-3 text-base lg:text-lg cursor-pointer"
+          >
+            <Icon name="add" /> Add
+          </motion.button>
+          <TopClockHeader now={new Date()} />
+        </div>
       </div>
 
       {tasks.length === 0 ? (

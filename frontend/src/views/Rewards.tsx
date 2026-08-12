@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { PRESS_SPRING, EXPRESSIVE_ENTER } from '../lib/motion'
 import CoinIcon from '../components/CoinIcon'
 import Icon from '../components/Icon'
+import TopClockHeader from '../components/TopClockHeader'
 import { api } from '../lib/api'
 import { useData } from '../lib/hooks'
 import type { CoinBalance, RewardStoreItem, RewardRedemptionItem, CoinTransaction } from '../lib/types'
@@ -52,14 +53,17 @@ export default function Rewards() {
   return (
     <div className="flex h-full flex-col px-4 py-3 lg:px-8 lg:py-4">
       {/* Header */}
-      <div className="mb-6 flex items-center gap-4">
-        <button
-          onClick={() => (location.hash = '#/chores')}
-          className="text-lg font-medium text-ink-soft transition-colors hover:text-ink"
-        >
-          <Icon name="arrow_back" /> Back to Chores
-        </button>
-        <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink"><Icon name="storefront" /> Rewards Store</h1>
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => (location.hash = '#/chores')}
+            className="text-lg font-medium text-ink-soft transition-colors hover:text-ink cursor-pointer flex items-center gap-1"
+          >
+            <Icon name="arrow_back" /> Back to Chores
+          </button>
+          <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink"><Icon name="storefront" /> Rewards Store</h1>
+        </div>
+        <TopClockHeader now={new Date()} />
       </div>
 
       {/* Coin Balances */}

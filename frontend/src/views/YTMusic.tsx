@@ -6,6 +6,8 @@ import AirPlaySelectorModal from '../components/ytmusic/AirPlaySelectorModal'
 import TopClockHeader from '../components/TopClockHeader'
 
 interface YTMusicViewProps {
+  now?: Date
+  config?: any
   currentTrack: Track | null
   isPlaying: boolean
   queue: Track[]
