@@ -176,6 +176,12 @@ class PlayerEngine:
             
             discovered_addresses = set()
             for conf in results:
+                airplay_service = conf.get_service(pyatv.const.Protocol.AirPlay)
+                if airplay_service is None:
+                    airplay_service = conf.get_service(pyatv.const.Protocol.RAOP)
+                if airplay_service is None:
+                    continue
+
                 addr = str(conf.address)
                 name = str(conf.name)
                 
@@ -189,7 +195,7 @@ class PlayerEngine:
                 discovered_addresses.add(addr)
 
                 dev_id = addr
-                port = conf.port or 7000
+                port = airplay_service.port or 7000
                 model = str(conf.device_info.model or "AirPlay Speaker") if conf.device_info else "AirPlay Speaker"
 
                 if dev_id in self.devices:

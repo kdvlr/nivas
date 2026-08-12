@@ -1,5 +1,7 @@
 import io
 import time
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -103,3 +105,33 @@ def test_expired_pause_stops_process_and_releases_devices():
     assert kitchen.is_connected is False
     assert family.is_connected is False
     assert engine._paused_stream_expired is True
+
+
+@pytest.mark.asyncio
+async def test_scan_devices_uses_airplay_service_port():
+    engine = PlayerEngine()
+    airplay_service = SimpleNamespace(port=7001)
+    config = SimpleNamespace(
+        address="192.168.120.111",
+        name="Kitchen",
+        device_info=SimpleNamespace(model="Sonos Era 100"),
+        get_service=lambda protocol: airplay_service
+        if protocol.name == "AirPlay"
+        else None,
+    )
+    fake_pyatv = SimpleNamespace(
+        const=SimpleNamespace(
+            Protocol=SimpleNamespace(
+                AirPlay=SimpleNamespace(name="AirPlay"),
+                RAOP=SimpleNamespace(name="RAOP"),
+            )
+        ),
+        scan=AsyncMock(return_value=[config]),
+    )
+
+    with patch.dict("sys.modules", {"pyatv": fake_pyatv}):
+        devices = await engine.scan_devices()
+
+    assert len(devices) == 1
+    assert devices[0]["address"] == "192.168.120.111"
+    assert devices[0]["port"] == 7001
