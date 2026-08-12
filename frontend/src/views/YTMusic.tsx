@@ -148,6 +148,7 @@ export default function YTMusic({
 }: YTMusicViewProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const [discoverySections, setDiscoverySections] = useState<DiscoverySection[]>([])
   const [mixCards, setMixCards] = useState<DiscoveryCard[]>([])
   const [releaseCards, setReleaseCards] = useState<DiscoveryCard[]>([])
@@ -312,26 +313,65 @@ export default function YTMusic({
 
   return (
     <div className={`bg-black text-white ${browseIsOpen ? 'min-h-full' : 'h-dvh flex flex-col overflow-hidden'}`}>
-      <header className="flex shrink-0 min-h-[4rem] md:min-h-[4.5rem] items-center gap-3 md:gap-4 border-b border-white/15 bg-black/95 px-3 md:px-8 backdrop-blur-xl">
-        <div className="flex shrink-0 rounded-full bg-white/10 p-1">
-          <button onClick={() => { setSearchQuery(''); setViewMode('browse') }} className={`flex h-9 md:h-11 items-center gap-1.5 md:gap-2 rounded-full px-3 md:px-4 text-xs md:text-sm font-semibold ${viewMode === 'browse' && !searchIsOpen ? 'bg-white text-black' : 'text-white/65 hover:text-white'}`}><Icon name="home" className="text-lg md:text-xl" /> Home</button>
-          <button disabled={!currentTrack} onClick={() => { setSearchQuery(''); setViewMode('now-playing') }} className={`flex h-9 md:h-11 items-center gap-1.5 md:gap-2 rounded-full px-3 md:px-4 text-xs md:text-sm font-semibold disabled:opacity-30 ${viewMode === 'now-playing' && !searchIsOpen ? 'bg-white text-black' : 'text-white/65 hover:text-white'}`}><Icon name="graphic_eq" className="text-lg md:text-xl" /> <span className="whitespace-nowrap">Now Playing</span></button>
-        </div>
-        <div className="relative flex-1 max-w-[52rem]">
-          <Icon name="search" className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-xl md:text-2xl text-white/55" />
-          <input
-            value={searchQuery}
-            onChange={(event) => { setSearchQuery(event.target.value); setViewMode('browse') }}
-            placeholder="Search songs, albums..."
-            className="h-10 md:h-14 w-full rounded-xl border border-white/20 bg-[#292929] pl-10 md:pl-14 pr-10 md:pr-12 text-sm md:text-lg text-white outline-none placeholder:text-white/50 focus:border-white/45"
-          />
-          {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute right-2 md:right-3 top-1/2 flex h-8 w-8 md:h-10 md:w-10 -translate-y-1/2 items-center justify-center text-white/55 hover:text-white"><Icon name="close" /></button>}
-        </div>
-        <div className="ml-auto flex shrink-0 items-center gap-3">
-          <button ref={airPlayButtonRef} onClick={() => setShowAirPlayModal(true)} title="Choose AirPlay rooms" className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full text-white/85 hover:bg-white/10 hover:text-white">
-            <Icon name="airplay" className="text-2xl md:text-[2rem]" />
-          </button>
-        </div>
+      <header className="flex shrink-0 min-h-[4rem] md:min-h-[4.5rem] items-center gap-2 md:gap-4 border-b border-white/15 bg-black/95 px-3 md:px-8 backdrop-blur-xl">
+        {mobileSearchOpen ? (
+          <div className="flex md:hidden flex-1 items-center gap-2">
+            <div className="relative flex-1">
+              <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-xl text-white/55" />
+              <input
+                autoFocus
+                value={searchQuery}
+                onChange={(event) => { setSearchQuery(event.target.value); setViewMode('browse') }}
+                placeholder="Search songs, albums..."
+                className="h-10 w-full rounded-xl border border-white/20 bg-[#292929] pl-10 pr-9 text-sm text-white outline-none placeholder:text-white/50 focus:border-white/45"
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center text-white/55 hover:text-white">
+                  <Icon name="close" className="text-lg" />
+                </button>
+              )}
+            </div>
+            <button
+              onClick={() => { setSearchQuery(''); setMobileSearchOpen(false) }}
+              className="px-2 text-sm font-semibold text-white/70 hover:text-white shrink-0"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="flex shrink-0 rounded-full bg-white/10 p-1">
+              <button onClick={() => { setSearchQuery(''); setViewMode('browse') }} className={`flex h-9 md:h-11 items-center gap-1.5 md:gap-2 rounded-full px-3 md:px-4 text-xs md:text-sm font-semibold ${viewMode === 'browse' && !searchIsOpen ? 'bg-white text-black' : 'text-white/65 hover:text-white'}`}><Icon name="home" className="text-lg md:text-xl" /> Home</button>
+              <button disabled={!currentTrack} onClick={() => { setSearchQuery(''); setViewMode('now-playing') }} className={`flex h-9 md:h-11 items-center gap-1.5 md:gap-2 rounded-full px-3 md:px-4 text-xs md:text-sm font-semibold disabled:opacity-30 ${viewMode === 'now-playing' && !searchIsOpen ? 'bg-white text-black' : 'text-white/65 hover:text-white'}`}><Icon name="graphic_eq" className="text-lg md:text-xl" /> <span className="whitespace-nowrap">Now Playing</span></button>
+            </div>
+
+            {/* Desktop Full Search Input */}
+            <div className="hidden md:relative md:flex md:flex-1 max-w-[52rem]">
+              <Icon name="search" className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-white/55" />
+              <input
+                value={searchQuery}
+                onChange={(event) => { setSearchQuery(event.target.value); setViewMode('browse') }}
+                placeholder="Search songs, albums..."
+                className="h-14 w-full rounded-xl border border-white/20 bg-[#292929] pl-14 pr-12 text-lg text-white outline-none placeholder:text-white/50 focus:border-white/45"
+              />
+              {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center text-white/55 hover:text-white"><Icon name="close" /></button>}
+            </div>
+
+            <div className="ml-auto flex shrink-0 items-center gap-2 md:gap-3">
+              {/* Mobile Search Icon Toggle */}
+              <button
+                onClick={() => setMobileSearchOpen(true)}
+                title="Search music"
+                className="flex md:hidden h-10 w-10 items-center justify-center rounded-full text-white/85 hover:bg-white/10 hover:text-white"
+              >
+                <Icon name="search" className="text-2xl" />
+              </button>
+              <button ref={airPlayButtonRef} onClick={() => setShowAirPlayModal(true)} title="Choose AirPlay rooms" className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full text-white/85 hover:bg-white/10 hover:text-white">
+                <Icon name="airplay" className="text-2xl md:text-[2rem]" />
+              </button>
+            </div>
+          </>
+        )}
       </header>
 
       {browseIsOpen ? (

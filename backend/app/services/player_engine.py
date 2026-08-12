@@ -24,14 +24,14 @@ DEFAULT_PAUSED_SESSION_TIMEOUT_SECONDS = 15 * 60
 MUSIC_UI_IDLE_TIMEOUT_SECONDS = 30 * 60
 
 class AirPlayDevice:
-    def __init__(self, identifier: str, name: str, address: str, port: int = 7000, model: str = "AirPlay Speaker"):
+    def __init__(self, identifier: str, name: str, address: str, port: int = 7000, model: str = "AirPlay Speaker", volume: int = 70):
         self.id = str(identifier)
         self.name = name
         self.address = str(address)
         self.port = port
         self.model = model
         self.is_selected = False
-        self.volume = 70
+        self.volume = volume
         self.is_connected = False
         self.is_hidden = False
         self.last_seen = time.time()
@@ -63,7 +63,7 @@ class PlayerEngine:
         self.autoplay_enabled: bool = True
         self._last_audio_at: Optional[float] = None
         self._preferences_path = Path(get_settings().data_dir) / "airplay_preferences.json"
-        self._hidden_device_ids = self._load_hidden_device_ids()
+        self._hidden_device_ids, self._device_volumes = self._load_preferences()
         
         self._scanner_task: Optional[asyncio.Task] = None
         self._ticker_task: Optional[asyncio.Task] = None
@@ -80,21 +80,38 @@ class PlayerEngine:
             int(os.getenv("AIRPLAY_PAUSE_TIMEOUT_SECONDS", DEFAULT_PAUSED_SESSION_TIMEOUT_SECONDS)),
         )
 
-    def _load_hidden_device_ids(self) -> set[str]:
+    def _load_preferences(self) -> tuple[set[str], dict[str, int]]:
         try:
             data = json.loads(self._preferences_path.read_text(encoding="utf-8"))
-            return {str(device_id) for device_id in data.get("hiddenDeviceIds", [])}
+            hidden = {str(device_id) for device_id in data.get("hiddenDeviceIds", [])}
+            raw_volumes = data.get("deviceVolumes", {})
+            volumes = {str(k): int(v) for k, v in raw_volumes.items() if isinstance(v, (int, float))}
+            return hidden, volumes
         except (FileNotFoundError, json.JSONDecodeError, OSError, AttributeError):
-            return set()
+            return set(), {}
+
+    def _load_hidden_device_ids(self) -> set[str]:
+        hidden, _ = self._load_preferences()
+        return hidden
+
+    def _save_preferences(self) -> None:
+        try:
+            self._preferences_path.parent.mkdir(parents=True, exist_ok=True)
+            temporary_path = self._preferences_path.with_suffix(".tmp")
+            payload = {
+                "hiddenDeviceIds": sorted(self._hidden_device_ids),
+                "deviceVolumes": self._device_volumes,
+            }
+            temporary_path.write_text(
+                json.dumps(payload, indent=2),
+                encoding="utf-8",
+            )
+            temporary_path.replace(self._preferences_path)
+        except Exception as e:
+            logger.error("Failed to save AirPlay preferences: %s", e)
 
     def _save_hidden_device_ids(self) -> None:
-        self._preferences_path.parent.mkdir(parents=True, exist_ok=True)
-        temporary_path = self._preferences_path.with_suffix(".tmp")
-        temporary_path.write_text(
-            json.dumps({"hiddenDeviceIds": sorted(self._hidden_device_ids)}, indent=2),
-            encoding="utf-8",
-        )
-        temporary_path.replace(self._preferences_path)
+        self._save_preferences()
 
     def start(self):
         loop = asyncio.get_event_loop()
@@ -248,16 +265,18 @@ class PlayerEngine:
                     dev.model = model
                     dev.last_seen = time.time()
                 else:
+                    saved_vol = self._device_volumes.get(dev_id, 70)
                     dev = AirPlayDevice(
                         identifier=dev_id,
                         name=name,
                         address=addr,
                         port=port,
-                        model=model
+                        model=model,
+                        volume=saved_vol
                     )
                     dev.is_hidden = dev_id in self._hidden_device_ids
                     self.devices[dev_id] = dev
-                    logger.info(f"Discovered AirPlay speaker: {name} ({addr}:{port})")
+                    logger.info(f"Discovered AirPlay speaker: {name} ({addr}:{port}) with volume {saved_vol}")
 
             self._broadcast_state()
         except Exception as e:
@@ -728,19 +747,22 @@ class PlayerEngine:
             self._hidden_device_ids.discard(device_id)
         if device:
             device.is_hidden = hidden
-        self._save_hidden_device_ids()
+        self._save_preferences()
         self._broadcast_state()
         return self.get_state()
 
     def set_device_volume(self, device_id: str, volume: int) -> Dict[str, Any]:
         device_id = str(device_id)
+        vol = max(0, min(100, volume))
+        self._device_volumes[device_id] = vol
         if device_id in self.devices:
             device = self.devices[device_id]
-            device.volume = max(0, min(100, volume))
+            device.volume = vol
             if device_id in self.active_targets:
                 self._write_stream_command(
                     f"volume {device.address} {device.volume / 100.0:.4f}"
                 )
+        self._save_preferences()
         self._broadcast_state()
         return self.get_state()
 
@@ -749,6 +771,8 @@ class PlayerEngine:
         for dev in self.devices.values():
             if dev.is_selected:
                 dev.volume = self.master_volume
+                self._device_volumes[dev.id] = self.master_volume
+        self._save_preferences()
         self._write_stream_command(f"volume {self.master_volume / 100.0:.4f}")
         self._broadcast_state()
         return self.get_state()

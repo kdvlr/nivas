@@ -38,7 +38,7 @@
 
 /* font choice via html[data-font] */
 :root {
-  --app-font: 'Outfit', 'Roboto', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --app-font: 'Inter', 'Plus Jakarta Sans', 'Outfit', 'Roboto', system-ui, -apple-system, sans-serif;
 }
 [data-font='roboto'] {
   --app-font: 'Roboto', system-ui, -apple-system, 'Segoe UI', sans-serif;

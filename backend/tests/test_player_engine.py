@@ -235,3 +235,21 @@ async def test_scan_devices_uses_airplay_service_port():
     assert devices[0]["port"] == 7001
     assert devices[0]["model"] == "Sonos Era 100"
     assert engine._device_uses_ptp(engine.devices["192.168.120.111"]) is True
+
+
+def test_speaker_volume_persists_in_preferences(tmp_path):
+    engine = PlayerEngine()
+    engine._preferences_path = tmp_path / "airplay_preferences.json"
+    kitchen = AirPlayDevice("kitchen", "Kitchen", "192.168.120.111", 7000, "Sonos Era 100")
+    engine.devices[kitchen.id] = kitchen
+
+    engine.set_device_volume(kitchen.id, 45)
+
+    data = json.loads(engine._preferences_path.read_text(encoding="utf-8"))
+    assert data["deviceVolumes"][kitchen.id] == 45
+
+    # Create new engine instance and verify restored volume
+    new_engine = PlayerEngine()
+    new_engine._preferences_path = engine._preferences_path
+    hidden, volumes = new_engine._load_preferences()
+    assert volumes[kitchen.id] == 45
