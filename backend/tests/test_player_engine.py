@@ -110,7 +110,10 @@ def test_expired_pause_stops_process_and_releases_devices():
 @pytest.mark.asyncio
 async def test_scan_devices_uses_airplay_service_port():
     engine = PlayerEngine()
-    airplay_service = SimpleNamespace(port=7001)
+    airplay_service = SimpleNamespace(
+        port=7001,
+        properties={"manufacturer": "Sonos", "model": "Era 100"},
+    )
     config = SimpleNamespace(
         address="192.168.120.111",
         name="Kitchen",
@@ -135,3 +138,5 @@ async def test_scan_devices_uses_airplay_service_port():
     assert len(devices) == 1
     assert devices[0]["address"] == "192.168.120.111"
     assert devices[0]["port"] == 7001
+    assert devices[0]["model"] == "Sonos Era 100"
+    assert engine._device_uses_ptp(engine.devices["192.168.120.111"]) is True

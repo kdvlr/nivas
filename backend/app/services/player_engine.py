@@ -196,7 +196,19 @@ class PlayerEngine:
 
                 dev_id = addr
                 port = airplay_service.port or 7000
-                model = str(conf.device_info.model or "AirPlay Speaker") if conf.device_info else "AirPlay Speaker"
+                properties = airplay_service.properties or {}
+                advertised_model = properties.get("model") or properties.get("am")
+                manufacturer = properties.get("manufacturer")
+                if advertised_model:
+                    model = " ".join(
+                        part for part in (manufacturer, advertised_model) if part
+                    )
+                else:
+                    model = (
+                        str(conf.device_info.model or "AirPlay Speaker")
+                        if conf.device_info
+                        else "AirPlay Speaker"
+                    )
 
                 if dev_id in self.devices:
                     dev = self.devices[dev_id]
