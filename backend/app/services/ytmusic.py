@@ -214,6 +214,14 @@ class YTMusicService:
         if not self._ytmusic:
             return {}
 
+        try:
+            watch_data = self._ytmusic.get_watch_playlist(videoId=video_id, playlistId=playlist_id, limit=25)
+            self._set_cache(cache_key, watch_data, CACHE_TTL["playlist"])
+            return watch_data
+        except Exception as e:
+            logger.error(f"YTMusic get_watch_playlist error: {e}")
+            return {}
+
     @staticmethod
     def is_song(item: Dict[str, Any]) -> bool:
         if not item or not item.get("videoId"):
@@ -273,14 +281,6 @@ class YTMusicService:
                 break
         return normalized
 
-        try:
-            watch_data = self._ytmusic.get_watch_playlist(videoId=video_id, playlistId=playlist_id, limit=25)
-            self._set_cache(cache_key, watch_data, CACHE_TTL["playlist"])
-            return watch_data
-        except Exception as e:
-            logger.error(f"YTMusic get_watch_playlist error: {e}")
-            return {}
-
     def get_lyrics(self, video_id: str) -> Dict[str, Any]:
         cache_key = f"lyrics:{video_id}"
         cached = self._get_cache(cache_key)
@@ -312,7 +312,11 @@ class YTMusicService:
         try:
             import yt_dlp
             ydl_opts = {
-                'format': 'bestaudio/best',
+                # Prefer the highest-bitrate audio-only representation. The
+                # fallback still requires an audio codec so a video-only URL
+                # can never be selected accidentally.
+                'format': 'bestaudio[acodec!=none]/best[acodec!=none]',
+                'format_sort': ['abr', 'asr', 'acodec', 'filesize'],
                 'quiet': True,
                 'no_warnings': True,
                 'skip_download': True,

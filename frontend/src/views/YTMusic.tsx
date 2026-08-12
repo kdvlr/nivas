@@ -20,6 +20,7 @@ interface YTMusicViewProps {
 }
 
 type PlayerTab = 'queue' | 'lyrics' | 'related'
+type MusicView = 'browse' | 'now-playing'
 
 const isSong = (item: any) => {
   if (!item?.videoId || item.resultType === 'video') return false
@@ -115,14 +116,17 @@ export default function YTMusic({
 }: YTMusicViewProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
-  const [homeSections, setHomeSections] = useState<any[]>([])
   const [charts, setCharts] = useState<any>(null)
+  const [usCharts, setUsCharts] = useState<any>(null)
+  const [viewMode, setViewMode] = useState<MusicView>(() => currentTrack ? 'now-playing' : 'browse')
   const [loading, setLoading] = useState(false)
   const [showAirPlayModal, setShowAirPlayModal] = useState(false)
   const airPlayButtonRef = useRef<HTMLButtonElement>(null)
   const [activeTab, setActiveTab] = useState<PlayerTab>('queue')
   const [lyrics, setLyrics] = useState('')
   const [lyricsLoading, setLyricsLoading] = useState(false)
+  const [relatedTracks, setRelatedTracks] = useState<Track[]>([])
+  const [relatedLoading, setRelatedLoading] = useState(false)
   const [editableQueue, setEditableQueue] = useState<Track[]>(queue)
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const dragIndexRef = useRef<number | null>(null)
@@ -172,8 +176,8 @@ export default function YTMusic({
 
   useEffect(() => {
     Promise.all([
-      api.get<any[]>('/api/ytmusic/home?limit=8').then((value) => setHomeSections(Array.isArray(value) ? value : [])),
       api.get<any>('/api/ytmusic/charts?country=IN').then(setCharts),
+      api.get<any>('/api/ytmusic/charts?country=US').then(setUsCharts),
     ]).catch(() => {})
   }, [])
 
@@ -203,36 +207,47 @@ export default function YTMusic({
       .finally(() => setLyricsLoading(false))
   }, [currentTrack?.videoId, activeTab])
 
-  const discoveryTracks = useMemo(() => {
-    const tracks: Track[] = []
-    const seen = new Set<string>()
-    const add = (item: any) => {
-      const track = toTrack(item)
-      if (track && !seen.has(track.videoId)) {
-        seen.add(track.videoId)
-        tracks.push(track)
-      }
-    }
-    charts?.songs?.items?.forEach(add)
-    homeSections.forEach((section) => section.contents?.forEach(add))
-    return tracks.slice(0, 30)
-  }, [charts, homeSections])
+  useEffect(() => {
+    setRelatedTracks([])
+    if (!currentTrack || activeTab !== 'related') return
+    setRelatedLoading(true)
+    api.get<any>(`/api/ytmusic/watch?video_id=${encodeURIComponent(currentTrack.videoId)}`)
+      .then((value) => {
+        const tracks: any[] = Array.isArray(value?.tracks) ? value.tracks : []
+        const seen = new Set([currentTrack.videoId])
+        setRelatedTracks(tracks.map(toTrack).filter((track): track is Track => {
+          if (!track || seen.has(track.videoId)) return false
+          seen.add(track.videoId)
+          return true
+        }).slice(0, 20))
+      })
+      .catch(() => setRelatedTracks([]))
+      .finally(() => setRelatedLoading(false))
+  }, [currentTrack?.videoId, activeTab])
+
+  const indiaTrending = useMemo<Track[]>(() => (charts?.songs?.items || []).map(toTrack).filter((track: Track | null): track is Track => Boolean(track)).slice(0, 12), [charts])
+  const usTrending = useMemo<Track[]>(() => (usCharts?.songs?.items || []).map(toTrack).filter((track: Track | null): track is Track => Boolean(track)).slice(0, 12), [usCharts])
 
   const resultTracks = useMemo(
     () => searchResults.map(toTrack).filter((track): track is Track => Boolean(track)),
     [searchResults],
   )
   const searchIsOpen = Boolean(searchQuery.trim())
+  const browseIsOpen = searchIsOpen || viewMode === 'browse' || !currentTrack
   const progressDuration = durationSeconds || currentTrack?.duration || 0
 
   return (
     <div className="min-h-full bg-black text-white">
       <header className="sticky top-0 z-20 flex min-h-[5.5rem] items-center gap-4 border-b border-white/15 bg-black/95 px-4 backdrop-blur-xl md:px-8">
+        <div className="flex shrink-0 rounded-full bg-white/10 p-1">
+          <button onClick={() => { setSearchQuery(''); setViewMode('browse') }} className={`flex h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold ${viewMode === 'browse' && !searchIsOpen ? 'bg-white text-black' : 'text-white/65 hover:text-white'}`}><Icon name="home" className="text-xl" /> Home</button>
+          <button disabled={!currentTrack} onClick={() => { setSearchQuery(''); setViewMode('now-playing') }} className={`flex h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold disabled:opacity-30 ${viewMode === 'now-playing' && !searchIsOpen ? 'bg-white text-black' : 'text-white/65 hover:text-white'}`}><Icon name="graphic_eq" className="text-xl" /> Now Playing</button>
+        </div>
         <div className="relative w-full max-w-[52rem]">
           <Icon name="search" className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-white/55" />
           <input
             value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
+            onChange={(event) => { setSearchQuery(event.target.value); setViewMode('browse') }}
             placeholder="Search songs, albums, artists"
             className="h-14 w-full rounded-xl border border-white/20 bg-[#292929] pl-14 pr-12 text-base text-white outline-none placeholder:text-white/50 focus:border-white/45 md:text-lg"
           />
@@ -246,9 +261,9 @@ export default function YTMusic({
         </div>
       </header>
 
-      {searchIsOpen ? (
+      {browseIsOpen ? (
         <main className="mx-auto max-w-6xl px-4 py-7 md:px-8">
-          <div className="mb-5 flex items-end justify-between border-b border-white/15 pb-4">
+          {searchIsOpen ? <><div className="mb-5 flex items-end justify-between border-b border-white/15 pb-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">Search results</p>
               <h1 className="mt-1 text-2xl font-bold">Songs matching “{searchQuery}”</h1>
@@ -258,14 +273,23 @@ export default function YTMusic({
           {loading ? (
             <div className="flex items-center justify-center gap-3 py-24 text-white/50"><Icon name="progress_activity" className="animate-spin text-2xl" /> Finding songs…</div>
           ) : resultTracks.length ? (
-            <div>{resultTracks.map((track, index) => <SongRow key={`${track.videoId}-${index}`} track={track} index={index} onPlay={() => { setSearchQuery(''); onPlayTrack(track, resultTracks.slice(index + 1)) }} onQueue={(playNext) => onQueueTrack(track, playNext)} />)}</div>
+            <div>{resultTracks.map((track, index) => <SongRow key={`${track.videoId}-${index}`} track={track} index={index} onPlay={() => { setSearchQuery(''); setViewMode('now-playing'); onPlayTrack(track, resultTracks.slice(index + 1)) }} onQueue={(playNext) => onQueueTrack(track, playNext)} />)}</div>
           ) : (
             <div className="py-24 text-center text-white/45">No audio-only songs found.</div>
+          )}</> : (
+            <div className="space-y-10">
+              {([{ title: 'Trending in the United States', flag: '🇺🇸', tracks: usTrending }, { title: 'Trending in India', flag: '🇮🇳', tracks: indiaTrending }] as const).map((section) => (
+                <section key={section.title}>
+                  <div className="mb-4 flex items-center gap-3"><span className="text-3xl">{section.flag}</span><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/40">YouTube Music</p><h1 className="text-2xl font-bold">{section.title}</h1></div></div>
+                  {section.tracks.length ? <div className="grid grid-cols-1 gap-x-5 lg:grid-cols-2">{section.tracks.map((track, index) => <SongRow key={track.videoId} track={track} index={index} onPlay={() => { setViewMode('now-playing'); onPlayTrack(track, section.tracks.slice(index + 1)) }} onQueue={(playNext) => onQueueTrack(track, playNext)} />)}</div> : <div className="rounded-xl bg-white/[0.04] p-8 text-center text-white/40">Trending songs are loading…</div>}
+                </section>
+              ))}
+            </div>
           )}
         </main>
       ) : (
-        <main className="grid min-h-[calc(100vh-7rem)] grid-cols-1 xl:grid-cols-[minmax(30rem,1.12fr)_minmax(27rem,0.88fr)]">
-          <section className="flex min-w-0 flex-col items-center justify-start px-5 py-8 md:px-10 xl:py-14">
+        <main className="grid h-[calc(100dvh-5.5rem)] grid-cols-1 overflow-hidden xl:grid-cols-[minmax(30rem,1.12fr)_minmax(27rem,0.88fr)]">
+          <section className="flex h-full min-w-0 flex-col items-center justify-center overflow-hidden px-5 py-6 md:px-10">
             <div
               className="max-w-full"
               style={{ width: 'min(100%, max(16rem, calc(100dvh - 12.5rem)))' }}
@@ -284,8 +308,8 @@ export default function YTMusic({
             </div>
           </section>
 
-          <aside className="min-w-0 border-t border-white/15 px-4 py-7 md:px-7 xl:border-l xl:border-t-0 xl:pt-12">
-            <div className="sticky top-[7rem]">
+          <aside className="h-full min-w-0 overflow-hidden border-t border-white/15 px-4 py-5 md:px-7 xl:border-l xl:border-t-0">
+            <div className="flex h-full min-h-0 flex-col">
               {currentTrack && (
                 <div className="border-b border-white/15 px-3 pb-5">
                   <div className="flex items-center gap-4">
@@ -315,6 +339,7 @@ export default function YTMusic({
                 ))}
               </div>
 
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
               {activeTab === 'queue' && (
                 <div>
                   <div className="flex items-center justify-between px-3 py-6">
@@ -355,7 +380,7 @@ export default function YTMusic({
               )}
 
               {activeTab === 'lyrics' && (
-                <div className="max-h-[calc(100vh-14rem)] overflow-y-auto px-4 py-7">
+                <div className="px-4 py-7">
                   {lyricsLoading ? <div className="flex items-center gap-2 text-white/45"><Icon name="progress_activity" className="animate-spin" /> Loading lyrics…</div>
                     : lyrics ? <p className="whitespace-pre-line text-xl font-medium leading-relaxed text-white/85">{lyrics}</p>
                       : <p className="py-12 text-center text-white/45">Lyrics are not available for this song.</p>}
@@ -363,12 +388,13 @@ export default function YTMusic({
               )}
 
               {activeTab === 'related' && (
-                <div className="max-h-[calc(100vh-14rem)] overflow-y-auto">
-                  {discoveryTracks.length ? discoveryTracks.slice(0, 14).map((track, index) => (
-                    <SongRow key={`${track.videoId}-${index}`} track={track} onPlay={() => onPlayTrack(track, discoveryTracks.slice(index + 1))} onQueue={(playNext) => onQueueTrack(track, playNext)} />
-                  )) : <p className="px-3 py-12 text-center text-sm text-white/45">Related songs are loading…</p>}
+                <div>
+                  {relatedLoading ? <p className="px-3 py-12 text-center text-sm text-white/45">Loading recommendations…</p> : relatedTracks.length ? relatedTracks.map((track, index) => (
+                    <SongRow key={`${track.videoId}-${index}`} track={track} onPlay={() => onPlayTrack(track, relatedTracks.slice(index + 1))} onQueue={(playNext) => onQueueTrack(track, playNext)} />
+                  )) : <p className="px-3 py-12 text-center text-sm text-white/45">No related songs were returned for this track.</p>}
                 </div>
               )}
+              </div>
             </div>
           </aside>
         </main>

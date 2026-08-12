@@ -62,3 +62,16 @@ def test_normalize_song_rejects_music_video_and_maps_metadata():
         "thumbnail": "large",
         "duration": 185,
     }
+
+
+def test_watch_playlist_returns_client_recommendations():
+    class FakeClient:
+        def get_watch_playlist(self, **kwargs):
+            return {"tracks": [{"videoId": "related", "title": "Related"}]}
+
+    service = YTMusicService()
+    service._ytmusic = FakeClient()
+
+    watch = service.get_watch_playlist(video_id="current")
+
+    assert watch["tracks"][0]["videoId"] == "related"
