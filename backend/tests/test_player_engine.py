@@ -1,4 +1,5 @@
 import io
+import json
 import time
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
@@ -139,6 +140,23 @@ def test_replace_queue_supports_reordering_and_removal():
 
     assert [track["videoId"] for track in engine.queue] == ["three", "one"]
     assert [track["videoId"] for track in state["queue"]] == ["three", "one"]
+
+
+def test_hidden_speakers_persist_and_are_deselected(tmp_path):
+    engine, kitchen, _ = configured_engine()
+    engine._preferences_path = tmp_path / "airplay_preferences.json"
+
+    state = engine.set_device_hidden(kitchen.id, True)
+
+    kitchen_state = next(device for device in state["devices"] if device["id"] == kitchen.id)
+    assert kitchen_state["isHidden"] is True
+    assert kitchen_state["isSelected"] is False
+    assert kitchen.id not in engine.active_targets
+    assert json.loads(engine._preferences_path.read_text())["hiddenDeviceIds"] == [kitchen.id]
+
+    restarted = PlayerEngine()
+    restarted._preferences_path = engine._preferences_path
+    assert restarted._load_hidden_device_ids() == {kitchen.id}
 
 
 def test_expired_pause_stops_process_and_releases_devices():

@@ -12,6 +12,7 @@ export interface AirPlayDevice {
   isSelected: boolean
   volume: number
   isConnected: boolean
+  isHidden: boolean
 }
 
 interface AirPlaySelectorModalProps {
@@ -23,6 +24,7 @@ export default function AirPlaySelectorModal({ isOpen, onClose }: AirPlaySelecto
   const [devices, setDevices] = useState<any[]>([])
   const [masterVolume, setMasterVolume] = useState<number>(70)
   const [loading, setLoading] = useState<boolean>(false)
+  const [showHidden, setShowHidden] = useState<boolean>(false)
 
   const fetchDevices = async () => {
     try {
@@ -92,9 +94,25 @@ export default function AirPlaySelectorModal({ isOpen, onClose }: AirPlaySelecto
     }
   }
 
+  const setDeviceHidden = async (deviceId: string, hidden: boolean) => {
+    setDevices((previous) => previous.map((device) => (
+      device.id === deviceId ? { ...device, isHidden: hidden, isSelected: hidden ? false : device.isSelected } : device
+    )))
+    try {
+      const response = await api.post<any>('/api/ytmusic/airplay/devices/hide', { deviceId, hidden })
+      if (response && Array.isArray(response.devices)) setDevices(response.devices)
+    } catch (error) {
+      console.error('Failed to update speaker visibility', error)
+      fetchDevices()
+    }
+  }
+
   if (!isOpen) return null
 
   const selectedCount = devices.filter((d) => d.isSelected).length
+  const visibleDevices = devices.filter((device) => !device.isHidden)
+  const hiddenDevices = devices.filter((device) => device.isHidden)
+  const displayedDevices = showHidden ? hiddenDevices : visibleDevices
 
   return (
     <AnimatePresence>
@@ -153,7 +171,7 @@ export default function AirPlaySelectorModal({ isOpen, onClose }: AirPlaySelecto
             {/* Device List */}
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                <span>Audio Speakers ({devices.length})</span>
+                <span>{showHidden ? `Hidden Speakers (${hiddenDevices.length})` : `Audio Speakers (${visibleDevices.length})`}</span>
                 <button
                   type="button"
                   onClick={() => {
@@ -168,13 +186,13 @@ export default function AirPlaySelectorModal({ isOpen, onClose }: AirPlaySelecto
                 </button>
               </div>
 
-              {devices.length === 0 ? (
+              {displayedDevices.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 rounded-2xl bg-white/5 text-slate-400 gap-2 border border-dashed border-white/10">
                   <Icon name="speaker_group" className="text-4xl text-slate-500" />
-                  <p className="text-sm font-medium">Scanning local network for AirPlay 2 speakers...</p>
+                  <p className="text-sm font-medium">{showHidden ? 'No speakers are hidden.' : 'Scanning local network for AirPlay 2 speakers...'}</p>
                 </div>
               ) : (
-                devices.map((device) => (
+                displayedDevices.map((device) => (
                   <div
                     key={device.id}
                     className={`flex flex-col gap-3 rounded-2xl p-4 transition-all duration-200 border ${
@@ -187,7 +205,8 @@ export default function AirPlaySelectorModal({ isOpen, onClose }: AirPlaySelecto
                       <button
                         type="button"
                         onClick={() => toggleDevice(device.id, device.isSelected)}
-                        className="flex items-center gap-3 cursor-pointer select-none flex-1 text-left bg-transparent border-0 p-0"
+                        disabled={device.isHidden}
+                        className="flex flex-1 cursor-pointer select-none items-center gap-3 border-0 bg-transparent p-0 text-left disabled:cursor-default disabled:opacity-60"
                       >
                         <div
                           className={`flex h-6 w-6 items-center justify-center rounded-lg border transition ${
@@ -212,6 +231,15 @@ export default function AirPlaySelectorModal({ isOpen, onClose }: AirPlaySelecto
                           </span>
                         </div>
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeviceHidden(device.id, !device.isHidden)}
+                        title={device.isHidden ? 'Show this speaker' : 'Hide this speaker'}
+                        aria-label={device.isHidden ? `Show ${device.name}` : `Hide ${device.name}`}
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-500 transition hover:bg-white/10 hover:text-slate-200"
+                      >
+                        <Icon name={device.isHidden ? 'visibility' : 'visibility_off'} className="text-xl" />
+                      </button>
                     </div>
 
                     {device.isSelected && (
@@ -232,6 +260,16 @@ export default function AirPlaySelectorModal({ isOpen, onClose }: AirPlaySelecto
                     )}
                   </div>
                 ))
+              )}
+              {(hiddenDevices.length > 0 || showHidden) && (
+                <button
+                  type="button"
+                  onClick={() => setShowHidden((value) => !value)}
+                  className="flex items-center justify-center gap-2 rounded-xl py-2 text-sm font-semibold text-slate-400 hover:bg-white/5 hover:text-slate-200"
+                >
+                  <Icon name={showHidden ? 'arrow_back' : 'visibility'} className="text-lg" />
+                  {showHidden ? 'Back to available speakers' : `Manage hidden speakers (${hiddenDevices.length})`}
+                </button>
               )}
             </div>
           </div>

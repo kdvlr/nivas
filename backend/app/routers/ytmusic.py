@@ -19,6 +19,10 @@ class ToggleDeviceRequest(BaseModel):
     deviceId: str
     selected: bool
 
+class HideDeviceRequest(BaseModel):
+    deviceId: str
+    hidden: bool
+
 class DeviceVolumeRequest(BaseModel):
     deviceId: str
     volume: int
@@ -173,6 +177,10 @@ def list_airplay_devices():
 @router.post("/airplay/devices/toggle")
 def toggle_airplay_device(req: ToggleDeviceRequest):
     return player_engine.toggle_device(req.deviceId, req.selected)
+
+@router.post("/airplay/devices/hide")
+def hide_airplay_device(req: HideDeviceRequest):
+    return player_engine.set_device_hidden(req.deviceId, req.hidden)
 
 @router.post("/airplay/volume/device")
 def set_device_volume(req: DeviceVolumeRequest):

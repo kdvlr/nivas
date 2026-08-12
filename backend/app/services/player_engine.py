@@ -13,6 +13,7 @@ from pathlib import Path
 import httpx
 from PIL import Image
 
+from ..config import get_settings
 from ..ws import manager
 from .ytmusic import ytmusic_service
 
@@ -31,6 +32,7 @@ class AirPlayDevice:
         self.is_selected = False
         self.volume = 70
         self.is_connected = False
+        self.is_hidden = False
         self.last_seen = time.time()
 
     def to_dict(self) -> Dict[str, Any]:
@@ -43,6 +45,7 @@ class AirPlayDevice:
             "isSelected": self.is_selected,
             "volume": self.volume,
             "isConnected": self.is_connected,
+            "isHidden": self.is_hidden,
             "lastSeen": self.last_seen
         }
 
@@ -57,6 +60,8 @@ class PlayerEngine:
         self.devices: Dict[str, AirPlayDevice] = {}
         self.active_targets: List[str] = []
         self.autoplay_enabled: bool = True
+        self._preferences_path = Path(get_settings().data_dir) / "airplay_preferences.json"
+        self._hidden_device_ids = self._load_hidden_device_ids()
         
         self._scanner_task: Optional[asyncio.Task] = None
         self._ticker_task: Optional[asyncio.Task] = None
@@ -72,6 +77,22 @@ class PlayerEngine:
             1,
             int(os.getenv("AIRPLAY_PAUSE_TIMEOUT_SECONDS", DEFAULT_PAUSED_SESSION_TIMEOUT_SECONDS)),
         )
+
+    def _load_hidden_device_ids(self) -> set[str]:
+        try:
+            data = json.loads(self._preferences_path.read_text(encoding="utf-8"))
+            return {str(device_id) for device_id in data.get("hiddenDeviceIds", [])}
+        except (FileNotFoundError, json.JSONDecodeError, OSError, AttributeError):
+            return set()
+
+    def _save_hidden_device_ids(self) -> None:
+        self._preferences_path.parent.mkdir(parents=True, exist_ok=True)
+        temporary_path = self._preferences_path.with_suffix(".tmp")
+        temporary_path.write_text(
+            json.dumps({"hiddenDeviceIds": sorted(self._hidden_device_ids)}, indent=2),
+            encoding="utf-8",
+        )
+        temporary_path.replace(self._preferences_path)
 
     def start(self):
         loop = asyncio.get_event_loop()
@@ -232,6 +253,7 @@ class PlayerEngine:
                         port=port,
                         model=model
                     )
+                    dev.is_hidden = dev_id in self._hidden_device_ids
                     self.devices[dev_id] = dev
                     logger.info(f"Discovered AirPlay speaker: {name} ({addr}:{port})")
 
@@ -677,6 +699,21 @@ class PlayerEngine:
                         self._write_stream_command("pause")
                         self._paused_at = time.monotonic()
 
+        self._broadcast_state()
+        return self.get_state()
+
+    def set_device_hidden(self, device_id: str, hidden: bool) -> Dict[str, Any]:
+        device_id = str(device_id)
+        device = self.devices.get(device_id)
+        if hidden:
+            self._hidden_device_ids.add(device_id)
+            if device and device.is_selected:
+                self.toggle_device(device_id, False)
+        else:
+            self._hidden_device_ids.discard(device_id)
+        if device:
+            device.is_hidden = hidden
+        self._save_hidden_device_ids()
         self._broadcast_state()
         return self.get_state()
 

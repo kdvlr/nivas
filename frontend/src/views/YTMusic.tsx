@@ -239,7 +239,7 @@ export default function YTMusic({
         </div>
         <div className="ml-auto flex shrink-0 items-center gap-3">
           <button onClick={() => setShowAirPlayModal(true)} title="Choose AirPlay rooms" className="flex h-12 w-12 items-center justify-center rounded-full text-white/85 hover:bg-white/10 hover:text-white">
-            <Icon name="cast" className="text-[2rem]" />
+            <Icon name="airplay" className="text-[2rem]" />
           </button>
           <div className="hidden h-11 w-11 items-center justify-center rounded-full bg-rose-600 text-lg font-semibold sm:flex">N</div>
         </div>
@@ -257,7 +257,7 @@ export default function YTMusic({
           {loading ? (
             <div className="flex items-center justify-center gap-3 py-24 text-white/50"><Icon name="progress_activity" className="animate-spin text-2xl" /> Finding songs…</div>
           ) : resultTracks.length ? (
-            <div>{resultTracks.map((track, index) => <SongRow key={`${track.videoId}-${index}`} track={track} index={index} onPlay={() => onPlayTrack(track, resultTracks.slice(index + 1))} onQueue={(playNext) => onQueueTrack(track, playNext)} />)}</div>
+            <div>{resultTracks.map((track, index) => <SongRow key={`${track.videoId}-${index}`} track={track} index={index} onPlay={() => { setSearchQuery(''); onPlayTrack(track, resultTracks.slice(index + 1)) }} onQueue={(playNext) => onQueueTrack(track, playNext)} />)}</div>
           ) : (
             <div className="py-24 text-center text-white/45">No audio-only songs found.</div>
           )}
