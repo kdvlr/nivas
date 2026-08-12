@@ -7,6 +7,8 @@ import { startStarCanvas, startFxCanvas, SkyPhase, SkyKind, SkyState } from './s
 import { useQuality, Quality } from './sky/useQuality'
 import { getQueryParam } from './sky/queryParam'
 import AmbientCalendarOverlay, { ReminderPayload } from './AmbientCalendarOverlay'
+import NowPlayingQueue from './ytmusic/NowPlayingQueue'
+import { Track } from './ytmusic/MiniPlayerBar'
 
 interface MediaItem {
   url: string
@@ -33,6 +35,9 @@ interface Slide {
 interface SlideshowProps {
   photos: MediaItem[]
   onDismiss: () => void
+  currentTrack: Track | null
+  queue: Track[]
+  isPlaying: boolean
 }
 
 interface WeatherDay {
@@ -457,7 +462,7 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVide
   )
 }
 
-export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
+export default function Slideshow({ photos, onDismiss, currentTrack, queue, isPlaying }: SlideshowProps) {
   const [currentIdx, setCurrentIdx] = useState(0)
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null)
   const [playerReady, setPlayerReady] = useState(false)
@@ -844,6 +849,17 @@ export default function Slideshow({ photos, onDismiss }: SlideshowProps) {
 
       {/* Weather + delights (rain, snow, fireflies, birds — in front of photos) */}
       <canvas ref={fxRef} className="absolute inset-0 w-full h-full pointer-events-none z-20" />
+
+      {currentTrack && (
+        <div className="pointer-events-none absolute bottom-6 right-6 z-40">
+          <NowPlayingQueue
+            currentTrack={currentTrack}
+            queue={queue}
+            isPlaying={isPlaying}
+            compact
+          />
+        </div>
+      )}
 
       {selectedVideo && (
         <div

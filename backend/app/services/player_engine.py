@@ -56,6 +56,7 @@ class PlayerEngine:
         self.master_volume: int = 70
         self.devices: Dict[str, AirPlayDevice] = {}
         self.active_targets: List[str] = []
+        self.autoplay_enabled: bool = True
         
         self._scanner_task: Optional[asyncio.Task] = None
         self._ticker_task: Optional[asyncio.Task] = None
@@ -65,6 +66,8 @@ class PlayerEngine:
         self._stream_lock = threading.RLock()
         self._paused_at: Optional[float] = None
         self._paused_stream_expired = False
+        self._event_loop: Optional[asyncio.AbstractEventLoop] = None
+        self._advancing = False
         self._paused_session_timeout = max(
             1,
             int(os.getenv("AIRPLAY_PAUSE_TIMEOUT_SECONDS", DEFAULT_PAUSED_SESSION_TIMEOUT_SECONDS)),
@@ -72,6 +75,7 @@ class PlayerEngine:
 
     def start(self):
         loop = asyncio.get_event_loop()
+        self._event_loop = loop
         if self._scanner_task is None or self._scanner_task.done():
             self._scanner_task = loop.create_task(self._device_scanner_loop())
         if self._ticker_task is None or self._ticker_task.done():
@@ -287,6 +291,7 @@ class PlayerEngine:
             "isPlaying": self.is_playing,
             "currentTrack": self.current_track,
             "queue": self.queue,
+            "autoplayEnabled": self.autoplay_enabled,
             "elapsedSeconds": self.elapsed_seconds,
             "durationSeconds": self.duration_seconds,
             "masterVolume": self.master_volume,
@@ -314,9 +319,13 @@ class PlayerEngine:
         self.elapsed_seconds = 0
         self.duration_seconds = track.get("duration", 0) or 180
         self.is_playing = True
-        
-        if queue is not None:
-            self.queue = queue
+
+        self.queue = [
+            normalized
+            for item in (queue or [])
+            if (normalized := ytmusic_service.normalize_song(item)) is not None
+            and normalized["videoId"] != video_id
+        ]
 
         loop = asyncio.get_running_loop()
         self._play_task = loop.create_task(self._orchestrate_playback(video_id, self.current_track))
@@ -326,6 +335,20 @@ class PlayerEngine:
 
     async def _orchestrate_playback(self, video_id: str, track_info: Dict[str, Any]):
         try:
+            if self.autoplay_enabled:
+                loop = asyncio.get_running_loop()
+                recommendations = await loop.run_in_executor(
+                    None,
+                    ytmusic_service.get_autoplay_tracks,
+                    video_id,
+                )
+                existing_ids = {video_id, *(item["videoId"] for item in self.queue)}
+                for recommendation in recommendations:
+                    if recommendation["videoId"] not in existing_ids:
+                        self.queue.append(recommendation)
+                        existing_ids.add(recommendation["videoId"])
+                self._broadcast_state()
+
             stream_url = ytmusic_service.get_stream_url(video_id)
             if not stream_url:
                 logger.error(f"Could not extract stream URL for track {video_id}")
@@ -410,6 +433,10 @@ class PlayerEngine:
         for device_id in device_ids:
             if device_id in self.devices:
                 self.devices[device_id].is_connected = False
+        if self.is_playing and exit_code == 0 and self.queue and self._event_loop:
+            logger.info("AirPlay track finished; advancing autoplay queue")
+            asyncio.run_coroutine_threadsafe(self.next_track(), self._event_loop)
+            return
         if self.is_playing:
             logger.warning("AirPlay stream %s exited with code %s", stream_id, exit_code)
             self.is_playing = False
@@ -574,15 +601,33 @@ class PlayerEngine:
         return self.get_state()
 
     async def next_track(self):
-        if self.queue and len(self.queue) > 0:
-            next_t = self.queue.pop(0)
-            await self.play_track(next_t)
+        if self._advancing:
+            return self.get_state()
+        self._advancing = True
+        try:
+            if self.queue:
+                next_t = self.queue.pop(0)
+                remaining = list(self.queue)
+                await self.play_track(next_t, remaining)
+            else:
+                self.is_playing = False
+                self.current_track = None
+                self.elapsed_seconds = 0
+                self._stop_current_stream()
+                self._broadcast_state()
+        finally:
+            self._advancing = False
+        return self.get_state()
+
+    def add_to_queue(self, track: Dict[str, Any], play_next: bool = False) -> Dict[str, Any]:
+        normalized = ytmusic_service.normalize_song(track)
+        if normalized is None:
+            raise ValueError("Only songs can be added to the queue")
+        if play_next:
+            self.queue.insert(0, normalized)
         else:
-            self.is_playing = False
-            self.current_track = None
-            self.elapsed_seconds = 0
-            self._stop_current_stream()
-            self._broadcast_state()
+            self.queue.append(normalized)
+        self._broadcast_state()
         return self.get_state()
 
     async def prev_track(self):

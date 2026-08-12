@@ -38,6 +38,14 @@ class PlayRequest(BaseModel):
     duration: Optional[int] = 0
     queue: Optional[List[Dict[str, Any]]] = None
 
+class QueueRequest(BaseModel):
+    videoId: str
+    title: Optional[str] = "Unknown Title"
+    artist: Optional[str] = "Unknown Artist"
+    thumbnail: Optional[str] = None
+    album: Optional[str] = None
+    duration: Optional[int] = 0
+
 @router.get("/auth")
 def get_auth_status():
     return ytmusic_service.get_auth_status()
@@ -125,6 +133,20 @@ async def player_resume():
 @router.post("/player/next")
 async def player_next():
     return await player_engine.next_track()
+
+@router.post("/player/queue")
+def player_add_queue(req: QueueRequest):
+    try:
+        return player_engine.add_to_queue(req.model_dump())
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+@router.post("/player/queue/next")
+def player_play_next(req: QueueRequest):
+    try:
+        return player_engine.add_to_queue(req.model_dump(), play_next=True)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
 
 @router.post("/player/prev")
 async def player_prev():

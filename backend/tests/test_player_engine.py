@@ -115,6 +115,18 @@ def test_volume_commands_are_state_driven_and_targetable():
     )
 
 
+def test_add_to_queue_and_play_next_preserve_requested_order():
+    engine, _, _ = configured_engine()
+    later = {"videoId": "later", "title": "Later", "artist": "Artist"}
+    next_up = {"videoId": "next", "title": "Next", "artist": "Artist"}
+
+    engine.add_to_queue(later)
+    engine.add_to_queue(next_up, play_next=True)
+
+    assert [track["videoId"] for track in engine.queue] == ["next", "later"]
+    assert engine.get_state()["autoplayEnabled"] is True
+
+
 def test_expired_pause_stops_process_and_releases_devices():
     engine, kitchen, family = configured_engine()
     process = FakeProcess()

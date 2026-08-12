@@ -101,7 +101,9 @@ class YTMusicService:
         }
 
     def search(self, query: str, filter_type: Optional[str] = None) -> List[Dict[str, Any]]:
-        cache_key = f"search:{query}:{filter_type or 'all'}"
+        # Nivas is an audio player. Always ask InnerTube for songs and enforce
+        # the same rule locally so video/UGC results can never leak into play.
+        cache_key = f"search:{query}:songs"
         cached = self._get_cache(cache_key)
         if cached is not None:
             return cached
@@ -110,8 +112,8 @@ class YTMusicService:
             return []
 
         try:
-            filter_param = filter_type if filter_type in ["songs", "videos", "albums", "artists", "playlists"] else None
-            results = self._ytmusic.search(query, filter=filter_param, limit=25)
+            results = self._ytmusic.search(query, filter="songs", limit=25)
+            results = [item for item in results if self.is_song(item)]
             self._set_cache(cache_key, results, CACHE_TTL["search"])
             return results
         except Exception as e:
@@ -211,6 +213,65 @@ class YTMusicService:
 
         if not self._ytmusic:
             return {}
+
+    @staticmethod
+    def is_song(item: Dict[str, Any]) -> bool:
+        if not item or not item.get("videoId"):
+            return False
+        if str(item.get("resultType", "")).lower() == "video":
+            return False
+        video_type = str(item.get("videoType", "")).upper()
+        return not any(marker in video_type for marker in ("_OMV", "_UGC"))
+
+    @staticmethod
+    def normalize_song(item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        if not YTMusicService.is_song(item):
+            return None
+        artists = item.get("artists")
+        if isinstance(artists, list):
+            artist = ", ".join(
+                str(value.get("name"))
+                for value in artists
+                if isinstance(value, dict) and value.get("name")
+            )
+        else:
+            raw_artist = item.get("artist")
+            artist = raw_artist.get("name", "") if isinstance(raw_artist, dict) else raw_artist
+        thumbnails = item.get("thumbnails") or []
+        thumbnail = thumbnails[-1].get("url") if thumbnails and isinstance(thumbnails[-1], dict) else item.get("thumbnail")
+        album = item.get("album")
+        if isinstance(album, dict):
+            album = album.get("name")
+        duration = item.get("duration_seconds") or item.get("durationSeconds") or item.get("duration") or 0
+        if isinstance(duration, str):
+            parts = duration.split(":")
+            try:
+                duration = sum(int(value) * (60 ** index) for index, value in enumerate(reversed(parts)))
+            except ValueError:
+                duration = 0
+        return {
+            "videoId": item["videoId"],
+            "title": item.get("title") or "Unknown Title",
+            "artist": artist or "Unknown Artist",
+            "thumbnail": thumbnail,
+            "album": album or "",
+            "duration": int(duration or 0),
+        }
+
+    def get_autoplay_tracks(self, video_id: str, limit: int = 12) -> List[Dict[str, Any]]:
+        watch = self.get_watch_playlist(video_id=video_id)
+        tracks = watch.get("tracks", []) if isinstance(watch, dict) else []
+        normalized: List[Dict[str, Any]] = []
+        seen = {video_id}
+        for item in tracks:
+            track = self.normalize_song(item)
+            if not track or track["videoId"] in seen:
+                continue
+            seen.add(track["videoId"])
+            normalized.append(track)
+            if len(normalized) >= limit:
+                break
+        return normalized
 
         try:
             watch_data = self._ytmusic.get_watch_playlist(videoId=video_id, playlistId=playlist_id, limit=25)

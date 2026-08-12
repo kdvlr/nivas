@@ -191,6 +191,7 @@ export default function App() {
   const [isPlaying, setIsPlaying] = useState<boolean>(false)
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0)
   const [durationSeconds, setDurationSeconds] = useState<number>(0)
+  const [playQueue, setPlayQueue] = useState<Track[]>([])
 
   const syncPlayerState = async () => {
     try {
@@ -200,6 +201,7 @@ export default function App() {
         setCurrentTrack(state.currentTrack)
         setElapsedSeconds(state.elapsedSeconds || 0)
         setDurationSeconds(state.durationSeconds || 0)
+        setPlayQueue(Array.isArray(state.queue) ? state.queue : [])
       }
     } catch (e) {
       // Ignore
@@ -225,6 +227,7 @@ export default function App() {
       if (res) {
         setIsPlaying(res.isPlaying)
         setCurrentTrack(res.currentTrack)
+        setPlayQueue(Array.isArray(res.queue) ? res.queue : [])
       }
     }).catch(() => {})
   }
@@ -241,6 +244,7 @@ export default function App() {
       if (res) {
         setIsPlaying(res.isPlaying)
         setCurrentTrack(res.currentTrack)
+        setPlayQueue(Array.isArray(res.queue) ? res.queue : [])
       }
     }).catch(() => {})
   }
@@ -252,6 +256,12 @@ export default function App() {
   const handleSeek = (secs: number) => {
     setElapsedSeconds(secs)
     api.post<any>('/api/ytmusic/player/seek', { seconds: secs }).catch(() => {})
+  }
+
+  const handleQueueTrack = (track: Track, playNext: boolean) => {
+    api.post<any>(playNext ? '/api/ytmusic/player/queue/next' : '/api/ytmusic/player/queue', track)
+      .then((res) => setPlayQueue(Array.isArray(res?.queue) ? res.queue : []))
+      .catch(() => {})
   }
 
   // Touch gestures for swipe-to-navigate and pull-to-refresh
@@ -796,8 +806,13 @@ export default function App() {
                   onStartSlideshow={() => setSlideshowActive(true)}
                   currentTrack={currentTrack}
                   isPlaying={isPlaying}
+                  queue={playQueue}
+                  elapsedSeconds={elapsedSeconds}
+                  durationSeconds={durationSeconds}
                   onPlayTrack={handlePlayTrack}
                   onTogglePlay={handleTogglePlay}
+                  onNextTrack={handleNextTrack}
+                  onQueueTrack={handleQueueTrack}
                 />
               </motion.div>
             </AnimatePresence>
@@ -896,7 +911,13 @@ export default function App() {
           </div>
         </motion.div>
         {slideshowActive && photosList.length > 0 && (
-          <Slideshow photos={photosList} onDismiss={() => setSlideshowActive(false)} />
+          <Slideshow
+            photos={photosList}
+            onDismiss={() => setSlideshowActive(false)}
+            currentTrack={currentTrack}
+            queue={playQueue}
+            isPlaying={isPlaying}
+          />
         )}
       </RewardCelebrationProvider>
     </CelebrationProvider>
