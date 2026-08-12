@@ -278,6 +278,7 @@ class PlayerEngine:
                     self.devices[dev_id] = dev
                     logger.info(f"Discovered AirPlay speaker: {name} ({addr}:{port}) with volume {saved_vol}")
 
+            self._ensure_default_target()
             self._broadcast_state()
         except Exception as e:
             logger.error(f"AirPlay scan error: {e}")
@@ -356,11 +357,29 @@ class PlayerEngine:
             "devices": [dev.to_dict() for dev in sorted(self.devices.values(), key=lambda d: d.name)]
         }
 
+    def _ensure_default_target(self):
+        if not self.active_targets or not self._selected_devices():
+            kitchen_dev = next(
+                (dev for dev in self.devices.values() if "kitchen" in dev.name.lower() or "kitchen" in dev.model.lower()),
+                None
+            )
+            if kitchen_dev:
+                kitchen_dev.is_selected = True
+                if kitchen_dev.id not in self.active_targets:
+                    self.active_targets.append(kitchen_dev.id)
+            elif self.devices:
+                first_dev = next((dev for dev in sorted(self.devices.values(), key=lambda d: d.name) if not dev.is_hidden), None)
+                if first_dev:
+                    first_dev.is_selected = True
+                    if first_dev.id not in self.active_targets:
+                        self.active_targets.append(first_dev.id)
+
     async def play_track(self, track: Dict[str, Any], queue: Optional[List[Dict[str, Any]]] = None):
         video_id = track.get("videoId")
         if not video_id:
             return self.get_state()
 
+        self._ensure_default_target()
         self._stop_current_stream()
 
         self.current_track = {
@@ -722,16 +741,35 @@ class PlayerEngine:
                 wav_path = f"/tmp/ytmusic_{video_id}.wav"
                 if os.path.exists(wav_path):
                     was_paused = not self.is_playing
+                    current_offset = max(0.0, self.elapsed_seconds)
                     self._stop_current_stream()
+
+                    audio_target = wav_path
+                    if current_offset > 1:
+                        offset_wav = f"/tmp/ytmusic_{video_id}_offset.wav"
+                        try:
+                            cmd = [
+                                "ffmpeg", "-y", "-ss", str(current_offset),
+                                "-i", wav_path, "-vn", "-ar", "44100",
+                                "-ac", "2", "-acodec", "pcm_s16le", offset_wav
+                            ]
+                            subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                            if os.path.exists(offset_wav) and os.path.getsize(offset_wav) > 0:
+                                audio_target = offset_wav
+                        except Exception as e:
+                            logger.warning(f"Could not create seeked audio file for room toggle: {e}")
+
                     artwork_path = f"/tmp/ytmusic_{video_id}_artwork.jpg"
-                    self._start_airplay_streams(
-                        wav_path,
+                    started = self._start_airplay_streams(
+                        audio_target,
                         self.current_track,
                         artwork_path if os.path.exists(artwork_path) else None,
                     )
-                    if was_paused:
-                        self._write_stream_command("pause")
-                        self._paused_at = time.monotonic()
+                    if started:
+                        self.elapsed_seconds = current_offset
+                        if was_paused:
+                            self._write_stream_command("pause")
+                            self._paused_at = time.monotonic()
 
         self._broadcast_state()
         return self.get_state()
