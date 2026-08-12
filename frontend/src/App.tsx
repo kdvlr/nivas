@@ -445,6 +445,16 @@ export default function App() {
   }, [])
 
   const lastMotionTimeRef = useRef<number>(Date.now())
+  const isMusicActive = Boolean(isPlaying || currentTrack)
+  const isMusicActiveRef = useRef(false)
+  isMusicActiveRef.current = isMusicActive
+
+  // Whenever music starts playing, dismiss screensaver so controls stay visible
+  useEffect(() => {
+    if (isMusicActive) {
+      setSlideshowActive(false)
+    }
+  }, [isMusicActive])
 
   // Screensaver + kiosk return to home + Fully Kiosk screen-off & motion wake logic
   useEffect(() => {
@@ -478,12 +488,18 @@ export default function App() {
     }
 
     function startSlideshow() {
+      // Do NOT trigger screensaver when music is playing so sidebar & topbar remain interactive
+      if (isMusicActiveRef.current) return
       setSlideshowActive(true)
     }
 
     function goHome() {
       if (slideshowActiveRef.current) return
-      if (currentRoute() !== 'home') location.hash = '#/home'
+      if (isMusicActiveRef.current) {
+        if (currentRoute() !== 'ytmusic') location.hash = '#/ytmusic'
+      } else {
+        if (currentRoute() !== 'home') location.hash = '#/home'
+      }
     }
 
     function reset() {
@@ -510,9 +526,12 @@ export default function App() {
       screenOffTimer = setTimeout(turnScreenOff, NO_MOTION_SCREEN_OFF_MS)
 
       // Motion detected logic:
-      // Over 2 hours of inactivity -> show Home Page
-      // Under/equal 2 hours of inactivity -> show Photos Slideshow
-      if (elapsedMs > TWO_HOURS_MS) {
+      // If music is playing -> show YouTube Music / Now Playing view (do not start slideshow)
+      // Otherwise: Over 2 hours -> Home, Under 2 hours -> Photos Slideshow
+      if (isMusicActiveRef.current) {
+        setSlideshowActive(false)
+        if (currentRoute() !== 'ytmusic') location.hash = '#/ytmusic'
+      } else if (elapsedMs > TWO_HOURS_MS) {
         setSlideshowActive(false)
         if (currentRoute() !== 'home') location.hash = '#/home'
       } else {

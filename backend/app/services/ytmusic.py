@@ -347,6 +347,20 @@ class YTMusicService:
         seen = {video_id}
         for item in tracks:
             track = self.normalize_song(item)
+            if not track and isinstance(item, dict) and item.get("videoId"):
+                artist = YTMusicService._artist_text(item)
+                thumbnail = YTMusicService._thumbnail_url(item)
+                album = item.get("album")
+                if isinstance(album, dict):
+                    album = album.get("name")
+                track = {
+                    "videoId": item["videoId"],
+                    "title": item.get("title") or "Unknown Title",
+                    "artist": artist or "Unknown Artist",
+                    "thumbnail": thumbnail,
+                    "album": album or "",
+                    "duration": int(item.get("duration_seconds") or item.get("length") or 0),
+                }
             if not track or track["videoId"] in seen:
                 continue
             seen.add(track["videoId"])
