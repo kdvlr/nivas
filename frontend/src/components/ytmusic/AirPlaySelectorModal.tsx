@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import React, { useEffect, useLayoutEffect, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import Icon from '../Icon'
 import { api } from '../../lib/api'
 
@@ -18,275 +18,215 @@ export interface AirPlayDevice {
 interface AirPlaySelectorModalProps {
   isOpen: boolean
   onClose: () => void
+  anchorRef: React.RefObject<HTMLElement | null>
 }
 
-export default function AirPlaySelectorModal({ isOpen, onClose }: AirPlaySelectorModalProps) {
-  const [devices, setDevices] = useState<any[]>([])
-  const [masterVolume, setMasterVolume] = useState<number>(70)
-  const [loading, setLoading] = useState<boolean>(false)
-  const [showHidden, setShowHidden] = useState<boolean>(false)
+interface PanelPosition {
+  top?: number
+  bottom?: number
+  right: number
+  origin: string
+}
+
+export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: AirPlaySelectorModalProps) {
+  const [devices, setDevices] = useState<AirPlayDevice[]>([])
+  const [masterVolume, setMasterVolume] = useState(70)
+  const [loading, setLoading] = useState(false)
+  const [showHidden, setShowHidden] = useState(false)
+  const [position, setPosition] = useState<PanelPosition>({ top: 84, right: 20, origin: 'top right' })
 
   const fetchDevices = async () => {
     try {
-      const res = await api.get<any>('/api/ytmusic/player/state')
-      if (res && Array.isArray(res.devices)) {
-        setDevices(res.devices)
-      }
-      if (res && typeof res.masterVolume === 'number') {
-        setMasterVolume(res.masterVolume)
-      }
-    } catch (e) {
-      console.error('Failed to fetch AirPlay devices', e)
+      const response = await api.get<any>('/api/ytmusic/player/state')
+      if (Array.isArray(response?.devices)) setDevices(response.devices)
+      if (typeof response?.masterVolume === 'number') setMasterVolume(response.masterVolume)
+    } catch (error) {
+      console.error('Failed to fetch AirPlay devices', error)
     }
   }
 
   useEffect(() => {
-    if (isOpen) {
-      setLoading(true)
-      fetchDevices().finally(() => setLoading(false))
-      const interval = setInterval(fetchDevices, 4000)
-      return () => clearInterval(interval)
-    }
+    if (!isOpen) return
+    setLoading(true)
+    fetchDevices().finally(() => setLoading(false))
+    const interval = window.setInterval(fetchDevices, 4000)
+    return () => window.clearInterval(interval)
   }, [isOpen])
 
-  const toggleDevice = async (deviceId: string, currentSelected: boolean) => {
-    const nextSelected = !currentSelected
-    // Optimistic UI state update
-    setDevices((prev) =>
-      prev.map((d) => (d.id === deviceId ? { ...d, isSelected: nextSelected } : d))
-    )
-    try {
-      const res = await api.post<any>('/api/ytmusic/airplay/devices/toggle', {
-        deviceId,
-        selected: nextSelected,
-      })
-      if (res && Array.isArray(res.devices)) {
-        setDevices(res.devices)
+  useLayoutEffect(() => {
+    if (!isOpen) return
+    const placePanel = () => {
+      const rectangle = anchorRef.current?.getBoundingClientRect()
+      if (!rectangle) return
+      const right = Math.max(12, window.innerWidth - rectangle.right)
+      const estimatedHeight = Math.min(520, 76 + devices.length * 52)
+      if (rectangle.bottom + estimatedHeight + 12 <= window.innerHeight) {
+        setPosition({ top: rectangle.bottom + 8, right, origin: 'top right' })
+      } else {
+        setPosition({ bottom: window.innerHeight - rectangle.top + 8, right, origin: 'bottom right' })
       }
-    } catch (e) {
-      console.error('Failed to toggle device', e)
+    }
+    placePanel()
+    window.addEventListener('resize', placePanel)
+    return () => window.removeEventListener('resize', placePanel)
+  }, [isOpen, anchorRef, devices.length])
+
+  const toggleDevice = async (device: AirPlayDevice) => {
+    const selected = !device.isSelected
+    setDevices((previous) => previous.map((item) => item.id === device.id ? { ...item, isSelected: selected } : item))
+    try {
+      const response = await api.post<any>('/api/ytmusic/airplay/devices/toggle', { deviceId: device.id, selected })
+      if (Array.isArray(response?.devices)) setDevices(response.devices)
+    } catch (error) {
+      console.error('Failed to toggle AirPlay device', error)
+      fetchDevices()
     }
   }
 
-  const handleDeviceVolume = async (deviceId: string, vol: number) => {
-    setDevices((prev) =>
-      prev.map((d) => (d.id === deviceId ? { ...d, volume: vol } : d))
-    )
+  const setDeviceVolume = async (deviceId: string, volume: number) => {
+    setDevices((previous) => previous.map((device) => device.id === deviceId ? { ...device, volume } : device))
     try {
-      const res = await api.post<any>('/api/ytmusic/airplay/volume/device', { deviceId, volume: vol })
-      if (res && Array.isArray(res.devices)) {
-        setDevices(res.devices)
-      }
-    } catch (e) {
-      console.error('Failed to update device volume', e)
+      const response = await api.post<any>('/api/ytmusic/airplay/volume/device', { deviceId, volume })
+      if (Array.isArray(response?.devices)) setDevices(response.devices)
+    } catch (error) {
+      console.error('Failed to update AirPlay volume', error)
     }
   }
 
-  const handleMasterVolume = async (vol: number) => {
-    setMasterVolume(vol)
+  const setGroupVolume = async (volume: number) => {
+    setMasterVolume(volume)
+    setDevices((previous) => previous.map((device) => device.isSelected ? { ...device, volume } : device))
     try {
-      const res = await api.post<any>('/api/ytmusic/airplay/volume/master', { volume: vol })
-      if (res && Array.isArray(res.devices)) {
-        setDevices(res.devices)
-      }
-    } catch (e) {
-      console.error('Failed to update master volume', e)
+      const response = await api.post<any>('/api/ytmusic/airplay/volume/master', { volume })
+      if (Array.isArray(response?.devices)) setDevices(response.devices)
+    } catch (error) {
+      console.error('Failed to update group volume', error)
     }
   }
 
   const setDeviceHidden = async (deviceId: string, hidden: boolean) => {
-    setDevices((previous) => previous.map((device) => (
-      device.id === deviceId ? { ...device, isHidden: hidden, isSelected: hidden ? false : device.isSelected } : device
-    )))
+    setDevices((previous) => previous.map((device) => device.id === deviceId ? { ...device, isHidden: hidden, isSelected: hidden ? false : device.isSelected } : device))
     try {
       const response = await api.post<any>('/api/ytmusic/airplay/devices/hide', { deviceId, hidden })
-      if (response && Array.isArray(response.devices)) setDevices(response.devices)
+      if (Array.isArray(response?.devices)) setDevices(response.devices)
     } catch (error) {
       console.error('Failed to update speaker visibility', error)
       fetchDevices()
     }
   }
 
-  if (!isOpen) return null
-
-  const selectedCount = devices.filter((d) => d.isSelected).length
-  const visibleDevices = devices.filter((device) => !device.isHidden)
   const hiddenDevices = devices.filter((device) => device.isHidden)
-  const displayedDevices = showHidden ? hiddenDevices : visibleDevices
+  const displayedDevices = devices.filter((device) => showHidden ? device.isHidden : !device.isHidden)
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="w-full max-w-lg overflow-hidden rounded-3xl bg-[var(--surface-elevated,#1e293b)] border border-white/10 shadow-2xl text-slate-100"
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-white/5">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-500/20 text-sky-400">
-                <Icon name="airplay" className="text-2xl" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold tracking-wide">AirPlay 2 Speakers</h3>
-                <p className="text-xs text-slate-400">
-                  {selectedCount > 0
-                    ? `Streaming to ${selectedCount} speaker${selectedCount > 1 ? 's' : ''}`
-                    : 'Select speakers for multi-room output'}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              type="button"
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition text-slate-300 cursor-pointer"
-            >
-              <Icon name="close" className="text-xl" />
-            </button>
-          </div>
-
-          {/* Body */}
-          <div className="p-6 flex flex-col gap-5 max-h-[60vh] overflow-y-auto">
-            {/* Master Volume */}
-            <div className="rounded-2xl bg-white/5 p-4 flex flex-col gap-2 border border-white/5">
-              <div className="flex items-center justify-between text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                <span className="flex items-center gap-2">
-                  <Icon name="volume_up" className="text-sky-400" />
-                  Master Multi-Room Volume
-                </span>
-                <span className="text-sky-400">{masterVolume}%</span>
-              </div>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={masterVolume}
-                onChange={(e) => handleMasterVolume(Number(e.target.value))}
-                className="w-full h-2 rounded-lg bg-slate-700 accent-sky-400 cursor-pointer"
-              />
-            </div>
-
-            {/* Device List */}
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                <span>{showHidden ? `Hidden Speakers (${hiddenDevices.length})` : `Audio Speakers (${visibleDevices.length})`}</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLoading(true)
-                    fetchDevices().finally(() => setLoading(false))
-                  }}
-                  disabled={loading}
-                  className="flex items-center gap-1 text-sky-400 hover:text-sky-300 transition cursor-pointer"
-                >
-                  <Icon name="sync" className={`text-sm ${loading ? 'animate-spin' : ''}`} />
-                  Scan
-                </button>
-              </div>
-
-              {displayedDevices.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 rounded-2xl bg-white/5 text-slate-400 gap-2 border border-dashed border-white/10">
-                  <Icon name="speaker_group" className="text-4xl text-slate-500" />
-                  <p className="text-sm font-medium">{showHidden ? 'No speakers are hidden.' : 'Scanning local network for AirPlay 2 speakers...'}</p>
+      {isOpen && (
+        <div className="fixed inset-0 z-50" onPointerDown={onClose}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.94, y: position.bottom ? 6 : -6 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: position.bottom ? 6 : -6 }}
+            transition={{ duration: 0.16, ease: 'easeOut' }}
+            onPointerDown={(event) => event.stopPropagation()}
+            style={{ top: position.top, bottom: position.bottom, right: position.right, transformOrigin: position.origin }}
+            className="fixed w-[min(23rem,calc(100vw-1.5rem))] overflow-hidden rounded-[1.35rem] border border-white/15 bg-[#242427]/95 p-2 text-white shadow-[0_20px_55px_rgba(0,0,0,0.55)] backdrop-blur-2xl"
+          >
+            {!showHidden && (
+              <div className="mb-1 flex h-14 items-center gap-2 border-b border-white/10 px-1.5 pb-1">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10 text-white/70">
+                  <Icon name="volume_up" className="text-lg" />
                 </div>
-              ) : (
-                displayedDevices.map((device) => (
-                  <div
-                    key={device.id}
-                    className={`flex flex-col gap-3 rounded-2xl p-4 transition-all duration-200 border ${
-                      device.isSelected
-                        ? 'bg-sky-950/40 border-sky-500/50 shadow-md'
-                        : 'bg-white/5 border-white/5 hover:border-white/15'
+                <div className="relative h-11 min-w-0 flex-1 overflow-hidden rounded-xl bg-white/[0.09]">
+                  <div className="absolute inset-y-0 left-0 bg-white/[0.13]" style={{ width: `${masterVolume}%` }} />
+                  <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-between px-3">
+                    <span className="text-[0.95rem] font-semibold text-white/95">All Speakers</span>
+                    <span className="text-xs tabular-nums text-white/55">{masterVolume}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={masterVolume}
+                    onChange={(event) => setGroupVolume(Number(event.target.value))}
+                    aria-label="All speakers volume"
+                    className="absolute inset-0 z-20 h-full w-full cursor-ew-resize opacity-0"
+                  />
+                </div>
+                <div className="w-8 shrink-0" />
+              </div>
+            )}
+            <div className="max-h-[min(31rem,calc(100vh-7rem))] overflow-y-auto overscroll-contain">
+              {displayedDevices.length ? displayedDevices.map((device) => (
+                <div key={device.id} className="flex h-14 items-center gap-2 rounded-2xl px-1.5 transition hover:bg-white/[0.05]">
+                  <button
+                    type="button"
+                    onClick={() => device.isHidden ? setDeviceHidden(device.id, false) : toggleDevice(device)}
+                    aria-label={device.isHidden ? `Show ${device.name}` : `${device.isSelected ? 'Deselect' : 'Select'} ${device.name}`}
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition ${
+                      device.isHidden
+                        ? 'border-white/30 text-white/70'
+                        : device.isSelected
+                          ? 'border-sky-400 bg-sky-500 text-white'
+                          : 'border-white/35 text-transparent hover:border-white/65'
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <button
-                        type="button"
-                        onClick={() => toggleDevice(device.id, device.isSelected)}
-                        disabled={device.isHidden}
-                        className="flex flex-1 cursor-pointer select-none items-center gap-3 border-0 bg-transparent p-0 text-left disabled:cursor-default disabled:opacity-60"
-                      >
-                        <div
-                          className={`flex h-6 w-6 items-center justify-center rounded-lg border transition ${
-                            device.isSelected
-                              ? 'bg-sky-500 border-sky-400 text-slate-950'
-                              : 'border-slate-600 bg-slate-800'
-                          }`}
-                        >
-                          {device.isSelected && <Icon name="check" className="text-base font-bold" />}
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-sm text-slate-100">{device.name}</span>
-                            {device.isSelected && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/20 text-sky-300">
-                                ACTIVE
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-xs text-slate-400 font-mono">
-                            {device.address}
-                          </span>
-                        </div>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDeviceHidden(device.id, !device.isHidden)}
-                        title={device.isHidden ? 'Show this speaker' : 'Hide this speaker'}
-                        aria-label={device.isHidden ? `Show ${device.name}` : `Hide ${device.name}`}
-                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-500 transition hover:bg-white/10 hover:text-slate-200"
-                      >
-                        <Icon name={device.isHidden ? 'visibility' : 'visibility_off'} className="text-xl" />
-                      </button>
-                    </div>
+                    <Icon name={device.isHidden ? 'add' : 'check'} filled className="text-lg" />
+                  </button>
 
+                  <div className={`relative h-11 min-w-0 flex-1 overflow-hidden rounded-xl ${device.isSelected ? 'bg-white/[0.09]' : 'bg-transparent'}`}>
                     {device.isSelected && (
-                      <div className="flex items-center gap-3 pt-2 border-t border-white/10">
-                        <Icon name="volume_down" className="text-slate-400 text-sm" />
-                        <input
-                          type="range"
-                          min={0}
-                          max={100}
-                          value={device.volume}
-                          onChange={(e) => handleDeviceVolume(device.id, Number(e.target.value))}
-                          className="w-full h-1.5 rounded-lg bg-slate-700 accent-sky-400 cursor-pointer"
-                        />
-                        <span className="text-xs font-mono text-slate-300 w-8 text-right">
-                          {device.volume}%
-                        </span>
-                      </div>
+                      <div className="absolute inset-y-0 left-0 bg-white/[0.13]" style={{ width: `${device.volume}%` }} />
+                    )}
+                    <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-between gap-2 px-3">
+                      <span className={`truncate text-[0.95rem] font-medium ${device.isHidden ? 'text-white/55' : 'text-white/95'}`}>{device.name}</span>
+                      {device.isSelected && <span className="text-xs tabular-nums text-white/55">{device.volume}%</span>}
+                    </div>
+                    {device.isSelected && (
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        value={device.volume}
+                        onChange={(event) => setDeviceVolume(device.id, Number(event.target.value))}
+                        aria-label={`${device.name} volume`}
+                        className="absolute inset-0 z-20 h-full w-full cursor-ew-resize opacity-0"
+                      />
                     )}
                   </div>
-                ))
-              )}
-              {(hiddenDevices.length > 0 || showHidden) && (
-                <button
-                  type="button"
-                  onClick={() => setShowHidden((value) => !value)}
-                  className="flex items-center justify-center gap-2 rounded-xl py-2 text-sm font-semibold text-slate-400 hover:bg-white/5 hover:text-slate-200"
-                >
-                  <Icon name={showHidden ? 'arrow_back' : 'visibility'} className="text-lg" />
-                  {showHidden ? 'Back to available speakers' : `Manage hidden speakers (${hiddenDevices.length})`}
-                </button>
+
+                  {!showHidden && (
+                    <button
+                      type="button"
+                      onClick={() => setDeviceHidden(device.id, true)}
+                      aria-label={`Hide ${device.name}`}
+                      title="Hide speaker"
+                      className="flex h-9 w-8 shrink-0 items-center justify-center rounded-full text-white/25 transition hover:bg-white/10 hover:text-white/65"
+                    >
+                      <Icon name="visibility_off" className="text-lg" />
+                    </button>
+                  )}
+                </div>
+              )) : (
+                <div className="flex h-24 items-center justify-center gap-2 text-sm text-white/45">
+                  {loading && <Icon name="progress_activity" className="animate-spin" />}
+                  {showHidden ? 'No hidden speakers' : 'Looking for speakers…'}
+                </div>
               )}
             </div>
-          </div>
 
-          {/* Footer */}
-          <div className="flex items-center justify-between px-6 py-4 bg-white/5 border-t border-white/10 text-xs text-slate-400">
-            <span>Server-Side Synchronized Audio</span>
-            <button
-              onClick={onClose}
-              type="button"
-              className="px-5 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold transition shadow-lg shadow-sky-500/20 cursor-pointer"
-            >
-              Done
-            </button>
-          </div>
-        </motion.div>
-      </div>
+            {(hiddenDevices.length > 0 || showHidden) && (
+              <button
+                type="button"
+                onClick={() => setShowHidden((value) => !value)}
+                className="mt-1 flex h-10 w-full items-center justify-center gap-2 border-t border-white/10 text-xs font-medium text-white/45 transition hover:text-white/75"
+              >
+                <Icon name={showHidden ? 'arrow_back' : 'visibility'} className="text-base" />
+                {showHidden ? 'Speakers' : `${hiddenDevices.length} hidden`}
+              </button>
+            )}
+          </motion.div>
+        </div>
+      )}
     </AnimatePresence>
   )
 }

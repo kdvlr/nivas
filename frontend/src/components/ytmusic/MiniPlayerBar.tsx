@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import Icon from '../Icon'
 import { api } from '../../lib/api'
@@ -37,6 +37,7 @@ export default function MiniPlayerBar({
   onOpenFullPlayer,
 }: MiniPlayerBarProps) {
   const [showAirPlayModal, setShowAirPlayModal] = useState(false)
+  const airPlayButtonRef = useRef<HTMLButtonElement>(null)
   const [activeAirPlayCount, setActiveAirPlayCount] = useState(0)
 
   const checkAirPlayStatus = async () => {
@@ -162,6 +163,7 @@ export default function MiniPlayerBar({
 
           {/* AirPlay 2 Trigger Button */}
           <button
+            ref={airPlayButtonRef}
             onClick={() => setShowAirPlayModal(true)}
             className={`relative flex items-center gap-1.5 px-3 py-2 rounded-2xl transition border ${
               activeAirPlayCount > 0
@@ -191,6 +193,7 @@ export default function MiniPlayerBar({
       <AirPlaySelectorModal
         isOpen={showAirPlayModal}
         onClose={() => setShowAirPlayModal(false)}
+        anchorRef={airPlayButtonRef}
       />
     </>
   )

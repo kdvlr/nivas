@@ -119,6 +119,7 @@ export default function YTMusic({
   const [charts, setCharts] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [showAirPlayModal, setShowAirPlayModal] = useState(false)
+  const airPlayButtonRef = useRef<HTMLButtonElement>(null)
   const [activeTab, setActiveTab] = useState<PlayerTab>('queue')
   const [lyrics, setLyrics] = useState('')
   const [lyricsLoading, setLyricsLoading] = useState(false)
@@ -238,7 +239,7 @@ export default function YTMusic({
           {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center text-white/55 hover:text-white"><Icon name="close" /></button>}
         </div>
         <div className="ml-auto flex shrink-0 items-center gap-3">
-          <button onClick={() => setShowAirPlayModal(true)} title="Choose AirPlay rooms" className="flex h-12 w-12 items-center justify-center rounded-full text-white/85 hover:bg-white/10 hover:text-white">
+          <button ref={airPlayButtonRef} onClick={() => setShowAirPlayModal(true)} title="Choose AirPlay rooms" className="flex h-12 w-12 items-center justify-center rounded-full text-white/85 hover:bg-white/10 hover:text-white">
             <Icon name="airplay" className="text-[2rem]" />
           </button>
           <div className="hidden h-11 w-11 items-center justify-center rounded-full bg-rose-600 text-lg font-semibold sm:flex">N</div>
@@ -370,7 +371,7 @@ export default function YTMusic({
         </main>
       )}
 
-      <AirPlaySelectorModal isOpen={showAirPlayModal} onClose={() => setShowAirPlayModal(false)} />
+      <AirPlaySelectorModal isOpen={showAirPlayModal} onClose={() => setShowAirPlayModal(false)} anchorRef={airPlayButtonRef} />
     </div>
   )
 }
