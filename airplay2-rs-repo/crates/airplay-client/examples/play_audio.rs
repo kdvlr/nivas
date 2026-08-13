@@ -658,10 +658,7 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
             }
 
             if let Some(command) = airplay_command {
-                println!(
-                    "Applying AirPlay event command to all speakers: {:?}",
-                    command
-                );
+                println!("REMOTE_EVENT: {:?}", command);
                 match command {
                     DacpCommand::Pause => {
                         for conn in &mut conns {
@@ -722,7 +719,7 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                         command => command,
                     };
-                    println!("Applying DACP command to all speakers: {:?}", command);
+                    println!("REMOTE_EVENT: {:?}", command);
                     match command {
                         DacpCommand::Pause => {
                             for conn in &mut conns {

@@ -1733,6 +1733,7 @@ impl Connection {
 
         self.session.pause()?;
         self.playback_state = PlaybackState::Paused;
+        let _ = self.send_playback_state(PlaybackState::Paused).await;
 
         Ok(())
     }
@@ -1761,6 +1762,7 @@ impl Connection {
         self.session.start_playing()?;
         self.playback_state = PlaybackState::Playing;
         self.paused_rtp_info = None;
+        let _ = self.send_playback_state(PlaybackState::Playing).await;
 
         Ok(())
     }
@@ -1905,6 +1907,33 @@ impl Connection {
             album,
             res
         );
+        Ok(())
+    }
+
+    /// Send now-playing playback state (Playing vs Paused vs Stopped) via DMAP `caps` tag.
+    pub async fn send_playback_state(&mut self, state: PlaybackState) -> Result<()> {
+        let val: u8 = match state {
+            PlaybackState::Playing => 3,
+            PlaybackState::Paused => 2,
+            PlaybackState::Stopped | PlaybackState::Buffering | PlaybackState::Error => 1,
+        };
+        let inner = dmap_tag(b"caps", &[val]);
+        let body = dmap_tag(b"mlit", &inner);
+        let current_rtp = self.current_metadata_rtp_timestamp();
+        let mut req = RtspRequest::new(
+            airplay_rtsp::RtspMethod::SetParameter,
+            self.session.request_uri(),
+        )
+        .header("Content-Type", "application/x-dmap-tagged")
+        .header("RTP-Info", format!("rtptime={}", current_rtp))
+        .body(body);
+
+        if let Some(session_id) = self.session.stream_connection_id() {
+            req = req.header("Session", session_id.to_string());
+        }
+
+        let res = self.rtsp.send(req).await;
+        tracing::info!("send_playback_state ({:?}, val={}) result: {:?}", state, val, res);
         Ok(())
     }
 

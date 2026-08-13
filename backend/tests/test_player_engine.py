@@ -272,6 +272,7 @@ def test_selected_speaker_persists_and_restores(tmp_path):
     # Re-instantiate engine and verify preferences
     new_engine = PlayerEngine()
     new_engine._preferences_path = engine._preferences_path
+    new_engine._hidden_device_ids, new_engine._selected_device_ids, new_engine._selected_device_names, new_engine._device_volumes = new_engine._load_preferences()
     assert "192.168.1.50" in new_engine._selected_device_ids
     assert "Master Bedroom" in new_engine._selected_device_names
 
@@ -348,11 +349,11 @@ async def test_non_blocking_autoplay_fetch(monkeypatch):
     monkeypatch.setattr("app.services.ytmusic.ytmusic_service.get_autoplay_tracks", lambda vid: recs)
 
     broadcasted = False
-    async def mock_broadcast(scope):
+    def mock_broadcast():
         nonlocal broadcasted
         broadcasted = True
 
-    monkeypatch.setattr("app.ws.manager.broadcast", mock_broadcast)
+    monkeypatch.setattr(engine, "_broadcast_state", mock_broadcast)
 
     await engine._fetch_autoplay_recommendations("v123")
 

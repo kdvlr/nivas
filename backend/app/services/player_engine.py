@@ -595,16 +595,53 @@ class PlayerEngine:
             return False
         return self._start_airplay_process(devices, wav_path, track_info, artwork_path)
 
-    def _watch_stream_process(self, stream_id: str, proc: subprocess.Popen, device_ids: List[str]):
+    def _watch_stream_process(
+        self,
+        stream_id: str,
+        proc: subprocess.Popen,
+        device_ids: List[str],
+        log_handle: Optional[Any] = None,
+    ):
+        if proc.stdout:
+            try:
+                for line in iter(proc.stdout.readline, ""):
+                    if not line:
+                        break
+                    if log_handle:
+                        try:
+                            log_handle.write(line)
+                            log_handle.flush()
+                        except Exception:
+                            pass
+                    line_clean = line.strip()
+                    if "REMOTE_EVENT: Pause" in line_clean:
+                        logger.info("Received AirPlay remote event: Pause")
+                        if self._event_loop and self._event_loop.is_running():
+                            def _apply_pause():
+                                self.is_playing = False
+                                self._paused_at = time.monotonic()
+                                self._broadcast_state()
+                            self._event_loop.call_soon_threadsafe(_apply_pause)
+                    elif "REMOTE_EVENT: Play" in line_clean:
+                        logger.info("Received AirPlay remote event: Play")
+                        if self._event_loop and self._event_loop.is_running():
+                            def _apply_play():
+                                self.is_playing = True
+                                self._paused_at = None
+                                self._broadcast_state()
+                            self._event_loop.call_soon_threadsafe(_apply_play)
+            except Exception as e:
+                logger.debug(f"Stream output reader error: {e}")
+
         exit_code = proc.wait()
         with self._stream_lock:
             if self._stream_procs.get(stream_id) is not proc:
                 return
             self._stream_procs.pop(stream_id, None)
-            log_handle = self._stream_log_handles.pop(stream_id, None)
-        if log_handle is not None:
+            stored_log = self._stream_log_handles.pop(stream_id, None)
+        if stored_log is not None:
             try:
-                log_handle.close()
+                stored_log.close()
             except OSError:
                 pass
         for device_id in device_ids:
@@ -619,10 +656,16 @@ class PlayerEngine:
             self.is_playing = False
         self._broadcast_state()
 
-    def _monitor_stream_process(self, stream_id: str, proc: subprocess.Popen, device_ids: List[str]):
+    def _monitor_stream_process(
+        self,
+        stream_id: str,
+        proc: subprocess.Popen,
+        device_ids: List[str],
+        log_handle: Optional[Any] = None,
+    ):
         threading.Thread(
             target=self._watch_stream_process,
-            args=(stream_id, proc, device_ids),
+            args=(stream_id, proc, device_ids, log_handle),
             daemon=True,
             name=f"airplay-monitor-{stream_id}",
         ).start()
@@ -653,6 +696,8 @@ class PlayerEngine:
             wav_path,
             "--airplay2",
             "--control-stdin",
+            "--dacp",
+            "--remote-control-events",
             "--volume",
             f"{volume:.4f}",
         ]
@@ -694,7 +739,7 @@ class PlayerEngine:
             proc = subprocess.Popen(
                 cmd,
                 stdin=subprocess.PIPE,
-                stdout=log_handle,
+                stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
                 bufsize=1,
@@ -705,7 +750,7 @@ class PlayerEngine:
                 self._stream_log_handles[GROUP_STREAM_ID] = log_handle
             for device in devices:
                 device.is_connected = True
-            self._monitor_stream_process(GROUP_STREAM_ID, proc, [device.id for device in devices])
+            self._monitor_stream_process(GROUP_STREAM_ID, proc, [device.id for device in devices], log_handle)
             # Preserve per-room state without embedding a Sonos or test volume.
             for device in devices:
                 value = max(0.0, min(1.0, device.volume / 100.0))
