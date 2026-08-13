@@ -419,17 +419,18 @@ class PlayerEngine:
         self._ensure_default_target()
         self._stop_current_stream()
 
+        parsed_duration = ytmusic_service._parse_duration_seconds(track.get("duration"))
         self.current_track = {
             "videoId": video_id,
             "title": track.get("title", "Unknown Title"),
             "artist": track.get("artist", "Unknown Artist"),
             "thumbnail": track.get("thumbnail"),
             "album": track.get("album"),
-            "duration": track.get("duration", 0),
+            "duration": parsed_duration,
         }
         self.played_history[video_id] = time.time()
         self.elapsed_seconds = 0
-        self.duration_seconds = track.get("duration", 0) or 180
+        self.duration_seconds = float(parsed_duration or 180)
         self.is_playing = True
         self._last_audio_at = time.monotonic()
 

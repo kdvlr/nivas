@@ -316,6 +316,22 @@ class YTMusicService:
         return None
 
     @staticmethod
+    def _parse_duration_seconds(duration: Any) -> int:
+        if not duration:
+            return 0
+        if isinstance(duration, (int, float)):
+            return int(duration)
+        if isinstance(duration, str):
+            if duration.isdigit():
+                return int(duration)
+            parts = duration.split(":")
+            try:
+                return sum(int(value) * (60 ** index) for index, value in enumerate(reversed(parts)))
+            except (ValueError, TypeError):
+                return 0
+        return 0
+
+    @staticmethod
     def normalize_song(item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         if not YTMusicService.is_song(item):
             return None
@@ -324,20 +340,14 @@ class YTMusicService:
         album = item.get("album")
         if isinstance(album, dict):
             album = album.get("name")
-        duration = item.get("duration_seconds") or item.get("durationSeconds") or item.get("duration") or 0
-        if isinstance(duration, str):
-            parts = duration.split(":")
-            try:
-                duration = sum(int(value) * (60 ** index) for index, value in enumerate(reversed(parts)))
-            except ValueError:
-                duration = 0
+        duration = item.get("duration_seconds") or item.get("durationSeconds") or item.get("duration") or item.get("length") or 0
         return {
             "videoId": item["videoId"],
             "title": item.get("title") or "Unknown Title",
             "artist": artist or "Unknown Artist",
             "thumbnail": thumbnail,
             "album": album or "",
-            "duration": int(duration or 0),
+            "duration": YTMusicService._parse_duration_seconds(duration),
         }
 
     def get_autoplay_tracks(self, video_id: str, limit: int = 12) -> List[Dict[str, Any]]:
@@ -353,13 +363,14 @@ class YTMusicService:
                 album = item.get("album")
                 if isinstance(album, dict):
                     album = album.get("name")
+                duration = item.get("duration_seconds") or item.get("durationSeconds") or item.get("duration") or item.get("length") or 0
                 track = {
                     "videoId": item["videoId"],
                     "title": item.get("title") or "Unknown Title",
                     "artist": artist or "Unknown Artist",
                     "thumbnail": thumbnail,
                     "album": album or "",
-                    "duration": int(item.get("duration_seconds") or item.get("length") or 0),
+                    "duration": YTMusicService._parse_duration_seconds(duration),
                 }
             if not track or track["videoId"] in seen:
                 continue

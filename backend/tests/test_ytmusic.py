@@ -118,3 +118,37 @@ def test_playlist_songs_resolves_music_videos_to_audio():
         "album": "",
         "duration": 0,
     }]
+
+
+def test_parse_duration_seconds_handles_strings_and_numbers():
+    assert YTMusicService._parse_duration_seconds("2:18") == 138
+    assert YTMusicService._parse_duration_seconds("1:02:18") == 3738
+    assert YTMusicService._parse_duration_seconds("138") == 138
+    assert YTMusicService._parse_duration_seconds(138) == 138
+    assert YTMusicService._parse_duration_seconds(None) == 0
+
+
+def test_autoplay_tracks_handles_fallback_string_duration():
+    class FakeClient:
+        def get_watch_playlist(self, videoId=None, playlistId=None, limit=25):
+            return {
+                "tracks": [
+                    {
+                        "videoId": "current",
+                        "title": "Current Track",
+                    },
+                    {
+                        "videoId": "next_track",
+                        "title": "Next Track",
+                        "length": "2:18",  # String duration in fallback
+                        "videoType": "MUSIC_VIDEO_TYPE_UGC",
+                    }
+                ]
+            }
+
+    service = YTMusicService()
+    service._ytmusic = FakeClient()
+    recs = service.get_autoplay_tracks("current")
+    assert len(recs) == 1
+    assert recs[0]["videoId"] == "next_track"
+    assert recs[0]["duration"] == 138
