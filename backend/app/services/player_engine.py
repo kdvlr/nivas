@@ -513,18 +513,11 @@ class PlayerEngine:
 
     async def _orchestrate_playback(self, video_id: str, track_info: Dict[str, Any]):
         try:
-            stream_url, http_headers = ytmusic_service.get_stream_url_and_headers(video_id)
-            if not stream_url:
-                logger.error(f"Could not extract stream URL for track {video_id}")
-                self.is_playing = False
-                self._broadcast_state()
-                return
-
             wav_path = f"/tmp/ytmusic_{video_id}.wav"
-            logger.info(f"Transcoding track '{track_info['title']}' to 44.1kHz PCM WAV...")
-
-            loop = asyncio.get_running_loop()
-            await loop.run_in_executor(None, self._transcode_to_wav, stream_url, wav_path, http_headers)
+            if not os.path.exists(wav_path) or os.path.getsize(wav_path) == 0:
+                logger.info(f"Downloading and converting track '{track_info['title']}' to 44.1kHz PCM WAV...")
+                loop = asyncio.get_running_loop()
+                await loop.run_in_executor(None, self._transcode_to_wav, video_id, wav_path)
 
             if not os.path.exists(wav_path) or os.path.getsize(wav_path) == 0:
                 logger.error(f"Transcoding produced empty file for {video_id}")
@@ -540,6 +533,7 @@ class PlayerEngine:
 
             logger.info(f"Transcode complete. Streaming '{track_info['title']}' via airplay2-rs to {len(self.active_targets)} selected AirPlay speakers")
 
+            loop = asyncio.get_running_loop()
             artwork_path = f"/tmp/ytmusic_{video_id}_artwork.jpg"
             artwork_path = await loop.run_in_executor(
                 None,
@@ -567,21 +561,36 @@ class PlayerEngine:
             self.is_playing = False
             self._broadcast_state()
 
-    def _transcode_to_wav(self, stream_url: str, output_path: str, http_headers: Optional[Dict[str, str]] = None):
+    def _transcode_to_wav(self, source: str, output_path: str):
         try:
-            cmd = ["ffmpeg", "-y"]
-            if http_headers:
-                header_str = "".join(f"{k}: {v}\r\n" for k, v in http_headers.items())
-                cmd.extend(["-headers", header_str])
-            cmd.extend([
-                "-i", stream_url,
-                "-vn", "-ar", "44100", "-ac", "2", "-acodec", "pcm_s16le",
-                output_path
-            ])
-            subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            logger.info(f"Transcoded audio successfully to {output_path}")
+            if source.startswith("http://") or (source.startswith("https://") and not ("youtube.com" in source or "youtu.be" in source)):
+                cmd = [
+                    "ffmpeg", "-y", "-i", source,
+                    "-vn", "-ar", "44100", "-ac", "2", "-acodec", "pcm_s16le",
+                    output_path
+                ]
+                subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                logger.info(f"Transcoded audio successfully to {output_path}")
+                return
+
+            import yt_dlp
+            url = source if (source.startswith("http://") or source.startswith("https://")) else f"https://www.youtube.com/watch?v={source}"
+            out_base = output_path.rsplit(".", 1)[0]
+            ydl_opts = {
+                "format": "bestaudio/best",
+                "outtmpl": f"{out_base}.%(ext)s",
+                "postprocessors": [{
+                    "key": "FFmpegExtractAudio",
+                    "preferredcodec": "wav",
+                }],
+                "quiet": True,
+                "no_warnings": True,
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([url])
+            logger.info(f"Downloaded and converted audio successfully to {output_path}")
         except Exception as e:
-            logger.error(f"FFmpeg transcoding error: {e}")
+            logger.error(f"yt-dlp download/transcoding error: {e}")
 
     def _selected_devices(self) -> List[AirPlayDevice]:
         return [self.devices[device_id] for device_id in self.active_targets if device_id in self.devices]
