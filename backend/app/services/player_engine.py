@@ -64,7 +64,7 @@ class PlayerEngine:
         self._last_audio_at: Optional[float] = None
         self.played_history: Dict[str, float] = {}
         self._preferences_path = Path(get_settings().data_dir) / "airplay_preferences.json"
-        self._hidden_device_ids, self._device_volumes = self._load_preferences()
+        self._hidden_device_ids, self._selected_device_ids, self._selected_device_names, self._device_volumes = self._load_preferences()
 
         self._scanner_task: Optional[asyncio.Task] = None
         self._ticker_task: Optional[asyncio.Task] = None
@@ -99,18 +99,20 @@ class PlayerEngine:
             int(os.getenv("AIRPLAY_PAUSE_TIMEOUT_SECONDS", DEFAULT_PAUSED_SESSION_TIMEOUT_SECONDS)),
         )
 
-    def _load_preferences(self) -> tuple[set[str], dict[str, int]]:
+    def _load_preferences(self) -> tuple[set[str], set[str], set[str], dict[str, int]]:
         try:
             data = json.loads(self._preferences_path.read_text(encoding="utf-8"))
             hidden = {str(device_id) for device_id in data.get("hiddenDeviceIds", [])}
+            selected_ids = {str(device_id) for device_id in data.get("selectedDeviceIds", [])}
+            selected_names = {str(name) for name in data.get("selectedDeviceNames", [])}
             raw_volumes = data.get("deviceVolumes", {})
             volumes = {str(k): int(v) for k, v in raw_volumes.items() if isinstance(v, (int, float))}
-            return hidden, volumes
+            return hidden, selected_ids, selected_names, volumes
         except (FileNotFoundError, json.JSONDecodeError, OSError, AttributeError):
-            return set(), {}
+            return set(), set(), set(), {}
 
     def _load_hidden_device_ids(self) -> set[str]:
-        hidden, _ = self._load_preferences()
+        hidden, _, _, _ = self._load_preferences()
         return hidden
 
     def _save_preferences(self) -> None:
@@ -119,6 +121,8 @@ class PlayerEngine:
             temporary_path = self._preferences_path.with_suffix(".tmp")
             payload = {
                 "hiddenDeviceIds": sorted(self._hidden_device_ids),
+                "selectedDeviceIds": sorted(self._selected_device_ids),
+                "selectedDeviceNames": sorted(self._selected_device_names),
                 "deviceVolumes": self._device_volumes,
             }
             temporary_path.write_text(
@@ -251,11 +255,6 @@ class PlayerEngine:
 
                 addr = str(conf.address)
                 name = str(conf.name)
-                
-                # Filter out TV devices (case-insensitive)
-                name_lower = name.lower()
-                if "tv" in name_lower:
-                    continue
 
                 if addr in discovered_addresses:
                     continue
@@ -277,12 +276,18 @@ class PlayerEngine:
                         else "AirPlay Speaker"
                     )
 
+                is_prev_selected = (dev_id in self._selected_device_ids or name in self._selected_device_names)
+
                 if dev_id in self.devices:
                     dev = self.devices[dev_id]
                     dev.name = name
                     dev.port = port
                     dev.model = model
                     dev.last_seen = time.time()
+                    if is_prev_selected and not dev.is_selected:
+                        dev.is_selected = True
+                        if dev_id not in self.active_targets:
+                            self.active_targets.append(dev_id)
                 else:
                     saved_vol = self._device_volumes.get(dev_id, 70)
                     dev = AirPlayDevice(
@@ -294,6 +299,10 @@ class PlayerEngine:
                         volume=saved_vol
                     )
                     dev.is_hidden = dev_id in self._hidden_device_ids
+                    if is_prev_selected:
+                        dev.is_selected = True
+                        if dev_id not in self.active_targets:
+                            self.active_targets.append(dev_id)
                     self.devices[dev_id] = dev
                     logger.info(f"Discovered AirPlay speaker: {name} ({addr}:{port}) with volume {saved_vol}")
 
@@ -377,9 +386,18 @@ class PlayerEngine:
         }
 
     def _ensure_default_target(self):
+        # 1. Restore selection for any discovered devices matching previously saved selected IDs/names
+        if self._selected_device_ids or self._selected_device_names:
+            for dev in self.devices.values():
+                if (dev.id in self._selected_device_ids or dev.name in self._selected_device_names) and not dev.is_hidden:
+                    dev.is_selected = True
+                    if dev.id not in self.active_targets:
+                        self.active_targets.append(dev.id)
+
+        # 2. If no saved target matches, fall back to Kitchen or first available non-hidden device
         if not self.active_targets or not self._selected_devices():
             kitchen_dev = next(
-                (dev for dev in self.devices.values() if "kitchen" in dev.name.lower() or "kitchen" in dev.model.lower()),
+                (dev for dev in self.devices.values() if ("kitchen" in dev.name.lower() or "kitchen" in dev.model.lower()) and not dev.is_hidden),
                 None
             )
             if kitchen_dev:
@@ -782,11 +800,20 @@ class PlayerEngine:
     def toggle_device(self, device_id: str, selected: bool) -> Dict[str, Any]:
         device_id = str(device_id)
         if device_id in self.devices:
-            self.devices[device_id].is_selected = selected
-            if selected and device_id not in self.active_targets:
-                self.active_targets.append(device_id)
-            elif not selected and device_id in self.active_targets:
-                self.active_targets.remove(device_id)
+            dev = self.devices[device_id]
+            dev.is_selected = selected
+            if selected:
+                if device_id not in self.active_targets:
+                    self.active_targets.append(device_id)
+                self._selected_device_ids.add(device_id)
+                self._selected_device_names.add(dev.name)
+            else:
+                if device_id in self.active_targets:
+                    self.active_targets.remove(device_id)
+                self._selected_device_ids.discard(device_id)
+                self._selected_device_names.discard(dev.name)
+
+            self._save_preferences()
 
             # Group membership is negotiated at sender startup. Recreate the
             # shared sender when changing rooms so an old member is never left

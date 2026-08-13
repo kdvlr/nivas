@@ -253,8 +253,62 @@ def test_speaker_volume_persists_in_preferences(tmp_path):
     # Create new engine instance and verify restored volume
     new_engine = PlayerEngine()
     new_engine._preferences_path = engine._preferences_path
-    hidden, volumes = new_engine._load_preferences()
+    hidden, selected_ids, selected_names, volumes = new_engine._load_preferences()
     assert volumes[kitchen.id] == 45
+
+
+def test_selected_speaker_persists_and_restores(tmp_path):
+    engine = PlayerEngine()
+    engine._preferences_path = tmp_path / "airplay_preferences.json"
+    master_bed = AirPlayDevice("192.168.1.50", "Master Bedroom", "192.168.1.50", 7000, "Apple TV 4K")
+    engine.devices[master_bed.id] = master_bed
+
+    engine.toggle_device(master_bed.id, True)
+
+    data = json.loads(engine._preferences_path.read_text(encoding="utf-8"))
+    assert "192.168.1.50" in data["selectedDeviceIds"]
+    assert "Master Bedroom" in data["selectedDeviceNames"]
+
+    # Re-instantiate engine and verify preferences
+    new_engine = PlayerEngine()
+    new_engine._preferences_path = engine._preferences_path
+    assert "192.168.1.50" in new_engine._selected_device_ids
+    assert "Master Bedroom" in new_engine._selected_device_names
+
+
+@pytest.mark.asyncio
+async def test_scan_devices_discovers_tv_and_restores_selection(tmp_path):
+    engine = PlayerEngine()
+    engine._preferences_path = tmp_path / "airplay_preferences.json"
+    engine._selected_device_names.add("Master Bedroom TV")
+
+    airplay_service = SimpleNamespace(
+        port=7000,
+        properties={"manufacturer": "Apple", "model": "Apple TV"},
+    )
+    config = SimpleNamespace(
+        address="192.168.1.55",
+        name="Master Bedroom TV",
+        device_info=SimpleNamespace(model="Apple TV"),
+        get_service=lambda protocol: airplay_service if protocol.name == "AirPlay" else None,
+    )
+    fake_pyatv = SimpleNamespace(
+        const=SimpleNamespace(
+            Protocol=SimpleNamespace(
+                AirPlay=SimpleNamespace(name="AirPlay"),
+                RAOP=SimpleNamespace(name="RAOP"),
+            )
+        ),
+        scan=AsyncMock(return_value=[config]),
+    )
+
+    with patch.dict("sys.modules", {"pyatv": fake_pyatv}):
+        devices = await engine.scan_devices()
+
+    assert len(devices) == 1
+    assert devices[0]["name"] == "Master Bedroom TV"
+    assert devices[0]["isSelected"] is True
+    assert "192.168.1.55" in engine.active_targets
 
 
 def test_played_history_deduplication():
