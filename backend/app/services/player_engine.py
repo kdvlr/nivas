@@ -82,6 +82,11 @@ class PlayerEngine:
             1,
             int(os.getenv("AIRPLAY_PAUSE_TIMEOUT_SECONDS", DEFAULT_PAUSED_SESSION_TIMEOUT_SECONDS)),
         )
+        self.sonos_listener = SonosEventListener(
+            on_volume_change=self._on_external_sonos_volume,
+            on_state_change=self._on_external_sonos_state,
+        )
+        self.media_remote = MediaRemotePublisher(display_name="Nivas", port=49152)
 
     def get_recently_played_ids(self, hours: float = 4.0) -> set[str]:
         cutoff = time.time() - (hours * 3600)
@@ -137,12 +142,6 @@ class PlayerEngine:
 
     def _save_hidden_device_ids(self) -> None:
         self._save_preferences()
-
-        self.sonos_listener = SonosEventListener(
-            on_volume_change=self._on_external_sonos_volume,
-            on_state_change=self._on_external_sonos_state,
-        )
-        self.media_remote = MediaRemotePublisher(display_name="Nivas", port=49152)
 
     def _on_external_sonos_volume(self, ip: str, volume: int):
         for dev_id, dev in self.devices.items():
