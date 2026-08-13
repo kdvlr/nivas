@@ -78,6 +78,7 @@ class PlayerEngine:
         self._paused_stream_expired = False
         self._event_loop: Optional[asyncio.AbstractEventLoop] = None
         self._advancing = False
+        self._prefetching_video_ids: set[str] = set()
         self._paused_session_timeout = max(
             1,
             int(os.getenv("AIRPLAY_PAUSE_TIMEOUT_SECONDS", DEFAULT_PAUSED_SESSION_TIMEOUT_SECONDS)),
@@ -520,16 +521,22 @@ class PlayerEngine:
 
             if next_track and next_track.get("videoId"):
                 next_video_id = next_track["videoId"]
-                next_wav_path = f"/tmp/ytmusic_{next_video_id}.wav"
-                if not os.path.exists(next_wav_path) or os.path.getsize(next_wav_path) == 0:
-                    logger.info("Pre-fetching next track in background: %s (%s)", next_track.get("title"), next_video_id)
-                    loop = asyncio.get_running_loop()
-                    await loop.run_in_executor(None, self._transcode_to_wav, next_video_id, next_wav_path)
+                if next_video_id in self._prefetching_video_ids:
+                    return
+                self._prefetching_video_ids.add(next_video_id)
+                try:
+                    next_wav_path = f"/tmp/ytmusic_{next_video_id}.wav"
+                    if not os.path.exists(next_wav_path) or os.path.getsize(next_wav_path) == 0:
+                        logger.info("Pre-fetching next track in background: %s (%s)", next_track.get("title"), next_video_id)
+                        loop = asyncio.get_running_loop()
+                        await loop.run_in_executor(None, self._transcode_to_wav, next_video_id, next_wav_path)
 
-                next_art_path = f"/tmp/ytmusic_{next_video_id}_artwork.jpg"
-                if not os.path.exists(next_art_path) and next_track.get("thumbnail"):
-                    loop = asyncio.get_running_loop()
-                    await loop.run_in_executor(None, self._download_artwork, next_track["thumbnail"], next_art_path)
+                    next_art_path = f"/tmp/ytmusic_{next_video_id}_artwork.jpg"
+                    if not os.path.exists(next_art_path) and next_track.get("thumbnail"):
+                        loop = asyncio.get_running_loop()
+                        await loop.run_in_executor(None, self._download_artwork, next_track["thumbnail"], next_art_path)
+                finally:
+                    self._prefetching_video_ids.discard(next_video_id)
         except Exception as e:
             logger.debug(f"Next track prefetch background task error: {e}")
 
