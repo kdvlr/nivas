@@ -522,19 +522,19 @@ class PlayerEngine:
 
     def _transcode_to_wav(self, stream_url: str, output_path: str):
         import os
-        raw_path = output_path + ".raw.m4a"
+        raw_path = output_path + ".raw.wav"
         try:
-            # Phase 1: Download raw stream to local disk buffer with network reconnect flags
+            # Phase 1: Decode stream to raw PCM WAV on local disk buffer with network reconnect flags
             dl_cmd = [
                 "ffmpeg", "-y", "-nostdin",
                 "-reconnect", "1", "-reconnect_at_eof", "1", "-reconnect_streamed", "1",
                 "-i", stream_url,
-                "-vn", "-c", "copy",
+                "-vn", "-ar", "44100", "-ac", "2", "-acodec", "pcm_s16le",
                 raw_path
             ]
             subprocess.run(dl_cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-            # Phase 2: Run EBU R128 loudness normalization on local file
+            # Phase 2: Run EBU R128 loudness normalization on local WAV file
             norm_cmd = [
                 "ffmpeg", "-y", "-nostdin",
                 "-i", raw_path,

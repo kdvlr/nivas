@@ -336,7 +336,7 @@ def test_transcode_to_wav_runs_disk_buffered_loudnorm(monkeypatch):
     # Command 1: Local stream download with reconnect flags
     assert captured_cmds[0][0] == "ffmpeg"
     assert "-reconnect" in captured_cmds[0]
-    assert captured_cmds[0][-1] == "/tmp/output.wav.raw.m4a"
+    assert captured_cmds[0][-1] == "/tmp/output.wav.raw.wav"
 
     # Command 2: EBU R128 loudness normalization on local file
     assert captured_cmds[1][0] == "ffmpeg"
