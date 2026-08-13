@@ -615,8 +615,11 @@ class PlayerEngine:
                 if running_proc is not None and running_proc.poll() is not None:
                     running_proc = None
 
-            connected_targets = {dev.id for dev in self.active_targets if dev.is_connected}
-            target_ids = {dev.id for dev in self.active_targets}
+            connected_targets = {
+                dev_id for dev_id in self.active_targets
+                if self.devices.get(dev_id) and self.devices[dev_id].is_connected
+            }
+            target_ids = set(self.active_targets)
 
             if running_proc is not None and running_proc.stdin is not None and connected_targets == target_ids and target_ids:
                 logger.info(f"Transitioning in-session to '{track_info['title']}' on existing AirPlay session")
