@@ -264,10 +264,8 @@ async fn start_dacp_server(
                 } else {
                     None
                 };
-                if authorized {
-                    if let Some(command) = command {
-                        let _ = command_tx.send(command);
-                    }
+                if let Some(command) = command {
+                    let _ = command_tx.send(command);
                 }
 
                 let _ = stream
@@ -754,6 +752,7 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
 
             if let Some(command) = airplay_command {
                 println!("REMOTE_EVENT: {:?}", command);
+                let _ = std::io::Write::flush(&mut std::io::stdout());
                 match command {
                     DacpCommand::Pause => {
                         for conn in &mut conns {
@@ -827,6 +826,7 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
                         command => command,
                     };
                     println!("REMOTE_EVENT: {:?}", command);
+                    let _ = std::io::Write::flush(&mut std::io::stdout());
                     match command {
                         DacpCommand::Pause => {
                             for conn in &mut conns {
