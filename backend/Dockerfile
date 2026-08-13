@@ -2,7 +2,7 @@
 FROM node:22-alpine AS frontend
 WORKDIR /build
 COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci
 COPY frontend/ ./
 RUN npm run build -- --outDir /build/dist --emptyOutDir
 
@@ -11,19 +11,10 @@ FROM rust:alpine AS airplay2-builder
 WORKDIR /build
 RUN apk add --no-cache alsa-lib-dev musl-dev gcc g++ pkgconfig
 COPY airplay2-rs-repo ./
-RUN cargo build --release -p airplay-client --example play_audio
-
-# ---- Python dependency wheels ----
-# miniaudio builds from source on some architectures. Keep that compiler out
-# of the final always-on image by producing all wheels in a dedicated stage.
-FROM python:3.12-slim AS python-deps
-WORKDIR /build
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends g++ \
-    && rm -rf /var/lib/apt/lists/*
-COPY backend/pyproject.toml ./
-COPY backend/app ./app
-RUN pip wheel --no-cache-dir --wheel-dir /wheels .
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/build/target \
+    cargo build --release -p airplay-client --example play_audio && \
+    cp /build/target/release/examples/play_audio /build/play_audio
 
 # ---- backend runtime ----
 FROM python:3.12-slim
@@ -33,16 +24,17 @@ ENV PYTHONUNBUFFERED=1 \
     AIRPLAY_IDENTITY_DIR=/data/airplay-identities \
     STATIC_DIR=/app/static
 
-# Install only runtime audio dependencies.
+# Install runtime dependencies and build essentials for packages requiring compilation
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg libasound2 \
+    && apt-get install -y --no-install-recommends ffmpeg libasound2 gcc g++ \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=python-deps /wheels /wheels
-RUN pip install --no-cache-dir --no-index --find-links=/wheels family-dashboard \
-    && rm -rf /wheels
+COPY backend/pyproject.toml ./
+COPY backend/app ./app
+RUN --mount=type=cache,target=/root/.cache/pip pip install --no-cache-dir .
+
 COPY --from=frontend /build/dist ./static
-COPY --from=airplay2-builder /build/target/release/examples/play_audio /usr/local/bin/airplay-play-audio
+COPY --from=airplay2-builder /build/play_audio /usr/local/bin/airplay-play-audio
 
 VOLUME /data
 EXPOSE 8000
