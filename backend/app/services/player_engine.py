@@ -99,14 +99,15 @@ class PlayerEngine:
             try:
                 with open(p, "rb") as f:
                     cmd = f.read().replace(b"\x00", b" ").decode("utf-8", errors="ignore").strip()
-                    if "airplay-play-audio" in cmd:
-                        pid = int(p.split("/")[2])
-                        if pid not in tracked and pid != os.getpid():
-                            logger.warning("Reaping untracked orphaned AirPlay sender PID %s", pid)
-                            try:
-                                os.kill(pid, signal.SIGKILL)
-                            except (ProcessLookupError, PermissionError, OSError):
-                                pass
+                parts = cmd.split()
+                if parts and (parts[0] == "airplay-play-audio" or parts[0].endswith("/airplay-play-audio")):
+                    pid = int(p.split("/")[2])
+                    if pid not in tracked and pid != os.getpid():
+                        logger.warning("Reaping untracked orphaned AirPlay sender PID %s", pid)
+                        try:
+                            os.kill(pid, signal.SIGKILL)
+                        except (ProcessLookupError, PermissionError, OSError):
+                            pass
             except Exception:
                 pass
 
