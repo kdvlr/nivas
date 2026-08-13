@@ -401,8 +401,8 @@ class YTMusicService:
             logger.error(f"YTMusic get_lyrics error for video '{video_id}': {e}")
             return {}
 
-    def get_stream_url(self, video_id: str) -> Optional[str]:
-        cache_key = f"stream:{video_id}"
+    def get_stream_url_and_headers(self, video_id: str) -> tuple[Optional[str], Dict[str, str]]:
+        cache_key = f"stream_info:{video_id}"
         cached = self._get_cache(cache_key)
         if cached is not None:
             return cached
@@ -423,12 +423,17 @@ class YTMusicService:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
                 stream_url = info.get('url')
+                headers = info.get('http_headers', {})
                 if stream_url:
-                    self._set_cache(cache_key, stream_url, CACHE_TTL["stream"])
-                    return stream_url
+                    self._set_cache(cache_key, (stream_url, headers), CACHE_TTL["stream"])
+                    return stream_url, headers
         except Exception as e:
             logger.error(f"yt-dlp extract error for video '{video_id}': {e}")
 
-        return None
+        return None, {}
+
+    def get_stream_url(self, video_id: str) -> Optional[str]:
+        stream_url, _ = self.get_stream_url_and_headers(video_id)
+        return stream_url
 
 ytmusic_service = YTMusicService()
