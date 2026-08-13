@@ -23,7 +23,7 @@ class MediaRemotePublisher:
         self.on_prev: Optional[Callable[[], None]] = None
         self.on_volume: Optional[Callable[[int], None]] = None
 
-    def start(self):
+    def start(self, loop: Optional[asyncio.AbstractEventLoop] = None):
         try:
             from zeroconf import Zeroconf, ServiceInfo
             
@@ -81,7 +81,14 @@ class MediaRemotePublisher:
             self._is_running = True
             logger.info(f"Registered Apple MediaRemote & AirPlay 2 mDNS services '{self.display_name}'")
             
-            asyncio.create_task(self._start_rpc_server())
+            if loop and loop.is_running():
+                loop.create_task(self._start_rpc_server())
+            else:
+                try:
+                    active_loop = asyncio.get_running_loop()
+                    active_loop.create_task(self._start_rpc_server())
+                except RuntimeError:
+                    logger.debug("No active event loop available to spawn MediaRemote RPC server")
         except Exception as e:
             logger.warning(f"Could not register Apple MediaRemote/AirPlay mDNS service: {e}")
 

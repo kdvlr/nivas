@@ -171,7 +171,7 @@ class PlayerEngine:
         self.media_remote.on_play_pause = lambda: asyncio.run_coroutine_threadsafe(self.toggle_play_pause(), loop)
         self.media_remote.on_next = lambda: asyncio.run_coroutine_threadsafe(self.next_track(), loop)
         self.media_remote.on_prev = lambda: asyncio.run_coroutine_threadsafe(self.prev_track(), loop)
-        self.media_remote.start()
+        self.media_remote.start(loop)
 
     def stop(self):
         if self._scanner_task and not self._scanner_task.done():
