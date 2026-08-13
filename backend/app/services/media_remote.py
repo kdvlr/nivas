@@ -27,10 +27,24 @@ class MediaRemotePublisher:
         try:
             from zeroconf import Zeroconf, ServiceInfo
             
-            # Persistent MAC/UUID-like bytes for mDNS unique identifier
             mac_str = "02:42:AC:11:00:02"
+            mac_bytes = b"02:42:ac:11:00:02"
             
-            properties = {
+            # Full AirPlay 2 + MediaRemote Control Center feature properties
+            airplay_props = {
+                b"deviceid": mac_bytes,
+                b"features": b"0x5A7FFFF7,0x1E",
+                b"flags": b"0x4",
+                b"model": b"AudioAccessory1,1",
+                b"name": self.display_name.encode("utf-8"),
+                b"pk": b"b4e78079a4055be2f6280ec522fbce71b86e88ffbf31a70425c276326127fa28",
+                b"pi": b"b4e78079-a405-5be2-f628-0ec522fbce71",
+                b"srcvers": b"220.68",
+                b"vv": b"2",
+                b"statusflags": b"0x4",
+            }
+
+            mr_props = {
                 b"Name": self.display_name.encode("utf-8"),
                 b"ModelName": b"Apple TV",
                 b"UniqueIdentifier": b"NIVAS-MEDIAREMOTE-01",
@@ -41,25 +55,35 @@ class MediaRemotePublisher:
 
             local_ip = self._get_local_ip()
             ip_bytes = socket.inet_aton(local_ip)
+            server_name = f"Nivas-{socket.gethostname()}.local."
 
             self._service_info = ServiceInfo(
                 type_="_mediaremotetv._tcp.local.",
                 name=f"{self.display_name}._mediaremotetv._tcp.local.",
                 addresses=[ip_bytes],
                 port=self.port,
-                properties=properties,
-                server=f"Nivas-{socket.gethostname()}.local.",
+                properties=mr_props,
+                server=server_name,
+            )
+
+            self._airplay_info = ServiceInfo(
+                type_="_airplay._tcp.local.",
+                name=f"{self.display_name}._airplay._tcp.local.",
+                addresses=[ip_bytes],
+                port=7000,
+                properties=airplay_props,
+                server=server_name,
             )
 
             self._zeroconf = Zeroconf()
             self._zeroconf.register_service(self._service_info)
+            self._zeroconf.register_service(self._airplay_info)
             self._is_running = True
-            logger.info(f"Registered Apple MediaRemote mDNS service '{self.display_name}' on port {self.port}")
+            logger.info(f"Registered Apple MediaRemote & AirPlay 2 mDNS services '{self.display_name}'")
             
-            # Start lightweight RPC TCP server for incoming Control Center handshake/commands
             asyncio.create_task(self._start_rpc_server())
         except Exception as e:
-            logger.warning(f"Could not register Apple MediaRemote mDNS service: {e}")
+            logger.warning(f"Could not register Apple MediaRemote/AirPlay mDNS service: {e}")
 
     def _get_local_ip(self) -> str:
         try:
@@ -84,7 +108,6 @@ class MediaRemotePublisher:
                 data = await reader.read(1024)
                 if not data:
                     break
-                # Handle control center commands or pings
                 if b"PLAY" in data or b"PAUSE" in data or b"TOGGLE" in data:
                     if self.on_play_pause:
                         self.on_play_pause()
@@ -106,9 +129,12 @@ class MediaRemotePublisher:
         self._is_running = False
         if self._server:
             self._server.close()
-        if self._zeroconf and self._service_info:
+        if self._zeroconf:
             try:
-                self._zeroconf.unregister_service(self._service_info)
+                if self._service_info:
+                    self._zeroconf.unregister_service(self._service_info)
+                if hasattr(self, "_airplay_info") and self._airplay_info:
+                    self._zeroconf.unregister_service(self._airplay_info)
                 self._zeroconf.close()
             except Exception as e:
                 logger.error(f"Error unregistering MediaRemote mDNS service: {e}")
