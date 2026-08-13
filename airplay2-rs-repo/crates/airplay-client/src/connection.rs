@@ -1733,6 +1733,15 @@ impl Connection {
 
         self.session.pause()?;
         self.playback_state = PlaybackState::Paused;
+
+        let mut pause_req = RtspRequest::new(
+            airplay_rtsp::RtspMethod::Pause,
+            self.session.request_uri(),
+        );
+        if let Some(session_id) = self.session.stream_connection_id() {
+            pause_req = pause_req.header("Session", session_id.to_string());
+        }
+        let _ = self.rtsp.send(pause_req).await;
         let _ = self.send_playback_state(PlaybackState::Paused).await;
 
         Ok(())

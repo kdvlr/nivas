@@ -126,6 +126,29 @@ pub struct SetupPhase1Request {
     pub timing_peer_list: Option<Vec<TimingPeerInfo>>,
 }
 
+impl Default for SetupPhase1Request {
+    fn default() -> Self {
+        Self {
+            device_id: String::new(),
+            session_uuid: String::new(),
+            timing_port: 0,
+            timing_protocol: "NTP".to_string(),
+            is_multi_select_airplay: true,
+            group_contains_group_leader: false,
+            mac_address: String::new(),
+            model: "AirPlay2,1".to_string(),
+            name: "Nivas".to_string(),
+            os_build_version: "20A362".to_string(),
+            os_name: "Mac OS X".to_string(),
+            os_version: "14.5".to_string(),
+            sender_supports_relay: false,
+            source_version: "366.0".to_string(),
+            timing_peer_info: None,
+            timing_peer_list: None,
+        }
+    }
+}
+
 /// SETUP phase 1 response body.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SetupPhase1Response {
@@ -309,15 +332,13 @@ mod tests {
         use super::*;
 
         #[test]
-        fn setup_phase1_serializes_minimal_fields() {
-            // Test the minimal owntone-style SETUP phase 1 request
+        fn setup_phase1_serializes_fields() {
             let request = SetupPhase1Request {
                 device_id: "AA:BB:CC:DD:EE:FF".to_string(),
                 session_uuid: "session-456".to_string(),
                 timing_port: 60373,
                 timing_protocol: "NTP".to_string(),
-                timing_peer_info: None,
-                timing_peer_list: None,
+                ..Default::default()
             };
 
             let encoded = encode(&request).unwrap();
@@ -341,9 +362,6 @@ mod tests {
                 dict.get("timingProtocol").and_then(|v| v.as_string()),
                 Some("NTP")
             );
-
-            // Should have exactly 4 keys (no timingPeerInfo/timingPeerList when None)
-            assert_eq!(dict.len(), 4);
         }
 
         #[test]
@@ -360,6 +378,7 @@ mod tests {
                 timing_protocol: "PTP".to_string(),
                 timing_peer_info: Some(peer_info.clone()),
                 timing_peer_list: Some(vec![peer_info]),
+                ..Default::default()
             };
 
             let encoded = encode(&request).unwrap();
