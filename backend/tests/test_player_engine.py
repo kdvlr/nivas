@@ -338,3 +338,27 @@ def test_transcode_to_wav_runs_standard_pcm_transcoding(monkeypatch):
     assert captured_cmd[codec_idx + 1] == "pcm_s16le"
 
 
+@pytest.mark.asyncio
+async def test_non_blocking_autoplay_fetch(monkeypatch):
+    engine = PlayerEngine()
+    engine.current_track = {"videoId": "v123"}
+    engine.queue = [{"videoId": "v456", "title": "Queued Track"}]
+
+    recs = [{"videoId": "v789", "title": "Recommended Track"}]
+    monkeypatch.setattr("app.services.ytmusic.ytmusic_service.get_autoplay_tracks", lambda vid: recs)
+
+    broadcasted = False
+    async def mock_broadcast(scope):
+        nonlocal broadcasted
+        broadcasted = True
+
+    monkeypatch.setattr("app.ws.manager.broadcast", mock_broadcast)
+
+    await engine._fetch_autoplay_recommendations("v123")
+
+    assert len(engine.queue) == 2
+    assert engine.queue[0]["videoId"] == "v456"
+    assert engine.queue[1]["videoId"] == "v789"
+    assert broadcasted is True
+
+

@@ -447,28 +447,39 @@ class PlayerEngine:
         self._broadcast_state()
         return self.get_state()
 
+    async def _fetch_autoplay_recommendations(self, video_id: str):
+        try:
+            if not self.autoplay_enabled:
+                return
+            loop = asyncio.get_running_loop()
+            recommendations = await loop.run_in_executor(
+                None,
+                ytmusic_service.get_autoplay_tracks,
+                video_id,
+            )
+            if not recommendations or self.current_track.get("videoId") != video_id:
+                return
+
+            recent_ids = self.get_recently_played_ids(hours=4.0)
+            filtered_recs = [r for r in recommendations if r["videoId"] not in recent_ids]
+            if not filtered_recs and recommendations:
+                recent_1h = self.get_recently_played_ids(hours=1.0)
+                filtered_recs = [r for r in recommendations if r["videoId"] not in recent_1h] or recommendations
+
+            existing_ids = {video_id, *(item["videoId"] for item in self.queue)}
+            added = False
+            for recommendation in filtered_recs:
+                if recommendation["videoId"] not in existing_ids:
+                    self.queue.append(recommendation)
+                    existing_ids.add(recommendation["videoId"])
+                    added = True
+            if added:
+                self._broadcast_state()
+        except Exception as e:
+            logger.warning(f"Background autoplay recommendation fetch failed: {e}")
+
     async def _orchestrate_playback(self, video_id: str, track_info: Dict[str, Any]):
         try:
-            if self.autoplay_enabled:
-                loop = asyncio.get_running_loop()
-                recommendations = await loop.run_in_executor(
-                    None,
-                    ytmusic_service.get_autoplay_tracks,
-                    video_id,
-                )
-                recent_ids = self.get_recently_played_ids(hours=4.0)
-                filtered_recs = [r for r in recommendations if r["videoId"] not in recent_ids]
-                if not filtered_recs and recommendations:
-                    recent_1h = self.get_recently_played_ids(hours=1.0)
-                    filtered_recs = [r for r in recommendations if r["videoId"] not in recent_1h] or recommendations
-
-                existing_ids = {video_id, *(item["videoId"] for item in self.queue)}
-                for recommendation in filtered_recs:
-                    if recommendation["videoId"] not in existing_ids:
-                        self.queue.append(recommendation)
-                        existing_ids.add(recommendation["videoId"])
-                self._broadcast_state()
-
             stream_url = ytmusic_service.get_stream_url(video_id)
             if not stream_url:
                 logger.error(f"Could not extract stream URL for track {video_id}")
@@ -511,10 +522,13 @@ class PlayerEngine:
             if not started:
                 self.is_playing = False
                 self._broadcast_state()
-            elif not self.is_playing:
-                # Pause may have been pressed while the track was transcoding.
-                self._write_stream_command("pause")
-                self._paused_at = time.monotonic()
+            else:
+                if not self.is_playing:
+                    # Pause may have been pressed while the track was transcoding.
+                    self._write_stream_command("pause")
+                    self._paused_at = time.monotonic()
+                # Spawn background non-blocking task for autoplay recommendations
+                loop.create_task(self._fetch_autoplay_recommendations(video_id))
         except Exception as e:
             logger.error(f"Error orchestrating playback: {e}")
             self.is_playing = False
