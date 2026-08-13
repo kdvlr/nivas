@@ -508,8 +508,30 @@ class PlayerEngine:
                     added = True
             if added:
                 self._broadcast_state()
+                loop.create_task(self._prefetch_next_track())
         except Exception as e:
             logger.warning(f"Background autoplay recommendation fetch failed: {e}")
+
+    async def _prefetch_next_track(self):
+        try:
+            next_track = None
+            if self.queue:
+                next_track = self.queue[0]
+
+            if next_track and next_track.get("videoId"):
+                next_video_id = next_track["videoId"]
+                next_wav_path = f"/tmp/ytmusic_{next_video_id}.wav"
+                if not os.path.exists(next_wav_path) or os.path.getsize(next_wav_path) == 0:
+                    logger.info("Pre-fetching next track in background: %s (%s)", next_track.get("title"), next_video_id)
+                    loop = asyncio.get_running_loop()
+                    await loop.run_in_executor(None, self._transcode_to_wav, next_video_id, next_wav_path)
+
+                next_art_path = f"/tmp/ytmusic_{next_video_id}_artwork.jpg"
+                if not os.path.exists(next_art_path) and next_track.get("thumbnail"):
+                    loop = asyncio.get_running_loop()
+                    await loop.run_in_executor(None, self._download_artwork, next_track["thumbnail"], next_art_path)
+        except Exception as e:
+            logger.debug(f"Next track prefetch background task error: {e}")
 
     async def _orchestrate_playback(self, video_id: str, track_info: Dict[str, Any]):
         try:
@@ -535,16 +557,18 @@ class PlayerEngine:
 
             loop = asyncio.get_running_loop()
             artwork_path = f"/tmp/ytmusic_{video_id}_artwork.jpg"
-            artwork_path = await loop.run_in_executor(
-                None,
-                self._download_artwork,
-                track_info.get("thumbnail"),
-                artwork_path,
-            )
+            if os.path.exists(artwork_path) and os.path.getsize(artwork_path) > 0:
+                artwork_arg = artwork_path
+            else:
+                artwork_arg = None
+                thumbnail_url = track_info.get("thumbnail")
+                if thumbnail_url:
+                    loop.run_in_executor(None, self._download_artwork, thumbnail_url, artwork_path)
+
             started = self._start_airplay_streams(
                 wav_path,
                 track_info,
-                artwork_path,
+                artwork_arg,
             )
             if not started:
                 self.is_playing = False
@@ -554,8 +578,9 @@ class PlayerEngine:
                     # Pause may have been pressed while the track was transcoding.
                     self._write_stream_command("pause")
                     self._paused_at = time.monotonic()
-                # Spawn background non-blocking task for autoplay recommendations
+                # Spawn background non-blocking tasks for autoplay recommendations & next-track prefetch
                 loop.create_task(self._fetch_autoplay_recommendations(video_id))
+                loop.create_task(self._prefetch_next_track())
         except Exception as e:
             logger.error(f"Error orchestrating playback: {e}")
             self.is_playing = False
@@ -887,6 +912,8 @@ class PlayerEngine:
             self.queue.insert(0, normalized)
         else:
             self.queue.append(normalized)
+        if self._event_loop and self._event_loop.is_running():
+            self._event_loop.create_task(self._prefetch_next_track())
         self._broadcast_state()
         return self.get_state()
 
@@ -901,6 +928,8 @@ class PlayerEngine:
             if normalized["videoId"] != current_video_id:
                 normalized_queue.append(normalized)
         self.queue = normalized_queue
+        if self._event_loop and self._event_loop.is_running():
+            self._event_loop.create_task(self._prefetch_next_track())
         self._broadcast_state()
         return self.get_state()
 

@@ -685,15 +685,15 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
         let mut source_test_resumed = false;
         let mut stop_requested = false;
         loop {
-            tokio::time::sleep(Duration::from_millis(250)).await;
+            tokio::time::sleep(Duration::from_millis(75)).await;
             feedback_counter += 1;
             let pos = conns[0].playback_position();
             let state = conns[0].playback_state();
-            if feedback_counter % 4 == 0 {
+            if feedback_counter % 14 == 0 {
                 println!("Position: {:.1}s, State: {:?}", pos, state);
             }
 
-            if feedback_counter % 8 == 0 {
+            if feedback_counter % 7 == 0 {
                 let progress_duration = metadata_duration.unwrap_or(duration_secs);
                 for conn in conns.iter_mut() {
                     let _ = conn.send_progress(progress_duration).await;
