@@ -1572,6 +1572,63 @@ impl Connection {
         Ok(())
     }
 
+    /// Change track in an active streaming session without reconnecting.
+    pub async fn change_track(
+        &mut self,
+        decoder: AudioDecoder,
+        title: &str,
+        album: &str,
+        artist: &str,
+        duration: f64,
+        artwork: Option<Vec<u8>>,
+    ) -> Result<()> {
+        if let Some(ref mut streamer) = self.streamer {
+            let _ = streamer.stop().await;
+        }
+
+        // Flush receiver audio buffer
+        let flush_req = RtspRequest::flush_with_info(
+            self.session.request_uri(),
+            self.initial_rtp_sequence,
+            self.initial_rtp_timestamp,
+        );
+        let _ = self.rtsp.send(flush_req).await;
+
+        let sender = self.build_rtp_sender()?;
+        let mut streamer = AudioStreamer::new(self.stream_config.clone());
+        streamer.set_rtp_sender(sender).await;
+        if self.render_delay_ms > 0 {
+            streamer.set_render_delay_ms(self.render_delay_ms).await;
+        }
+        if let Some(offset) = self.timing_offset {
+            streamer.set_timing_offset(offset).await;
+        }
+        if let Some(ref tx) = self.timing_tx {
+            streamer.set_timing_updates(tx.subscribe()).await;
+        }
+        if self.stream_config.timing_protocol == TimingProtocol::Ptp {
+            if let Some(clock_id) = self.ptp_master_clock_id {
+                streamer.set_ptp_sync_mode(clock_id).await;
+            }
+        }
+        if let (Some(config), Some(params)) = (self.eq_config.take(), self.eq_params.clone()) {
+            streamer.set_eq_params(config, params).await;
+        }
+
+        streamer.start(decoder).await?;
+        self.streamer = Some(streamer);
+        self.playback_state = PlaybackState::Playing;
+
+        let _ = self.send_metadata(title, album, artist).await;
+        if let Some(art) = artwork {
+            let _ = self.send_artwork(art, "image/jpeg").await;
+        }
+        let _ = self.send_progress(duration).await;
+        let _ = self.send_playback_state(PlaybackState::Playing).await;
+
+        Ok(())
+    }
+
     /// Start audio streaming from a live source (e.g., Bluetooth capture).
     ///
     /// This is similar to `start_streaming()` but uses a `LiveAudioDecoder` that

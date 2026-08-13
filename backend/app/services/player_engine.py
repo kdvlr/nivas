@@ -78,6 +78,7 @@ class PlayerEngine:
         self._paused_stream_expired = False
         self._event_loop: Optional[asyncio.AbstractEventLoop] = None
         self._advancing = False
+        self._play_generation_id: int = 0
         self._prefetching_video_ids: set[str] = set()
         self._paused_session_timeout = max(
             1,
@@ -88,6 +89,26 @@ class PlayerEngine:
             on_state_change=self._on_external_sonos_state,
         )
         self.media_remote = MediaRemotePublisher(display_name="Nivas", port=49152)
+
+    @staticmethod
+    def _reap_orphaned_airplay_processes(tracked_pids: Optional[set[int]] = None):
+        """Clean up any untracked airplay-play-audio processes running in the system."""
+        import glob
+        tracked = tracked_pids or set()
+        for p in glob.glob("/proc/[0-9]*/cmdline"):
+            try:
+                with open(p, "rb") as f:
+                    cmd = f.read().replace(b"\x00", b" ").decode("utf-8", errors="ignore").strip()
+                    if "airplay-play-audio" in cmd:
+                        pid = int(p.split("/")[2])
+                        if pid not in tracked and pid != os.getpid():
+                            logger.warning("Reaping untracked orphaned AirPlay sender PID %s", pid)
+                            try:
+                                os.kill(pid, signal.SIGKILL)
+                            except (ProcessLookupError, PermissionError, OSError):
+                                pass
+            except Exception:
+                pass
 
     def get_recently_played_ids(self, hours: float = 4.0) -> set[str]:
         cutoff = time.time() - (hours * 3600)
@@ -208,7 +229,7 @@ class PlayerEngine:
             if proc.stdin is not None:
                 proc.stdin.write("stop\n")
                 proc.stdin.flush()
-            proc.wait(timeout=3)
+            proc.wait(timeout=0.3)
             return
         except (BrokenPipeError, OSError, ValueError, subprocess.TimeoutExpired):
             pass
@@ -221,7 +242,7 @@ class PlayerEngine:
             except OSError:
                 return
         try:
-            proc.wait(timeout=2)
+            proc.wait(timeout=0.5)
             return
         except subprocess.TimeoutExpired:
             pass
@@ -234,7 +255,7 @@ class PlayerEngine:
             except OSError:
                 return
         try:
-            proc.wait(timeout=1)
+            proc.wait(timeout=0.2)
         except subprocess.TimeoutExpired:
             logger.error("AirPlay sender %s did not exit after SIGKILL", proc.pid)
 
@@ -259,6 +280,7 @@ class PlayerEngine:
         self._paused_stream_expired = False
         for device in self.devices.values():
             device.is_connected = False
+        self._reap_orphaned_airplay_processes()
 
     async def _device_scanner_loop(self):
         while True:
@@ -451,7 +473,12 @@ class PlayerEngine:
             return self.get_state()
 
         self._ensure_default_target()
-        self._stop_current_stream()
+        if self._play_task and not self._play_task.done():
+            self._play_task.cancel()
+            self._play_task = None
+
+        self._play_generation_id += 1
+        generation_id = self._play_generation_id
 
         parsed_duration = ytmusic_service._parse_duration_seconds(track.get("duration"))
         self.current_track = {
@@ -476,7 +503,7 @@ class PlayerEngine:
         ]
 
         loop = asyncio.get_running_loop()
-        self._play_task = loop.create_task(self._orchestrate_playback(video_id, self.current_track))
+        self._play_task = loop.create_task(self._orchestrate_playback(video_id, self.current_track, generation_id))
 
         self._broadcast_state()
         return self.get_state()
@@ -526,27 +553,46 @@ class PlayerEngine:
                 self._prefetching_video_ids.add(next_video_id)
                 try:
                     next_wav_path = f"/tmp/ytmusic_{next_video_id}.wav"
+                    next_art_path = f"/tmp/ytmusic_{next_video_id}_artwork.jpg"
+                    loop = asyncio.get_running_loop()
+                    prefetch_tasks = []
+
                     if not os.path.exists(next_wav_path) or os.path.getsize(next_wav_path) == 0:
                         logger.info("Pre-fetching next track in background: %s (%s)", next_track.get("title"), next_video_id)
-                        loop = asyncio.get_running_loop()
-                        await loop.run_in_executor(None, self._transcode_to_wav, next_video_id, next_wav_path)
+                        prefetch_tasks.append(loop.run_in_executor(None, self._transcode_to_wav, next_video_id, next_wav_path))
 
-                    next_art_path = f"/tmp/ytmusic_{next_video_id}_artwork.jpg"
                     if not os.path.exists(next_art_path) and next_track.get("thumbnail"):
-                        loop = asyncio.get_running_loop()
-                        await loop.run_in_executor(None, self._download_artwork, next_track["thumbnail"], next_art_path)
+                        prefetch_tasks.append(loop.run_in_executor(None, self._download_artwork, next_track["thumbnail"], next_art_path))
+
+                    if prefetch_tasks:
+                        await asyncio.gather(*prefetch_tasks, return_exceptions=True)
                 finally:
                     self._prefetching_video_ids.discard(next_video_id)
         except Exception as e:
             logger.debug(f"Next track prefetch background task error: {e}")
 
-    async def _orchestrate_playback(self, video_id: str, track_info: Dict[str, Any]):
+    async def _orchestrate_playback(self, video_id: str, track_info: Dict[str, Any], generation_id: int):
         try:
+            loop = asyncio.get_running_loop()
             wav_path = f"/tmp/ytmusic_{video_id}.wav"
+            artwork_path = f"/tmp/ytmusic_{video_id}_artwork.jpg"
+
+            # Concurrently transcode audio and download artwork in parallel
+            fetch_tasks = []
             if not os.path.exists(wav_path) or os.path.getsize(wav_path) == 0:
                 logger.info(f"Downloading and converting track '{track_info['title']}' to 44.1kHz PCM WAV...")
-                loop = asyncio.get_running_loop()
-                await loop.run_in_executor(None, self._transcode_to_wav, video_id, wav_path)
+                fetch_tasks.append(loop.run_in_executor(None, self._transcode_to_wav, video_id, wav_path))
+
+            thumbnail_url = track_info.get("thumbnail")
+            if thumbnail_url and (not os.path.exists(artwork_path) or os.path.getsize(artwork_path) == 0):
+                fetch_tasks.append(loop.run_in_executor(None, self._download_artwork, thumbnail_url, artwork_path))
+
+            if fetch_tasks:
+                await asyncio.gather(*fetch_tasks, return_exceptions=True)
+
+            if generation_id != self._play_generation_id:
+                logger.info("Aborting stale playback orchestration (generation %s superseded by %s)", generation_id, self._play_generation_id)
+                return
 
             if not os.path.exists(wav_path) or os.path.getsize(wav_path) == 0:
                 logger.error(f"Transcoding produced empty file for {video_id}")
@@ -560,23 +606,45 @@ class PlayerEngine:
                 if calc_duration > 0:
                     self.duration_seconds = calc_duration
 
-            logger.info(f"Transcode complete. Streaming '{track_info['title']}' via airplay2-rs to {len(self.active_targets)} selected AirPlay speakers")
+            artwork_arg = artwork_path if os.path.exists(artwork_path) and os.path.getsize(artwork_path) > 0 else None
 
-            loop = asyncio.get_running_loop()
-            artwork_path = f"/tmp/ytmusic_{video_id}_artwork.jpg"
-            if os.path.exists(artwork_path) and os.path.getsize(artwork_path) > 0:
-                artwork_arg = artwork_path
+            # Item C: Check if existing AirPlay stream process is alive for the same active targets
+            running_proc = None
+            with self._stream_lock:
+                running_proc = self._stream_procs.get(GROUP_STREAM_ID)
+                if running_proc is not None and running_proc.poll() is not None:
+                    running_proc = None
+
+            connected_targets = {dev.id for dev in self.active_targets if dev.is_connected}
+            target_ids = {dev.id for dev in self.active_targets}
+
+            if running_proc is not None and running_proc.stdin is not None and connected_targets == target_ids and target_ids:
+                logger.info(f"Transitioning in-session to '{track_info['title']}' on existing AirPlay session")
+                payload = {
+                    "path": wav_path,
+                    "duration": float(self.duration_seconds),
+                    "title": str(track_info.get("title") or "Unknown Title"),
+                    "artist": str(track_info.get("artist") or "Unknown Artist"),
+                    "album": str(track_info.get("album") or "Nivas"),
+                    "artwork": artwork_arg,
+                }
+                try:
+                    running_proc.stdin.write(f"track {json.dumps(payload)}\n")
+                    running_proc.stdin.flush()
+                    started = True
+                except (BrokenPipeError, OSError) as err:
+                    logger.warning("In-session track transition write failed: %s; restarting stream", err)
+                    self._stop_current_stream()
+                    started = self._start_airplay_streams(wav_path, track_info, artwork_arg)
             else:
-                artwork_arg = None
-                thumbnail_url = track_info.get("thumbnail")
-                if thumbnail_url:
-                    loop.run_in_executor(None, self._download_artwork, thumbnail_url, artwork_path)
+                self._stop_current_stream()
+                logger.info(f"Transcode complete. Streaming '{track_info['title']}' via airplay2-rs to {len(self.active_targets)} selected AirPlay speakers")
+                started = self._start_airplay_streams(
+                    wav_path,
+                    track_info,
+                    artwork_arg,
+                )
 
-            started = self._start_airplay_streams(
-                wav_path,
-                track_info,
-                artwork_arg,
-            )
             if not started:
                 self.is_playing = False
                 self._broadcast_state()

@@ -68,16 +68,51 @@ fn build_play_status_response(state: &DacpState) -> Vec<u8> {
     build_dmap_tag(b"cmst", &inner)
 }
 
+#[derive(Debug, Clone)]
+struct TrackInfoPayload {
+    path: String,
+    duration: f64,
+    title: String,
+    artist: String,
+    album: String,
+    artwork_path: Option<String>,
+}
+
 #[derive(Debug)]
 enum SourceCommand {
     Pause,
     Resume,
     Volume { target: Option<IpAddr>, value: f32 },
+    Track(TrackInfoPayload),
     Stop,
 }
 
 fn parse_source_command(line: &str) -> Option<SourceCommand> {
-    let mut parts = line.split_whitespace();
+    let trimmed = line.trim();
+    if trimmed.starts_with("track ") {
+        let json_str = trimmed["track ".len()..].trim();
+        #[derive(serde::Deserialize)]
+        struct TrackJson {
+            path: String,
+            duration: Option<f64>,
+            title: Option<String>,
+            artist: Option<String>,
+            album: Option<String>,
+            artwork: Option<String>,
+        }
+        if let Ok(data) = serde_json::from_str::<TrackJson>(json_str) {
+            return Some(SourceCommand::Track(TrackInfoPayload {
+                path: data.path,
+                duration: data.duration.unwrap_or(0.0),
+                title: data.title.unwrap_or_else(|| "Unknown Title".to_string()),
+                artist: data.artist.unwrap_or_else(|| "Unknown Artist".to_string()),
+                album: data.album.unwrap_or_else(|| "Nivas".to_string()),
+                artwork_path: data.artwork,
+            }));
+        }
+    }
+
+    let mut parts = trimmed.split_whitespace();
     match parts.next()?.to_ascii_lowercase().as_str() {
         "pause" => Some(SourceCommand::Pause),
         "resume" | "play" => Some(SourceCommand::Resume),
@@ -680,6 +715,7 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
 
         let mut feedback_counter = 0u32;
         let mut next_volume_step = 0usize;
+        let mut current_duration_secs = metadata_duration.unwrap_or(duration_secs);
         let source_test_started = Instant::now();
         let mut source_test_paused = false;
         let mut source_test_resumed = false;
@@ -694,7 +730,7 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
             }
 
             if feedback_counter % 7 == 0 {
-                let progress_duration = metadata_duration.unwrap_or(duration_secs);
+                let progress_duration = current_duration_secs;
                 for conn in conns.iter_mut() {
                     let _ = conn.send_progress(progress_duration).await;
                 }
@@ -718,6 +754,45 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
                             if target.is_none() || target == Some(ips[index]) {
                                 conn.set_volume(value).await?;
                             }
+                        }
+                    }
+                    SourceCommand::Track(payload) => {
+                        println!("TRACK_TRANSITION: Switching to '{}' by '{}'", payload.title, payload.artist);
+                        let _ = std::io::Write::flush(&mut std::io::stdout());
+                        let artwork_bytes = if let Some(ref art_path) = payload.artwork_path {
+                            std::fs::read(art_path).ok()
+                        } else {
+                            None
+                        };
+
+                        for conn in &mut conns {
+                            match AudioDecoder::open(&payload.path) {
+                                Ok(dec) => {
+                                    if let Err(e) = conn.change_track(
+                                        dec,
+                                        &payload.title,
+                                        &payload.album,
+                                        &payload.artist,
+                                        payload.duration,
+                                        artwork_bytes.clone(),
+                                    ).await {
+                                        tracing::warn!("Failed to change track on speaker: {}", e);
+                                    }
+                                }
+                                Err(e) => tracing::error!("Failed to open audio decoder for {}: {}", payload.path, e),
+                            }
+                        }
+                        current_duration_secs = payload.duration;
+
+                        // Update DACP state
+                        {
+                            let mut state_guard = dacp_state.write().await;
+                            state_guard.title = payload.title.clone();
+                            state_guard.artist = payload.artist.clone();
+                            state_guard.album = payload.album.clone();
+                            state_guard.duration_ms = (payload.duration * 1000.0) as u32;
+                            state_guard.position_ms = 0;
+                            state_guard.state = airplay_client::PlaybackState::Playing;
                         }
                     }
                     SourceCommand::Stop => {
@@ -855,7 +930,7 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
 
-            if duration_secs > 0.0 && pos >= duration_secs - 0.5 {
+            if current_duration_secs > 0.0 && pos >= current_duration_secs - 0.5 {
                 println!("\nReached end of audio, stopping...");
                 break;
             }
