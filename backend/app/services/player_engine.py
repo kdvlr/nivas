@@ -524,13 +524,11 @@ class PlayerEngine:
         try:
             cmd = [
                 "ffmpeg", "-y", "-i", stream_url,
-                "-vn",
-                "-af", "loudnorm=I=-14.0:LTP=-1.0:TP=-1.0",
-                "-ar", "44100", "-ac", "2", "-acodec", "pcm_s16le",
+                "-vn", "-ar", "44100", "-ac", "2", "-acodec", "pcm_s16le",
                 output_path
             ]
             subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            logger.info(f"Transcoded audio with EBU R128 loudness normalization successfully to {output_path}")
+            logger.info(f"Transcoded audio successfully to {output_path}")
         except Exception as e:
             logger.error(f"FFmpeg transcoding error: {e}")
 

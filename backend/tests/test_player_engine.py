@@ -322,7 +322,7 @@ def test_played_history_deduplication():
     assert "old_track" not in recent_ids
 
 
-def test_transcode_to_wav_includes_loudnorm_filter(monkeypatch):
+def test_transcode_to_wav_runs_standard_pcm_transcoding(monkeypatch):
     engine = PlayerEngine()
     captured_cmd = []
 
@@ -333,8 +333,8 @@ def test_transcode_to_wav_includes_loudnorm_filter(monkeypatch):
     engine._transcode_to_wav("http://example.com/stream.m4a", "/tmp/output.wav")
 
     assert "ffmpeg" in captured_cmd
-    assert "-af" in captured_cmd
-    af_idx = captured_cmd.index("-af")
-    assert captured_cmd[af_idx + 1] == "loudnorm=I=-14.0:LTP=-1.0:TP=-1.0"
+    assert "-acodec" in captured_cmd
+    codec_idx = captured_cmd.index("-acodec")
+    assert captured_cmd[codec_idx + 1] == "pcm_s16le"
 
 
