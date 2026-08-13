@@ -76,8 +76,8 @@ class MediaRemotePublisher:
             )
 
             self._zeroconf = Zeroconf(interfaces=[local_ip])
-            self._zeroconf.register_service(self._service_info)
-            self._zeroconf.register_service(self._airplay_info)
+            self._zeroconf.register_service(self._service_info, allow_name_change=True)
+            self._zeroconf.register_service(self._airplay_info, allow_name_change=True)
             self._is_running = True
             logger.info(f"Registered Apple MediaRemote & AirPlay 2 mDNS services '{self.display_name}'")
             
