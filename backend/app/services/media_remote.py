@@ -35,7 +35,7 @@ class MediaRemotePublisher:
                 b"deviceid": mac_bytes,
                 b"features": b"0x5A7FFFF7,0x1E",
                 b"flags": b"0x4",
-                b"model": b"AudioAccessory1,1",
+                b"model": b"AppleTV6,2",
                 b"name": self.display_name.encode("utf-8"),
                 b"pk": b"b4e78079a4055be2f6280ec522fbce71b86e88ffbf31a70425c276326127fa28",
                 b"pi": b"b4e78079-a405-5be2-f628-0ec522fbce71",
@@ -75,7 +75,7 @@ class MediaRemotePublisher:
                 server=server_name,
             )
 
-            self._zeroconf = Zeroconf()
+            self._zeroconf = Zeroconf(interfaces=[local_ip])
             self._zeroconf.register_service(self._service_info)
             self._zeroconf.register_service(self._airplay_info)
             self._is_running = True
