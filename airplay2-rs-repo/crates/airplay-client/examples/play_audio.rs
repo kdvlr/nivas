@@ -21,6 +21,51 @@ enum DacpCommand {
     Pause,
     Play,
     PlayPause,
+    Next,
+    Prev,
+}
+
+#[derive(Clone)]
+struct DacpState {
+    title: String,
+    artist: String,
+    album: String,
+    duration_ms: u32,
+    position_ms: u32,
+    state: airplay_client::PlaybackState,
+    volume: u8,
+}
+
+fn build_dmap_tag(tag: &[u8; 4], data: &[u8]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(8 + data.len());
+    out.extend_from_slice(tag);
+    out.extend_from_slice(&(data.len() as u32).to_be_bytes());
+    out.extend_from_slice(data);
+    out
+}
+
+fn build_play_status_response(state: &DacpState) -> Vec<u8> {
+    let mut inner = Vec::new();
+    inner.extend_from_slice(&build_dmap_tag(b"mstt", &(200u32).to_be_bytes()));
+    let caps_val: u8 = match state.state {
+        airplay_client::PlaybackState::Playing => 3,
+        airplay_client::PlaybackState::Paused => 2,
+        _ => 1,
+    };
+    inner.extend_from_slice(&build_dmap_tag(b"caps", &[caps_val]));
+    if !state.title.is_empty() {
+        inner.extend_from_slice(&build_dmap_tag(b"cann", state.title.as_bytes()));
+    }
+    if !state.artist.is_empty() {
+        inner.extend_from_slice(&build_dmap_tag(b"cana", state.artist.as_bytes()));
+    }
+    if !state.album.is_empty() {
+        inner.extend_from_slice(&build_dmap_tag(b"canl", state.album.as_bytes()));
+    }
+    inner.extend_from_slice(&build_dmap_tag(b"cant", &(state.position_ms).to_be_bytes()));
+    inner.extend_from_slice(&build_dmap_tag(b"cast", &(state.duration_ms).to_be_bytes()));
+    inner.extend_from_slice(&build_dmap_tag(b"cmvo", &(state.volume as u32).to_be_bytes()));
+    build_dmap_tag(b"cmst", &inner)
 }
 
 #[derive(Debug)]
@@ -136,6 +181,7 @@ async fn start_dacp_server(
     dacp_id: &str,
     active_remote: &str,
     receiver_ip: IpAddr,
+    shared_state: std::sync::Arc<tokio::sync::RwLock<DacpState>>,
 ) -> Result<(ServiceDaemon, mpsc::UnboundedReceiver<DacpCommand>), Box<dyn std::error::Error>> {
     let listener = TcpListener::bind("0.0.0.0:0").await?;
     let port = listener.local_addr()?.port();
@@ -144,7 +190,15 @@ async fn start_dacp_server(
     let advertised_ip = route_socket.local_addr()?.ip().to_string();
     let mdns = ServiceDaemon::new()?;
     let instance = format!("iTunes_Ctrl_{}", dacp_id);
-    let properties = [("txtvers", "1"), ("DbId", dacp_id)];
+    let properties = [
+        ("txtvers", "1"),
+        ("DbId", dacp_id),
+        ("OSsi", "0x0000000000000000"),
+        ("CtlN", "Nivas"),
+        ("Ver", "131073"),
+        ("DvSv", "2049"),
+        ("DvTy", "AirPlay"),
+    ];
     let service = ServiceInfo::new(
         "_dacp._tcp.local.",
         &instance,
@@ -164,6 +218,7 @@ async fn start_dacp_server(
             };
             let command_tx = command_tx.clone();
             let expected_active_remote = expected_active_remote.clone();
+            let shared_state = shared_state.clone();
             tokio::spawn(async move {
                 let mut request = vec![0u8; 8192];
                 let Ok(length) = stream.read(&mut request).await else {
@@ -183,12 +238,29 @@ async fn start_dacp_server(
                     authorized
                 );
 
+                if request_line.contains("/ctrl-int/1/playstatusupdate") || request_line.contains("/ctrl-int/1/getproperty") {
+                    let state_guard = shared_state.read().await;
+                    let dmap_body = build_play_status_response(&state_guard);
+                    let resp = format!(
+                        "HTTP/1.1 200 OK\r\nContent-Type: application/x-dmap-tagged\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                        dmap_body.len()
+                    );
+                    let mut resp_bytes = resp.into_bytes();
+                    resp_bytes.extend_from_slice(&dmap_body);
+                    let _ = stream.write_all(&resp_bytes).await;
+                    return;
+                }
+
                 let command = if request_line.contains("/ctrl-int/1/playpause") {
                     Some(DacpCommand::PlayPause)
                 } else if request_line.contains("/ctrl-int/1/pause") {
                     Some(DacpCommand::Pause)
                 } else if request_line.contains("/ctrl-int/1/play") {
                     Some(DacpCommand::Play)
+                } else if request_line.contains("/ctrl-int/1/nextitem") {
+                    Some(DacpCommand::Next)
+                } else if request_line.contains("/ctrl-int/1/previtem") {
+                    Some(DacpCommand::Prev)
                 } else {
                     None
                 };
@@ -262,13 +334,36 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
         .map(|s| s.trim().parse().expect("Invalid IP address"))
         .collect();
 
+    let option_value = |name: &str| {
+        args.iter()
+            .position(|argument| argument == name)
+            .and_then(|index| args.get(index + 1))
+            .cloned()
+    };
+    let metadata_title = option_value("--title").unwrap_or_else(|| "YouTube Music".to_string());
+    let metadata_artist = option_value("--artist").unwrap_or_else(|| "Nivas AirPlay".to_string());
+    let metadata_album = option_value("--album").unwrap_or_else(|| "Nivas".to_string());
+    let artwork_path = option_value("--artwork");
+    let metadata_duration = option_value("--duration")
+        .and_then(|value| value.parse::<f64>().ok());
+
+    let dacp_state = std::sync::Arc::new(tokio::sync::RwLock::new(DacpState {
+        title: metadata_title.clone(),
+        artist: metadata_artist.clone(),
+        album: metadata_album.clone(),
+        duration_ms: (metadata_duration.unwrap_or(0.0) * 1000.0) as u32,
+        position_ms: 0,
+        state: airplay_client::PlaybackState::Playing,
+        volume: 70,
+    }));
+
     let use_dacp = args.iter().any(|a| a == "--dacp");
     let active_remote = "1234567890";
     let dacp_device_id = "4E:49:56:41:53:01";
     let dacp_id = dacp_device_id.replace(':', "");
-    let (_dacp_daemon, mut dacp_commands) = if use_dacp {
+    let (dacp_daemon, mut dacp_commands) = if use_dacp {
         std::env::set_var("AIRPLAY_CLIENT_DEVICE_ID", dacp_device_id);
-        let (daemon, receiver) = start_dacp_server(&dacp_id, active_remote, ips[0]).await?;
+        let (daemon, receiver) = start_dacp_server(&dacp_id, active_remote, ips[0], dacp_state.clone()).await?;
         (Some(daemon), Some(receiver))
     } else {
         (None, None)
@@ -670,6 +765,12 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
                             conn.resume_from_remote().await?;
                         }
                     }
+                    DacpCommand::Next => {
+                        break;
+                    }
+                    DacpCommand::Prev => {
+                        break;
+                    }
                     DacpCommand::PlayPause => unreachable!(),
                 }
             }
@@ -707,6 +808,12 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
                 next_volume_step += 1;
             }
 
+            {
+                let mut state_guard = dacp_state.write().await;
+                state_guard.position_ms = (pos * 1000.0) as u32;
+                state_guard.state = conns[0].playback_state();
+            }
+
             if let Some(commands) = dacp_commands.as_mut() {
                 while let Ok(command) = commands.try_recv() {
                     let command = match command {
@@ -731,6 +838,12 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
                                 conn.resume().await?;
                             }
                         }
+                        DacpCommand::Next => {
+                            break;
+                        }
+                        DacpCommand::Prev => {
+                            break;
+                        }
                         DacpCommand::PlayPause => unreachable!(),
                     }
                 }
@@ -753,6 +866,7 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
             let _ = conn.stop().await;
             let _ = conn.disconnect().await;
         }
+        drop(dacp_daemon);
         std::process::exit(0);
     } else {
         // AirPlay 1 / RAOP path: no pairing, plaintext RTSP, AES-CBC audio

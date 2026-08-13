@@ -630,6 +630,14 @@ class PlayerEngine:
                                 self._paused_at = None
                                 self._broadcast_state()
                             self._event_loop.call_soon_threadsafe(_apply_play)
+                    elif "REMOTE_EVENT: Next" in line_clean:
+                        logger.info("Received AirPlay remote event: Next")
+                        if self._event_loop and self._event_loop.is_running():
+                            asyncio.run_coroutine_threadsafe(self.next_track(), self._event_loop)
+                    elif "REMOTE_EVENT: Prev" in line_clean:
+                        logger.info("Received AirPlay remote event: Prev")
+                        if self._event_loop and self._event_loop.is_running():
+                            asyncio.run_coroutine_threadsafe(self.prev_track(), self._event_loop)
             except Exception as e:
                 logger.debug(f"Stream output reader error: {e}")
 
