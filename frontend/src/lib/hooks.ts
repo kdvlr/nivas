@@ -2,18 +2,27 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from './api'
 import { onRefresh } from './ws'
 
-/** Fetch JSON from `path`, refetch on WS refresh for any of `scopes` and every `pollMs`. */
-export function useData<T>(path: string, scopes: string[], pollMs = 120000) {
+/** Fetch JSON from `path`, refetch on WS refresh for any of `scopes` and optionally every `pollMs`. */
+export function useData<T>(path: string, scopes: string[], pollMs = 0) {
   const [data, setData] = useState<T | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const pathRef = useRef(path)
   pathRef.current = path
+  const dataRef = useRef<T | null>(data)
+  dataRef.current = data
 
-  const reload = useCallback(async () => {
-    setLoading(true)
+  const fetchLatest = useCallback(async (isSilent = false) => {
+    if (!isSilent && dataRef.current === null) {
+      setLoading(true)
+    }
     try {
-      setData(await api.get<T>(pathRef.current))
+      const result = await api.get<T>(pathRef.current)
+      const currentJson = JSON.stringify(dataRef.current)
+      const newJson = JSON.stringify(result)
+      if (currentJson !== newJson) {
+        setData(result)
+      }
       setError('')
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -22,20 +31,22 @@ export function useData<T>(path: string, scopes: string[], pollMs = 120000) {
     }
   }, [])
 
+  const reload = useCallback(() => fetchLatest(false), [fetchLatest])
+
   useEffect(() => {
-    reload()
-  }, [reload, path])
+    fetchLatest(false)
+  }, [fetchLatest, path])
 
   const scopeKey = scopes.sort().join(',')
   useEffect(() => {
-    const un = onRefresh(scopes, reload)
-    const timer = setInterval(reload, pollMs)
+    const un = onRefresh(scopes, () => fetchLatest(true))
+    const timer = pollMs > 0 ? setInterval(() => fetchLatest(true), pollMs) : null
     return () => {
       un()
-      clearInterval(timer)
+      if (timer) clearInterval(timer)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reload, scopeKey, pollMs])
+  }, [fetchLatest, scopeKey, pollMs])
 
   return { data, error, loading, reload }
 }
