@@ -322,26 +322,19 @@ def test_played_history_deduplication():
     assert "old_track" not in recent_ids
 
 
-def test_transcode_to_wav_runs_disk_buffered_loudnorm(monkeypatch):
+def test_transcode_to_wav_runs_standard_pcm_transcoding(monkeypatch):
     engine = PlayerEngine()
-    captured_cmds = []
+    captured_cmd = []
 
     def mock_run(cmd, check=True, stdout=None, stderr=None):
-        captured_cmds.append(cmd)
+        captured_cmd.extend(cmd)
 
     monkeypatch.setattr(subprocess, "run", mock_run)
     engine._transcode_to_wav("http://example.com/stream.m4a", "/tmp/output.wav")
 
-    assert len(captured_cmds) == 2
-    # Command 1: Local stream download with reconnect flags
-    assert captured_cmds[0][0] == "ffmpeg"
-    assert "-reconnect" in captured_cmds[0]
-    assert captured_cmds[0][-1] == "/tmp/output.wav.raw.wav"
-
-    # Command 2: EBU R128 loudness normalization on local file
-    assert captured_cmds[1][0] == "ffmpeg"
-    assert "-af" in captured_cmds[1]
-    af_idx = captured_cmds[1].index("-af")
-    assert captured_cmds[1][af_idx + 1] == "loudnorm=I=-14.0:LTP=-1.0:TP=-1.0"
+    assert "ffmpeg" in captured_cmd
+    assert "-acodec" in captured_cmd
+    codec_idx = captured_cmd.index("-acodec")
+    assert captured_cmd[codec_idx + 1] == "pcm_s16le"
 
 

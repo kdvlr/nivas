@@ -521,51 +521,16 @@ class PlayerEngine:
             self._broadcast_state()
 
     def _transcode_to_wav(self, stream_url: str, output_path: str):
-        import os
-        raw_path = output_path + ".raw.wav"
         try:
-            # Phase 1: Decode stream to raw PCM WAV on local disk buffer with network reconnect flags
-            dl_cmd = [
-                "ffmpeg", "-y", "-nostdin",
-                "-reconnect", "1", "-reconnect_at_eof", "1", "-reconnect_streamed", "1",
-                "-i", stream_url,
+            cmd = [
+                "ffmpeg", "-y", "-i", stream_url,
                 "-vn", "-ar", "44100", "-ac", "2", "-acodec", "pcm_s16le",
-                raw_path
-            ]
-            subprocess.run(dl_cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-            # Phase 2: Run EBU R128 loudness normalization on local WAV file
-            norm_cmd = [
-                "ffmpeg", "-y", "-nostdin",
-                "-i", raw_path,
-                "-vn",
-                "-af", "loudnorm=I=-14.0:LTP=-1.0:TP=-1.0",
-                "-ar", "44100", "-ac", "2", "-acodec", "pcm_s16le",
                 output_path
             ]
-            subprocess.run(norm_cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            logger.info(f"Transcoded normalized EBU R128 audio successfully to {output_path}")
+            subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            logger.info(f"Transcoded audio successfully to {output_path}")
         except Exception as e:
-            logger.warning(f"Loudness normalization error ({e}), falling back to direct PCM transcode...")
-            # Fail-safe Fallback: Direct PCM transcode without loudnorm filter
-            try:
-                fb_cmd = [
-                    "ffmpeg", "-y", "-nostdin",
-                    "-reconnect", "1", "-reconnect_at_eof", "1", "-reconnect_streamed", "1",
-                    "-i", stream_url,
-                    "-vn", "-ar", "44100", "-ac", "2", "-acodec", "pcm_s16le",
-                    output_path
-                ]
-                subprocess.run(fb_cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                logger.info(f"Fallback transcode succeeded to {output_path}")
-            except Exception as fb_err:
-                logger.error(f"Fallback FFmpeg transcoding error: {fb_err}")
-        finally:
-            if os.path.exists(raw_path):
-                try:
-                    os.remove(raw_path)
-                except Exception:
-                    pass
+            logger.error(f"FFmpeg transcoding error: {e}")
 
     def _selected_devices(self) -> List[AirPlayDevice]:
         return [self.devices[device_id] for device_id in self.active_targets if device_id in self.devices]
