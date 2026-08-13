@@ -16,6 +16,8 @@ from PIL import Image
 from ..config import get_settings
 from ..ws import manager
 from .ytmusic import ytmusic_service
+from .sonos_listener import SonosEventListener
+from .media_remote import MediaRemotePublisher
 
 logger = logging.getLogger(__name__)
 
@@ -136,6 +138,28 @@ class PlayerEngine:
     def _save_hidden_device_ids(self) -> None:
         self._save_preferences()
 
+        self.sonos_listener = SonosEventListener(
+            on_volume_change=self._on_external_sonos_volume,
+            on_state_change=self._on_external_sonos_state,
+        )
+        self.media_remote = MediaRemotePublisher(display_name="Nivas", port=49152)
+
+    def _on_external_sonos_volume(self, ip: str, volume: int):
+        for dev_id, dev in self.devices.items():
+            if dev.address == ip:
+                dev.volume = max(0, min(100, volume))
+                self._device_volumes[dev_id] = dev.volume
+                self._save_preferences()
+                self._update_master_volume_from_devices()
+                self._broadcast_state()
+                break
+
+    def _on_external_sonos_state(self, is_playing: bool):
+        if self.is_playing != is_playing:
+            self.is_playing = is_playing
+            self._write_stream_command("resume" if is_playing else "pause")
+            self._broadcast_state()
+
     def start(self):
         loop = asyncio.get_event_loop()
         self._event_loop = loop
@@ -143,12 +167,20 @@ class PlayerEngine:
             self._scanner_task = loop.create_task(self._device_scanner_loop())
         if self._ticker_task is None or self._ticker_task.done():
             self._ticker_task = loop.create_task(self._playback_ticker())
+        
+        self.sonos_listener.start()
+        self.media_remote.on_play_pause = lambda: asyncio.run_coroutine_threadsafe(self.toggle_play_pause(), loop)
+        self.media_remote.on_next = lambda: asyncio.run_coroutine_threadsafe(self.next_track(), loop)
+        self.media_remote.on_prev = lambda: asyncio.run_coroutine_threadsafe(self.prev_track(), loop)
+        self.media_remote.start()
 
     def stop(self):
         if self._scanner_task and not self._scanner_task.done():
             self._scanner_task.cancel()
         if self._ticker_task and not self._ticker_task.done():
             self._ticker_task.cancel()
+        self.sonos_listener.stop()
+        self.media_remote.stop()
         self._stop_current_stream()
 
     def _write_stream_command(self, command: str) -> bool:
@@ -360,6 +392,8 @@ class PlayerEngine:
     def _broadcast_state(self):
         try:
             state = self.get_state()
+            if hasattr(self, "sonos_listener") and self.sonos_listener:
+                self.sonos_listener.sync_active_devices(self.devices)
             manager.broadcast_json({"type": "player_state", "payload": state})
         except Exception:
             pass

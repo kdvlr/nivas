@@ -362,3 +362,22 @@ async def test_non_blocking_autoplay_fetch(monkeypatch):
     assert broadcasted is True
 
 
+def test_media_remote_publisher():
+    from app.services.media_remote import MediaRemotePublisher
+    pub = MediaRemotePublisher(display_name="Nivas Test", port=59999)
+    assert pub.display_name == "Nivas Test"
+    assert pub.port == 59999
+
+
+def test_sonos_event_listener():
+    from app.services.sonos_listener import SonosEventListener
+    vol_changed = []
+    listener = SonosEventListener(
+        on_volume_change=lambda ip, vol: vol_changed.append((ip, vol)),
+        on_state_change=lambda s: None
+    )
+    listener.start()
+    listener.stop()
+    assert listener._is_running is False
+
+
