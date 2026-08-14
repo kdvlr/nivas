@@ -49,8 +49,6 @@ const NAV = [
   { id: 'setup', label: 'Setup', icon: 'settings', view: Setup, active: 'bg-slate-300 text-slate-950 dark:bg-slate-700 dark:text-slate-100', activeText: 'text-slate-600 dark:text-slate-400' },
 ] as const
 
-const IDLE_RETURN_MS = 5 * 60 * 1000
-
 function currentRoute() {
   // strip the query string first: "#/photos?sky=day" is still the photos route
   const hash = location.hash.replace(/^#\/?/, '').split('?')[0].split('/')[0]
@@ -447,13 +445,11 @@ export default function App() {
   const lastMotionTimeRef = useRef<number>(Date.now())
   // Screensaver + kiosk return to home + Fully Kiosk screen-off & motion wake logic
   useEffect(() => {
-    const IDLE_RETURN_MS = 3 * 60 * 1000               // 3 minutes of inactivity to go Home
-    const SLIDESHOW_TRIGGER_MS = (3 * 60 + 30) * 1000  // 3m30s to start screensaver
+    const SLIDESHOW_TRIGGER_MS = 3 * 60 * 1000         // 3 minutes of inactivity to start slideshow
     const NO_MOTION_SCREEN_OFF_MS = 30 * 60 * 1000     // 30 minutes of no motion to turn screen off
     const TWO_HOURS_MS = 2 * 60 * 60 * 1000            // 2 hours threshold for wake destination
 
     let slideshowTimer = setTimeout(startSlideshow, SLIDESHOW_TRIGGER_MS)
-    let homeTimer = setTimeout(goHome, IDLE_RETURN_MS)
     let screenOffTimer = setTimeout(turnScreenOff, NO_MOTION_SCREEN_OFF_MS)
 
     function turnScreenOff() {
@@ -478,10 +474,6 @@ export default function App() {
 
     function startSlideshow() {
       setSlideshowActive(true)
-    }
-
-    function goHome() {
-      if (slideshowActiveRef.current) return
       if (currentRoute() !== 'home') location.hash = '#/home'
     }
 
@@ -491,9 +483,7 @@ export default function App() {
       screenOffTimer = setTimeout(turnScreenOff, NO_MOTION_SCREEN_OFF_MS)
 
       clearTimeout(slideshowTimer)
-      clearTimeout(homeTimer)
       slideshowTimer = setTimeout(startSlideshow, SLIDESHOW_TRIGGER_MS)
-      homeTimer = setTimeout(goHome, IDLE_RETURN_MS)
     }
 
     function handleKioskMotion() {
@@ -546,7 +536,6 @@ export default function App() {
 
     return () => {
       clearTimeout(slideshowTimer)
-      clearTimeout(homeTimer)
       clearTimeout(screenOffTimer)
       for (const ev of ['pointerdown', 'touchstart', 'keydown']) {
         window.removeEventListener(ev, reset)
