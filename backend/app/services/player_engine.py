@@ -373,11 +373,11 @@ class PlayerEngine:
                 await asyncio.sleep(1)
                 if self.is_playing and self.current_track:
                     self._last_audio_at = time.monotonic()
-                    self.elapsed_seconds += 1
-                    if self.duration_seconds > 0 and self.elapsed_seconds >= self.duration_seconds:
-                        await self.next_track()
-                    else:
-                        self._broadcast_state()
+                    if self.duration_seconds > 0 and self.elapsed_seconds < self.duration_seconds:
+                        self.elapsed_seconds += 1
+                    elif self.duration_seconds == 0:
+                        self.elapsed_seconds += 1
+                    self._broadcast_state()
                 elif (
                     self.current_track
                     and self._last_audio_at is not None

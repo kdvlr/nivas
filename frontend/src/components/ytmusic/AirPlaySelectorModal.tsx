@@ -57,13 +57,16 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
     if (!isOpen) return
     const placePanel = () => {
       const rectangle = anchorRef.current?.getBoundingClientRect()
-      if (!rectangle) return
-      const right = Math.max(12, window.innerWidth - rectangle.right)
+      if (!rectangle || (rectangle.width === 0 && rectangle.height === 0)) {
+        setPosition({ bottom: 20, right: 16, origin: 'bottom right' })
+        return
+      }
+      const right = Math.max(12, Math.min(window.innerWidth - 60, window.innerWidth - rectangle.right))
       const estimatedHeight = Math.min(520, 76 + devices.length * 52)
       if (rectangle.bottom + estimatedHeight + 12 <= window.innerHeight) {
         setPosition({ top: rectangle.bottom + 8, right, origin: 'top right' })
       } else {
-        setPosition({ bottom: window.innerHeight - rectangle.top + 8, right, origin: 'bottom right' })
+        setPosition({ bottom: Math.max(12, window.innerHeight - rectangle.top + 8), right, origin: 'bottom right' })
       }
     }
     placePanel()
@@ -121,7 +124,7 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50" onPointerDown={onClose}>
+        <div className="fixed inset-0 z-[150]" onPointerDown={onClose}>
           <motion.div
             initial={{ opacity: 0, scale: 0.94, y: position.bottom ? 6 : -6 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
