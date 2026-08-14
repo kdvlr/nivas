@@ -633,40 +633,28 @@ class PlayerEngine:
 
     def _transcode_to_wav(self, source: str, output_path: str):
         try:
-            if source.startswith("http://") or (source.startswith("https://") and not ("youtube.com" in source or "youtu.be" in source)):
-                cmd = [
-                    "ffmpeg", "-y", "-i", source,
-                    "-vn", "-ar", "44100", "-ac", "2", "-acodec", "pcm_s16le",
-                    output_path
-                ]
-                subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                logger.info(f"Transcoded audio successfully to {output_path}")
-                return
+            stream_url = source
+            headers = {}
+            if not source.startswith("http://") and not source.startswith("https://"):
+                from app.services.ytmusic import ytmusic_service
+                stream_url, headers = ytmusic_service.get_stream_url_and_headers(source)
+                if not stream_url:
+                    logger.error(f"Could not retrieve stream URL for {source}")
+                    return
 
-            import yt_dlp
-            url = source if (source.startswith("http://") or source.startswith("https://")) else f"https://www.youtube.com/watch?v={source}"
-            out_base = output_path.rsplit(".", 1)[0]
-            ydl_opts = {
-                "format": "bestaudio/best",
-                "outtmpl": f"{out_base}.%(ext)s",
-                "postprocessors": [{
-                    "key": "FFmpegExtractAudio",
-                    "preferredcodec": "wav",
-                    "preferredquality": "0",
-                }],
-                "postprocessor_args": [
-                    "-ar", "44100",
-                    "-ac", "2",
-                    "-acodec", "pcm_s16le",
-                ],
-                "quiet": True,
-                "no_warnings": True,
-            }
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                ydl.download([url])
-            logger.info(f"Downloaded and converted audio successfully to 44.1kHz WAV: {output_path}")
+            cmd = ["ffmpeg", "-y"]
+            if headers:
+                header_str = "".join(f"{k}: {v}\r\n" for k, v in headers.items())
+                cmd.extend(["-headers", header_str])
+            cmd.extend([
+                "-i", stream_url,
+                "-vn", "-ar", "44100", "-ac", "2", "-acodec", "pcm_s16le",
+                output_path
+            ])
+            subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            logger.info(f"Transcoded audio successfully to {output_path}")
         except Exception as e:
-            logger.error(f"yt-dlp download/transcoding error: {e}")
+            logger.error(f"FFmpeg transcoding error: {e}")
 
     def _selected_devices(self) -> List[AirPlayDevice]:
         return [self.devices[device_id] for device_id in self.active_targets if device_id in self.devices]
