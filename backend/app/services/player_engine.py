@@ -795,8 +795,6 @@ class PlayerEngine:
             "--control-stdin",
             "--dacp",
             "--remote-control-events",
-            "--render-delay",
-            "200",
             "--volume",
             f"{volume:.4f}",
         ]

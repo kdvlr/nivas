@@ -1572,6 +1572,82 @@ impl Connection {
         Ok(())
     }
 
+    /// Start synchronized audio streaming across this connection and all peer connections simultaneously.
+    pub async fn start_group_streaming(
+        &mut self,
+        peers: &mut [Connection],
+        decoder: AudioDecoder,
+    ) -> Result<()> {
+        if self.session.state() != SessionState::Ready {
+            self.setup().await?;
+        }
+        for peer in peers.iter_mut() {
+            if peer.session.state() != SessionState::Ready {
+                peer.setup().await?;
+            }
+        }
+
+        let mut senders = Vec::with_capacity(1 + peers.len());
+        senders.push(self.build_rtp_sender()?);
+        for peer in peers.iter() {
+            senders.push(peer.build_rtp_sender()?);
+        }
+
+        let mut streamer = AudioStreamer::new(self.stream_config.clone());
+        streamer.set_rtp_senders(senders).await;
+        if self.render_delay_ms > 0 {
+            streamer.set_render_delay_ms(self.render_delay_ms).await;
+        }
+        if let Some(offset) = self.timing_offset {
+            streamer.set_timing_offset(offset).await;
+        }
+        if let Some(ref tx) = self.timing_tx {
+            streamer.set_timing_updates(tx.subscribe()).await;
+        }
+        if self.stream_config.timing_protocol == TimingProtocol::Ptp {
+            if let Some(clock_id) = self.ptp_master_clock_id {
+                streamer.set_ptp_sync_mode(clock_id).await;
+            }
+        }
+        if let (Some(config), Some(params)) = (self.eq_config.take(), self.eq_params.clone()) {
+            streamer.set_eq_params(config, params).await;
+        }
+
+        let flush_req = RtspRequest::flush_with_info(
+            self.session.request_uri(),
+            self.initial_rtp_sequence,
+            self.initial_rtp_timestamp,
+        );
+        let _ = self.rtsp.send(flush_req).await;
+        for peer in peers.iter_mut() {
+            let flush_req = RtspRequest::flush_with_info(
+                peer.session.request_uri(),
+                peer.initial_rtp_sequence,
+                peer.initial_rtp_timestamp,
+            );
+            let _ = peer.rtsp.send(flush_req).await;
+        }
+
+        streamer.start(decoder).await?;
+
+        self.session.start_playing()?;
+        self.playback_state = PlaybackState::Playing;
+        self.streamer = Some(streamer.clone());
+
+        for peer in peers.iter_mut() {
+            let _ = peer.session.start_playing();
+            peer.playback_state = PlaybackState::Playing;
+            peer.streamer = Some(streamer.clone());
+        }
+
+        let _ = self.set_volume(self.volume).await;
+        for peer in peers.iter_mut() {
+            let _ = peer.set_volume(peer.volume).await;
+        }
+
+        Ok(())
+    }
+
     /// Change track in an active streaming session without reconnecting.
     pub async fn change_track(
         &mut self,

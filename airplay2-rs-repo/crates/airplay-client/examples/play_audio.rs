@@ -687,26 +687,30 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
             conn.setup().await?;
             conns.push(conn);
         }
-        println!("All {} devices connected and setup complete!", conns.len());
-
         println!("\n--- Starting playback on all speakers ---");
+        let dec = AudioDecoder::open(audio_path)?;
+        if conns.len() == 1 {
+            conns[0].start_streaming(dec).await?;
+        } else {
+            let (first, rest) = conns.split_at_mut(1);
+            first[0].start_group_streaming(rest, dec).await?;
+        }
+
+        let artwork_bytes = if let Some(path) = artwork_path.as_ref() {
+            std::fs::read(path).ok()
+        } else {
+            None
+        };
+
         for (idx, conn) in conns.iter_mut().enumerate() {
-            let dec = AudioDecoder::open(audio_path)?;
-            conn.start_streaming(dec).await?;
             let _ = conn
                 .send_metadata(&metadata_title, &metadata_album, &metadata_artist)
                 .await;
-            if let Some(path) = artwork_path.as_ref() {
-                match std::fs::read(path) {
-                    Ok(artwork) => {
-                        let _ = conn.send_artwork(artwork, "image/jpeg").await;
-                    }
-                    Err(error) => tracing::warn!("Could not read artwork {}: {}", path, error),
-                }
+            if let Some(ref artwork) = artwork_bytes {
+                let _ = conn.send_artwork(artwork.clone(), "image/jpeg").await;
             }
             let progress_duration = metadata_duration.unwrap_or(duration_secs);
             let _ = conn.send_progress(progress_duration).await;
-            // Sonos expects volume to be the final parameter update.
             if let Some(vol) = initial_volume {
                 let _ = conn.set_volume(vol).await;
             }
