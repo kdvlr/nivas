@@ -474,9 +474,7 @@ class PlayerEngine:
             return self.get_state()
 
         self._ensure_default_target()
-        if self._play_task and not self._play_task.done():
-            self._play_task.cancel()
-            self._play_task = None
+        self._stop_current_stream()
 
         self._play_generation_id += 1
         generation_id = self._play_generation_id
@@ -609,45 +607,13 @@ class PlayerEngine:
 
             artwork_arg = artwork_path if os.path.exists(artwork_path) and os.path.getsize(artwork_path) > 0 else None
 
-            # Item C: Check if existing AirPlay stream process is alive for the same active targets
-            running_proc = None
-            with self._stream_lock:
-                running_proc = self._stream_procs.get(GROUP_STREAM_ID)
-                if running_proc is not None and running_proc.poll() is not None:
-                    running_proc = None
-
-            connected_targets = {
-                dev_id for dev_id in self.active_targets
-                if self.devices.get(dev_id) and self.devices[dev_id].is_connected
-            }
-            target_ids = set(self.active_targets)
-
-            if running_proc is not None and running_proc.stdin is not None and connected_targets == target_ids and target_ids:
-                logger.info(f"Transitioning in-session to '{track_info['title']}' on existing AirPlay session")
-                payload = {
-                    "path": wav_path,
-                    "duration": float(self.duration_seconds),
-                    "title": str(track_info.get("title") or "Unknown Title"),
-                    "artist": str(track_info.get("artist") or "Unknown Artist"),
-                    "album": str(track_info.get("album") or "Nivas"),
-                    "artwork": artwork_arg,
-                }
-                try:
-                    running_proc.stdin.write(f"track {json.dumps(payload)}\n")
-                    running_proc.stdin.flush()
-                    started = True
-                except (BrokenPipeError, OSError) as err:
-                    logger.warning("In-session track transition write failed: %s; restarting stream", err)
-                    self._stop_current_stream()
-                    started = self._start_airplay_streams(wav_path, track_info, artwork_arg)
-            else:
-                self._stop_current_stream()
-                logger.info(f"Transcode complete. Streaming '{track_info['title']}' via airplay2-rs to {len(self.active_targets)} selected AirPlay speakers")
-                started = self._start_airplay_streams(
-                    wav_path,
-                    track_info,
-                    artwork_arg,
-                )
+            self._stop_current_stream()
+            logger.info(f"Transcode complete. Streaming '{track_info['title']}' via airplay2-rs to {len(self.active_targets)} selected AirPlay speakers")
+            started = self._start_airplay_streams(
+                wav_path,
+                track_info,
+                artwork_arg,
+            )
 
             if not started:
                 self.is_playing = False
