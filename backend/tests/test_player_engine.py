@@ -373,12 +373,43 @@ def test_media_remote_publisher():
 def test_sonos_event_listener():
     from app.services.sonos_listener import SonosEventListener
     vol_changed = []
+    state_changed = []
     listener = SonosEventListener(
         on_volume_change=lambda ip, vol: vol_changed.append((ip, vol)),
-        on_state_change=lambda s: None
+        on_state_change=lambda s: state_changed.append(s),
     )
     listener.start()
+    assert listener._is_running is True
     listener.stop()
     assert listener._is_running is False
+
+
+@pytest.mark.asyncio
+async def test_playback_ticker_advances_after_grace_period():
+    engine = PlayerEngine()
+    engine.is_playing = True
+    engine.current_track = {"videoId": "test1", "title": "Track 1"}
+    engine.duration_seconds = 10
+    engine.elapsed_seconds = 11
+    engine.queue = [{"videoId": "test2", "title": "Track 2"}]
+
+    advanced = False
+    async def mock_next_track():
+        nonlocal advanced
+        advanced = True
+
+    engine.next_track = mock_next_track
+
+    # Run one step of ticker logic: elapsed_seconds reaches 12 >= 10 + 2 -> next_track
+    ticker_task = asyncio.create_task(engine._playback_ticker())
+    await asyncio.sleep(1.1)
+    ticker_task.cancel()
+    try:
+        await ticker_task
+    except asyncio.CancelledError:
+        pass
+
+    assert advanced is True
+
 
 

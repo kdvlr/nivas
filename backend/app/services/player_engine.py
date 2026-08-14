@@ -177,10 +177,12 @@ class PlayerEngine:
                 break
 
     def _on_external_sonos_state(self, is_playing: bool):
-        if self.is_playing != is_playing:
-            self.is_playing = is_playing
-            self._write_stream_command("resume" if is_playing else "pause")
-            self._broadcast_state()
+        if self.is_playing != is_playing and self._event_loop and self._event_loop.is_running():
+            logger.info("External Sonos state change: is_playing=%s", is_playing)
+            if is_playing:
+                asyncio.run_coroutine_threadsafe(self.resume(), self._event_loop)
+            else:
+                asyncio.run_coroutine_threadsafe(self.pause(), self._event_loop)
 
     def start(self):
         loop = asyncio.get_event_loop()
@@ -373,11 +375,16 @@ class PlayerEngine:
                 await asyncio.sleep(1)
                 if self.is_playing and self.current_track:
                     self._last_audio_at = time.monotonic()
-                    if self.duration_seconds > 0 and self.elapsed_seconds < self.duration_seconds:
-                        self.elapsed_seconds += 1
-                    elif self.duration_seconds == 0:
-                        self.elapsed_seconds += 1
-                    self._broadcast_state()
+                    self.elapsed_seconds += 1
+                    if self.duration_seconds > 0 and self.elapsed_seconds >= self.duration_seconds + 2:
+                        logger.info(
+                            "Track elapsed seconds (%s) reached duration (%s) + grace period; advancing to next track",
+                            self.elapsed_seconds,
+                            self.duration_seconds,
+                        )
+                        await self.next_track()
+                    else:
+                        self._broadcast_state()
                 elif (
                     self.current_track
                     and self._last_audio_at is not None

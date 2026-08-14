@@ -8,15 +8,14 @@ logger = logging.getLogger(__name__)
 
 class SonosEventListener:
     """
-    Subscribes to UPnP events (RenderingControl for volume, AVTransport for state)
+    Subscribes to UPnP events (RenderingControl for volume, AVTransport for playback state)
     for active Sonos devices and syncs changes back to PlayerEngine.
     """
     def __init__(self, on_volume_change: Callable[[str, int], None], on_state_change: Callable[[bool], None]):
         self.on_volume_change = on_volume_change
         self.on_state_change = on_state_change
-        self.subscriptions: Dict[str, Any] = {}
+        self.subscriptions: Dict[str, Dict[str, Any]] = {}
         self._is_running = False
-        self._event_thread: Optional[threading.Thread] = None
 
     def start(self):
         self._is_running = True
@@ -57,7 +56,8 @@ class SonosEventListener:
         try:
             import soco
             device = soco.SoCo(ip)
-            
+            subs = {}
+
             def handle_rendering_control(event):
                 if not self._is_running:
                     return
@@ -68,23 +68,53 @@ class SonosEventListener:
                     try:
                         self.on_volume_change(ip, int(vol))
                     except Exception as e:
-                        logger.error(f"Error handling Sonos volume event: {e}")
+                        logger.error(f"Error handling Sonos volume event on {ip}: {e}")
 
-            sub = device.renderingControl.subscribe(auto_renew=True)
-            sub.callback = handle_rendering_control
-            self.subscriptions[ip] = sub
-            logger.info(f"Subscribed to UPnP RenderingControl volume events for Sonos speaker at {ip}")
+            def handle_av_transport(event):
+                if not self._is_running:
+                    return
+                transport_state = event.variables.get("transport_state")
+                if transport_state:
+                    state_str = str(transport_state).upper()
+                    logger.info(f"Sonos AVTransport state on {ip}: {state_str}")
+                    try:
+                        if state_str == "PLAYING":
+                            self.on_state_change(True)
+                        elif state_str in ("PAUSED_PLAYBACK", "STOPPED"):
+                            self.on_state_change(False)
+                    except Exception as e:
+                        logger.error(f"Error handling Sonos state event on {ip}: {e}")
+
+            try:
+                sub_vol = device.renderingControl.subscribe(auto_renew=True)
+                sub_vol.callback = handle_rendering_control
+                subs["volume"] = sub_vol
+                logger.info(f"Subscribed to UPnP RenderingControl volume events for Sonos speaker at {ip}")
+            except Exception as e:
+                logger.warning(f"Failed to subscribe to UPnP volume events for Sonos speaker at {ip}: {e}")
+
+            try:
+                sub_transport = device.avTransport.subscribe(auto_renew=True)
+                sub_transport.callback = handle_av_transport
+                subs["transport"] = sub_transport
+                logger.info(f"Subscribed to UPnP AVTransport state events for Sonos speaker at {ip}")
+            except Exception as e:
+                logger.warning(f"Failed to subscribe to UPnP transport events for Sonos speaker at {ip}: {e}")
+
+            if subs:
+                self.subscriptions[ip] = subs
         except Exception as e:
-            logger.warning(f"Failed to subscribe to UPnP events for Sonos speaker at {ip}: {e}")
+            logger.warning(f"Failed to setup UPnP subscriptions for Sonos speaker at {ip}: {e}")
 
     def _unsubscribe_device(self, ip: str):
         if ip in self.subscriptions:
-            try:
-                sub = self.subscriptions.pop(ip)
-                sub.unsubscribe()
-                logger.info(f"Unsubscribed UPnP events for Sonos speaker at {ip}")
-            except Exception as e:
-                logger.warning(f"Error unsubscribing UPnP events for {ip}: {e}")
+            subs = self.subscriptions.pop(ip)
+            for sub_type, sub in subs.items():
+                try:
+                    sub.unsubscribe()
+                    logger.info(f"Unsubscribed UPnP {sub_type} events for Sonos speaker at {ip}")
+                except Exception as e:
+                    logger.warning(f"Error unsubscribing UPnP {sub_type} events for {ip}: {e}")
 
     def stop(self):
         self._is_running = False
