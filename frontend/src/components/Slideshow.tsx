@@ -7,8 +7,7 @@ import { startStarCanvas, startFxCanvas, SkyPhase, SkyKind, SkyState } from './s
 import { useQuality, Quality } from './sky/useQuality'
 import { getQueryParam } from './sky/queryParam'
 import AmbientCalendarOverlay, { ReminderPayload } from './AmbientCalendarOverlay'
-import NowPlayingQueue from './ytmusic/NowPlayingQueue'
-import { Track } from './ytmusic/MiniPlayerBar'
+import MiniPlayerBar, { Track } from './ytmusic/MiniPlayerBar'
 
 interface MediaItem {
   url: string
@@ -35,9 +34,16 @@ interface Slide {
 interface SlideshowProps {
   photos: MediaItem[]
   onDismiss: () => void
-  currentTrack: Track | null
-  queue: Track[]
-  isPlaying: boolean
+  currentTrack?: Track | null
+  queue?: Track[]
+  isPlaying?: boolean
+  elapsedSeconds?: number
+  durationSeconds?: number
+  onTogglePlay?: () => void
+  onNextTrack?: () => void
+  onPrevTrack?: () => void
+  onSeek?: (seconds: number) => void
+  onOpenFullPlayer?: () => void
 }
 
 interface WeatherDay {
@@ -462,7 +468,20 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVide
   )
 }
 
-export default function Slideshow({ photos, onDismiss, currentTrack, queue, isPlaying }: SlideshowProps) {
+export default function Slideshow({
+  photos,
+  onDismiss,
+  currentTrack,
+  queue,
+  isPlaying,
+  elapsedSeconds,
+  durationSeconds,
+  onTogglePlay,
+  onNextTrack,
+  onPrevTrack,
+  onSeek,
+  onOpenFullPlayer,
+}: SlideshowProps) {
   const [currentIdx, setCurrentIdx] = useState(0)
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null)
   const [playerReady, setPlayerReady] = useState(false)
@@ -851,14 +870,18 @@ export default function Slideshow({ photos, onDismiss, currentTrack, queue, isPl
       <canvas ref={fxRef} className="absolute inset-0 w-full h-full pointer-events-none z-20" />
 
       {currentTrack && (
-        <div className="pointer-events-none absolute bottom-6 right-6 z-40">
-          <NowPlayingQueue
-            currentTrack={currentTrack}
-            queue={queue}
-            isPlaying={isPlaying}
-            compact
-          />
-        </div>
+        <MiniPlayerBar
+          currentTrack={currentTrack}
+          isPlaying={Boolean(isPlaying)}
+          elapsedSeconds={elapsedSeconds ?? 0}
+          durationSeconds={durationSeconds ?? 0}
+          onTogglePlay={onTogglePlay ?? (() => {})}
+          onNextTrack={onNextTrack ?? (() => {})}
+          onPrevTrack={onPrevTrack ?? (() => {})}
+          onSeek={onSeek ?? (() => {})}
+          onOpenFullPlayer={onOpenFullPlayer ?? onDismiss}
+          slideshowMode
+        />
       )}
 
       {selectedVideo && (

@@ -35,7 +35,6 @@ import Photos from './views/Photos'
 import YTMusic from './views/YTMusic'
 import MiniPlayerBar, { Track } from './components/ytmusic/MiniPlayerBar'
 import Slideshow, { hasSkyOverride } from './components/Slideshow'
-import MusicNowPlayingScreen from './components/ytmusic/MusicNowPlayingScreen'
 
 const NAV = [
   { id: 'home', label: 'Home', icon: 'home', view: Home, active: 'bg-sky-200 text-sky-950 dark:bg-sky-900 dark:text-sky-100', activeText: 'text-sky-600 dark:text-sky-400' },
@@ -446,19 +445,6 @@ export default function App() {
   }, [])
 
   const lastMotionTimeRef = useRef<number>(Date.now())
-  const isPlayingRef = useRef(false)
-  isPlayingRef.current = Boolean(isPlaying)
-  const isMusicActive = Boolean(isPlaying || currentTrack)
-  const isMusicActiveRef = useRef(false)
-  isMusicActiveRef.current = isMusicActive
-
-  // Whenever music starts playing, dismiss screensaver so controls stay visible
-  useEffect(() => {
-    if (isPlaying) {
-      setSlideshowActive(false)
-    }
-  }, [isPlaying])
-
   // Screensaver + kiosk return to home + Fully Kiosk screen-off & motion wake logic
   useEffect(() => {
     const IDLE_RETURN_MS = 3 * 60 * 1000               // 3 minutes of inactivity to go Home
@@ -491,18 +477,12 @@ export default function App() {
     }
 
     function startSlideshow() {
-      // Do NOT trigger screensaver when music is ACTIVELY playing so sidebar & topbar remain interactive
-      if (isPlayingRef.current) return
       setSlideshowActive(true)
     }
 
     function goHome() {
       if (slideshowActiveRef.current) return
-      if (isMusicActiveRef.current) {
-        if (currentRoute() !== 'ytmusic') location.hash = '#/ytmusic'
-      } else {
-        if (currentRoute() !== 'home') location.hash = '#/home'
-      }
+      if (currentRoute() !== 'home') location.hash = '#/home'
     }
 
     function reset() {
@@ -527,23 +507,15 @@ export default function App() {
       clearTimeout(screenOffTimer)
       screenOffTimer = setTimeout(turnScreenOff, NO_MOTION_SCREEN_OFF_MS)
 
-      // Motion detected logic:
-      // 1. If music is ACTIVELY playing -> dismiss slideshow & make sure we're on ytmusic
-      if (isPlayingRef.current) {
-        setSlideshowActive(false)
-        if (currentRoute() !== 'ytmusic') location.hash = '#/ytmusic'
-        return
-      }
-
-      // 2. If the user is actively interacting with the app (slideshow is NOT active),
-      // DO NOT let camera motion interrupt their search, typing, or paused view with the slideshow!
+      // If the user is actively interacting with the app (slideshow is NOT active),
+      // DO NOT let camera motion interrupt their search, typing, or view with the slideshow!
       if (!slideshowActiveRef.current) {
         return
       }
 
-      // 3. Waking up from an active screensaver:
+      // Waking up from an active screensaver:
       // Over 2 hours of inactivity -> Home Page
-      // Under 2 hours of inactivity -> Photos Slideshow
+      // Under 2 hours of inactivity -> Keep Photos Slideshow active
       lastMotionTimeRef.current = nowMs
       if (elapsedMs > TWO_HOURS_MS) {
         setSlideshowActive(false)
@@ -889,27 +861,23 @@ export default function App() {
             </div>
           </div>
         </motion.div>
-        {slideshowActive && currentTrack && (
-          <MusicNowPlayingScreen
-            currentTrack={currentTrack}
-            queue={playQueue}
-            isPlaying={isPlaying}
-            elapsedSeconds={elapsedSeconds}
-            durationSeconds={durationSeconds}
-            onTogglePlay={handleTogglePlay}
-            onNext={handleNextTrack}
-            onPrevious={handlePrevTrack}
-            onMute={handleMute}
-            onDismiss={() => setSlideshowActive(false)}
-          />
-        )}
-        {slideshowActive && !currentTrack && photosList.length > 0 && (
+        {slideshowActive && photosList.length > 0 && (
           <Slideshow
             photos={photosList}
             onDismiss={() => setSlideshowActive(false)}
             currentTrack={currentTrack}
             queue={playQueue}
             isPlaying={isPlaying}
+            elapsedSeconds={elapsedSeconds}
+            durationSeconds={durationSeconds}
+            onTogglePlay={handleTogglePlay}
+            onNextTrack={handleNextTrack}
+            onPrevTrack={handlePrevTrack}
+            onSeek={handleSeek}
+            onOpenFullPlayer={() => {
+              setSlideshowActive(false)
+              window.location.hash = '#/ytmusic'
+            }}
           />
         )}
       </RewardCelebrationProvider>

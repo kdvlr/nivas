@@ -23,6 +23,8 @@ interface MiniPlayerBarProps {
   onPrevTrack: () => void
   onSeek: (seconds: number) => void
   onOpenFullPlayer: () => void
+  slideshowMode?: boolean
+  className?: string
 }
 
 export default function MiniPlayerBar({
@@ -35,6 +37,8 @@ export default function MiniPlayerBar({
   onPrevTrack,
   onSeek,
   onOpenFullPlayer,
+  slideshowMode = false,
+  className = '',
 }: MiniPlayerBarProps) {
   const [showAirPlayModal, setShowAirPlayModal] = useState(false)
   const airPlayButtonRef = useRef<HTMLButtonElement>(null)
@@ -72,7 +76,12 @@ export default function MiniPlayerBar({
       <motion.div
         initial={{ y: 80, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="fixed bottom-3 left-3 right-3 md:left-24 md:right-6 z-40 flex items-center justify-between gap-4 rounded-3xl bg-[var(--surface-elevated,#0f172a)]/95 p-3 backdrop-blur-xl border border-white/10 shadow-2xl text-slate-100"
+        onClick={(e) => e.stopPropagation()}
+        className={`fixed bottom-3 z-40 flex items-center justify-between gap-4 rounded-3xl bg-[var(--surface-elevated,#0f172a)]/95 p-3 backdrop-blur-xl border border-white/10 shadow-2xl text-slate-100 ${
+          slideshowMode
+            ? 'left-3 right-3 sm:left-6 sm:right-6 lg:left-12 lg:right-12 z-[110]'
+            : 'left-3 right-3 md:left-24 md:right-6'
+        } ${className}`}
       >
         {/* Track Thumbnail & Metadata */}
         <div
