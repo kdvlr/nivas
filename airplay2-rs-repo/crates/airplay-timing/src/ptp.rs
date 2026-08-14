@@ -420,11 +420,11 @@ impl PtpHeader {
         }
     }
 
-    /// Serialize to 34 bytes.
+    /// Serialize to 34 bytes (with IEEE 802.1AS transportSpecific = 1).
     pub fn serialize(&self) -> [u8; 34] {
         let mut buf = [0u8; 34];
 
-        buf[0] = self.message_type as u8;
+        buf[0] = 0x10 | (self.message_type as u8); // transportSpecific = 1 (802.1AS / gPTP)
         buf[1] = self.version;
         buf[2..4].copy_from_slice(&self.message_length.to_be_bytes());
         buf[4] = self.domain_number;
@@ -2220,7 +2220,7 @@ mod tests {
             let header = PtpHeader::new(PtpMessageType::DelayReq, 100);
             let bytes = header.serialize();
 
-            assert_eq!(bytes[0], PtpMessageType::DelayReq as u8);
+            assert_eq!(bytes[0], 0x10 | (PtpMessageType::DelayReq as u8));
             assert_eq!(bytes.len(), 34);
         }
     }
