@@ -684,8 +684,36 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
             if render_delay_ms > 0 {
                 conn.set_render_delay_ms(render_delay_ms);
             }
-            conn.setup().await?;
             conns.push(conn);
+        }
+
+        // Complete RTSP and Timing Setup for all connections
+        if conns.len() > 1 && use_ptp {
+            let all_target_ips: Vec<std::net::IpAddr> = ips.clone();
+            if ptp_master {
+                println!("Setting up primary speaker as PTP master for all {} speakers...", all_target_ips.len());
+                conns[0].setup_as_ptp_master(&all_target_ips).await?;
+            } else {
+                println!("Setting up primary speaker...");
+                conns[0].setup().await?;
+            }
+            let ptp_clock_id = conns[0].ptp_master_clock_id().unwrap_or([0u8; 8]);
+            let timing_offset = conns[0].timing_offset().unwrap_or_default();
+            let timing_rx = conns[0].timing_rx();
+            println!("Primary PTP setup done, clock ID: {:02x?}", ptp_clock_id);
+
+            for (i, conn) in conns.iter_mut().enumerate().skip(1) {
+                println!("Setting up secondary speaker {} (IP: {})...", i + 1, ips[i]);
+                if let Some(ref rx) = timing_rx {
+                    conn.setup_for_group(ptp_clock_id, timing_offset, rx.clone()).await?;
+                } else {
+                    conn.setup().await?;
+                }
+            }
+        } else {
+            for conn in conns.iter_mut() {
+                conn.setup().await?;
+            }
         }
         println!("\n--- Starting playback on all speakers ---");
         let dec = AudioDecoder::open(audio_path)?;
