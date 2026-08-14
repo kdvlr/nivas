@@ -1605,7 +1605,10 @@ impl Connection {
             streamer.set_timing_updates(tx.subscribe()).await;
         }
         if self.stream_config.timing_protocol == TimingProtocol::Ptp {
-            if let Some(clock_id) = self.ptp_master_clock_id {
+            let clock_id = self.ptp_master_clock_id.or_else(|| {
+                peers.iter().find_map(|p| p.ptp_master_clock_id)
+            });
+            if let Some(clock_id) = clock_id {
                 streamer.set_ptp_sync_mode(clock_id).await;
             }
         }

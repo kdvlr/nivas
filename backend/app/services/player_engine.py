@@ -800,16 +800,11 @@ class PlayerEngine:
             "--control-stdin",
             "--dacp",
             "--remote-control-events",
+            "--ptp",
+            "--ptp-master",
             "--volume",
             f"{volume:.4f}",
         ]
-        ptp_targets = [device.address for device in devices if self._device_uses_ptp(device)]
-        if ptp_targets and len(ptp_targets) == len(devices):
-            # Match the command that is verified to work with the Sonos Era:
-            # global PTP master mode, not merely a per-target timing override.
-            cmd.extend(["--ptp", "--ptp-master"])
-        elif ptp_targets:
-            cmd.extend(["--ptp-targets", ",".join(ptp_targets)])
 
         if track_info:
             for flag, key in (
