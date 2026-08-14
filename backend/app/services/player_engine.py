@@ -652,13 +652,19 @@ class PlayerEngine:
                 "postprocessors": [{
                     "key": "FFmpegExtractAudio",
                     "preferredcodec": "wav",
+                    "preferredquality": "0",
                 }],
+                "postprocessor_args": [
+                    "-ar", "44100",
+                    "-ac", "2",
+                    "-acodec", "pcm_s16le",
+                ],
                 "quiet": True,
                 "no_warnings": True,
             }
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([url])
-            logger.info(f"Downloaded and converted audio successfully to {output_path}")
+            logger.info(f"Downloaded and converted audio successfully to 44.1kHz WAV: {output_path}")
         except Exception as e:
             logger.error(f"yt-dlp download/transcoding error: {e}")
 
@@ -789,6 +795,8 @@ class PlayerEngine:
             "--control-stdin",
             "--dacp",
             "--remote-control-events",
+            "--render-delay",
+            "200",
             "--volume",
             f"{volume:.4f}",
         ]
