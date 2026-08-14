@@ -152,3 +152,56 @@ def test_autoplay_tracks_handles_fallback_string_duration():
     assert len(recs) == 1
     assert recs[0]["videoId"] == "next_track"
     assert recs[0]["duration"] == 138
+
+
+def test_parse_and_build_ytmusic_headers_json_array():
+    from app.services.ytmusic import parse_and_build_ytmusic_headers
+    json_array = """[
+        {"name": "SAPISID", "value": "test_sapisid_value_123"},
+        {"name": "__Secure-3PSID", "value": "psid_value_456"}
+    ]"""
+    headers = parse_and_build_ytmusic_headers(json_array)
+    assert "cookie" in headers
+    assert "SAPISID=test_sapisid_value_123" in headers["cookie"]
+    assert "authorization" in headers
+    assert headers["authorization"].startswith("SAPISIDHASH ")
+    assert headers["origin"] == "https://music.youtube.com"
+
+
+def test_parse_and_build_ytmusic_headers_raw_cookie():
+    from app.services.ytmusic import parse_and_build_ytmusic_headers
+    raw = "SID=123; __Secure-3PAPISID=my_sapisid_tok; HSID=456"
+    headers = parse_and_build_ytmusic_headers(raw)
+    assert "cookie" in headers
+    assert headers["cookie"] == raw
+    assert "authorization" in headers
+    assert headers["authorization"].startswith("SAPISIDHASH ")
+
+
+def test_parse_and_build_ytmusic_headers_netscape():
+    from app.services.ytmusic import parse_and_build_ytmusic_headers
+    netscape = "# Netscape HTTP Cookie File\n.youtube.com\tTRUE\t/\tTRUE\t1750000000\tSAPISID\ttest_netscape_sapisid"
+    headers = parse_and_build_ytmusic_headers(netscape)
+    assert "cookie" in headers
+    assert "SAPISID=test_netscape_sapisid" in headers["cookie"]
+    assert "authorization" in headers
+    assert headers["authorization"].startswith("SAPISIDHASH ")
+
+
+def test_init_client_falls_back_to_guest_mode_on_invalid_file(tmp_path, monkeypatch):
+    from app.config import get_settings
+    settings = get_settings()
+    corrupt_file = tmp_path / "corrupt_ytmusic.json"
+    corrupt_file.write_text('{"invalid": "data"}')
+    monkeypatch.setattr(settings, "data_dir", tmp_path)
+    (tmp_path / "credentials").mkdir()
+    auth_file = tmp_path / "credentials" / "ytmusic_headers.json"
+    auth_file.write_text('{"invalid": "data"}')
+
+    service = YTMusicService()
+    # Should fall back to guest mode without crashing
+    assert service._ytmusic is not None
+    status = service.get_auth_status()
+    assert status["authenticated"] is False
+    assert status["has_client"] is True
+

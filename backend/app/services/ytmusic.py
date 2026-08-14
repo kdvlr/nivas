@@ -1,7 +1,11 @@
+import hashlib
 import json
 import logging
+import os
+import re
+import tempfile
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from pathlib import Path
 
 from ..config import get_settings
@@ -19,60 +23,174 @@ CACHE_TTL = {
     "stream": 14400,      # 4 hours
 }
 
+
+def parse_and_build_ytmusic_headers(raw_input: str) -> Dict[str, str]:
+    """Parse raw browser headers, JSON cookie array, Netscape cookies, or cookie string into valid ytmusicapi browser headers."""
+    if not isinstance(raw_input, str):
+        raise ValueError("Input must be a string")
+
+    raw_input = raw_input.strip()
+    if not raw_input:
+        raise ValueError("Input is empty")
+
+    user_headers: Dict[str, str] = {}
+    cookie_str = ""
+
+    # 1. Check if Netscape cookie format (e.g. cookies.txt exported from browser)
+    if raw_input.startswith("# Netscape") or "\tTRUE\t" in raw_input or "\tFALSE\t" in raw_input:
+        cookie_parts = []
+        for line in raw_input.splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            parts = line.split("\t")
+            if len(parts) >= 7:
+                cookie_parts.append(f"{parts[5]}={parts[6]}")
+        cookie_str = "; ".join(cookie_parts)
+
+    # 2. Check if JSON array (e.g. EditThisCookie, Cookie-Editor export)
+    elif raw_input.startswith("["):
+        try:
+            arr = json.loads(raw_input)
+            if isinstance(arr, list):
+                cookie_parts = [
+                    f"{c['name']}={c['value']}"
+                    for c in arr
+                    if isinstance(c, dict) and "name" in c and "value" in c
+                ]
+                cookie_str = "; ".join(cookie_parts)
+        except Exception as e:
+            raise ValueError(f"Malformed JSON array: {e}") from e
+
+    # 3. Check if JSON dict (e.g. {"Cookie": "..."} or {"cookie": "...", "authorization": "..."})
+    elif raw_input.startswith("{"):
+        try:
+            d = json.loads(raw_input)
+            if isinstance(d, dict):
+                lowered = {str(k).lower(): str(v) for k, v in d.items()}
+                if "cookie" in lowered:
+                    cookie_str = lowered["cookie"]
+                user_headers = lowered
+        except Exception as e:
+            raise ValueError(f"Malformed JSON object: {e}") from e
+
+    # 4. If no cookie extracted yet, check line-by-line headers or raw cookie string
+    if not cookie_str:
+        has_colon_headers = False
+        for line in raw_input.splitlines():
+            if ":" in line:
+                k, v = line.split(":", 1)
+                user_headers[k.strip().lower()] = v.strip()
+                if k.strip().lower() == "cookie":
+                    cookie_str = v.strip()
+                    has_colon_headers = True
+
+        if not cookie_str and not has_colon_headers and "=" in raw_input:
+            cookie_str = raw_input.replace("\n", "; ").strip()
+
+    if cookie_str:
+        user_headers["cookie"] = cookie_str
+
+    if "cookie" not in user_headers:
+        raise ValueError("No cookie found in the provided credentials. Please paste valid cookies or browser headers.")
+
+    # 5. Extract SAPISID or __Secure-3PAPISID to compute SAPISIDHASH authorization header if not provided
+    if "authorization" not in user_headers:
+        cookie_val = user_headers["cookie"]
+        sapisid_match = re.search(r"(?:__Secure-3PAPISID|SAPISID)=([^;\"'\s]+)", cookie_val)
+        if sapisid_match:
+            sapisid = sapisid_match.group(1).strip()
+            origin = user_headers.get("origin", "https://music.youtube.com")
+            now_ts = str(int(time.time()))
+            sha1_hash = hashlib.sha1(f"{now_ts} {sapisid} {origin}".encode("utf-8")).hexdigest()
+            user_headers["authorization"] = f"SAPISIDHASH {now_ts}_{sha1_hash}"
+        else:
+            raise ValueError("Cookie does not contain SAPISID or __Secure-3PAPISID token required for YouTube Music authentication.")
+
+    # 6. Fill in standard browser defaults
+    default_headers = {
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+        "accept": "*/*",
+        "accept-encoding": "gzip, deflate",
+        "content-type": "application/json",
+        "origin": "https://music.youtube.com",
+        "x-goog-authuser": "0",
+    }
+    for k, v in default_headers.items():
+        if k not in user_headers:
+            user_headers[k] = v
+
+    return user_headers
+
+
 class YTMusicService:
     def __init__(self):
         self._ytmusic = None
+        self._auth_error: Optional[str] = None
         self._cache: Dict[str, Dict[str, Any]] = {}
         self._init_client()
 
     def _init_client(self):
         settings = get_settings()
         auth_file = settings.ytmusic_headers_file
+        self._auth_error = None
         try:
             from ytmusicapi import YTMusic
             if auth_file.exists():
                 logger.info(f"Initializing YTMusic with auth file: {auth_file}")
-                self._ytmusic = YTMusic(str(auth_file))
-            else:
-                logger.info("Initializing YTMusic in guest mode")
-                self._ytmusic = YTMusic()
+                try:
+                    self._ytmusic = YTMusic(str(auth_file))
+                    logger.info("Successfully initialized authenticated YTMusic client")
+                    return
+                except Exception as e:
+                    logger.warning(f"Failed to load authenticated YTMusic credentials ({e}), falling back to guest mode")
+                    self._auth_error = str(e)
+
+            logger.info("Initializing YTMusic in guest mode")
+            self._ytmusic = YTMusic()
         except Exception as e:
-            logger.error(f"Failed to initialize YTMusic client: {e}")
+            logger.error(f"Failed to initialize YTMusic client in guest mode: {e}")
             self._ytmusic = None
 
     def get_auth_status(self) -> Dict[str, Any]:
         settings = get_settings()
-        is_authenticated = settings.ytmusic_headers_file.exists()
+        is_authenticated = settings.ytmusic_headers_file.exists() and self._auth_error is None
         return {
             "authenticated": is_authenticated,
-            "headers_file_exists": is_authenticated,
-            "has_client": self._ytmusic is not None
+            "headers_file_exists": settings.ytmusic_headers_file.exists(),
+            "has_client": self._ytmusic is not None,
+            "error": self._auth_error,
         }
 
-    def save_auth_headers(self, headers_str: str) -> bool:
+    def save_auth_headers(self, headers_str: str) -> Tuple[bool, Optional[str]]:
         settings = get_settings()
         auth_file = settings.ytmusic_headers_file
         try:
-            if isinstance(headers_str, str):
-                headers_str = headers_str.strip()
-                if headers_str.startswith("{"):
-                    headers_dict = json.loads(headers_str)
-                else:
-                    headers_dict = {}
-                    for line in headers_str.splitlines():
-                        if ":" in line:
-                            k, v = line.split(":", 1)
-                            headers_dict[k.strip()] = v.strip()
-                
-                auth_file.parent.mkdir(parents=True, exist_ok=True)
-                with open(auth_file, "w", encoding="utf-8") as f:
-                    json.dump(headers_dict, f, indent=2)
+            headers_dict = parse_and_build_ytmusic_headers(headers_str)
+
+            # Validate with YTMusic in-memory before writing to disk
+            from ytmusicapi import YTMusic
+            with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as tf:
+                json.dump(headers_dict, tf, indent=2)
+                tf_name = tf.name
+
+            try:
+                test_client = YTMusic(tf_name)
+                if not test_client:
+                    raise ValueError("Client initialization failed")
+            finally:
+                if os.path.exists(tf_name):
+                    os.unlink(tf_name)
+
+            auth_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(auth_file, "w", encoding="utf-8") as f:
+                json.dump(headers_dict, f, indent=2)
 
             self._init_client()
-            return True
+            return True, None
         except Exception as e:
             logger.error(f"Failed to save auth headers: {e}")
-            return False
+            return False, str(e)
 
     def clear_auth(self) -> bool:
         settings = get_settings()

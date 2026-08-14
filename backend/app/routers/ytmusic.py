@@ -60,9 +60,9 @@ def get_auth_status():
 
 @router.post("/auth")
 def save_auth(req: AuthRequest):
-    success = ytmusic_service.save_auth_headers(req.headers)
+    success, error_msg = ytmusic_service.save_auth_headers(req.headers)
     if not success:
-        raise HTTPException(status_code=400, detail="Invalid headers or JSON format")
+        raise HTTPException(status_code=400, detail=error_msg or "Invalid headers or cookie format")
     return ytmusic_service.get_auth_status()
 
 @router.delete("/auth")
