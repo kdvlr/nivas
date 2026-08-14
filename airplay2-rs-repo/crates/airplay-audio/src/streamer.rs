@@ -99,9 +99,9 @@ enum SenderMessage {
         /// Pre-serialized wire bytes per target (one entry per SendTarget).
         /// Single-device: 1 entry. Group: N entries (each encrypted with device-specific cipher).
         wire_packets: Vec<Vec<u8>>,
-        /// Pre-serialized sync packet bytes, if sync is needed this frame.
-        /// Shared across all targets (sync content is identical for all devices).
-        sync_data: Option<Vec<u8>>,
+        /// Pre-serialized sync packet bytes per target, if sync is needed this frame.
+        /// Each target receives its own sync packet matching its RTP timestamp offset.
+        sync_packets: Vec<Option<Vec<u8>>>,
     },
     /// Pause: sender thread should stop advancing deadlines and wait for Resume.
     Pause,
@@ -196,8 +196,8 @@ fn sender_thread_main(
     let mut jitter_exceed_count: u64 = 0;
 
     // Burst buffer for WiFi/BT coexistence
-    // Each entry: (wire_packets per target, optional shared sync data)
-    let mut burst_buffer: Vec<(Vec<Vec<u8>>, Option<Vec<u8>>)> = Vec::with_capacity(burst_size);
+    // Each entry: (wire_packets per target, per-target sync packets)
+    let mut burst_buffer: Vec<(Vec<Vec<u8>>, Vec<Option<Vec<u8>>>)> = Vec::with_capacity(burst_size);
 
     let target_count = targets.len();
     tracing::info!(
@@ -266,10 +266,10 @@ fn sender_thread_main(
             }
             SenderMessage::Packet {
                 wire_packets,
-                sync_data,
+                sync_packets,
             } => {
                 // Buffer packet for burst sending
-                burst_buffer.push((wire_packets, sync_data));
+                burst_buffer.push((wire_packets, sync_packets));
 
                 // Only send when we have a full burst (or first packet to initialize timing)
                 if burst_buffer.len() < burst_size && started {
@@ -350,10 +350,10 @@ fn sender_thread_main(
                 last_send = send_time;
 
                 // Send all buffered packets
-                for (wire_packets, sync_data) in burst_buffer.drain(..) {
-                    // Send sync packet to ALL targets' control dests
-                    if let Some(ref sync) = sync_data {
-                        for target in &targets {
+                for (wire_packets, sync_packets) in burst_buffer.drain(..) {
+                    // Send per-target sync packets to each target's control dest
+                    for (i, target) in targets.iter().enumerate() {
+                        if let Some(Some(ref sync)) = sync_packets.get(i) {
                             if let Some(sock) = target
                                 .control_socket
                                 .as_ref()
@@ -1214,13 +1214,13 @@ async fn run_streamer(
                 let sample_rate = guard.config.audio_format.sample_rate.as_hz();
                 let last_sync_rtp = guard.last_sync_rtp;
 
-                // Get current time and apply clock offset from PTP/NTP sync
+                // Get current time and apply clock offset from PTP sync
                 let local_wall = guard.clock.now_wall_ns();
-                let adjusted = if let Some(offset) = guard.clock_offset {
+                let ptp_adjusted = if let Some(offset) = guard.clock_offset {
                     let result = guard.clock.apply_offset(local_wall, &offset);
                     if diag < 3 {
                         tracing::info!(
-                            "CLOCK OFFSET: offset_ns={}, local_wall={}, adjusted={}, diff={}",
+                            "PTP CLOCK OFFSET: offset_ns={}, local_wall={}, adjusted={}, diff={}",
                             offset.offset_ns,
                             local_wall,
                             result,
@@ -1229,17 +1229,16 @@ async fn run_streamer(
                     }
                     result
                 } else {
-                    if diag < 3 {
-                        tracing::warn!("CLOCK OFFSET: None - using local time directly (may cause timing issues!)");
-                    }
                     local_wall
                 };
 
-                // Apply render delay: shift NTP timestamp into the future so the
-                // receiver buffers audio longer before rendering, giving more
-                // time for retransmit recovery of lost packets.
-                let render_adjusted = adjusted + guard.render_delay_ns;
-                let ntp = unix_to_ntp(render_adjusted);
+                // PTP render adjusted timestamp (for PTP receivers like Sonos)
+                let ptp_render_adjusted = ptp_adjusted + guard.render_delay_ns;
+
+                // Unix NTP render adjusted timestamp (for NTP receivers like WiiM)
+                // WiiM synchronizes against our NtpTimingServer which uses local Unix wall clock time.
+                let ntp_render_adjusted = local_wall + guard.render_delay_ns;
+                let ntp = unix_to_ntp(ntp_render_adjusted);
 
                 // Apple sends realtime audio with PT=96 and the marker bit clear,
                 // including the first packet (RTP byte 1 is 0x60, not 0xe0).
@@ -1259,22 +1258,32 @@ async fn run_streamer(
 
                 if !guard.rtp_senders.is_empty() {
                     if let Some(ref tx) = sender_tx {
-                        // Sender thread path: prepare sync from first sender (shared),
+                        // Sender thread path: prepare per-target sync for ALL senders,
                         // then prepare audio from ALL senders (per-device encryption).
-                        let sync_data = if need_sync {
-                            if use_ptp_sync {
-                                let next_rtp_ts = rtp_ts.wrapping_add(sample_rate / 44100 * 352);
-                                guard.rtp_senders[0].prepare_ptp_sync(
-                                    rtp_ts,
-                                    render_adjusted,
-                                    next_rtp_ts,
-                                    &ptp_clock_id,
-                                )?
-                            } else {
-                                guard.rtp_senders[0].prepare_sync(rtp_ts, ntp)?
+                        let sync_packets = if need_sync {
+                            let mut syncs = Vec::with_capacity(guard.rtp_senders.len());
+                            for sender in &mut guard.rtp_senders {
+                                let ptp_id = sender.ptp_master_clock_id().or(if use_ptp_sync {
+                                    Some(ptp_clock_id)
+                                } else {
+                                    None
+                                });
+                                let sync_pkt = if let Some(clock_id) = ptp_id {
+                                    let next_rtp_ts = rtp_ts.wrapping_add(sample_rate / 44100 * 352);
+                                    sender.prepare_ptp_sync(
+                                        rtp_ts,
+                                        ptp_render_adjusted,
+                                        next_rtp_ts,
+                                        &clock_id,
+                                    )?
+                                } else {
+                                    sender.prepare_sync(rtp_ts, ntp)?
+                                };
+                                syncs.push(sync_pkt);
                             }
+                            syncs
                         } else {
-                            None
+                            Vec::new()
                         };
 
                         let mut wire_packets = Vec::with_capacity(guard.rtp_senders.len());
@@ -1312,7 +1321,7 @@ async fn run_streamer(
                         let tx_clone = tx.clone();
                         let msg = SenderMessage::Packet {
                             wire_packets,
-                            sync_data,
+                            sync_packets,
                         };
                         let send_result =
                             tokio::task::spawn_blocking(move || tx_clone.send(msg)).await;
@@ -1327,18 +1336,25 @@ async fn run_streamer(
                         continue;
                     } else {
                         // Fallback: direct send (no sender thread)
-                        // Send sync from first sender, audio from all senders
+                        // Send per-target sync and audio to all senders
                         if need_sync {
-                            if use_ptp_sync {
-                                let next_rtp_ts = rtp_ts.wrapping_add(sample_rate / 44100 * 352);
-                                guard.rtp_senders[0].send_ptp_sync(
-                                    rtp_ts,
-                                    render_adjusted,
-                                    next_rtp_ts,
-                                    &ptp_clock_id,
-                                )?;
-                            } else {
-                                guard.rtp_senders[0].send_sync(rtp_ts, ntp)?;
+                            for sender in &mut guard.rtp_senders {
+                                let ptp_id = sender.ptp_master_clock_id().or(if use_ptp_sync {
+                                    Some(ptp_clock_id)
+                                } else {
+                                    None
+                                });
+                                if let Some(clock_id) = ptp_id {
+                                    let next_rtp_ts = rtp_ts.wrapping_add(sample_rate / 44100 * 352);
+                                    sender.send_ptp_sync(
+                                        rtp_ts,
+                                        ptp_render_adjusted,
+                                        next_rtp_ts,
+                                        &clock_id,
+                                    )?;
+                                } else {
+                                    sender.send_sync(rtp_ts, ntp)?;
+                                }
                             }
                         }
 

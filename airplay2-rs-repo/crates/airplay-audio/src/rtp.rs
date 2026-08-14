@@ -410,6 +410,8 @@ pub struct RtpSender {
     /// Ring buffer of recently sent serialized packets, indexed by (sequence % PACKET_HISTORY_SIZE).
     tcp_stream: Option<std::net::TcpStream>,
     packet_history: Vec<Option<Vec<u8>>>,
+    /// PTP master clock identity if this target uses PTP sync mode.
+    ptp_master_clock_id: Option<[u8; 8]>,
 }
 
 impl RtpSender {
@@ -443,7 +445,18 @@ impl RtpSender {
             sync_sequence: 0,
             first_sync_sent: false,
             packet_history,
+            ptp_master_clock_id: None,
         }
+    }
+
+    /// Set PTP master clock identity for this sender.
+    pub fn set_ptp_master_clock_id(&mut self, clock_id: [u8; 8]) {
+        self.ptp_master_clock_id = Some(clock_id);
+    }
+
+    /// Get PTP master clock identity if configured.
+    pub fn ptp_master_clock_id(&self) -> Option<[u8; 8]> {
+        self.ptp_master_clock_id
     }
 
     /// Connect TCP stream to destination data_port (AirPlay 2 TCP audio streaming).

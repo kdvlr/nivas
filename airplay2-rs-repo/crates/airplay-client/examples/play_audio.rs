@@ -675,7 +675,7 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
 
             println!("Connecting to {} ({:?})...", target_ip, dev_id_str);
             let mut target_config = config.clone();
-            if ptp_targets.contains(target_ip) {
+            if ptp_targets.contains(target_ip) || (use_ptp && ptp_targets.is_empty()) {
                 target_config.timing_protocol = TimingProtocol::Ptp;
                 target_config.ptp_mode = PtpMode::Master;
                 println!("Using PTP timing for {}", target_ip);
@@ -688,24 +688,45 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         // Complete RTSP and Timing Setup for all connections
-        if conns.len() > 1 && use_ptp {
-            let all_target_ips: Vec<std::net::IpAddr> = ips.clone();
+        let ptp_indices: Vec<usize> = conns
+            .iter()
+            .enumerate()
+            .filter(|(_, conn)| conn.stream_config().timing_protocol == TimingProtocol::Ptp)
+            .map(|(i, _)| i)
+            .collect();
+
+        if !ptp_indices.is_empty() {
+            let ptp_target_ips: Vec<std::net::IpAddr> = ptp_indices.iter().map(|&i| ips[i]).collect();
+            let primary_ptp_idx = ptp_indices[0];
+
             if ptp_master {
-                println!("Setting up primary speaker as PTP master for all {} speakers...", all_target_ips.len());
-                conns[0].setup_as_ptp_master(&all_target_ips).await?;
+                println!(
+                    "Setting up speaker {} ({}) as PTP master for {} PTP speaker(s)...",
+                    primary_ptp_idx + 1,
+                    ips[primary_ptp_idx],
+                    ptp_target_ips.len()
+                );
+                conns[primary_ptp_idx].setup_as_ptp_master(&ptp_target_ips).await?;
             } else {
-                println!("Setting up primary speaker...");
-                conns[0].setup().await?;
+                println!("Setting up speaker {} ({})...", primary_ptp_idx + 1, ips[primary_ptp_idx]);
+                conns[primary_ptp_idx].setup().await?;
             }
-            let ptp_clock_id = conns[0].ptp_master_clock_id().unwrap_or([0u8; 8]);
-            let timing_offset = conns[0].timing_offset().unwrap_or_default();
-            let timing_rx = conns[0].timing_rx();
+            let ptp_clock_id = conns[primary_ptp_idx].ptp_master_clock_id().unwrap_or([0u8; 8]);
+            let timing_offset = conns[primary_ptp_idx].timing_offset().unwrap_or_default();
+            let timing_rx = conns[primary_ptp_idx].timing_rx();
             println!("Primary PTP setup done, clock ID: {:02x?}", ptp_clock_id);
 
-            for (i, conn) in conns.iter_mut().enumerate().skip(1) {
-                println!("Setting up secondary speaker {} (IP: {})...", i + 1, ips[i]);
-                if let Some(ref rx) = timing_rx {
-                    conn.setup_for_group(ptp_clock_id, timing_offset, rx.clone()).await?;
+            for (i, conn) in conns.iter_mut().enumerate() {
+                if i == primary_ptp_idx {
+                    continue;
+                }
+                println!("Setting up speaker {} (IP: {})...", i + 1, ips[i]);
+                if conn.stream_config().timing_protocol == TimingProtocol::Ptp {
+                    if let Some(ref rx) = timing_rx {
+                        conn.setup_for_group(ptp_clock_id, timing_offset, rx.clone()).await?;
+                    } else {
+                        conn.setup().await?;
+                    }
                 } else {
                     conn.setup().await?;
                 }

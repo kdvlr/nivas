@@ -1588,9 +1588,22 @@ impl Connection {
         }
 
         let mut senders = Vec::with_capacity(1 + peers.len());
-        senders.push(self.build_rtp_sender()?);
+        let mut self_sender = self.build_rtp_sender()?;
+        if self.stream_config.timing_protocol == TimingProtocol::Ptp {
+            if let Some(clock_id) = self.ptp_master_clock_id {
+                self_sender.set_ptp_master_clock_id(clock_id);
+            }
+        }
+        senders.push(self_sender);
+
         for peer in peers.iter() {
-            senders.push(peer.build_rtp_sender()?);
+            let mut peer_sender = peer.build_rtp_sender()?;
+            if peer.stream_config.timing_protocol == TimingProtocol::Ptp {
+                if let Some(clock_id) = peer.ptp_master_clock_id.or(self.ptp_master_clock_id) {
+                    peer_sender.set_ptp_master_clock_id(clock_id);
+                }
+            }
+            senders.push(peer_sender);
         }
 
         let mut streamer = AudioStreamer::new(self.stream_config.clone());
@@ -1603,14 +1616,6 @@ impl Connection {
         }
         if let Some(ref tx) = self.timing_tx {
             streamer.set_timing_updates(tx.subscribe()).await;
-        }
-        if self.stream_config.timing_protocol == TimingProtocol::Ptp {
-            let clock_id = self.ptp_master_clock_id.or_else(|| {
-                peers.iter().find_map(|p| p.ptp_master_clock_id)
-            });
-            if let Some(clock_id) = clock_id {
-                streamer.set_ptp_sync_mode(clock_id).await;
-            }
         }
         if let (Some(config), Some(params)) = (self.eq_config.take(), self.eq_params.clone()) {
             streamer.set_eq_params(config, params).await;
@@ -2535,6 +2540,13 @@ impl Connection {
         let audio_cipher = AudioCipher::new(stream_key);
         sender.set_cipher(Box::new(ChaChaPacketCipher::new(audio_cipher)));
 
+        // If this target uses PTP timing, configure its PTP clock ID
+        if self.stream_config.timing_protocol == TimingProtocol::Ptp {
+            if let Some(clock_id) = self.ptp_master_clock_id {
+                sender.set_ptp_master_clock_id(clock_id);
+            }
+        }
+
         tracing::info!("Built RTP sender: data={}, control={}", dest, control_dest);
         Ok(sender)
     }
@@ -2577,6 +2589,11 @@ impl Connection {
     /// Get the PTP master clock ID from BMCA yield (if available).
     pub fn ptp_master_clock_id(&self) -> Option<[u8; 8]> {
         self.ptp_master_clock_id
+    }
+
+    /// Get the stream config.
+    pub fn stream_config(&self) -> &StreamConfig {
+        &self.stream_config
     }
 
     /// Get the current timing offset (if available).

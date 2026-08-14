@@ -800,11 +800,20 @@ class PlayerEngine:
             "--control-stdin",
             "--dacp",
             "--remote-control-events",
-            "--ptp",
-            "--ptp-master",
             "--volume",
             f"{volume:.4f}",
         ]
+
+        ptp_ips = [device.address for device in devices if self._device_uses_ptp(device)]
+        if ptp_ips:
+            if len(ptp_ips) == len(devices):
+                cmd.extend(["--ptp", "--ptp-master"])
+            else:
+                cmd.extend([
+                    "--ptp-targets",
+                    ",".join(ptp_ips),
+                    "--ptp-master",
+                ])
 
         if track_info:
             for flag, key in (
