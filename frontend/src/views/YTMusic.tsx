@@ -48,9 +48,7 @@ interface DiscoveryCard {
 }
 
 const isSong = (item: any) => {
-  if (!item?.videoId || item.resultType === 'video') return false
-  const videoType = String(item.videoType || '').toUpperCase()
-  return !videoType.includes('_OMV') && !videoType.includes('_UGC')
+  return Boolean(item && item.videoId)
 }
 
 const thumbnailUrl = (item: any): string | undefined => {

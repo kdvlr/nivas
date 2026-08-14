@@ -219,9 +219,7 @@ class YTMusicService:
         }
 
     def search(self, query: str, filter_type: Optional[str] = None) -> List[Dict[str, Any]]:
-        # Nivas is an audio player. Always ask InnerTube for songs and enforce
-        # the same rule locally so video/UGC results can never leak into play.
-        cache_key = f"search:{query}:songs"
+        cache_key = f"search:{query}:{filter_type or 'songs'}"
         cached = self._get_cache(cache_key)
         if cached is not None:
             return cached
@@ -230,10 +228,16 @@ class YTMusicService:
             return []
 
         try:
-            results = self._ytmusic.search(query, filter="songs", limit=25)
-            results = [item for item in results if self.is_song(item)]
-            self._set_cache(cache_key, results, CACHE_TTL["search"])
-            return results
+            results = self._ytmusic.search(query, filter=filter_type or "songs", limit=25)
+            normalized_results: List[Dict[str, Any]] = []
+            for item in results:
+                normalized = self.normalize_song(item)
+                if normalized:
+                    normalized_results.append(normalized)
+            # Prioritize pure audio tracks (ATV / song) above video / UGC tracks
+            normalized_results.sort(key=lambda x: 0 if x.get("isPureAudio") else 1)
+            self._set_cache(cache_key, normalized_results, CACHE_TTL["search"])
+            return normalized_results
         except Exception as e:
             logger.error(f"YTMusic search error for query '{query}': {e}")
             return []
@@ -341,7 +345,7 @@ class YTMusicService:
             return {}
 
     def get_playlist_songs(self, playlist_id: str, limit: int = 12) -> Dict[str, Any]:
-        """Return playable audio songs, resolving music-video chart entries to songs."""
+        """Return playable songs, preferring pure audio tracks while accepting music videos."""
         cache_key = f"playlist-songs:{playlist_id}:{limit}"
         cached = self._get_cache(cache_key)
         if cached is not None:
@@ -355,13 +359,17 @@ class YTMusicService:
         seen = set()
         for item in playlist.get("tracks", []):
             song = self.normalize_song(item)
-            if song is None and item.get("videoId"):
+            if not song:
+                continue
+            # If the track is a video/OMV, try to resolve to a pure audio song if available
+            if not song.get("isPureAudio") and item.get("videoId"):
                 artists = self._artist_text(item)
                 query = " ".join(value for value in (item.get("title"), artists) if value)
-                candidates = self.search(query)
+                candidates = self.search(query, filter_type="songs")
                 for candidate in candidates:
-                    song = self.normalize_song(candidate)
-                    if song:
+                    cand_norm = self.normalize_song(candidate) if "isPureAudio" not in candidate else candidate
+                    if cand_norm and cand_norm.get("isPureAudio", False):
+                        song = cand_norm
                         break
             if not song or song["videoId"] in seen:
                 continue
@@ -398,13 +406,24 @@ class YTMusicService:
             return {}
 
     @staticmethod
-    def is_song(item: Dict[str, Any]) -> bool:
-        if not item or not item.get("videoId"):
+    def is_pure_audio(item: Dict[str, Any]) -> bool:
+        if not item or not isinstance(item, dict) or not item.get("videoId"):
             return False
-        if str(item.get("resultType", "")).lower() == "video":
+        result_type = str(item.get("resultType", "")).lower()
+        if result_type == "song":
+            return True
+        if result_type == "video":
             return False
         video_type = str(item.get("videoType", "")).upper()
-        return not any(marker in video_type for marker in ("_OMV", "_UGC"))
+        if "ATV" in video_type:
+            return True
+        if any(marker in video_type for marker in ("_OMV", "_UGC")):
+            return False
+        return True
+
+    @staticmethod
+    def is_song(item: Dict[str, Any]) -> bool:
+        return bool(item and isinstance(item, dict) and item.get("videoId"))
 
     @staticmethod
     def _artist_text(item: Dict[str, Any]) -> str:
@@ -466,6 +485,7 @@ class YTMusicService:
             "thumbnail": thumbnail,
             "album": album or "",
             "duration": YTMusicService._parse_duration_seconds(duration),
+            "isPureAudio": YTMusicService.is_pure_audio(item),
         }
 
     def get_autoplay_tracks(self, video_id: str, limit: int = 12) -> List[Dict[str, Any]]:

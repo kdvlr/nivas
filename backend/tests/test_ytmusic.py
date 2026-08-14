@@ -20,7 +20,7 @@ def test_ytmusic_search_fallback():
     assert isinstance(results, list)
 
 
-def test_search_forces_songs_and_filters_video_results():
+def test_search_prioritizes_pure_audio_and_allows_videos():
     class FakeClient:
         def __init__(self):
             self.filter = None
@@ -28,22 +28,29 @@ def test_search_forces_songs_and_filters_video_results():
         def search(self, query, filter=None, limit=None):
             self.filter = filter
             return [
-                {"videoId": "song", "resultType": "song", "title": "Song"},
                 {"videoId": "video", "resultType": "video", "title": "Video"},
+                {"videoId": "song", "resultType": "song", "title": "Song"},
                 {"videoId": "ugc", "videoType": "MUSIC_VIDEO_TYPE_UGC", "title": "UGC"},
             ]
 
     service = YTMusicService()
     service._ytmusic = FakeClient()
 
-    results = service.search("test", filter_type="videos")
+    results = service.search("test")
 
     assert service._ytmusic.filter == "songs"
-    assert [item["videoId"] for item in results] == ["song"]
+    # Pure audio song is sorted first, then video items
+    assert results[0]["videoId"] == "song"
+    assert results[0]["isPureAudio"] is True
+    assert len(results) == 3
 
 
-def test_normalize_song_rejects_music_video_and_maps_metadata():
-    assert YTMusicService.normalize_song({"videoId": "v", "resultType": "video"}) is None
+def test_normalize_song_accepts_videos_and_maps_metadata():
+    video_track = YTMusicService.normalize_song({"videoId": "v", "resultType": "video", "title": "Video Track"})
+    assert video_track is not None
+    assert video_track["videoId"] == "v"
+    assert video_track["isPureAudio"] is False
+
     track = YTMusicService.normalize_song(
         {
             "videoId": "s",
@@ -52,6 +59,7 @@ def test_normalize_song_rejects_music_video_and_maps_metadata():
             "album": {"name": "Album"},
             "thumbnails": [{"url": "small"}, {"url": "large"}],
             "duration": "3:05",
+            "resultType": "song",
         }
     )
     assert track == {
@@ -61,6 +69,7 @@ def test_normalize_song_rejects_music_video_and_maps_metadata():
         "album": "Album",
         "thumbnail": "large",
         "duration": 185,
+        "isPureAudio": True,
     }
 
 
@@ -117,6 +126,7 @@ def test_playlist_songs_resolves_music_videos_to_audio():
         "thumbnail": "art",
         "album": "",
         "duration": 0,
+        "isPureAudio": True,
     }]
 
 
