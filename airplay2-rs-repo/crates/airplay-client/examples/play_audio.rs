@@ -725,11 +725,8 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
             feedback_counter += 1;
             let pos = conns[0].playback_position();
             let state = conns[0].playback_state();
-            if feedback_counter % 14 == 0 {
+            if feedback_counter % 27 == 0 {
                 println!("Position: {:.1}s, State: {:?}", pos, state);
-            }
-
-            if feedback_counter % 7 == 0 {
                 let progress_duration = current_duration_secs;
                 for conn in conns.iter_mut() {
                     let _ = conn.send_progress(progress_duration).await;
@@ -924,7 +921,7 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
 
-            if feedback_counter % 8 == 0 {
+            if feedback_counter % 30 == 0 {
                 for conn in conns.iter_mut() {
                     let _ = conn.send_feedback().await;
                 }
