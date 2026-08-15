@@ -74,7 +74,7 @@ export default function MiniPlayerBar({
         exit={{ y: 20, opacity: 0, scale: 0.95 }}
         transition={{ duration: 0.2, ease: 'easeOut' }}
         onClick={(e) => e.stopPropagation()}
-        className={`fixed bottom-4 right-4 sm:bottom-6 sm:right-6 select-none bg-black/35 backdrop-blur-xl border border-white/15 rounded-2xl sm:rounded-3xl p-3 text-white shadow-2xl transition-all w-[270px] sm:w-[310px] ${
+        className={`fixed bottom-[calc(4.25rem+env(safe-area-inset-bottom,0px))] inset-x-3 sm:inset-x-auto sm:right-6 sm:bottom-6 select-none bg-black/35 backdrop-blur-xl border border-white/15 rounded-2xl sm:rounded-3xl p-3 text-white shadow-2xl transition-all w-auto max-w-[320px] mx-auto sm:mx-0 sm:w-[310px] ${
           slideshowMode ? 'z-[110]' : 'z-40'
         } ${className}`}
       >

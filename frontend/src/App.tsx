@@ -610,7 +610,7 @@ export default function App() {
           ref={dashboardRef}
           style={slideshowActive ? { visibility: 'hidden' } : undefined}
         >
-          <nav className="glass group/nav order-last lg:order-first flex flex-row lg:flex-col w-full lg:w-16 hover:lg:w-48 transition-[width] duration-300 ease-in-out h-14 lg:h-full shrink-0 items-center lg:items-start justify-around lg:justify-start gap-1 lg:gap-4 py-1.5 lg:py-4 px-2 lg:px-2 z-20">
+          <nav className="glass group/nav order-last lg:order-first flex flex-row lg:flex-col w-full lg:w-16 hover:lg:w-48 transition-[width] duration-300 ease-in-out h-[calc(3.5rem+env(safe-area-inset-bottom,0px))] lg:h-full shrink-0 items-center lg:items-start justify-around lg:justify-start gap-1 lg:gap-4 py-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom,0px))] lg:py-4 px-2 lg:px-2 z-20">
 
             {/* Main Nav Items */}
             <div className="flex flex-row lg:flex-col items-center justify-around lg:justify-start gap-1 lg:gap-3 flex-1 lg:flex-none w-full">
@@ -708,7 +708,7 @@ export default function App() {
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
-            className="flex min-w-0 flex-1 flex-col overflow-y-auto py-1 relative"
+            className="flex min-w-0 flex-1 flex-col overflow-y-auto py-1 relative pb-32 sm:pb-36 lg:pb-6"
           >
             {pullY > 0 && (
               <div 

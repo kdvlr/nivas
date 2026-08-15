@@ -24,7 +24,8 @@ interface AirPlaySelectorModalProps {
 interface PanelPosition {
   top?: number
   bottom?: number
-  right: number
+  right?: number
+  isMobile: boolean
   origin: string
 }
 
@@ -33,7 +34,7 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
   const [masterVolume, setMasterVolume] = useState(70)
   const [loading, setLoading] = useState(false)
   const [showHidden, setShowHidden] = useState(false)
-  const [position, setPosition] = useState<PanelPosition>({ top: 84, right: 20, origin: 'top right' })
+  const [position, setPosition] = useState<PanelPosition>({ top: 84, right: 20, isMobile: false, origin: 'top right' })
 
   const fetchDevices = async () => {
     try {
@@ -56,17 +57,34 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
   useLayoutEffect(() => {
     if (!isOpen) return
     const placePanel = () => {
-      const rectangle = anchorRef.current?.getBoundingClientRect()
-      if (!rectangle || (rectangle.width === 0 && rectangle.height === 0)) {
-        setPosition({ bottom: 20, right: 16, origin: 'bottom right' })
+      const isMobile = window.innerWidth < 640
+      if (isMobile) {
+        const rectangle = anchorRef.current?.getBoundingClientRect()
+        const bottom = rectangle && rectangle.top > 0
+          ? Math.max(16, window.innerHeight - rectangle.top + 8)
+          : 84
+        setPosition({
+          bottom,
+          isMobile: true,
+          origin: 'bottom center',
+        })
         return
       }
-      const right = Math.max(12, Math.min(window.innerWidth - 60, window.innerWidth - rectangle.right))
+
+      const rectangle = anchorRef.current?.getBoundingClientRect()
+      if (!rectangle || (rectangle.width === 0 && rectangle.height === 0)) {
+        setPosition({ bottom: 20, right: 16, isMobile: false, origin: 'bottom right' })
+        return
+      }
+      const panelWidth = 368
+      const calculatedRight = Math.max(12, window.innerWidth - rectangle.right)
+      const maxRight = Math.max(12, window.innerWidth - panelWidth - 12)
+      const right = Math.min(maxRight, calculatedRight)
       const estimatedHeight = Math.min(520, 76 + devices.length * 52)
       if (rectangle.bottom + estimatedHeight + 12 <= window.innerHeight) {
-        setPosition({ top: rectangle.bottom + 8, right, origin: 'top right' })
+        setPosition({ top: rectangle.bottom + 8, right, isMobile: false, origin: 'top right' })
       } else {
-        setPosition({ bottom: Math.max(12, window.innerHeight - rectangle.top + 8), right, origin: 'bottom right' })
+        setPosition({ bottom: Math.max(12, window.innerHeight - rectangle.top + 8), right, isMobile: false, origin: 'bottom right' })
       }
     }
     placePanel()
@@ -131,8 +149,17 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
             exit={{ opacity: 0, scale: 0.96, y: position.bottom ? 6 : -6 }}
             transition={{ duration: 0.16, ease: 'easeOut' }}
             onPointerDown={(event) => event.stopPropagation()}
-            style={{ top: position.top, bottom: position.bottom, right: position.right, transformOrigin: position.origin }}
-            className="fixed w-[min(23rem,calc(100vw-1.5rem))] overflow-hidden rounded-[1.35rem] border border-white/15 bg-[#242427]/95 p-2 text-white shadow-[0_20px_55px_rgba(0,0,0,0.55)] backdrop-blur-2xl"
+            style={{
+              top: position.top,
+              bottom: position.bottom,
+              right: position.isMobile ? undefined : position.right,
+              transformOrigin: position.origin,
+            }}
+            className={`fixed z-[150] overflow-hidden rounded-[1.35rem] border border-white/15 bg-[#242427]/95 p-2 text-white shadow-[0_20px_55px_rgba(0,0,0,0.55)] backdrop-blur-2xl ${
+              position.isMobile
+                ? 'left-3 right-3 mx-auto w-auto max-w-[23rem]'
+                : 'w-[23rem]'
+            }`}
           >
             {!showHidden && (
               <div className="mb-1 flex h-14 items-center gap-2 border-b border-white/10 px-1.5 pb-1">
@@ -152,7 +179,7 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
                     value={masterVolume}
                     onChange={(event) => setGroupVolume(Number(event.target.value))}
                     aria-label="All speakers volume"
-                    className="absolute inset-0 z-20 h-full w-full cursor-ew-resize opacity-0"
+                    className="absolute inset-0 z-20 h-full w-full cursor-ew-resize opacity-0 touch-none"
                   />
                 </div>
                 <div className="w-8 shrink-0" />
