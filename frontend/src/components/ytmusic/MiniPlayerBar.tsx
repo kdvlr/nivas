@@ -23,6 +23,7 @@ interface MiniPlayerBarProps {
   onPrevTrack?: () => void
   onSeek?: (seconds: number) => void
   onOpenFullPlayer: () => void
+  onClose?: () => void
   slideshowMode?: boolean
   className?: string
 }
@@ -35,6 +36,7 @@ export default function MiniPlayerBar({
   onTogglePlay,
   onNextTrack,
   onOpenFullPlayer,
+  onClose,
   slideshowMode = false,
   className = '',
 }: MiniPlayerBarProps) {
@@ -78,6 +80,22 @@ export default function MiniPlayerBar({
           slideshowMode ? 'z-[110]' : 'z-40'
         } ${className}`}
       >
+        {/* Close Button when Paused */}
+        {!isPlaying && onClose && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onClose()
+            }}
+            aria-label="Close player"
+            title="Close player"
+            className="absolute -top-2 -right-2 z-30 flex h-6 w-6 items-center justify-center rounded-full border border-white/25 bg-slate-900/95 text-white/75 shadow-lg backdrop-blur-md transition hover:bg-slate-800 hover:text-white hover:scale-110 active:scale-95 cursor-pointer"
+          >
+            <Icon name="close" className="text-sm" />
+          </button>
+        )}
+
         {/* Track Thumbnail & Metadata */}
         <div
           onClick={onOpenFullPlayer}

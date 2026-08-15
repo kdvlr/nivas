@@ -156,6 +156,10 @@ async def player_pause():
 async def player_resume():
     return await player_engine.resume()
 
+@router.post("/player/stop")
+async def player_stop():
+    return await player_engine.stop_playback()
+
 @router.post("/player/next")
 async def player_next():
     return await player_engine.next_track()

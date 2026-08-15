@@ -207,6 +207,25 @@ class PlayerEngine:
         self.media_remote.stop()
         self._stop_current_stream()
 
+    async def stop_playback(self) -> Dict[str, Any]:
+        """Stops the current track, terminates streaming processes, and clears active track."""
+        self.is_playing = False
+        self._stop_current_stream()
+        self.current_track = None
+        self.elapsed_seconds = 0
+        self.duration_seconds = 0
+        self.queue.clear()
+        self.history.clear()
+        self.media_remote.update_state(
+            PlaybackState.STOPPED,
+            title="Not Playing",
+            artist="",
+            album="",
+            duration=0,
+            elapsed=0,
+        )
+        return self.get_state()
+
     def _write_stream_command(self, command: str) -> bool:
         """Send a command to every active native sender process."""
         sent = False
