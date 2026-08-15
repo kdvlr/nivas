@@ -1896,10 +1896,14 @@ impl Connection {
         // Re-anchor the receiver before packet production resumes. Sending a
         // bare RECORD leaves strict receivers such as Sonos on the old RTP
         // timeline, so they silently discard the new packets.
-        let rtp_info = self
-            .paused_rtp_info
-            .or_else(|| Some((self.initial_rtp_sequence, self.initial_rtp_timestamp)))
-            .unwrap();
+        let rtp_info = if let Some(ref streamer) = self.streamer {
+            streamer.rtp_info().await
+        } else {
+            None
+        }
+        .or(self.paused_rtp_info)
+        .unwrap_or((self.initial_rtp_sequence, self.initial_rtp_timestamp));
+
         tracing::info!("Resuming at RTP seq={}, rtptime={}", rtp_info.0, rtp_info.1);
         let record_req =
             RtspRequest::record_with_info(self.session.request_uri(), rtp_info.0, rtp_info.1);
@@ -1920,22 +1924,27 @@ impl Connection {
     /// Apply a pause command that the receiver has already enacted locally.
     /// Unlike `pause`, this must not send FLUSH back to the receiver.
     pub async fn pause_from_remote(&mut self) -> Result<()> {
-        if let Some(ref mut streamer) = self.streamer {
-            streamer.pause().await?;
+        if self.playback_state == PlaybackState::Paused {
+            return Ok(());
         }
+        if let Some(ref mut streamer) = self.streamer {
+            let rtp_info = streamer
+                .rtp_info()
+                .await
+                .unwrap_or((self.initial_rtp_sequence, self.initial_rtp_timestamp));
+            self.paused_rtp_info = Some(rtp_info);
+            tracing::info!("Remote pausing at RTP seq={}, rtptime={}", rtp_info.0, rtp_info.1);
+            streamer.pause().await?;
+            streamer.reset_after_flush().await;
+        }
+        let _ = self.session.pause();
         self.playback_state = PlaybackState::Paused;
         Ok(())
     }
 
     /// Apply a play command that the receiver has already enacted locally.
-    /// The AirPlay session remains recorded, so resume packet production
-    /// without issuing a second RECORD request.
     pub async fn resume_from_remote(&mut self) -> Result<()> {
-        if let Some(ref mut streamer) = self.streamer {
-            streamer.resume().await?;
-        }
-        self.playback_state = PlaybackState::Playing;
-        Ok(())
+        self.resume().await
     }
 
     /// Stop streaming.
