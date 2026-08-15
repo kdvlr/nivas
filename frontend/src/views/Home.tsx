@@ -910,11 +910,13 @@ export default function Home() {
   }
 
   return (
-    <div className="h-full w-full lg:overflow-visible overflow-hidden">
+    <div className="h-full w-full lg:overflow-visible overflow-hidden relative">
+      {/* Morning Kids Discovery Hub Floating Window */}
+      <MorningKidsBanner now={now} />
+
       {/* Desktop view */}
       <div className="hidden lg:flex h-full flex-col gap-4">
         {renderHeader()}
-        <MorningKidsBanner now={now} />
         <div className="grid min-h-0 flex-1 grid-cols-3 gap-4">
           {renderSchedule(true)}
           <div className="flex min-h-0 flex-col gap-4 overflow-hidden">
@@ -931,7 +933,6 @@ export default function Home() {
         {/* Slide 1: Header + Schedule */}
         <div className="min-h-[100dvh] w-full flex flex-col p-4 gap-3 overflow-hidden">
           {renderHeader()}
-          <MorningKidsBanner now={now} />
           <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
             {renderSchedule(false)}
           </div>
