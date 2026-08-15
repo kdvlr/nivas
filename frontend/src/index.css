@@ -213,7 +213,7 @@ html[data-theme='woodland'].dark {
   --shape-tile: 0.7rem;
   --shape-btn: 0.7rem;
   --shape-input: 0.7rem;
-  --card-blur: blur(24px) saturate(1.6);
+  --card-blur: blur(16px) saturate(1.4);
 }
 
 html[data-theme='glass']:not(.dark) {
@@ -312,6 +312,8 @@ body {
   backdrop-filter: var(--card-blur);
   -webkit-backdrop-filter: var(--card-blur);
   box-shadow: var(--shadow-1);
+  contain: paint layout;
+  transform: translateZ(0);
 }
 
 @utility glass-inset {

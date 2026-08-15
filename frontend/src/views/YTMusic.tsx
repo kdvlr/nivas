@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import Icon from '../components/Icon'
 import { api } from '../lib/api'
 import { Track } from '../components/ytmusic/MiniPlayerBar'
@@ -147,7 +147,23 @@ export default function YTMusic({
   onQueueTrack,
   onQueueChange,
 }: YTMusicViewProps) {
-  const [searchQuery, setSearchQuery] = useState('')
+  const parseSubViewFromHash = useCallback(() => {
+    const hash = window.location.hash
+    const queryIndex = hash.indexOf('?')
+    if (queryIndex === -1) {
+      return { view: currentTrack ? 'now-playing' : ('browse' as MusicView), search: '' }
+    }
+    const params = new URLSearchParams(hash.slice(queryIndex))
+    const viewParam = params.get('view') as MusicView | null
+    const searchParam = params.get('search') || ''
+    return {
+      view: (viewParam === 'now-playing' || viewParam === 'browse') ? viewParam : (currentTrack ? 'now-playing' : ('browse' as MusicView)),
+      search: searchParam,
+    }
+  }, [currentTrack])
+
+  const initialSubView = parseSubViewFromHash()
+  const [searchQuery, setSearchQuery] = useState(initialSubView.search)
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const [discoverySections, setDiscoverySections] = useState<DiscoverySection[]>([])
@@ -155,7 +171,7 @@ export default function YTMusic({
   const [releaseCards, setReleaseCards] = useState<DiscoveryCard[]>([])
   const [discoveryLoading, setDiscoveryLoading] = useState(true)
   const [openingCardId, setOpeningCardId] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<MusicView>(() => currentTrack ? 'now-playing' : 'browse')
+  const [viewMode, setViewMode] = useState<MusicView>(initialSubView.view)
   const [loading, setLoading] = useState(false)
   const [showAirPlayModal, setShowAirPlayModal] = useState(false)
   const airPlayButtonRef = useRef<HTMLButtonElement>(null)
@@ -169,6 +185,35 @@ export default function YTMusic({
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const dragIndexRef = useRef<number | null>(null)
   const editableQueueRef = useRef<Track[]>(queue)
+
+  const syncUrlSubView = useCallback((nextView: MusicView, nextSearch = '', replace = false) => {
+    const params = new URLSearchParams()
+    if (nextView) params.set('view', nextView)
+    if (nextSearch) params.set('search', nextSearch)
+    const queryString = params.toString() ? `?${params.toString()}` : ''
+    const newHash = `#/ytmusic${queryString}`
+    if (window.location.hash !== newHash) {
+      if (replace) {
+        window.history.replaceState(null, '', newHash)
+      } else {
+        window.history.pushState(null, '', newHash)
+      }
+    }
+    setViewMode(nextView)
+    setSearchQuery(nextSearch)
+  }, [])
+
+  useEffect(() => {
+    const handlePopState = () => {
+      if (window.location.hash.startsWith('#/ytmusic')) {
+        const parsed = parseSubViewFromHash()
+        setViewMode(parsed.view)
+        setSearchQuery(parsed.search)
+      }
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [parseSubViewFromHash])
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000)
@@ -270,7 +315,7 @@ export default function YTMusic({
         : await api.get<any>(`/api/ytmusic/album/${card.id}`)
       const tracks = (Array.isArray(value?.tracks) ? value.tracks : []).map(toTrack).filter((track: Track | null): track is Track => Boolean(track))
       if (tracks.length) {
-        setViewMode('now-playing')
+        syncUrlSubView('now-playing')
         onPlayTrack(tracks[0], tracks.slice(1))
       }
     } finally {
@@ -322,18 +367,18 @@ export default function YTMusic({
               <input
                 autoFocus
                 value={searchQuery}
-                onChange={(event) => { setSearchQuery(event.target.value); setViewMode('browse') }}
+                onChange={(event) => syncUrlSubView('browse', event.target.value, true)}
                 placeholder="Search songs, albums..."
                 className="h-10 w-full rounded-xl border border-white/20 bg-[#292929] pl-10 pr-9 text-sm text-white outline-none placeholder:text-white/50 focus:border-white/45"
               />
               {searchQuery && (
-                <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center text-white/55 hover:text-white">
+                <button onClick={() => syncUrlSubView('browse', '')} className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center text-white/55 hover:text-white">
                   <Icon name="close" className="text-lg" />
                 </button>
               )}
             </div>
             <button
-              onClick={() => { setSearchQuery(''); setMobileSearchOpen(false) }}
+              onClick={() => { syncUrlSubView('browse', ''); setMobileSearchOpen(false) }}
               className="px-2 text-sm font-semibold text-white/70 hover:text-white shrink-0"
             >
               Cancel
@@ -342,8 +387,8 @@ export default function YTMusic({
         ) : (
           <>
             <div className="flex shrink-0 rounded-full bg-white/10 p-1">
-              <button onClick={() => { setSearchQuery(''); setViewMode('browse') }} className={`flex h-9 md:h-11 items-center gap-1.5 md:gap-2 rounded-full px-3 md:px-4 text-xs md:text-sm font-semibold ${viewMode === 'browse' && !searchIsOpen ? 'bg-white text-black' : 'text-white/65 hover:text-white'}`}><Icon name="home" className="text-lg md:text-xl" /> Home</button>
-              <button disabled={!currentTrack} onClick={() => { setSearchQuery(''); setViewMode('now-playing') }} className={`flex h-9 md:h-11 items-center gap-1.5 md:gap-2 rounded-full px-3 md:px-4 text-xs md:text-sm font-semibold disabled:opacity-30 ${viewMode === 'now-playing' && !searchIsOpen ? 'bg-white text-black' : 'text-white/65 hover:text-white'}`}><Icon name="graphic_eq" className="text-lg md:text-xl" /> <span className="whitespace-nowrap">Now Playing</span></button>
+              <button onClick={() => syncUrlSubView('browse', '')} className={`flex h-9 md:h-11 items-center gap-1.5 md:gap-2 rounded-full px-3 md:px-4 text-xs md:text-sm font-semibold ${viewMode === 'browse' && !searchIsOpen ? 'bg-white text-black' : 'text-white/65 hover:text-white'}`}><Icon name="home" className="text-lg md:text-xl" /> Home</button>
+              <button disabled={!currentTrack} onClick={() => syncUrlSubView('now-playing', '')} className={`flex h-9 md:h-11 items-center gap-1.5 md:gap-2 rounded-full px-3 md:px-4 text-xs md:text-sm font-semibold disabled:opacity-30 ${viewMode === 'now-playing' && !searchIsOpen ? 'bg-white text-black' : 'text-white/65 hover:text-white'}`}><Icon name="graphic_eq" className="text-lg md:text-xl" /> <span className="whitespace-nowrap">Now Playing</span></button>
             </div>
 
             {/* Desktop Full Search Input */}
@@ -351,11 +396,11 @@ export default function YTMusic({
               <Icon name="search" className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-white/55" />
               <input
                 value={searchQuery}
-                onChange={(event) => { setSearchQuery(event.target.value); setViewMode('browse') }}
+                onChange={(event) => syncUrlSubView('browse', event.target.value, true)}
                 placeholder="Search songs, albums..."
                 className="h-14 w-full rounded-xl border border-white/20 bg-[#292929] pl-14 pr-12 text-lg text-white outline-none placeholder:text-white/50 focus:border-white/45"
               />
-              {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center text-white/55 hover:text-white"><Icon name="close" /></button>}
+              {searchQuery && <button onClick={() => syncUrlSubView('browse', '')} className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center text-white/55 hover:text-white"><Icon name="close" /></button>}
             </div>
 
             <div className="ml-auto flex shrink-0 items-center gap-2 md:gap-3">
@@ -387,7 +432,7 @@ export default function YTMusic({
           {loading ? (
             <div className="flex items-center justify-center gap-3 py-24 text-white/50"><Icon name="progress_activity" className="animate-spin text-2xl" /> Finding songs…</div>
           ) : resultTracks.length ? (
-            <div>{resultTracks.map((track, index) => <SongRow key={`${track.videoId}-${index}`} track={track} index={index} onPlay={() => { setSearchQuery(''); setViewMode('now-playing'); onPlayTrack(track) }} onQueue={(playNext) => onQueueTrack(track, playNext)} />)}</div>
+            <div>{resultTracks.map((track, index) => <SongRow key={`${track.videoId}-${index}`} track={track} index={index} onPlay={() => { syncUrlSubView('now-playing', ''); onPlayTrack(track) }} onQueue={(playNext) => onQueueTrack(track, playNext)} />)}</div>
           ) : (
             <div className="py-24 text-center text-white/45">No audio-only songs found.</div>
           )}</> : (
@@ -417,7 +462,7 @@ export default function YTMusic({
               {discoverySections.map((section) => (
                 <section key={section.title}>
                   <div className="mb-4"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/40">YouTube Music playlist</p><h1 className="text-2xl font-bold">{section.title}</h1></div>
-                  {section.tracks.length ? <div className="grid grid-cols-1 gap-x-5 lg:grid-cols-2">{section.tracks.map((track, index) => <SongRow key={track.videoId} track={track} index={index} onPlay={() => { setViewMode('now-playing'); onPlayTrack(track) }} onQueue={(playNext) => onQueueTrack(track, playNext)} />)}</div> : <div className="rounded-xl bg-white/[0.04] p-8 text-center text-white/40">Trending songs are loading…</div>}
+                  {section.tracks.length ? <div className="grid grid-cols-1 gap-x-5 lg:grid-cols-2">{section.tracks.map((track, index) => <SongRow key={track.videoId} track={track} index={index} onPlay={() => { syncUrlSubView('now-playing', ''); onPlayTrack(track) }} onQueue={(playNext) => onQueueTrack(track, playNext)} />)}</div> : <div className="rounded-xl bg-white/[0.04] p-8 text-center text-white/40">Trending songs are loading…</div>}
                 </section>
               ))}
             </div>

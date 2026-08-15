@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, lazy, Suspense } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   PRESS_SPRING,
@@ -23,16 +23,16 @@ import {
 } from './lib/theme'
 import { startWs } from './lib/ws'
 import Home from './views/Home'
-import Calendar from './views/Calendar'
-import Chores from './views/Chores'
-import ToDos from './views/ToDos'
-import Rewards from './views/Rewards'
-import Shopping from './views/Shopping'
-import Meals from './views/Meals'
-import Recipes from './views/Recipes'
-import Setup from './views/Setup'
-import Photos from './views/Photos'
-import YTMusic from './views/YTMusic'
+const Calendar = lazy(() => import('./views/Calendar'))
+const Chores = lazy(() => import('./views/Chores'))
+const ToDos = lazy(() => import('./views/ToDos'))
+const Rewards = lazy(() => import('./views/Rewards'))
+const Shopping = lazy(() => import('./views/Shopping'))
+const Meals = lazy(() => import('./views/Meals'))
+const Recipes = lazy(() => import('./views/Recipes'))
+const Setup = lazy(() => import('./views/Setup'))
+const Photos = lazy(() => import('./views/Photos'))
+const YTMusic = lazy(() => import('./views/YTMusic'))
 import MiniPlayerBar, { Track } from './components/ytmusic/MiniPlayerBar'
 import Slideshow, { hasSkyOverride } from './components/Slideshow'
 
@@ -735,23 +735,31 @@ export default function App() {
                 transition={EXPRESSIVE_ENTER}
                 className="flex flex-1 flex-col min-h-0"
               >
-                <View
-                  now={now}
-                  config={config}
-                  onStartSlideshow={() => setSlideshowActive(true)}
-                  currentTrack={currentTrack}
-                  isPlaying={isPlaying}
-                  queue={playQueue}
-                  elapsedSeconds={elapsedSeconds}
-                  durationSeconds={durationSeconds}
-                  onPlayTrack={handlePlayTrack}
-                  onTogglePlay={handleTogglePlay}
-                  onNextTrack={handleNextTrack}
-                  onPrevTrack={handlePrevTrack}
-                  onSeek={handleSeek}
-                  onQueueTrack={handleQueueTrack}
-                  onQueueChange={handleQueueChange}
-                />
+                <Suspense
+                  fallback={
+                    <div className="flex flex-1 items-center justify-center p-12 text-ink-soft">
+                      <Icon name="progress_activity" className="animate-spin text-3xl" />
+                    </div>
+                  }
+                >
+                  <View
+                    now={now}
+                    config={config}
+                    onStartSlideshow={() => setSlideshowActive(true)}
+                    currentTrack={currentTrack}
+                    isPlaying={isPlaying}
+                    queue={playQueue}
+                    elapsedSeconds={elapsedSeconds}
+                    durationSeconds={durationSeconds}
+                    onPlayTrack={handlePlayTrack}
+                    onTogglePlay={handleTogglePlay}
+                    onNextTrack={handleNextTrack}
+                    onPrevTrack={handlePrevTrack}
+                    onSeek={handleSeek}
+                    onQueueTrack={handleQueueTrack}
+                    onQueueChange={handleQueueChange}
+                  />
+                </Suspense>
               </motion.div>
             </AnimatePresence>
           </main>

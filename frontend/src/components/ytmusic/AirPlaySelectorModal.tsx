@@ -2,6 +2,7 @@ import React, { useEffect, useLayoutEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import Icon from '../Icon'
 import { api } from '../../lib/api'
+import VolumeCapsuleScrubber from './VolumeCapsuleScrubber'
 
 export interface AirPlayDevice {
   id: string
@@ -155,39 +156,24 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
               right: position.isMobile ? undefined : position.right,
               transformOrigin: position.origin,
             }}
-            className={`fixed z-[150] overflow-hidden rounded-[1.35rem] border border-white/15 bg-[#242427]/95 p-2 text-white shadow-[0_20px_55px_rgba(0,0,0,0.55)] backdrop-blur-2xl ${
+            className={`fixed z-[150] overflow-hidden rounded-[1.35rem] border border-white/15 bg-[#242427]/95 p-2.5 text-white shadow-[0_20px_55px_rgba(0,0,0,0.55)] backdrop-blur-2xl ${
               position.isMobile
                 ? 'left-3 right-3 mx-auto w-auto max-w-[23rem]'
                 : 'w-[23rem]'
             }`}
           >
             {!showHidden && (
-              <div className="mb-1 flex h-14 items-center gap-2 border-b border-white/10 px-1.5 pb-1">
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10 text-white/70">
-                  <Icon name="volume_up" className="text-lg" />
-                </div>
-                <div className="relative h-11 min-w-0 flex-1 overflow-hidden rounded-xl bg-white/[0.09]">
-                  <div className="absolute inset-y-0 left-0 bg-white/[0.13]" style={{ width: `${masterVolume}%` }} />
-                  <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-between px-3">
-                    <span className="text-[0.95rem] font-semibold text-white/95">All Speakers</span>
-                    <span className="text-xs tabular-nums text-white/55">{masterVolume}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    value={masterVolume}
-                    onChange={(event) => setGroupVolume(Number(event.target.value))}
-                    aria-label="All speakers volume"
-                    className="absolute inset-0 z-20 h-full w-full cursor-ew-resize opacity-0 touch-none"
-                  />
-                </div>
-                <div className="w-8 shrink-0" />
+              <div className="mb-2 border-b border-white/10 px-1 pb-2">
+                <VolumeCapsuleScrubber
+                  value={masterVolume}
+                  onChange={setGroupVolume}
+                  label="All Speakers"
+                />
               </div>
             )}
-            <div className="max-h-[min(31rem,calc(100vh-7rem))] overflow-y-auto overscroll-contain">
+            <div className="flex max-h-[min(31rem,calc(100vh-7rem))] flex-col gap-1.5 overflow-y-auto overscroll-contain">
               {displayedDevices.length ? displayedDevices.map((device) => (
-                <div key={device.id} className="flex h-14 items-center gap-2 rounded-2xl px-1.5 transition hover:bg-white/[0.05]">
+                <div key={device.id} className="flex h-12 items-center gap-2 rounded-2xl px-1">
                   <button
                     type="button"
                     onClick={() => device.isHidden ? setDeviceHidden(device.id, false) : toggleDevice(device)}
@@ -203,24 +189,24 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
                     <Icon name={device.isHidden ? 'add' : 'check'} filled className="text-lg" />
                   </button>
 
-                  <div className={`relative h-11 min-w-0 flex-1 overflow-hidden rounded-xl ${device.isSelected ? 'bg-white/[0.09]' : 'bg-transparent'}`}>
-                    {device.isSelected && (
-                      <div className="absolute inset-y-0 left-0 bg-white/[0.13]" style={{ width: `${device.volume}%` }} />
-                    )}
-                    <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-between gap-2 px-3">
-                      <span className={`truncate text-[0.95rem] font-medium ${device.isHidden ? 'text-white/55' : 'text-white/95'}`}>{device.name}</span>
-                      {device.isSelected && <span className="text-xs tabular-nums text-white/55">{device.volume}%</span>}
-                    </div>
-                    {device.isSelected && (
-                      <input
-                        type="range"
-                        min={0}
-                        max={100}
+                  <div className="min-w-0 flex-1">
+                    {device.isSelected ? (
+                      <VolumeCapsuleScrubber
                         value={device.volume}
-                        onChange={(event) => setDeviceVolume(device.id, Number(event.target.value))}
-                        aria-label={`${device.name} volume`}
-                        className="absolute inset-0 z-20 h-full w-full cursor-ew-resize opacity-0"
+                        onChange={(vol) => setDeviceVolume(device.id, vol)}
+                        label={device.name}
                       />
+                    ) : (
+                      <div
+                        onClick={() => !device.isHidden && toggleDevice(device)}
+                        className={`flex h-11 min-w-0 flex-1 items-center px-3 rounded-xl border border-white/5 bg-white/[0.03] transition ${
+                          device.isHidden ? 'cursor-default opacity-60' : 'cursor-pointer hover:bg-white/[0.06]'
+                        }`}
+                      >
+                        <span className="truncate text-[0.92rem] font-medium text-white/80">
+                          {device.name}
+                        </span>
+                      </div>
                     )}
                   </div>
 

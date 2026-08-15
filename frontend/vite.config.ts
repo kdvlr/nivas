@@ -13,5 +13,20 @@ export default defineConfig({
   build: {
     outDir: '../backend/static',
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor_fullcalendar: [
+            '@fullcalendar/core',
+            '@fullcalendar/daygrid',
+            '@fullcalendar/timegrid',
+            '@fullcalendar/list',
+            '@fullcalendar/interaction',
+            '@fullcalendar/react',
+          ],
+          vendor_motion: ['framer-motion'],
+        },
+      },
+    },
   },
 })
