@@ -57,6 +57,7 @@ const SECTIONS = [
   { id: 'integrations', icon: 'cloud_sync', label: 'Integrations' },
   { id: 'family', icon: 'groups', label: 'Family' },
   { id: 'rewards', icon: 'stars', label: 'Rewards' },
+  { id: 'kids', icon: 'wb_sunny', label: 'Kids Hub' },
   { id: 'looks', icon: 'palette', label: 'Look & Feel' },
   { id: 'general', icon: 'tune', label: 'General' },
 ] as const
@@ -1016,9 +1017,9 @@ function SetupInner() {
         </Card>
         )}
 
-        {section === 'looks' && <PinFailPreviewCard />}
+        {section === 'kids' && <KidsDailyCard />}
 
-        {section === 'general' && <KidsDailyCard />}
+        {section === 'looks' && <PinFailPreviewCard />}
 
         {section === 'general' && <WeatherCard />}
 
