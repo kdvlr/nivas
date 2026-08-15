@@ -176,3 +176,55 @@ export interface RewardRedemptionItem {
   coins_spent: number
   redeemed_at: string
 }
+
+export interface KidsWordOfTheDay {
+  word: string
+  pronunciation: string
+  part_of_speech?: string
+  definition: string
+  example: string
+}
+
+export interface KidsFunFact {
+  fact: string
+  category?: string
+  emoji: string
+  did_you_know?: string
+}
+
+export interface KidsSTEMQuestion {
+  topic: string
+  question: string
+  hint?: string
+  answer?: string
+  parent_explanation?: string
+}
+
+export interface KidsDailyPublicResponse {
+  date: string
+  is_active_window: boolean
+  force_active: boolean
+  word_of_the_day: KidsWordOfTheDay
+  fun_fact: KidsFunFact
+  stem_5yo: KidsSTEMQuestion
+  stem_9yo: KidsSTEMQuestion
+}
+
+export interface KidsDailyAdminContent {
+  word_of_the_day: KidsWordOfTheDay
+  fun_fact: KidsFunFact
+  stem_5yo: KidsSTEMQuestion
+  stem_9yo: KidsSTEMQuestion
+  generated_by?: string
+}
+
+export interface KidsDailyAdminResponse {
+  date: string
+  is_active_window: boolean
+  force_active: boolean
+  content: KidsDailyAdminContent
+  settings: {
+    force_banner_active: boolean
+  }
+}
+

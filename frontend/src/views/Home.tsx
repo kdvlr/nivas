@@ -7,6 +7,7 @@ import Icon from '../components/Icon'
 import Modal from '../components/Modal'
 import WeatherModal from '../components/WeatherModal'
 import TopClockHeader from '../components/TopClockHeader'
+import MorningKidsBanner from '../components/kids/MorningKidsBanner'
 import { useCelebration } from '../components/celebrations/CelebrationContext'
 import { useClock, useData, todayISO, addDaysISO } from '../lib/hooks'
 import type { CalendarStatus, CalEvent, ChoreItem, CoinBalance, MealDay, ShoppingItem, Task, WeatherData } from '../lib/types'
@@ -913,6 +914,7 @@ export default function Home() {
       {/* Desktop view */}
       <div className="hidden lg:flex h-full flex-col gap-4">
         {renderHeader()}
+        <MorningKidsBanner now={now} />
         <div className="grid min-h-0 flex-1 grid-cols-3 gap-4">
           {renderSchedule(true)}
           <div className="flex min-h-0 flex-col gap-4 overflow-hidden">
@@ -929,6 +931,7 @@ export default function Home() {
         {/* Slide 1: Header + Schedule */}
         <div className="min-h-[100dvh] w-full flex flex-col p-4 gap-3 overflow-hidden">
           {renderHeader()}
+          <MorningKidsBanner now={now} />
           <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
             {renderSchedule(false)}
           </div>

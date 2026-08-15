@@ -7,7 +7,7 @@ import Icon from '../components/Icon'
 import TopClockHeader from '../components/TopClockHeader'
 import { api } from '../lib/api'
 import { useData } from '../lib/hooks'
-import type { CalendarStatus, SetupStatus, RewardStoreItem, WeatherData } from '../lib/types'
+import type { CalendarStatus, SetupStatus, RewardStoreItem, WeatherData, KidsDailyAdminResponse } from '../lib/types'
 import { useCelebration } from '../components/celebrations/CelebrationContext'
 import {
   FONTS,
@@ -1018,6 +1018,8 @@ function SetupInner() {
 
         {section === 'looks' && <PinFailPreviewCard />}
 
+        {section === 'general' && <KidsDailyCard />}
+
         {section === 'general' && <WeatherCard />}
 
         {section === 'general' && status && <TimezoneCard status={status} reload={reload} />}
@@ -1589,3 +1591,194 @@ function TimezoneCard({ status, reload }: { status: SetupStatus; reload: () => v
     </Card>
   )
 }
+
+function KidsDailyCard() {
+  const { data, reload, loading } = useData<KidsDailyAdminResponse>('/api/kids-daily/admin', [])
+  const [regenerating, setRegenerating] = useState(false)
+  const [toggling, setToggling] = useState(false)
+
+  const content = data?.content
+  const isForceActive = Boolean(data?.settings?.force_banner_active)
+
+  const handleToggleForce = async () => {
+    setToggling(true)
+    try {
+      await api.post('/api/kids-daily/settings', {
+        force_banner_active: !isForceActive,
+      })
+      reload()
+    } finally {
+      setToggling(false)
+    }
+  }
+
+  const handleRegenerate = async () => {
+    setRegenerating(true)
+    try {
+      await api.post('/api/kids-daily/regenerate')
+      reload()
+    } finally {
+      setRegenerating(false)
+    }
+  }
+
+  return (
+    <Card
+      title={
+        <>
+          <Icon name="wb_sunny" className="text-amber-500" /> Kids Daily Hub & STEM Answers
+        </>
+      }
+      badge={
+        <Badge
+          ok={Boolean(content)}
+          label={
+            content?.generated_by === 'gemini_ai'
+              ? 'Gemini AI'
+              : 'Daily Catalog'
+          }
+        />
+      }
+    >
+      <div className="flex flex-col gap-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl bg-amber-500/10 p-4 border border-amber-500/20">
+          <div>
+            <h3 className="text-base font-semibold text-ink flex items-center gap-2">
+              <Icon name="schedule" className="text-amber-600 dark:text-amber-400" />
+              Morning Floating Schedule
+            </h3>
+            <p className="text-xs text-ink-soft mt-0.5">
+              Active on Weekdays from <strong>6:00 AM – 8:00 AM</strong> and Weekends from <strong>9:00 AM – 11:00 AM</strong>.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleToggleForce}
+              disabled={toggling || loading}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer shadow-sm ${
+                isForceActive
+                  ? 'bg-rose-500 text-white hover:bg-rose-600'
+                  : 'bg-white/20 hover:bg-white/30 text-ink border border-white/20'
+              }`}
+              title="Force show banner anytime for testing"
+            >
+              <Icon name={isForceActive ? 'visibility' : 'visibility_off'} className="text-sm" />
+              <span>{isForceActive ? 'Force Active (ON)' : 'Test: Force Show Banner'}</span>
+            </button>
+
+            <button
+              onClick={handleRegenerate}
+              disabled={regenerating || loading}
+              className="btn-glass flex items-center gap-1.5 px-3 py-2 text-xs font-semibold disabled:opacity-50 cursor-pointer"
+              title="Generate new daily questions with AI"
+            >
+              <Icon name="refresh" className={`text-sm ${regenerating ? 'animate-spin' : ''}`} />
+              <span>Regenerate</span>
+            </button>
+          </div>
+        </div>
+
+        {content ? (
+          <div className="flex flex-col gap-4">
+            {/* Word of the day and Fun fact breakdown */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="rounded-2xl border border-[var(--outline-var)] p-4 bg-slate-50/50 dark:bg-slate-900/30">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                    <Icon name="menu_book" className="text-sm" /> Word of the Day
+                  </span>
+                  <span className="text-xs text-ink-faint italic">{content.word_of_the_day.part_of_speech}</span>
+                </div>
+                <h4 className="text-lg font-bold text-ink">
+                  {content.word_of_the_day.word} <span className="text-xs font-normal text-ink-soft">[{content.word_of_the_day.pronunciation}]</span>
+                </h4>
+                <p className="text-xs text-ink mt-1">{content.word_of_the_day.definition}</p>
+                <p className="text-xs text-ink-soft italic mt-2 bg-amber-500/5 p-2 rounded-lg border border-amber-500/10">
+                  “{content.word_of_the_day.example}”
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-[var(--outline-var)] p-4 bg-slate-50/50 dark:bg-slate-900/30">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    <Icon name="lightbulb" className="text-sm" /> Fun Fact
+                  </span>
+                  <span className="text-xs text-ink-faint font-semibold">{content.fun_fact.category}</span>
+                </div>
+                <div className="flex gap-2">
+                  <span className="text-2xl select-none">{content.fun_fact.emoji}</span>
+                  <p className="text-xs text-ink font-medium leading-relaxed">{content.fun_fact.fact}</p>
+                </div>
+                {content.fun_fact.did_you_know && (
+                  <p className="text-xs text-ink-soft mt-2 bg-emerald-500/5 p-2 rounded-lg border border-emerald-500/10">
+                    <strong>Did you know?</strong> {content.fun_fact.did_you_know}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* STEM Questions with PIN-Protected Answers for Parents */}
+            <div className="rounded-2xl border border-purple-500/30 bg-purple-500/5 p-4 flex flex-col gap-4">
+              <div className="flex items-center justify-between border-b border-purple-500/15 pb-2">
+                <h4 className="text-sm font-bold text-purple-700 dark:text-purple-300 flex items-center gap-1.5">
+                  <Icon name="lock_open" className="text-base" /> Parent STEM Answer Keys & Talking Points
+                </h4>
+                <span className="text-[11px] text-ink-faint">Answers kept private from Home view</span>
+              </div>
+
+              {/* 5-Year Old Question & Answer */}
+              <div className="rounded-xl bg-white/40 dark:bg-black/20 p-3.5 border border-purple-500/15">
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <span className="text-xs font-bold text-purple-700 dark:text-purple-300">
+                    🎈 5-Year-Old Challenge: {content.stem_5yo.topic}
+                  </span>
+                  {content.stem_5yo.hint && (
+                    <span className="text-[11px] text-ink-soft italic">Hint: {content.stem_5yo.hint}</span>
+                  )}
+                </div>
+                <p className="text-xs font-semibold text-ink mb-2">Q: {content.stem_5yo.question}</p>
+                <div className="rounded-lg bg-emerald-500/10 p-2.5 border border-emerald-500/20 text-xs">
+                  <span className="font-bold text-emerald-700 dark:text-emerald-300">Answer: </span>
+                  <span className="text-ink font-medium">{content.stem_5yo.answer}</span>
+                </div>
+                {content.stem_5yo.parent_explanation && (
+                  <p className="text-[11px] text-ink-soft mt-2 leading-relaxed">
+                    <strong>How to explain it: </strong>{content.stem_5yo.parent_explanation}
+                  </p>
+                )}
+              </div>
+
+              {/* 9-Year Old Question & Answer */}
+              <div className="rounded-xl bg-white/40 dark:bg-black/20 p-3.5 border border-indigo-500/15">
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300">
+                    🚀 9-Year-Old Challenge: {content.stem_9yo.topic}
+                  </span>
+                  {content.stem_9yo.hint && (
+                    <span className="text-[11px] text-ink-soft italic">Hint: {content.stem_9yo.hint}</span>
+                  )}
+                </div>
+                <p className="text-xs font-semibold text-ink mb-2">Q: {content.stem_9yo.question}</p>
+                <div className="rounded-lg bg-emerald-500/10 p-2.5 border border-emerald-500/20 text-xs">
+                  <span className="font-bold text-emerald-700 dark:text-emerald-300">Answer: </span>
+                  <span className="text-ink font-medium">{content.stem_9yo.answer}</span>
+                </div>
+                {content.stem_9yo.parent_explanation && (
+                  <p className="text-[11px] text-ink-soft mt-2 leading-relaxed">
+                    <strong>Deep dive concept: </strong>{content.stem_9yo.parent_explanation}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center p-8 text-ink-soft">
+            <Icon name="progress_activity" className="animate-spin text-2xl" />
+          </div>
+        )}
+      </div>
+    </Card>
+  )
+}
+

@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import scheduler
 from .db import init_db
-from .routers import calendar, chores, meals, recipes, rewards, setup, shopping, tasks, weather, photos, ytmusic
+from .routers import calendar, chores, meals, recipes, rewards, setup, shopping, tasks, weather, photos, ytmusic, kids_daily
 from .services.player_engine import player_engine
 from .ws import manager
 from .config import get_settings
@@ -40,7 +40,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Family Dashboard", lifespan=lifespan)
 
-for r in (calendar, tasks, chores, shopping, meals, recipes, rewards, setup, weather, photos, ytmusic):
+for r in (calendar, tasks, chores, shopping, meals, recipes, rewards, setup, weather, photos, ytmusic, kids_daily):
     app.include_router(r.router)
 
 
