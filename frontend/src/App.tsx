@@ -723,8 +723,8 @@ export default function App() {
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
-            className={`flex min-w-0 flex-1 flex-col overflow-y-auto py-1 relative ${
-              route !== 'ytmusic' && currentTrack ? 'pb-32 sm:pb-36 lg:pb-6' : 'pb-16 lg:pb-6'
+            className={`flex min-w-0 flex-1 flex-col overflow-y-auto relative py-1 lg:py-0 ${
+              route !== 'ytmusic' && currentTrack ? 'pb-32 sm:pb-36 lg:pb-0' : 'pb-16 lg:pb-0'
             }`}
           >
             {pullY > 0 && (
