@@ -12,6 +12,7 @@ interface MorningKidsBannerProps {
 export default function MorningKidsBanner({ now = new Date(), className = '' }: MorningKidsBannerProps) {
   const [data, setData] = useState<KidsDailyPublicResponse | null>(null)
   const [dismissedDate, setDismissedDate] = useState<string | null>(null)
+  const [manuallyDismissed, setManuallyDismissed] = useState(false)
   const [showHint5, setShowHint5] = useState(false)
   const [showHint9, setShowHint9] = useState(false)
 
@@ -39,7 +40,9 @@ export default function MorningKidsBanner({ now = new Date(), className = '' }: 
 
   if (!data) return null
 
-  // If force_active is true, show anytime regardless of dismissal or hour
+  // If user explicitly clicked 'X' in this session, immediately hide
+  if (manuallyDismissed) return null
+
   const isForceActive = Boolean(data.force_active)
   const isDismissedToday = dismissedDate === data.date
 
@@ -61,6 +64,7 @@ export default function MorningKidsBanner({ now = new Date(), className = '' }: 
   if (!shouldDisplay) return null
 
   const handleDismiss = () => {
+    setManuallyDismissed(true)
     if (data.date) {
       localStorage.setItem('kids_banner_dismissed_date', data.date)
       setDismissedDate(data.date)
@@ -69,13 +73,13 @@ export default function MorningKidsBanner({ now = new Date(), className = '' }: 
 
   return (
     <AnimatePresence>
-      {/* Floating Window Anchored on top of Home Screen */}
+      {/* Floating Window Anchored on top of Home Screen spanning full width */}
       <motion.div
         initial={{ opacity: 0, y: -30, scale: 0.96 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: -30, scale: 0.96 }}
         transition={{ type: 'spring', stiffness: 350, damping: 28 }}
-        className={`fixed inset-x-3 sm:inset-x-8 top-14 sm:top-18 z-40 max-w-7xl mx-auto rounded-3xl border border-white/20 bg-slate-950/85 p-6 sm:p-8 text-white shadow-2xl backdrop-blur-2xl dark:border-white/15 dark:bg-black/90 max-h-[calc(100dvh-4.5rem)] overflow-y-auto ${className}`}
+        className={`fixed inset-x-3 sm:inset-x-6 lg:inset-x-8 top-14 sm:top-18 z-40 w-auto rounded-3xl border border-white/20 bg-slate-950/85 p-6 sm:p-8 text-white shadow-2xl backdrop-blur-2xl dark:border-white/15 dark:bg-black/90 max-h-[calc(100dvh-4.5rem)] overflow-y-auto ${className}`}
       >
         {/* Header Ribbon */}
         <div className="mb-5 flex items-center justify-between gap-4 border-b border-white/15 pb-4">
