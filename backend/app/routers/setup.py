@@ -45,6 +45,14 @@ class ThemePut(BaseModel):
     reload: bool = True
 
 
+class KioskSchedulePut(BaseModel):
+    kiosk_sleep_enabled: bool = True
+    kiosk_sleep_start: str = "22:00"
+    kiosk_sleep_end: str = "06:00"
+    kiosk_daytime_screen_off_mins: int = 15
+    kiosk_suppress_night_motion: bool = True
+
+
 @router.get("/config")
 def get_config(db: Session = Depends(get_db)):
     return {
@@ -52,7 +60,32 @@ def get_config(db: Session = Depends(get_db)):
         "secondary_tz": sync.get_setting(db, "secondary_tz", "Asia/Kolkata"),
         "secondary_tz_emoji": sync.get_setting(db, "secondary_tz_emoji", "🇮🇳"),
         "appearance": sync.get_setting(db, "appearance", "auto"),
+        "kiosk_sleep_enabled": sync.get_setting(db, "kiosk_sleep_enabled", True),
+        "kiosk_sleep_start": sync.get_setting(db, "kiosk_sleep_start", "22:00"),
+        "kiosk_sleep_end": sync.get_setting(db, "kiosk_sleep_end", "06:00"),
+        "kiosk_daytime_screen_off_mins": sync.get_setting(db, "kiosk_daytime_screen_off_mins", 15),
+        "kiosk_suppress_night_motion": sync.get_setting(db, "kiosk_suppress_night_motion", True),
     }
+
+
+@router.post("/kiosk-schedule")
+async def update_kiosk_schedule(body: KioskSchedulePut, db: Session = Depends(get_db)):
+    sync.set_setting(db, "kiosk_sleep_enabled", body.kiosk_sleep_enabled)
+    sync.set_setting(db, "kiosk_sleep_start", body.kiosk_sleep_start)
+    sync.set_setting(db, "kiosk_sleep_end", body.kiosk_sleep_end)
+    sync.set_setting(db, "kiosk_daytime_screen_off_mins", body.kiosk_daytime_screen_off_mins)
+    sync.set_setting(db, "kiosk_suppress_night_motion", body.kiosk_suppress_night_motion)
+
+    await manager.broadcast("setup")
+    await manager.broadcast_custom({
+        "type": "kiosk_schedule_changed",
+        "kiosk_sleep_enabled": body.kiosk_sleep_enabled,
+        "kiosk_sleep_start": body.kiosk_sleep_start,
+        "kiosk_sleep_end": body.kiosk_sleep_end,
+        "kiosk_daytime_screen_off_mins": body.kiosk_daytime_screen_off_mins,
+        "kiosk_suppress_night_motion": body.kiosk_suppress_night_motion,
+    })
+    return {"ok": True}
 
 
 @router.post("/theme")

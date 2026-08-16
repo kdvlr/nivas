@@ -1021,6 +1021,8 @@ function SetupInner() {
 
         {section === 'looks' && <PinFailPreviewCard />}
 
+        {section === 'general' && <KioskScheduleCard />}
+
         {section === 'general' && <WeatherCard />}
 
         {section === 'general' && status && <TimezoneCard status={status} reload={reload} />}
@@ -1778,6 +1780,208 @@ function KidsDailyCard() {
             <Icon name="progress_activity" className="animate-spin text-2xl" />
           </div>
         )}
+      </div>
+    </Card>
+  )
+}
+
+function KioskScheduleCard() {
+  const { data: config, reload } = useData<{
+    kiosk_sleep_enabled?: boolean
+    kiosk_sleep_start?: string
+    kiosk_sleep_end?: string
+    kiosk_daytime_screen_off_mins?: number
+    kiosk_suppress_night_motion?: boolean
+  }>('/api/setup/config', ['setup'])
+
+  const [saving, setSaving] = useState(false)
+  const [sleepEnabled, setSleepEnabled] = useState(true)
+  const [sleepStart, setSleepStart] = useState('22:00')
+  const [sleepEnd, setSleepEnd] = useState('06:00')
+  const [daytimeMins, setDaytimeMins] = useState(15)
+  const [suppressMotion, setSuppressMotion] = useState(true)
+
+  useEffect(() => {
+    if (config) {
+      setSleepEnabled(config.kiosk_sleep_enabled ?? true)
+      setSleepStart(config.kiosk_sleep_start ?? '22:00')
+      setSleepEnd(config.kiosk_sleep_end ?? '06:00')
+      setDaytimeMins(config.kiosk_daytime_screen_off_mins ?? 15)
+      setSuppressMotion(config.kiosk_suppress_night_motion ?? true)
+    }
+  }, [config])
+
+  const saveSettings = async (updates: Partial<{
+    kiosk_sleep_enabled: boolean
+    kiosk_sleep_start: string
+    kiosk_sleep_end: string
+    kiosk_daytime_screen_off_mins: number
+    kiosk_suppress_night_motion: boolean
+  }>) => {
+    setSaving(true)
+    try {
+      const payload = {
+        kiosk_sleep_enabled: updates.kiosk_sleep_enabled ?? sleepEnabled,
+        kiosk_sleep_start: updates.kiosk_sleep_start ?? sleepStart,
+        kiosk_sleep_end: updates.kiosk_sleep_end ?? sleepEnd,
+        kiosk_daytime_screen_off_mins: updates.kiosk_daytime_screen_off_mins ?? daytimeMins,
+        kiosk_suppress_night_motion: updates.kiosk_suppress_night_motion ?? suppressMotion,
+      }
+      await api.post('/api/setup/kiosk-schedule', payload)
+      reload()
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const timeoutOptions = [5, 10, 15, 30, 60]
+
+  return (
+    <Card
+      title={
+        <span className="flex items-center gap-2">
+          <Icon name="bedtime" className="text-indigo-500" /> Kiosk & Display Schedule
+        </span>
+      }
+      badge={
+        saving ? (
+          <span className="text-xs text-ink-soft animate-pulse">Saving...</span>
+        ) : (
+          <Badge ok={sleepEnabled} label={sleepEnabled ? 'Schedule Active' : 'Always On'} />
+        )
+      }
+    >
+      <div className="space-y-5 text-sm">
+        {/* Night Sleep Schedule Toggle */}
+        <div className="flex items-center justify-between gap-4 py-2 border-b border-black/5 dark:border-white/5">
+          <div>
+            <div className="font-medium text-ink">Night Sleep Mode</div>
+            <div className="text-xs text-ink-soft">
+              Powers down the LCD display backlight hardware between scheduled hours to extend panel lifespan.
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              const next = !sleepEnabled
+              setSleepEnabled(next)
+              saveSettings({ kiosk_sleep_enabled: next })
+            }}
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+              sleepEnabled ? 'bg-indigo-600' : 'bg-black/20 dark:bg-white/20'
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                sleepEnabled ? 'translate-x-5' : 'translate-x-0'
+              }`}
+            />
+          </button>
+        </div>
+
+        {/* Start and End Times */}
+        {sleepEnabled && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="rounded-xl bg-white/40 dark:bg-black/20 p-3.5 border border-black/5 dark:border-white/5">
+              <label className="text-xs font-semibold text-ink-soft mb-1.5 flex items-center gap-1.5">
+                <Icon name="nightlight" className="text-sm text-indigo-400" /> Sleep Time (Screen Off)
+              </label>
+              <input
+                type="time"
+                value={sleepStart}
+                onChange={(e) => {
+                  setSleepStart(e.target.value)
+                  saveSettings({ kiosk_sleep_start: e.target.value })
+                }}
+                className="w-full rounded-lg bg-white/80 dark:bg-black/40 border border-black/10 dark:border-white/10 px-3 py-2 text-base font-semibold text-ink focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+              />
+              <div className="text-[11px] text-ink-soft mt-1">Turns off display completely</div>
+            </div>
+
+            <div className="rounded-xl bg-white/40 dark:bg-black/20 p-3.5 border border-black/5 dark:border-white/5">
+              <label className="text-xs font-semibold text-ink-soft mb-1.5 flex items-center gap-1.5">
+                <Icon name="wb_sunny" className="text-sm text-amber-400" /> Wake Time (Screen On)
+              </label>
+              <input
+                type="time"
+                value={sleepEnd}
+                onChange={(e) => {
+                  setSleepEnd(e.target.value)
+                  saveSettings({ kiosk_sleep_end: e.target.value })
+                }}
+                className="w-full rounded-lg bg-white/80 dark:bg-black/40 border border-black/10 dark:border-white/10 px-3 py-2 text-base font-semibold text-ink focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+              />
+              <div className="text-[11px] text-ink-soft mt-1">Wakes up & resets to Home dashboard</div>
+            </div>
+          </div>
+        )}
+
+        {/* Suppress Night Motion Toggle */}
+        {sleepEnabled && (
+          <div className="flex items-center justify-between gap-4 py-2 border-b border-black/5 dark:border-white/5">
+            <div>
+              <div className="font-medium text-ink">Suppress Night Motion Wake</div>
+              <div className="text-xs text-ink-soft">
+                Ignore camera & room motion events during quiet hours. Touching the screen will still wake it manually.
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                const next = !suppressMotion
+                setSuppressMotion(next)
+                saveSettings({ kiosk_suppress_night_motion: next })
+              }}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                suppressMotion ? 'bg-indigo-600' : 'bg-black/20 dark:bg-white/20'
+              }`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                  suppressMotion ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+        )}
+
+        {/* Daytime Inactivity Screen Off */}
+        <div>
+          <div className="font-medium text-ink mb-1">Daytime Inactivity Screen-Off</div>
+          <div className="text-xs text-ink-soft mb-2.5">
+            Turn off display after continuous room inactivity to allow panel cooldown during the day (motion will wake it back up).
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {timeoutOptions.map((mins) => (
+              <button
+                key={mins}
+                onClick={() => {
+                  setDaytimeMins(mins)
+                  saveSettings({ kiosk_daytime_screen_off_mins: mins })
+                }}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                  daytimeMins === mins
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'bg-white/40 dark:bg-black/20 text-ink-soft hover:bg-white/60 dark:hover:bg-black/40 border border-black/5 dark:border-white/5'
+                }`}
+              >
+                {mins} mins
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Fully Kiosk Recommendations Helper */}
+        <div className="rounded-xl bg-indigo-500/10 p-3.5 border border-indigo-500/20 text-xs text-ink space-y-1">
+          <div className="font-semibold text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5">
+            <Icon name="tips_and_updates" className="text-sm" /> Recommended Fully Kiosk App Settings
+          </div>
+          <p className="text-ink-soft leading-relaxed">
+            • <strong>Motion Detection Frame Rate</strong>: Set to 2–5 fps in Fully Kiosk settings to reduce CPU thermals.
+            <br />
+            • <strong>Daily Web Auto-Reload</strong>: Set to 05:45 AM (under Web Auto Reload) to flush memory before morning wake.
+          </p>
+        </div>
       </div>
     </Card>
   )
