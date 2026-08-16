@@ -396,13 +396,13 @@ class PlayerEngine:
                 if self.is_playing and self.current_track:
                     self._last_audio_at = time.monotonic()
                     self.elapsed_seconds += 1
-                    # Deterministic ticker fallback (+2s grace period)
+                    # Deterministic ticker watchdog fallback (+15s grace period)
                     if (
                         self.duration_seconds > 0
-                        and self.elapsed_seconds >= self.duration_seconds + 2
+                        and self.elapsed_seconds >= self.duration_seconds + 15
                     ):
                         logger.info(
-                            "Ticker: Track elapsed seconds (%s) reached duration (%s) + grace period; advancing to next track",
+                            "Watchdog: Track elapsed seconds (%s) reached duration (%s) + 15s grace period; advancing to next track",
                             self.elapsed_seconds,
                             self.duration_seconds,
                         )
@@ -771,6 +771,16 @@ class PlayerEngine:
                         logger.info("AirPlay stream reached EOF; advancing to next track")
                         if self._event_loop and self._event_loop.is_running():
                             asyncio.run_coroutine_threadsafe(self.next_track(), self._event_loop)
+                    elif line_clean.startswith("Position:") and "s," in line_clean:
+                        try:
+                            pos_str = line_clean.split("Position:")[1].split("s,")[0].strip()
+                            pos_sec = int(float(pos_str))
+                            if self.duration_seconds > 0:
+                                self.elapsed_seconds = min(self.duration_seconds, max(0, pos_sec))
+                            else:
+                                self.elapsed_seconds = max(0, pos_sec)
+                        except Exception:
+                            pass
             except Exception as e:
                 logger.debug(f"Stream output reader error: {e}")
 
