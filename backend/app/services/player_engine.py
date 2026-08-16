@@ -396,14 +396,13 @@ class PlayerEngine:
                 if self.is_playing and self.current_track:
                     self._last_audio_at = time.monotonic()
                     self.elapsed_seconds += 1
-                    # Generous watchdog fallback (+20s) so it never interrupts legitimate playback or PTP buffer delays
+                    # Deterministic ticker fallback (+2s grace period)
                     if (
                         self.duration_seconds > 0
-                        and self.elapsed_seconds >= self.duration_seconds + 20
-                        and not self._stream_procs
+                        and self.elapsed_seconds >= self.duration_seconds + 2
                     ):
                         logger.info(
-                            "Watchdog: Track elapsed seconds (%s) reached duration (%s) + grace period with no active stream; advancing to next track",
+                            "Ticker: Track elapsed seconds (%s) reached duration (%s) + grace period; advancing to next track",
                             self.elapsed_seconds,
                             self.duration_seconds,
                         )
@@ -678,34 +677,7 @@ class PlayerEngine:
                 logger.info(f"Transcoded direct audio URL successfully to {output_path}")
                 return
 
-            video_id = source
-            if "youtube.com" in source or "youtu.be" in source:
-                if "v=" in source:
-                    video_id = source.split("v=")[1].split("&")[0]
-                elif "youtu.be/" in source:
-                    video_id = source.split("youtu.be/")[1].split("?")[0]
-
-            # 2. Fast Path: Direct stream extraction piped to ffmpeg
-            try:
-                stream_url, headers = ytmusic_service.get_stream_url_and_headers(video_id)
-                if stream_url:
-                    cmd = ["ffmpeg", "-y"]
-                    if headers:
-                        header_str = "".join(f"{k}: {v}\r\n" for k, v in headers.items())
-                        cmd.extend(["-headers", header_str])
-                    cmd.extend([
-                        "-i", stream_url,
-                        "-vn", "-ar", "44100", "-ac", "2", "-acodec", "pcm_s16le",
-                        output_path
-                    ])
-                    subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                    if os.path.exists(output_path) and os.path.getsize(output_path) > 44:
-                        logger.info(f"Fast transcoded stream to 44.1kHz WAV: {output_path}")
-                        return
-            except Exception as direct_err:
-                logger.warning(f"Fast stream transcode failed for {video_id}, falling back to yt-dlp: {direct_err}")
-
-            # 3. Fallback: Full yt-dlp download & extract
+            # 2. Strict yt-dlp download & extract with multi-client extractors
             import yt_dlp
             url = source if (source.startswith("http://") or source.startswith("https://")) else f"https://www.youtube.com/watch?v={source}"
             out_base = output_path.rsplit(".", 1)[0]
@@ -795,6 +767,10 @@ class PlayerEngine:
                         logger.info("Received AirPlay remote event: Prev")
                         if self._event_loop and self._event_loop.is_running():
                             asyncio.run_coroutine_threadsafe(self.prev_track(), self._event_loop)
+                    elif "Reached end of audio" in line_clean or "Decoder EOF and buffer empty" in line_clean:
+                        logger.info("AirPlay stream reached EOF; advancing to next track")
+                        if self._event_loop and self._event_loop.is_running():
+                            asyncio.run_coroutine_threadsafe(self.next_track(), self._event_loop)
             except Exception as e:
                 logger.debug(f"Stream output reader error: {e}")
 
