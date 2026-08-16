@@ -308,12 +308,13 @@ class PlayerEngine:
         while True:
             try:
                 await self.scan_devices()
-                await asyncio.sleep(10)
+                sleep_sec = 60 if self.is_playing else 15
+                await asyncio.sleep(sleep_sec)
             except asyncio.CancelledError:
                 break
             except Exception as e:
                 logger.error(f"Error in pyatv scanner loop: {e}")
-                await asyncio.sleep(10)
+                await asyncio.sleep(30)
 
     async def scan_devices(self) -> List[Dict[str, Any]]:
         try:
@@ -395,9 +396,14 @@ class PlayerEngine:
                 if self.is_playing and self.current_track:
                     self._last_audio_at = time.monotonic()
                     self.elapsed_seconds += 1
-                    if self.duration_seconds > 0 and self.elapsed_seconds >= self.duration_seconds + 2:
+                    # Generous watchdog fallback (+20s) so it never interrupts legitimate playback or PTP buffer delays
+                    if (
+                        self.duration_seconds > 0
+                        and self.elapsed_seconds >= self.duration_seconds + 20
+                        and not self._stream_procs
+                    ):
                         logger.info(
-                            "Track elapsed seconds (%s) reached duration (%s) + grace period; advancing to next track",
+                            "Watchdog: Track elapsed seconds (%s) reached duration (%s) + grace period with no active stream; advancing to next track",
                             self.elapsed_seconds,
                             self.duration_seconds,
                         )
@@ -567,32 +573,34 @@ class PlayerEngine:
 
     async def _prefetch_next_track(self):
         try:
-            next_track = None
+            tracks_to_prefetch = []
             if self.queue:
-                next_track = self.queue[0]
+                # Pre-fetch the upcoming 2 tracks so track-to-track handover is instant
+                tracks_to_prefetch = [t for t in self.queue[:2] if t and t.get("videoId")]
 
-            if next_track and next_track.get("videoId"):
-                next_video_id = next_track["videoId"]
-                if next_video_id in self._prefetching_video_ids:
-                    return
-                self._prefetching_video_ids.add(next_video_id)
+            loop = asyncio.get_running_loop()
+            prefetch_tasks = []
+
+            for track in tracks_to_prefetch:
+                video_id = track["videoId"]
+                if video_id in self._prefetching_video_ids:
+                    continue
+                self._prefetching_video_ids.add(video_id)
                 try:
-                    next_wav_path = f"/tmp/ytmusic_{next_video_id}.wav"
-                    next_art_path = f"/tmp/ytmusic_{next_video_id}_artwork.jpg"
-                    loop = asyncio.get_running_loop()
-                    prefetch_tasks = []
+                    wav_path = f"/tmp/ytmusic_{video_id}.wav"
+                    art_path = f"/tmp/ytmusic_{video_id}_artwork.jpg"
 
-                    if not os.path.exists(next_wav_path) or os.path.getsize(next_wav_path) == 0:
-                        logger.info("Pre-fetching next track in background: %s (%s)", next_track.get("title"), next_video_id)
-                        prefetch_tasks.append(loop.run_in_executor(None, self._transcode_to_wav, next_video_id, next_wav_path))
+                    if not os.path.exists(wav_path) or os.path.getsize(wav_path) <= 44:
+                        logger.info("Pre-fetching track in background: %s (%s)", track.get("title"), video_id)
+                        prefetch_tasks.append(loop.run_in_executor(None, self._transcode_to_wav, video_id, wav_path))
 
-                    if not os.path.exists(next_art_path) and next_track.get("thumbnail"):
-                        prefetch_tasks.append(loop.run_in_executor(None, self._download_artwork, next_track["thumbnail"], next_art_path))
-
-                    if prefetch_tasks:
-                        await asyncio.gather(*prefetch_tasks, return_exceptions=True)
+                    if not os.path.exists(art_path) and track.get("thumbnail"):
+                        prefetch_tasks.append(loop.run_in_executor(None, self._download_artwork, track["thumbnail"], art_path))
                 finally:
-                    self._prefetching_video_ids.discard(next_video_id)
+                    self._prefetching_video_ids.discard(video_id)
+
+            if prefetch_tasks:
+                await asyncio.gather(*prefetch_tasks, return_exceptions=True)
         except Exception as e:
             logger.debug(f"Next track prefetch background task error: {e}")
 
@@ -604,7 +612,7 @@ class PlayerEngine:
 
             # Concurrently transcode audio and download artwork in parallel
             fetch_tasks = []
-            if not os.path.exists(wav_path) or os.path.getsize(wav_path) == 0:
+            if not os.path.exists(wav_path) or os.path.getsize(wav_path) <= 44:
                 logger.info(f"Downloading and converting track '{track_info['title']}' to 44.1kHz PCM WAV...")
                 fetch_tasks.append(loop.run_in_executor(None, self._transcode_to_wav, video_id, wav_path))
 
@@ -619,7 +627,7 @@ class PlayerEngine:
                 logger.info("Aborting stale playback orchestration (generation %s superseded by %s)", generation_id, self._play_generation_id)
                 return
 
-            if not os.path.exists(wav_path) or os.path.getsize(wav_path) == 0:
+            if not os.path.exists(wav_path) or os.path.getsize(wav_path) <= 44:
                 logger.error(f"Transcoding produced empty file for {video_id}")
                 self.is_playing = False
                 self._broadcast_state()
@@ -659,6 +667,7 @@ class PlayerEngine:
 
     def _transcode_to_wav(self, source: str, output_path: str):
         try:
+            # 1. Direct HTTP/HTTPS audio URL (non-YouTube)
             if source.startswith("http://") or (source.startswith("https://") and not ("youtube.com" in source or "youtu.be" in source)):
                 cmd = [
                     "ffmpeg", "-y", "-i", source,
@@ -669,6 +678,34 @@ class PlayerEngine:
                 logger.info(f"Transcoded direct audio URL successfully to {output_path}")
                 return
 
+            video_id = source
+            if "youtube.com" in source or "youtu.be" in source:
+                if "v=" in source:
+                    video_id = source.split("v=")[1].split("&")[0]
+                elif "youtu.be/" in source:
+                    video_id = source.split("youtu.be/")[1].split("?")[0]
+
+            # 2. Fast Path: Direct stream extraction piped to ffmpeg
+            try:
+                stream_url, headers = ytmusic_service.get_stream_url_and_headers(video_id)
+                if stream_url:
+                    cmd = ["ffmpeg", "-y"]
+                    if headers:
+                        header_str = "".join(f"{k}: {v}\r\n" for k, v in headers.items())
+                        cmd.extend(["-headers", header_str])
+                    cmd.extend([
+                        "-i", stream_url,
+                        "-vn", "-ar", "44100", "-ac", "2", "-acodec", "pcm_s16le",
+                        output_path
+                    ])
+                    subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    if os.path.exists(output_path) and os.path.getsize(output_path) > 44:
+                        logger.info(f"Fast transcoded stream to 44.1kHz WAV: {output_path}")
+                        return
+            except Exception as direct_err:
+                logger.warning(f"Fast stream transcode failed for {video_id}, falling back to yt-dlp: {direct_err}")
+
+            # 3. Fallback: Full yt-dlp download & extract
             import yt_dlp
             url = source if (source.startswith("http://") or source.startswith("https://")) else f"https://www.youtube.com/watch?v={source}"
             out_base = output_path.rsplit(".", 1)[0]

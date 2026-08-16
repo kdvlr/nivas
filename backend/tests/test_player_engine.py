@@ -390,7 +390,7 @@ async def test_playback_ticker_advances_after_grace_period():
     engine.is_playing = True
     engine.current_track = {"videoId": "test1", "title": "Track 1"}
     engine.duration_seconds = 10
-    engine.elapsed_seconds = 11
+    engine.elapsed_seconds = 29
     engine.queue = [{"videoId": "test2", "title": "Track 2"}]
 
     advanced = False
@@ -400,7 +400,7 @@ async def test_playback_ticker_advances_after_grace_period():
 
     engine.next_track = mock_next_track
 
-    # Run one step of ticker logic: elapsed_seconds reaches 12 >= 10 + 2 -> next_track
+    # Run one step of ticker logic: elapsed_seconds reaches 30 >= 10 + 20 -> next_track
     ticker_task = asyncio.create_task(engine._playback_ticker())
     await asyncio.sleep(1.1)
     ticker_task.cancel()

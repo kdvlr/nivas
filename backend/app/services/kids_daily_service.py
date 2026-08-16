@@ -8,8 +8,8 @@ from ..config import get_settings
 
 logger = logging.getLogger(__name__)
 
-DATA_DIR = Path("data")
-KIDS_DAILY_FILE = DATA_DIR / "kids_daily.json"
+def _get_kids_daily_file() -> Path:
+    return Path(get_settings().data_dir) / "kids_daily.json"
 
 KIDS_DAILY_SCHEMA = {
     "type": "OBJECT",
@@ -191,8 +191,9 @@ class KidsDailyService:
 
     def _load_cache(self):
         try:
-            if KIDS_DAILY_FILE.exists():
-                with open(KIDS_DAILY_FILE, "r", encoding="utf-8") as f:
+            target_file = _get_kids_daily_file()
+            if target_file.exists():
+                with open(target_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     self._cache = data.get("days", {})
                     self._settings = {**self._settings, **data.get("settings", {})}
@@ -201,8 +202,9 @@ class KidsDailyService:
 
     def _save_cache(self):
         try:
-            DATA_DIR.mkdir(parents=True, exist_ok=True)
-            with open(KIDS_DAILY_FILE, "w", encoding="utf-8") as f:
+            target_file = _get_kids_daily_file()
+            target_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(target_file, "w", encoding="utf-8") as f:
                 json.dump(
                     {
                         "days": self._cache,

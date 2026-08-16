@@ -25,26 +25,19 @@ interface YTMusicViewProps {
 type PlayerTab = 'queue' | 'lyrics'
 type MusicView = 'browse' | 'now-playing'
 
-const CURATED_PLAYLISTS = [
-  { id: 'RDCLAK5uy_nTbyVypdXPQd00z15bTWjZr7pG-26yyQ4', title: 'Kollywood Hitlist' },
-  { id: 'RDCLAK5uy_lhIiKLMQM6_gokxx581SC-xQBSfJm9gqc', title: 'Bollywood Essentials' },
-  { id: 'RDCLAK5uy_n9Fbdw7e6ap-98_A-8JYBmPv64v-Uaq1g', title: 'Bollywood Hitlist' },
-  { id: 'RDCLAK5uy_lyVnWI5JnuwKJiuE-n1x-Un0mj9WlEyZw', title: 'Tollywood Hitlist' },
-  { id: 'PL4fGSI1pDJn69On1f-8NAvX_CYlx7QyZc', title: 'Top 100 United States · Audio' },
+const TARGET_PLAYLISTS = [
+  { id: 'RDCLAK5uy_lBNUteBRencHzKelu5iDHwLF6mYqjL-JU', defaultTitle: 'Top Hindi Hits' },
+  { id: 'RDCLAK5uy_nNhhgRET3NcJ4SJBvqhAIJ6t7vjsQYowc', defaultTitle: 'Tollywood Top 50' },
+  { id: 'RDCLAK5uy_lyVnWI5JnuwKJiuE-n1x-Un0mj9WlEyZw', defaultTitle: 'Tollywood Hitlist' },
+  { id: 'RDCLAK5uy_myv3cB_L96tlcINvAx0uS9LdgTdweJMYM', defaultTitle: 'Bollywood Dance Party' },
 ] as const
 
-interface DiscoverySection {
-  id: string
-  title: string
-  tracks: Track[]
-}
-
-interface DiscoveryCard {
+interface PlaylistItem {
   id: string
   title: string
   subtitle?: string
   thumbnail?: string
-  kind: 'playlist' | 'album'
+  tracks?: Track[]
 }
 
 const isSong = (item: any) => {
@@ -92,6 +85,20 @@ const highResolutionArtwork = (url?: string) => {
     .replace(/=s\d+[^?&]*/, '=s1200')
 }
 
+// Daily pseudo-random generator seeded by date
+function getDateRandom(date: Date) {
+  const dateStr = date.toISOString().slice(0, 10)
+  let h = 2166136261
+  for (let i = 0; i < dateStr.length; i++) {
+    h = Math.imul(h ^ dateStr.charCodeAt(i), 16777619)
+  }
+  return function nextFloat() {
+    h = Math.imul(h ^ (h >>> 16), 2246822507)
+    h = Math.imul(h ^ (h >>> 13), 3266489909)
+    return ((h >>> 0) % 1000000) / 1000000
+  }
+}
+
 function SongRow({
   track,
   index,
@@ -106,25 +113,55 @@ function SongRow({
   onQueue?: (playNext: boolean) => void
 }) {
   return (
-    <div className={`group flex min-h-[4.5rem] items-center gap-3 border-b border-white/10 px-3 py-2 transition ${active ? 'bg-white/[0.12]' : 'hover:bg-white/[0.07]'}`}>
-      {typeof index === 'number' && <span className="w-5 shrink-0 text-center text-xs tabular-nums text-white/35">{index + 1}</span>}
-      <button onClick={onPlay} className="relative h-12 w-12 shrink-0 overflow-hidden rounded-sm bg-white/10">
-        {track.thumbnail ? <img src={track.thumbnail} alt="" className="h-full w-full object-cover" /> : <Icon name="music_note" className="text-2xl text-white/45" />}
+    <div
+      className={`group flex min-h-[4.5rem] items-center gap-3 border-b border-white/10 px-3 py-2 transition ${
+        active ? 'bg-white/[0.12]' : 'hover:bg-white/[0.07]'
+      }`}
+    >
+      {typeof index === 'number' && (
+        <span className="w-5 shrink-0 text-center text-xs tabular-nums text-white/35">
+          {index + 1}
+        </span>
+      )}
+      <button
+        onClick={onPlay}
+        className="relative h-12 w-12 shrink-0 overflow-hidden rounded-sm bg-white/10"
+      >
+        {track.thumbnail ? (
+          <img src={track.thumbnail} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <Icon name="music_note" className="text-2xl text-white/45" />
+        )}
         <span className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition group-hover:opacity-100">
           <Icon name="play_arrow" filled className="text-2xl text-white" />
         </span>
       </button>
       <button onClick={onPlay} className="min-w-0 flex-1 text-left">
         <p className="truncate text-[0.95rem] font-semibold text-white">{track.title}</p>
-        <p className="truncate text-sm text-white/50">{track.artist}{track.album ? ` · ${track.album}` : ''}</p>
+        <p className="truncate text-sm text-white/50">
+          {track.artist}
+          {track.album ? ` · ${track.album}` : ''}
+        </p>
       </button>
-      {track.duration ? <span className="hidden text-sm tabular-nums text-white/50 sm:block">{formatTime(track.duration)}</span> : null}
+      {track.duration ? (
+        <span className="hidden text-sm tabular-nums text-white/50 sm:block">
+          {formatTime(track.duration)}
+        </span>
+      ) : null}
       {onQueue && (
         <div className="flex shrink-0 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100">
-          <button onClick={() => onQueue(true)} title="Play next" className="flex h-10 w-10 items-center justify-center text-white/60 hover:text-white">
+          <button
+            onClick={() => onQueue(true)}
+            title="Play next"
+            className="flex h-10 w-10 items-center justify-center text-white/60 hover:text-white"
+          >
             <Icon name="playlist_play" className="text-2xl" />
           </button>
-          <button onClick={() => onQueue(false)} title="Add to queue" className="flex h-10 w-10 items-center justify-center text-white/60 hover:text-white">
+          <button
+            onClick={() => onQueue(false)}
+            title="Add to queue"
+            className="flex h-10 w-10 items-center justify-center text-white/60 hover:text-white"
+          >
             <Icon name="queue_music" className="text-xl" />
           </button>
         </div>
@@ -133,7 +170,8 @@ function SongRow({
   )
 }
 
-export default function YTMusic({
+export default function YTMusicView({
+  now: initialNow,
   currentTrack,
   isPlaying,
   queue,
@@ -147,51 +185,53 @@ export default function YTMusic({
   onQueueTrack,
   onQueueChange,
 }: YTMusicViewProps) {
-  const parseSubViewFromHash = useCallback(() => {
+  const getSubViewFromHash = useCallback((): { view: MusicView; search: string } => {
     const hash = window.location.hash
     const queryIndex = hash.indexOf('?')
     if (queryIndex === -1) {
-      return { view: currentTrack ? 'now-playing' : ('browse' as MusicView), search: '' }
+      return { view: currentTrack ? 'now-playing' : 'browse', search: '' }
     }
     const params = new URLSearchParams(hash.slice(queryIndex))
-    const viewParam = params.get('view') as MusicView | null
+    const viewParam = params.get('view')
     const searchParam = params.get('search') || ''
     return {
-      view: (viewParam === 'now-playing' || viewParam === 'browse') ? viewParam : (currentTrack ? 'now-playing' : ('browse' as MusicView)),
+      view: (viewParam === 'now-playing' || viewParam === 'browse') ? viewParam : (currentTrack ? 'now-playing' : 'browse'),
       search: searchParam,
     }
   }, [currentTrack])
 
-  const initialSubView = parseSubViewFromHash()
-  const [searchQuery, setSearchQuery] = useState(initialSubView.search)
+  const initialParsed = getSubViewFromHash()
+  const [searchQuery, setSearchQuery] = useState(initialParsed.search)
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
-  const [discoverySections, setDiscoverySections] = useState<DiscoverySection[]>([])
-  const [mixCards, setMixCards] = useState<DiscoveryCard[]>([])
-  const [releaseCards, setReleaseCards] = useState<DiscoveryCard[]>([])
-  const [discoveryLoading, setDiscoveryLoading] = useState(true)
-  const [openingCardId, setOpeningCardId] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<MusicView>(initialSubView.view)
   const [loading, setLoading] = useState(false)
+
+  // YouTube Music Home 10 Playlists (2 rows of 5)
+  const [homePlaylists, setHomePlaylists] = useState<PlaylistItem[]>([])
+  // Target 4 Playlists with tracks
+  const [targetPlaylists, setTargetPlaylists] = useState<PlaylistItem[]>([])
+  const [discoveryLoading, setDiscoveryLoading] = useState(true)
+  const [openingPlaylistId, setOpeningPlaylistId] = useState<string | null>(null)
+
+  const [activeView, setActiveView] = useState<MusicView>(initialParsed.view)
   const [showAirPlayModal, setShowAirPlayModal] = useState(false)
   const airPlayButtonRef = useRef<HTMLButtonElement>(null)
-  const [activeTab, setActiveTab] = useState<PlayerTab>('queue')
-  const [lyrics, setLyrics] = useState('')
-  const [lyricsLoading, setLyricsLoading] = useState(false)
-  const [relatedTracks, setRelatedTracks] = useState<Track[]>([])
-  const [relatedLoading, setRelatedLoading] = useState(false)
+  const [playerTab, setPlayerTab] = useState<PlayerTab>('queue')
+  const [lyrics, setLyrics] = useState<string>('')
+  const [loadingLyrics, setLoadingLyrics] = useState(false)
   const [now, setNow] = useState(new Date())
+
+  // Queue state for drag-and-drop
   const [editableQueue, setEditableQueue] = useState<Track[]>(queue)
-  const [dragIndex, setDragIndex] = useState<number | null>(null)
-  const dragIndexRef = useRef<number | null>(null)
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
+  const activePointerIdRef = useRef<number | null>(null)
   const editableQueueRef = useRef<Track[]>(queue)
 
-  const syncUrlSubView = useCallback((nextView: MusicView, nextSearch = '', replace = false) => {
+  const syncUrlSubView = useCallback((nextView: MusicView, nextSearch: string = '', replace = false) => {
     const params = new URLSearchParams()
     if (nextView) params.set('view', nextView)
     if (nextSearch) params.set('search', nextSearch)
-    const queryString = params.toString() ? `?${params.toString()}` : ''
-    const newHash = `#/ytmusic${queryString}`
+    const newHash = `#/ytmusic${params.toString() ? `?${params.toString()}` : ''}`
     if (window.location.hash !== newHash) {
       if (replace) {
         window.history.replaceState(null, '', newHash)
@@ -199,72 +239,62 @@ export default function YTMusic({
         window.history.pushState(null, '', newHash)
       }
     }
-    setViewMode(nextView)
+    setActiveView(nextView)
     setSearchQuery(nextSearch)
   }, [])
 
   useEffect(() => {
     const handlePopState = () => {
       if (window.location.hash.startsWith('#/ytmusic')) {
-        const parsed = parseSubViewFromHash()
-        setViewMode(parsed.view)
+        const parsed = getSubViewFromHash()
+        setActiveView(parsed.view)
         setSearchQuery(parsed.search)
       }
     }
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
-  }, [parseSubViewFromHash])
+  }, [getSubViewFromHash])
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(timer)
   }, [])
 
-  const secondaryTimeFormatted = useMemo(() => {
-    try {
-      return now.toLocaleTimeString(undefined, {
-        timeZone: 'Asia/Kolkata',
-        hour: 'numeric',
-        minute: '2-digit',
-      })
-    } catch {
-      return now.toLocaleTimeString()
-    }
-  }, [now])
-
   useEffect(() => {
-    if (dragIndexRef.current === null) {
+    if (activePointerIdRef.current === null) {
       setEditableQueue(queue)
       editableQueueRef.current = queue
     }
   }, [queue])
 
-  const startQueueDrag = (event: React.PointerEvent<HTMLButtonElement>, index: number) => {
-    event.currentTarget.setPointerCapture(event.pointerId)
-    dragIndexRef.current = index
-    setDragIndex(index)
+  const handlePointerDown = (e: React.PointerEvent<HTMLButtonElement>, index: number) => {
+    e.currentTarget.setPointerCapture(e.pointerId)
+    activePointerIdRef.current = index
+    setDraggedIndex(index)
   }
 
-  const moveQueueDrag = (event: React.PointerEvent<HTMLButtonElement>) => {
-    const fromIndex = dragIndexRef.current
-    if (fromIndex === null) return
-    const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>('[data-queue-index]')
-    const toIndex = target ? Number(target.dataset.queueIndex) : Number.NaN
-    if (!Number.isInteger(toIndex) || toIndex === fromIndex) return
-    const reordered = [...editableQueueRef.current]
-    const [moved] = reordered.splice(fromIndex, 1)
-    reordered.splice(toIndex, 0, moved)
-    editableQueueRef.current = reordered
-    dragIndexRef.current = toIndex
-    setEditableQueue(reordered)
-    setDragIndex(toIndex)
+  const handlePointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const sourceIndex = activePointerIdRef.current
+    if (sourceIndex === null) return
+    const targetElement = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-queue-index]') as HTMLElement | null
+    const targetIndex = targetElement ? Number(targetElement.dataset.queueIndex) : Number.NaN
+    if (!Number.isInteger(targetIndex) || targetIndex === sourceIndex) return
+
+    const newQueue = [...editableQueueRef.current]
+    const [movedTrack] = newQueue.splice(sourceIndex, 1)
+    newQueue.splice(targetIndex, 0, movedTrack)
+    editableQueueRef.current = newQueue
+    activePointerIdRef.current = targetIndex
+    setEditableQueue(newQueue)
+    setDraggedIndex(targetIndex)
   }
 
-  const finishQueueDrag = () => {
-    if (dragIndexRef.current === null) return
-    dragIndexRef.current = null
-    setDragIndex(null)
-    onQueueChange(editableQueueRef.current)
+  const handlePointerUp = () => {
+    if (activePointerIdRef.current !== null) {
+      activePointerIdRef.current = null
+      setDraggedIndex(null)
+      onQueueChange(editableQueueRef.current)
+    }
   }
 
   const removeQueueTrack = (index: number) => {
@@ -274,52 +304,78 @@ export default function YTMusic({
     onQueueChange(nextQueue)
   }
 
+  // Load Top 10 YouTube Music Home playlists + The 4 Target Playlists
   useEffect(() => {
     Promise.all([
-      Promise.all(CURATED_PLAYLISTS.map(async (playlist) => {
-        try {
-          const value = await api.get<any>(`/api/ytmusic/playlist/${playlist.id}/songs?limit=12`)
-          const tracks = (Array.isArray(value?.tracks) ? value.tracks : []).map(toTrack).filter((track: Track | null): track is Track => Boolean(track))
-          return { id: playlist.id, title: playlist.title, tracks }
-        } catch {
-          return { id: playlist.id, title: playlist.title, tracks: [] }
+      // 1. Top 10 Home Playlists
+      api.get<any[]>('/api/ytmusic/home?limit=10').catch(() => []),
+      // 2. The 4 Target Playlists
+      Promise.all(
+        TARGET_PLAYLISTS.map(async (pl) => {
+          try {
+            const value = await api.get<any>(`/api/ytmusic/playlist/${pl.id}/songs?limit=25`)
+            const rawTracks = Array.isArray(value?.tracks) ? value.tracks : []
+            const tracks = rawTracks.map(toTrack).filter((t: Track | null): t is Track => Boolean(t))
+            const title = value?.title || pl.defaultTitle
+            const thumbnail = thumbnailUrl(value) || tracks[0]?.thumbnail
+            return {
+              id: pl.id,
+              title,
+              subtitle: value?.author || 'Curated for you',
+              thumbnail,
+              tracks,
+            }
+          } catch {
+            return {
+              id: pl.id,
+              title: pl.defaultTitle,
+              subtitle: 'Curated for you',
+              thumbnail: undefined,
+              tracks: [],
+            }
+          }
+        })
+      ),
+    ])
+      .then(([homeData, targets]) => {
+        // Extract 10 unique playlists from home data
+        const seen = new Set<string>()
+        const extracted: PlaylistItem[] = []
+        for (const section of Array.isArray(homeData) ? homeData : []) {
+          for (const item of section?.contents || []) {
+            const plId = item?.playlistId || (item?.type === 'PLAYLIST' && item?.browseId)
+            if (plId && !seen.has(plId)) {
+              seen.add(plId)
+              extracted.push({
+                id: plId,
+                title: item.title || 'Playlist',
+                subtitle: item.description || section.title || 'YouTube Music',
+                thumbnail: thumbnailUrl(item),
+              })
+            }
+          }
         }
-      })),
-      api.get<any[]>('/api/ytmusic/home?limit=20').catch(() => []),
-      api.get<any>('/api/ytmusic/explore').catch(() => ({})),
-    ]).then(([sections, home, explore]) => {
-      setDiscoverySections(sections)
-      const seenMixes = new Set<string>()
-      setMixCards((Array.isArray(home) ? home : []).flatMap((section: any) => section?.contents || [])
-        .filter((item: any) => item?.playlistId && !seenMixes.has(item.playlistId) && seenMixes.add(item.playlistId))
-        .slice(0, 10)
-        .map((item: any) => ({ id: item.playlistId, title: item.title || 'Mix', subtitle: item.description || 'YouTube Music', thumbnail: thumbnailUrl(item), kind: 'playlist' as const })))
-
-      const homeReleases = (Array.isArray(home) ? home : []).find((section: any) => String(section?.title || '').toLowerCase().includes('new releases'))?.contents || []
-      const releases = Array.isArray(explore?.new_releases) && explore.new_releases.length ? explore.new_releases : homeReleases
-      setReleaseCards(releases.filter((item: any) => item?.browseId).slice(0, 10).map((item: any) => ({
-        id: item.browseId,
-        title: item.title || 'New release',
-        subtitle: Array.isArray(item.artists) ? item.artists.map((artist: any) => artist.name).filter(Boolean).join(', ') : item.artist || item.type || 'Album',
-        thumbnail: thumbnailUrl(item),
-        kind: 'album' as const,
-      })))
-    }).finally(() => setDiscoveryLoading(false))
+        setHomePlaylists(extracted.slice(0, 10))
+        setTargetPlaylists(targets)
+      })
+      .finally(() => setDiscoveryLoading(false))
   }, [])
 
-  const playDiscoveryCard = async (card: DiscoveryCard) => {
-    setOpeningCardId(card.id)
+  // Play any playlist immediately
+  const playAnyPlaylist = async (playlist: PlaylistItem) => {
+    setOpeningPlaylistId(playlist.id)
     try {
-      const value = card.kind === 'playlist'
-        ? await api.get<any>(`/api/ytmusic/playlist/${card.id}/songs?limit=25`)
-        : await api.get<any>(`/api/ytmusic/album/${card.id}`)
-      const tracks = (Array.isArray(value?.tracks) ? value.tracks : []).map(toTrack).filter((track: Track | null): track is Track => Boolean(track))
-      if (tracks.length) {
+      let tracks = playlist.tracks
+      if (!tracks || !tracks.length) {
+        const res = await api.get<any>(`/api/ytmusic/playlist/${playlist.id}/songs?limit=25`)
+        tracks = (Array.isArray(res?.tracks) ? res.tracks : []).map(toTrack).filter((t: Track | null): t is Track => Boolean(t))
+      }
+      if (tracks && tracks.length) {
         syncUrlSubView('now-playing')
         onPlayTrack(tracks[0], tracks.slice(1))
       }
     } finally {
-      setOpeningCardId(null)
+      setOpeningPlaylistId(null)
     }
   }
 
@@ -330,35 +386,109 @@ export default function YTMusic({
       return
     }
     setLoading(true)
-    const timer = window.setTimeout(() => {
-      api.get<any[]>(`/api/ytmusic/search?q=${encodeURIComponent(searchQuery)}&filter=songs`)
-        .then((results) => setSearchResults(Array.isArray(results) ? results.filter(isSong) : []))
+    const handle = window.setTimeout(() => {
+      api
+        .get<any[]>(`/api/ytmusic/search?q=${encodeURIComponent(searchQuery)}&filter=songs`)
+        .then((items) => setSearchResults(Array.isArray(items) ? items.filter(isSong) : []))
         .catch(() => setSearchResults([]))
         .finally(() => setLoading(false))
     }, 250)
-    return () => window.clearTimeout(timer)
+    return () => window.clearTimeout(handle)
   }, [searchQuery])
 
   useEffect(() => {
     setLyrics('')
-    if (!currentTrack || activeTab !== 'lyrics') return
-    setLyricsLoading(true)
-    api.get<any>(`/api/ytmusic/lyrics/${currentTrack.videoId}`)
-      .then((value) => setLyrics(value?.lyrics || value?.text || ''))
+    if (!currentTrack || playerTab !== 'lyrics') return
+    setLoadingLyrics(true)
+    api
+      .get<any>(`/api/ytmusic/lyrics/${currentTrack.videoId}`)
+      .then((res) => setLyrics(res?.lyrics || res?.text || ''))
       .catch(() => setLyrics(''))
-      .finally(() => setLyricsLoading(false))
-  }, [currentTrack?.videoId, activeTab])
+      .finally(() => setLoadingLyrics(false))
+  }, [currentTrack?.videoId, playerTab])
 
   const resultTracks = useMemo(
-    () => searchResults.map(toTrack).filter((track): track is Track => Boolean(track)),
-    [searchResults],
+    () => searchResults.map(toTrack).filter((item): item is Track => Boolean(item)),
+    [searchResults]
   )
+
+  // Compute daily randomized layout presentation
+  const dailyLayout = useMemo(() => {
+    const rnd = getDateRandom(now)
+
+    // Format for each of the 4 target playlists: 'icon' or 'songs'
+    const targetPresentations = targetPlaylists.map((pl) => {
+      const mode = rnd() > 0.5 ? ('songs' as const) : ('icon' as const)
+      return {
+        playlist: pl,
+        mode,
+      }
+    })
+
+    // Randomize whether Home 10 Playlists appear first or after a hero playlist
+    const showHomeTop = rnd() > 0.35
+
+    return {
+      targetPresentations,
+      showHomeTop,
+    }
+  }, [targetPlaylists, now])
+
   const searchIsOpen = Boolean(searchQuery.trim())
-  const browseIsOpen = searchIsOpen || viewMode === 'browse' || !currentTrack
-  const progressDuration = durationSeconds || currentTrack?.duration || 0
+  const browseIsOpen = searchIsOpen || activeView === 'browse' || !currentTrack
+  const effectiveDuration = durationSeconds || currentTrack?.duration || 0
+
+  // Render Top 10 YouTube Music Home Playlists in 2 rows of 5
+  const renderHome10Playlists = () => {
+    if (!homePlaylists.length) return null
+
+    return (
+      <section>
+        <div className="mb-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/40">From YouTube Music</p>
+          <h2 className="text-2xl font-bold text-white tracking-tight">Featured Playlists for You</h2>
+        </div>
+        {/* 2 Rows of 5 Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          {homePlaylists.map((pl) => (
+            <button
+              key={pl.id}
+              onClick={() => playAnyPlaylist(pl)}
+              className="group flex flex-col rounded-2xl bg-white/[0.06] hover:bg-white/[0.12] p-3 text-left transition active:scale-[0.98] border border-white/10 cursor-pointer"
+            >
+              <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-white/10 shadow-md">
+                {pl.thumbnail ? (
+                  <img
+                    src={pl.thumbnail}
+                    alt={pl.title}
+                    className="h-full w-full object-cover group-hover:scale-105 transition duration-300"
+                  />
+                ) : (
+                  <Icon name="album" className="absolute inset-0 m-auto text-5xl text-white/25" />
+                )}
+                <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-black shadow-xl">
+                    <Icon name="play_arrow" filled className="text-2xl" />
+                  </span>
+                </div>
+                {openingPlaylistId === pl.id && (
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/60">
+                    <Icon name="progress_activity" className="animate-spin text-3xl text-white" />
+                  </span>
+                )}
+              </div>
+              <p className="mt-2.5 truncate font-bold text-white text-sm sm:text-base leading-snug">{pl.title}</p>
+              <p className="mt-0.5 truncate text-xs text-white/50">{pl.subtitle}</p>
+            </button>
+          ))}
+        </div>
+      </section>
+    )
+  }
 
   return (
     <div className={`bg-black text-white ${browseIsOpen ? 'min-h-full' : 'h-dvh flex flex-col overflow-hidden'}`}>
+      {/* Top Header */}
       <header className="flex shrink-0 min-h-[4rem] md:min-h-[4.5rem] items-center gap-2 md:gap-4 border-b border-white/15 bg-black/95 px-3 md:px-8 backdrop-blur-xl">
         {mobileSearchOpen ? (
           <div className="flex md:hidden flex-1 items-center gap-2">
@@ -367,18 +497,24 @@ export default function YTMusic({
               <input
                 autoFocus
                 value={searchQuery}
-                onChange={(event) => syncUrlSubView('browse', event.target.value, true)}
+                onChange={(e) => syncUrlSubView('browse', e.target.value, true)}
                 placeholder="Search songs, albums..."
                 className="h-10 w-full rounded-xl border border-white/20 bg-[#292929] pl-10 pr-9 text-sm text-white outline-none placeholder:text-white/50 focus:border-white/45"
               />
               {searchQuery && (
-                <button onClick={() => syncUrlSubView('browse', '')} className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center text-white/55 hover:text-white">
+                <button
+                  onClick={() => syncUrlSubView('browse', '')}
+                  className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center text-white/55 hover:text-white"
+                >
                   <Icon name="close" className="text-lg" />
                 </button>
               )}
             </div>
             <button
-              onClick={() => { syncUrlSubView('browse', ''); setMobileSearchOpen(false) }}
+              onClick={() => {
+                syncUrlSubView('browse', '')
+                setMobileSearchOpen(false)
+              }}
               className="px-2 text-sm font-semibold text-white/70 hover:text-white shrink-0"
             >
               Cancel
@@ -387,27 +523,47 @@ export default function YTMusic({
         ) : (
           <>
             <div className="flex shrink-0 rounded-full bg-white/10 p-1">
-              <button onClick={() => syncUrlSubView('browse', '')} className={`flex h-9 md:h-11 items-center gap-1.5 md:gap-2 rounded-full px-3 md:px-4 text-xs md:text-sm font-semibold ${viewMode === 'browse' && !searchIsOpen ? 'bg-white text-black' : 'text-white/65 hover:text-white'}`}><Icon name="home" className="text-lg md:text-xl" /> Home</button>
-              <button disabled={!currentTrack} onClick={() => syncUrlSubView('now-playing', '')} className={`flex h-9 md:h-11 items-center gap-1.5 md:gap-2 rounded-full px-3 md:px-4 text-xs md:text-sm font-semibold disabled:opacity-30 ${viewMode === 'now-playing' && !searchIsOpen ? 'bg-white text-black' : 'text-white/65 hover:text-white'}`}><Icon name="graphic_eq" className="text-lg md:text-xl" /> <span className="whitespace-nowrap">Now Playing</span></button>
+              <button
+                onClick={() => syncUrlSubView('browse', '')}
+                className={`flex h-9 md:h-11 items-center gap-1.5 md:gap-2 rounded-full px-3 md:px-4 text-xs md:text-sm font-semibold ${
+                  activeView === 'browse' && !searchIsOpen ? 'bg-white text-black' : 'text-white/65 hover:text-white'
+                }`}
+              >
+                <Icon name="home" className="text-lg md:text-xl" />
+                Home
+              </button>
+              <button
+                disabled={!currentTrack}
+                onClick={() => syncUrlSubView('now-playing', '')}
+                className={`flex h-9 md:h-11 items-center gap-1.5 md:gap-2 rounded-full px-3 md:px-4 text-xs md:text-sm font-semibold disabled:opacity-30 ${
+                  activeView === 'now-playing' && !searchIsOpen ? 'bg-white text-black' : 'text-white/65 hover:text-white'
+                }`}
+              >
+                <Icon name="graphic_eq" className="text-lg md:text-xl" /> <span className="whitespace-nowrap">Now Playing</span>
+              </button>
             </div>
 
-            {/* Desktop Full Search Input */}
+            {/* Desktop Search Bar */}
             <div className="hidden md:relative md:flex md:flex-1 max-w-[52rem]">
               <Icon name="search" className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-white/55" />
               <input
                 value={searchQuery}
-                onChange={(event) => syncUrlSubView('browse', event.target.value, true)}
+                onChange={(e) => syncUrlSubView('browse', e.target.value, true)}
                 placeholder="Search songs, albums..."
                 className="h-14 w-full rounded-xl border border-white/20 bg-[#292929] pl-14 pr-12 text-lg text-white outline-none placeholder:text-white/50 focus:border-white/45"
               />
-              {searchQuery && <button onClick={() => syncUrlSubView('browse', '')} className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center text-white/55 hover:text-white"><Icon name="close" /></button>}
+              {searchQuery && (
+                <button
+                  onClick={() => syncUrlSubView('browse', '')}
+                  className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center text-white/55 hover:text-white"
+                >
+                  <Icon name="close" />
+                </button>
+              )}
             </div>
 
             <div className="ml-auto flex shrink-0 items-center gap-2 md:gap-3">
-              {/* Standardized Top-Right Wall Clock */}
               <TopClockHeader now={now} className="hidden sm:flex text-white [&_*]:text-white" />
-
-              {/* Mobile Search Icon Toggle */}
               <button
                 onClick={() => setMobileSearchOpen(true)}
                 title="Search music"
@@ -420,57 +576,145 @@ export default function YTMusic({
         )}
       </header>
 
+      {/* Main Content Area */}
       {browseIsOpen ? (
         <main className="mx-auto max-w-6xl px-4 py-7 md:px-8">
-          {searchIsOpen ? <><div className="mb-5 flex items-end justify-between border-b border-white/15 pb-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">Search results</p>
-              <h1 className="mt-1 text-2xl font-bold">Songs matching “{searchQuery}”</h1>
-            </div>
-            <span className="hidden text-sm text-white/45 sm:block">Songs only</span>
-          </div>
-          {loading ? (
-            <div className="flex items-center justify-center gap-3 py-24 text-white/50"><Icon name="progress_activity" className="animate-spin text-2xl" /> Finding songs…</div>
-          ) : resultTracks.length ? (
-            <div>{resultTracks.map((track, index) => <SongRow key={`${track.videoId}-${index}`} track={track} index={index} onPlay={() => { syncUrlSubView('now-playing', ''); onPlayTrack(track) }} onQueue={(playNext) => onQueueTrack(track, playNext)} />)}</div>
+          {searchIsOpen ? (
+            <>
+              <div className="mb-5 flex items-end justify-between border-b border-white/15 pb-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">Search results</p>
+                  <h1 className="mt-1 text-2xl font-bold">Songs matching “{searchQuery}”</h1>
+                </div>
+                <span className="hidden text-sm text-white/45 sm:block">Songs only</span>
+              </div>
+              {loading ? (
+                <div className="flex items-center justify-center gap-3 py-24 text-white/50">
+                  <Icon name="progress_activity" className="animate-spin text-2xl" /> Finding songs…
+                </div>
+              ) : resultTracks.length ? (
+                <div>
+                  {resultTracks.map((track, index) => (
+                    <SongRow
+                      key={`${track.videoId}-${index}`}
+                      track={track}
+                      index={index}
+                      onPlay={() => {
+                        syncUrlSubView('now-playing', '')
+                        onPlayTrack(track)
+                      }}
+                      onQueue={(playNext) => onQueueTrack(track, playNext)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="py-24 text-center text-white/45">No audio-only songs found.</div>
+              )}
+            </>
           ) : (
-            <div className="py-24 text-center text-white/45">No audio-only songs found.</div>
-          )}</> : (
-            <div className="space-y-10">
-              {discoveryLoading && <div className="flex items-center justify-center gap-3 py-16 text-white/50"><Icon name="progress_activity" className="animate-spin text-2xl" /> Loading YouTube Music…</div>}
-
-              {mixCards.length > 0 && <section>
-                <div className="mb-4"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/40">Personalized</p><h1 className="text-2xl font-bold">Mixed for You</h1></div>
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-                  {mixCards.map((card) => <button key={card.id} onClick={() => playDiscoveryCard(card)} className="group min-w-0 rounded-lg bg-white/[0.05] p-3 text-left transition hover:bg-white/[0.1]">
-                    <div className="relative aspect-square overflow-hidden rounded-md bg-white/10">{card.thumbnail ? <img src={card.thumbnail} alt="" className="h-full w-full object-cover" /> : <Icon name="album" className="absolute inset-0 m-auto text-5xl text-white/25" />}{openingCardId === card.id && <span className="absolute inset-0 flex items-center justify-center bg-black/55"><Icon name="progress_activity" className="animate-spin text-3xl" /></span>}</div>
-                    <p className="mt-3 truncate font-semibold">{card.title}</p><p className="mt-0.5 truncate text-sm text-white/45">{card.subtitle}</p>
-                  </button>)}
+            <div className="space-y-12">
+              {discoveryLoading && (
+                <div className="flex items-center justify-center gap-3 py-16 text-white/50">
+                  <Icon name="progress_activity" className="animate-spin text-2xl" /> Loading YouTube Music…
                 </div>
-              </section>}
+              )}
 
-              {releaseCards.length > 0 && <section>
-                <div className="mb-4"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/40">Albums</p><h1 className="text-2xl font-bold">New Releases</h1></div>
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-                  {releaseCards.map((card) => <button key={card.id} onClick={() => playDiscoveryCard(card)} className="group min-w-0 rounded-lg bg-white/[0.05] p-3 text-left transition hover:bg-white/[0.1]">
-                    <div className="relative aspect-square overflow-hidden rounded-md bg-white/10">{card.thumbnail ? <img src={card.thumbnail} alt="" className="h-full w-full object-cover" /> : <Icon name="album" className="absolute inset-0 m-auto text-5xl text-white/25" />}{openingCardId === card.id && <span className="absolute inset-0 flex items-center justify-center bg-black/55"><Icon name="progress_activity" className="animate-spin text-3xl" /></span>}</div>
-                    <p className="mt-3 truncate font-semibold">{card.title}</p><p className="mt-0.5 truncate text-sm text-white/45">{card.subtitle}</p>
-                  </button>)}
-                </div>
-              </section>}
+              {/* Home 10 Playlists (when placed at top in daily layout) */}
+              {!discoveryLoading && dailyLayout.showHomeTop && renderHome10Playlists()}
 
-              {discoverySections.map((section) => (
-                <section key={section.title}>
-                  <div className="mb-4"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/40">YouTube Music playlist</p><h1 className="text-2xl font-bold">{section.title}</h1></div>
-                  {section.tracks.length ? <div className="grid grid-cols-1 gap-x-5 lg:grid-cols-2">{section.tracks.map((track, index) => <SongRow key={track.videoId} track={track} index={index} onPlay={() => { syncUrlSubView('now-playing', ''); onPlayTrack(track) }} onQueue={(playNext) => onQueueTrack(track, playNext)} />)}</div> : <div className="rounded-xl bg-white/[0.04] p-8 text-center text-white/40">Trending songs are loading…</div>}
-                </section>
-              ))}
+              {/* The 4 Target Playlists with Daily Randomized Presentations */}
+              {!discoveryLoading &&
+                dailyLayout.targetPresentations.map(({ playlist: pl, mode }) => {
+                  return (
+                    <section key={pl.id} className="pt-2">
+                      {mode === 'icon' ? (
+                        /* Presentation A: Large Hero Icon Card */
+                        <div className="rounded-3xl border border-white/15 bg-gradient-to-r from-white/[0.08] to-white/[0.03] p-6 sm:p-7 backdrop-blur-xl flex flex-col sm:flex-row items-center gap-6 shadow-xl">
+                          <div className="relative aspect-square w-44 sm:w-52 shrink-0 overflow-hidden rounded-2xl bg-white/10 shadow-2xl">
+                            {pl.thumbnail ? (
+                              <img
+                                src={highResolutionArtwork(pl.thumbnail)}
+                                alt={pl.title}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <Icon name="album" className="absolute inset-0 m-auto text-7xl text-white/25" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0 text-center sm:text-left">
+                            <span className="inline-flex items-center gap-1.5 rounded-lg bg-red-600/30 px-3 py-1 text-xs font-bold uppercase tracking-wider text-red-300 border border-red-500/30">
+                              <Icon name="playlist_play" className="text-base" /> Playlist
+                            </span>
+                            <h3 className="mt-2.5 text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                              {pl.title}
+                            </h3>
+                            <p className="mt-1 text-sm text-white/60">
+                              {pl.tracks?.length || 25} tracks curated for today
+                            </p>
+                            <div className="mt-5 flex flex-wrap items-center justify-center sm:justify-start gap-3">
+                              <button
+                                onClick={() => playAnyPlaylist(pl)}
+                                className="inline-flex items-center gap-2 rounded-full bg-white hover:bg-white/90 px-6 py-3 text-sm font-bold text-black shadow-lg transition active:scale-95 cursor-pointer"
+                              >
+                                <Icon name="play_arrow" filled className="text-xl" />
+                                <span>Play Playlist</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        /* Presentation B: Expanded Song List Grid */
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                            <div>
+                              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/40">
+                                Playlist Tracklist
+                              </p>
+                              <h3 className="text-2xl font-bold text-white tracking-tight">{pl.title}</h3>
+                            </div>
+                            <button
+                              onClick={() => playAnyPlaylist(pl)}
+                              className="inline-flex items-center gap-1.5 rounded-full bg-white/15 hover:bg-white/25 px-4 py-1.5 text-xs font-semibold text-white transition active:scale-95 cursor-pointer"
+                            >
+                              <Icon name="play_arrow" filled className="text-base" />
+                              <span>Play All</span>
+                            </button>
+                          </div>
+                          {pl.tracks && pl.tracks.length ? (
+                            <div className="grid grid-cols-1 gap-x-5 lg:grid-cols-2">
+                              {pl.tracks.slice(0, 10).map((track, index) => (
+                                <SongRow
+                                  key={`${track.videoId}-${index}`}
+                                  track={track}
+                                  index={index}
+                                  onPlay={() => {
+                                    syncUrlSubView('now-playing', '')
+                                    onPlayTrack(track, pl.tracks?.slice(index + 1))
+                                  }}
+                                  onQueue={(playNext) => onQueueTrack(track, playNext)}
+                                />
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="rounded-xl bg-white/[0.04] p-8 text-center text-white/40">
+                              Songs are loading…
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </section>
+                  )
+                })}
+
+              {/* Home 10 Playlists (when placed after target playlists in daily layout) */}
+              {!discoveryLoading && !dailyLayout.showHomeTop && renderHome10Playlists()}
             </div>
           )}
         </main>
       ) : (
+        /* Now Playing View */
         <main className="flex-1 min-h-0 overflow-hidden flex flex-col xl:grid xl:grid-cols-[minmax(24rem,1.1fr)_minmax(24rem,0.9fr)]">
-          {/* Desktop Artwork View (Hidden on mobile) */}
+          {/* Desktop Artwork View */}
           <section className="hidden xl:flex h-full min-w-0 flex-col items-center justify-center overflow-hidden p-8">
             <div
               className="max-w-full"
@@ -478,7 +722,11 @@ export default function YTMusic({
             >
               <div className="aspect-square w-full overflow-hidden rounded-xl bg-[#181818] shadow-2xl shadow-black">
                 {currentTrack?.thumbnail ? (
-                  <img src={highResolutionArtwork(currentTrack.thumbnail)} alt={currentTrack.title} className="h-full w-full object-contain" />
+                  <img
+                    src={highResolutionArtwork(currentTrack.thumbnail)}
+                    alt={currentTrack.title}
+                    className="h-full w-full object-contain"
+                  />
                 ) : (
                   <div className="flex h-full flex-col items-center justify-center text-white/25">
                     <Icon name="album" className="text-8xl" />
@@ -489,14 +737,18 @@ export default function YTMusic({
             </div>
           </section>
 
-          {/* Mobile Header + Controls Section (Visible only on < xl screens) */}
+          {/* Mobile Player Bar */}
           <section className="flex shrink-0 flex-col border-b border-white/15 bg-white/[0.03] p-3 md:p-4 xl:hidden">
             {currentTrack && (
               <>
                 <div className="flex items-center gap-3">
                   <div className="h-14 w-14 md:h-16 md:w-16 shrink-0 overflow-hidden rounded-lg bg-[#181818] shadow-md">
                     {currentTrack.thumbnail ? (
-                      <img src={highResolutionArtwork(currentTrack.thumbnail)} alt={currentTrack.title} className="h-full w-full object-cover" />
+                      <img
+                        src={highResolutionArtwork(currentTrack.thumbnail)}
+                        alt={currentTrack.title}
+                        className="h-full w-full object-cover"
+                      />
                     ) : (
                       <div className="flex h-full items-center justify-center text-white/25">
                         <Icon name="music_note" className="text-2xl" />
@@ -505,100 +757,200 @@ export default function YTMusic({
                   </div>
                   <div className="min-w-0 flex-1">
                     <h1 className="truncate text-base font-bold text-white">{currentTrack.title}</h1>
-                    <p className="mt-0.5 truncate text-xs text-white/55">{currentTrack.artist}{currentTrack.album ? ` · ${currentTrack.album}` : ''}</p>
+                    <p className="mt-0.5 truncate text-xs text-white/55">
+                      {currentTrack.artist}
+                      {currentTrack.album ? ` · ${currentTrack.album}` : ''}
+                    </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
-                    <button onClick={onPrevTrack} aria-label="Previous song" className="flex h-10 w-10 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white cursor-pointer">
+                    <button
+                      onClick={onPrevTrack}
+                      aria-label="Previous song"
+                      className="flex h-10 w-10 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white cursor-pointer"
+                    >
                       <Icon name="skip_previous" className="text-2xl" />
                     </button>
-                    <button onClick={onTogglePlay} aria-label={isPlaying ? 'Pause' : 'Play'} className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-black transition hover:scale-105 cursor-pointer">
+                    <button
+                      onClick={onTogglePlay}
+                      aria-label={isPlaying ? 'Pause' : 'Play'}
+                      className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-black transition hover:scale-105 cursor-pointer"
+                    >
                       <Icon name={isPlaying ? 'pause' : 'play_arrow'} filled className="text-2xl" />
                     </button>
-                    <button onClick={onNextTrack} aria-label="Next song" className="flex h-10 w-10 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white cursor-pointer">
+                    <button
+                      onClick={onNextTrack}
+                      aria-label="Next song"
+                      className="flex h-10 w-10 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white cursor-pointer"
+                    >
                       <Icon name="skip_next" className="text-2xl" />
                     </button>
-                    <button onClick={() => setShowAirPlayModal(true)} title="Choose AirPlay rooms" aria-label="Choose AirPlay rooms" className="flex h-10 w-10 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white cursor-pointer">
+                    <button
+                      onClick={() => setShowAirPlayModal(true)}
+                      title="Choose AirPlay rooms"
+                      aria-label="Choose AirPlay rooms"
+                      className="flex h-10 w-10 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white cursor-pointer"
+                    >
                       <Icon name="airplay" className="text-xl" />
                     </button>
                   </div>
                 </div>
                 <div className="mt-2.5 flex items-center gap-2 text-[11px] tabular-nums text-white/45">
                   <span>{formatTime(elapsedSeconds)}</span>
-                  <input type="range" min={0} max={progressDuration || 100} value={Math.min(elapsedSeconds, progressDuration || 100)} onChange={(event) => onSeek(Number(event.target.value))} aria-label="Playback position" className="h-1 flex-1 cursor-pointer accent-white" />
-                  <span>{formatTime(progressDuration)}</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={effectiveDuration || 100}
+                    value={Math.min(elapsedSeconds, effectiveDuration || 100)}
+                    onChange={(e) => onSeek(Number(e.target.value))}
+                    aria-label="Playback position"
+                    className="h-1 flex-1 cursor-pointer accent-white"
+                  />
+                  <span>{formatTime(effectiveDuration)}</span>
                 </div>
               </>
             )}
           </section>
 
-          {/* Controls & Tabs Section */}
+          {/* Right/Bottom Panel: Controls + Queue/Lyrics */}
           <aside className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden xl:border-l xl:border-white/15">
-            {/* Desktop Controls (Visible only on xl screens) */}
             {currentTrack && (
               <div className="hidden border-b border-white/15 px-6 py-5 xl:block">
                 <div className="flex items-center gap-4">
                   <div className="min-w-0 flex-1">
                     <h1 className="truncate text-xl font-bold">{currentTrack.title}</h1>
-                    <p className="mt-1 truncate text-sm text-white/55">{currentTrack.artist}{currentTrack.album ? ` · ${currentTrack.album}` : ''}</p>
+                    <p className="mt-1 truncate text-sm text-white/55">
+                      {currentTrack.artist}
+                      {currentTrack.album ? ` · ${currentTrack.album}` : ''}
+                    </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">
-                    <button onClick={onPrevTrack} aria-label="Previous song" className="flex h-12 w-12 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white cursor-pointer"><Icon name="skip_previous" className="text-3xl" /></button>
-                    <button onClick={onTogglePlay} aria-label={isPlaying ? 'Pause' : 'Play'} className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-black transition hover:scale-105 cursor-pointer"><Icon name={isPlaying ? 'pause' : 'play_arrow'} filled className="text-3xl" /></button>
-                    <button onClick={onNextTrack} aria-label="Next song" className="flex h-12 w-12 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white cursor-pointer"><Icon name="skip_next" className="text-3xl" /></button>
-                    <button ref={airPlayButtonRef} onClick={() => setShowAirPlayModal(true)} title="Choose AirPlay rooms" aria-label="Choose AirPlay rooms" className="flex h-12 w-12 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white cursor-pointer"><Icon name="airplay" className="text-2xl" /></button>
+                    <button
+                      onClick={onPrevTrack}
+                      aria-label="Previous song"
+                      className="flex h-12 w-12 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white cursor-pointer"
+                    >
+                      <Icon name="skip_previous" className="text-3xl" />
+                    </button>
+                    <button
+                      onClick={onTogglePlay}
+                      aria-label={isPlaying ? 'Pause' : 'Play'}
+                      className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-black transition hover:scale-105 cursor-pointer"
+                    >
+                      <Icon name={isPlaying ? 'pause' : 'play_arrow'} filled className="text-3xl" />
+                    </button>
+                    <button
+                      onClick={onNextTrack}
+                      aria-label="Next song"
+                      className="flex h-12 w-12 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white cursor-pointer"
+                    >
+                      <Icon name="skip_next" className="text-3xl" />
+                    </button>
+                    <button
+                      ref={airPlayButtonRef}
+                      onClick={() => setShowAirPlayModal(true)}
+                      title="Choose AirPlay rooms"
+                      aria-label="Choose AirPlay rooms"
+                      className="flex h-12 w-12 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white cursor-pointer"
+                    >
+                      <Icon name="airplay" className="text-2xl" />
+                    </button>
                   </div>
                 </div>
                 <div className="mt-4 flex items-center gap-3 text-xs tabular-nums text-white/45">
                   <span>{formatTime(elapsedSeconds)}</span>
-                  <input type="range" min={0} max={progressDuration || 100} value={Math.min(elapsedSeconds, progressDuration || 100)} onChange={(event) => onSeek(Number(event.target.value))} aria-label="Playback position" className="h-1 flex-1 cursor-pointer accent-white" />
-                  <span>{formatTime(progressDuration)}</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={effectiveDuration || 100}
+                    value={Math.min(elapsedSeconds, effectiveDuration || 100)}
+                    onChange={(e) => onSeek(Number(e.target.value))}
+                    aria-label="Playback position"
+                    className="h-1 flex-1 cursor-pointer accent-white"
+                  />
+                  <span>{formatTime(effectiveDuration)}</span>
                 </div>
               </div>
             )}
 
-            {/* Tabs Row */}
             <div className="grid shrink-0 grid-cols-2 border-b border-white/15">
-              {([['queue', 'Up next'], ['lyrics', 'Lyrics']] as [PlayerTab, string][]).map(([tab, label]) => (
-                <button key={tab} onClick={() => setActiveTab(tab)} className={`relative py-3 text-xs font-semibold uppercase tracking-wide transition md:py-4 md:text-sm ${activeTab === tab ? 'text-white' : 'text-white/50 hover:text-white/80'}`}>
-                  {label}
-                  {activeTab === tab && <span className="absolute inset-x-4 bottom-0 h-0.5 bg-white" />}
+              {[
+                ['queue', 'Up next'],
+                ['lyrics', 'Lyrics'],
+              ].map(([tabKey, tabLabel]) => (
+                <button
+                  key={tabKey}
+                  onClick={() => setPlayerTab(tabKey as PlayerTab)}
+                  className={`relative py-3 text-xs font-semibold uppercase tracking-wide transition md:py-4 md:text-sm ${
+                    playerTab === tabKey ? 'text-white' : 'text-white/50 hover:text-white/80'
+                  }`}
+                >
+                  {tabLabel}
+                  {playerTab === tabKey && <span className="absolute inset-x-4 bottom-0 h-0.5 bg-white" />}
                 </button>
               ))}
             </div>
 
-            {/* Scrollable Tab Content */}
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-              {activeTab === 'queue' && (
+              {playerTab === 'queue' && (
                 <div className="py-2">
-                  {editableQueue.length ? editableQueue.map((track, index) => (
-                    <div key={track.videoId} data-queue-index={index} className={`flex items-center transition ${dragIndex === index ? 'bg-white/[0.14] opacity-80' : ''}`}>
-                      <button
-                        onPointerDown={(event) => startQueueDrag(event, index)}
-                        onPointerMove={moveQueueDrag}
-                        onPointerUp={finishQueueDrag}
-                        onPointerCancel={finishQueueDrag}
-                        aria-label={`Move ${track.title}`}
-                        title="Drag to reorder"
-                        className="flex h-[4.5rem] w-10 shrink-0 touch-none items-center justify-center text-white/35 hover:text-white"
+                  {editableQueue.length ? (
+                    editableQueue.map((track, index) => (
+                      <div
+                        key={`${track.videoId}-${index}`}
+                        data-queue-index={index}
+                        className={`flex items-center transition ${
+                          draggedIndex === index ? 'bg-white/[0.14] opacity-80' : ''
+                        }`}
                       >
-                        <Icon name="drag_indicator" className="text-2xl" />
-                      </button>
-                      <div className="min-w-0 flex-1">
-                        <SongRow track={track} active={false} onPlay={() => onPlayTrack(track, editableQueue.slice(index + 1))} />
+                        <button
+                          onPointerDown={(e) => handlePointerDown(e, index)}
+                          onPointerMove={handlePointerMove}
+                          onPointerUp={handlePointerUp}
+                          onPointerCancel={handlePointerUp}
+                          aria-label={`Move ${track.title}`}
+                          title="Drag to reorder"
+                          className="flex h-[4.5rem] w-10 shrink-0 touch-none items-center justify-center text-white/35 hover:text-white"
+                        >
+                          <Icon name="drag_indicator" className="text-2xl" />
+                        </button>
+                        <div className="min-w-0 flex-1">
+                          <SongRow
+                            track={track}
+                            active={false}
+                            onPlay={() => onPlayTrack(track, editableQueue.slice(index + 1))}
+                          />
+                        </div>
+                        <button
+                          onClick={() => removeQueueTrack(index)}
+                          aria-label={`Remove ${track.title} from queue`}
+                          title="Remove from queue"
+                          className="flex h-[4.5rem] w-11 shrink-0 items-center justify-center text-white/40 hover:text-red-400"
+                        >
+                          <Icon name="close" className="text-xl" />
+                        </button>
                       </div>
-                      <button onClick={() => removeQueueTrack(index)} aria-label={`Remove ${track.title} from queue`} title="Remove from queue" className="flex h-[4.5rem] w-11 shrink-0 items-center justify-center text-white/40 hover:text-red-400">
-                        <Icon name="close" className="text-xl" />
-                      </button>
-                    </div>
-                  )) : <p className="px-3 py-12 text-center text-sm text-white/45">Recommendations will appear after playback starts.</p>}
+                    ))
+                  ) : (
+                    <p className="px-3 py-12 text-center text-sm text-white/45">
+                      Recommendations will appear after playback starts.
+                    </p>
+                  )}
                 </div>
               )}
 
-              {activeTab === 'lyrics' && (
+              {playerTab === 'lyrics' && (
                 <div className="px-4 py-7">
-                  {lyricsLoading ? <div className="flex items-center gap-2 text-white/45"><Icon name="progress_activity" className="animate-spin" /> Loading lyrics…</div>
-                    : lyrics ? <p className="whitespace-pre-line text-lg md:text-xl font-medium leading-relaxed text-white/85">{lyrics}</p>
-                      : <p className="py-12 text-center text-white/45">Lyrics are not available for this song.</p>}
+                  {loadingLyrics ? (
+                    <div className="flex items-center gap-2 text-white/45">
+                      <Icon name="progress_activity" className="animate-spin" /> Loading lyrics…
+                    </div>
+                  ) : lyrics ? (
+                    <p className="whitespace-pre-line text-lg md:text-xl font-medium leading-relaxed text-white/85">
+                      {lyrics}
+                    </p>
+                  ) : (
+                    <p className="py-12 text-center text-white/45">Lyrics are not available for this song.</p>
+                  )}
                 </div>
               )}
             </div>
@@ -606,7 +958,11 @@ export default function YTMusic({
         </main>
       )}
 
-      <AirPlaySelectorModal isOpen={showAirPlayModal} onClose={() => setShowAirPlayModal(false)} anchorRef={airPlayButtonRef} />
+      <AirPlaySelectorModal
+        isOpen={showAirPlayModal}
+        onClose={() => setShowAirPlayModal(false)}
+        anchorRef={airPlayButtonRef}
+      />
     </div>
   )
 }

@@ -143,7 +143,7 @@ export default function MorningKidsBanner({ now = new Date(), className = '' }: 
               <div className="mt-2">
                 <h3
                   style={{ fontFamily: 'var(--font-body)' }}
-                  className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-normal text-white drop-shadow-sm leading-tight"
+                  className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-normal text-white drop-shadow-sm leading-tight"
                 >
                   {data.word_of_the_day.word}
                 </h3>

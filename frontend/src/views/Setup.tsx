@@ -1660,12 +1660,12 @@ function KidsDailyCard() {
               className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer shadow-sm ${
                 isForceActive
                   ? 'bg-rose-500 text-white hover:bg-rose-600'
-                  : 'bg-white/20 hover:bg-white/30 text-ink border border-white/20'
+                  : 'glass-inset text-ink hover:bg-white/20'
               }`}
               title="Force show banner anytime for testing"
             >
               <Icon name={isForceActive ? 'visibility' : 'visibility_off'} className="text-sm" />
-              <span>{isForceActive ? 'Force Active (ON)' : 'Test: Force Show Banner'}</span>
+              <span>{isForceActive ? 'Force Active: ON' : 'Force Active: OFF (Default)'}</span>
             </button>
 
             <button
