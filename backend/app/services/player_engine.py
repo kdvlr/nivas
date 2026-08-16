@@ -1,4 +1,5 @@
 import asyncio
+import glob
 import io
 import json
 import logging
@@ -578,25 +579,34 @@ class PlayerEngine:
                 tracks_to_prefetch = [t for t in self.queue[:2] if t and t.get("videoId")]
 
             loop = asyncio.get_running_loop()
-            prefetch_tasks = []
 
-            for track in tracks_to_prefetch:
-                video_id = track["videoId"]
-                if video_id in self._prefetching_video_ids:
-                    continue
-                self._prefetching_video_ids.add(video_id)
+            async def _prefetch_single(track_item: Dict[str, Any]):
+                vid = track_item.get("videoId")
+                if not vid or vid in self._prefetching_video_ids:
+                    return
+                self._prefetching_video_ids.add(vid)
                 try:
-                    wav_path = f"/tmp/ytmusic_{video_id}.wav"
-                    art_path = f"/tmp/ytmusic_{video_id}_artwork.jpg"
+                    wpath = f"/tmp/ytmusic_{vid}.wav"
+                    apath = f"/tmp/ytmusic_{vid}_artwork.jpg"
+                    subtasks = []
 
-                    if not os.path.exists(wav_path) or os.path.getsize(wav_path) <= 44:
-                        logger.info("Pre-fetching track in background: %s (%s)", track.get("title"), video_id)
-                        prefetch_tasks.append(loop.run_in_executor(None, self._transcode_to_wav, video_id, wav_path))
+                    if not os.path.exists(wpath) or os.path.getsize(wpath) <= 44:
+                        logger.info("Pre-fetching track in background: %s (%s)", track_item.get("title"), vid)
+                        subtasks.append(loop.run_in_executor(None, self._transcode_to_wav, vid, wpath))
 
-                    if not os.path.exists(art_path) and track.get("thumbnail"):
-                        prefetch_tasks.append(loop.run_in_executor(None, self._download_artwork, track["thumbnail"], art_path))
+                    if not os.path.exists(apath) and track_item.get("thumbnail"):
+                        subtasks.append(loop.run_in_executor(None, self._download_artwork, track_item["thumbnail"], apath))
+
+                    if subtasks:
+                        await asyncio.gather(*subtasks, return_exceptions=True)
                 finally:
-                    self._prefetching_video_ids.discard(video_id)
+                    self._prefetching_video_ids.discard(vid)
+
+            prefetch_tasks = [
+                _prefetch_single(t)
+                for t in tracks_to_prefetch
+                if t.get("videoId") and t["videoId"] not in self._prefetching_video_ids
+            ]
 
             if prefetch_tasks:
                 await asyncio.gather(*prefetch_tasks, return_exceptions=True)
@@ -627,9 +637,12 @@ class PlayerEngine:
                 return
 
             if not os.path.exists(wav_path) or os.path.getsize(wav_path) <= 44:
-                logger.error(f"Transcoding produced empty file for {video_id}")
-                self.is_playing = False
-                self._broadcast_state()
+                logger.warning(
+                    "Transcoding produced unplayable file for %s (%s); advancing to next track",
+                    track_info.get("title"),
+                    video_id,
+                )
+                await self.next_track()
                 return
 
             file_size = os.path.getsize(wav_path)
@@ -665,6 +678,8 @@ class PlayerEngine:
             self._broadcast_state()
 
     def _transcode_to_wav(self, source: str, output_path: str):
+        if os.path.exists(output_path) and os.path.getsize(output_path) > 44:
+            return
         try:
             # 1. Direct HTTP/HTTPS audio URL (non-YouTube)
             if source.startswith("http://") or (source.startswith("https://") and not ("youtube.com" in source or "youtu.be" in source)):
@@ -677,13 +692,14 @@ class PlayerEngine:
                 logger.info(f"Transcoded direct audio URL successfully to {output_path}")
                 return
 
-            # 2. Strict yt-dlp download & extract with multi-client extractors
+            # 2. Strict yt-dlp download & extract into thread-isolated temp file
             import yt_dlp
             url = source if (source.startswith("http://") or source.startswith("https://")) else f"https://www.youtube.com/watch?v={source}"
-            out_base = output_path.rsplit(".", 1)[0]
+            tmp_base = f"{output_path}.{os.getpid()}_{threading.get_ident()}_{int(time.time() * 1000)}.tmp"
+            tmp_wav = f"{tmp_base}.wav"
             ydl_opts = {
                 "format": "bestaudio/best",
-                "outtmpl": f"{out_base}.%(ext)s",
+                "outtmpl": f"{tmp_base}.%(ext)s",
                 "postprocessors": [{
                     "key": "FFmpegExtractAudio",
                     "preferredcodec": "wav",
@@ -702,9 +718,20 @@ class PlayerEngine:
                 "quiet": True,
                 "no_warnings": True,
             }
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                ydl.download([url])
-            logger.info(f"Downloaded and converted audio successfully to 44.1kHz WAV: {output_path}")
+            try:
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    ydl.download([url])
+                if os.path.exists(tmp_wav) and os.path.getsize(tmp_wav) > 44:
+                    os.replace(tmp_wav, output_path)
+                    logger.info(f"Downloaded and converted audio successfully to 44.1kHz WAV: {output_path}")
+                else:
+                    logger.error(f"yt-dlp output missing or empty for {source}")
+            finally:
+                for f in glob.glob(f"{tmp_base}.*"):
+                    try:
+                        os.remove(f)
+                    except OSError:
+                        pass
         except Exception as e:
             logger.error(f"yt-dlp download/transcoding error: {e}")
 
