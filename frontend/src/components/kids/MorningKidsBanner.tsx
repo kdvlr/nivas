@@ -180,7 +180,7 @@ export default function MorningKidsBanner({ now = new Date(), className = '' }: 
                 <span className="text-3xl shrink-0 select-none drop-shadow-md">
                   {data.fun_fact.emoji || '💡'}
                 </span>
-                <p className="text-lg font-bold text-white leading-snug">
+                <p className="text-xl font-normal text-white leading-snug">
                   {data.fun_fact.fact}
                 </p>
               </div>
