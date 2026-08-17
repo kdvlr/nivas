@@ -143,7 +143,7 @@ export default function MorningKidsBanner({ now = new Date(), className = '' }: 
               <div className="mt-2">
                 <h3
                   style={{ fontFamily: 'var(--font-body)' }}
-                  className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-normal text-white drop-shadow-sm leading-tight"
+                  className="text-3xl font-semibold tracking-normal text-white drop-shadow-sm leading-tight"
                 >
                   {data.word_of_the_day.word}
                 </h3>
@@ -176,11 +176,11 @@ export default function MorningKidsBanner({ now = new Date(), className = '' }: 
                 )}
               </div>
 
-              <div className="flex items-start gap-4 mt-4">
-                <span className="text-5xl sm:text-6xl lg:text-7xl shrink-0 select-none drop-shadow-md">
+              <div className="flex items-start gap-3.5 mt-4">
+                <span className="text-3xl shrink-0 select-none drop-shadow-md">
                   {data.fun_fact.emoji || '💡'}
                 </span>
-                <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-white leading-snug">
+                <p className="text-lg font-bold text-white leading-snug">
                   {data.fun_fact.fact}
                 </p>
               </div>
