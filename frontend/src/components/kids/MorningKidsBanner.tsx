@@ -73,13 +73,13 @@ export default function MorningKidsBanner({ now = new Date(), className = '' }: 
 
   return (
     <AnimatePresence>
-      {/* Floating Window spanning the full width of Calendar + Chores grid and 70% viewport height */}
+      {/* Floating Window spanning full width of Dashboard and auto-growing to fit all STEM questions without scrolling */}
       <motion.div
         initial={{ opacity: 0, y: -20, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: -20, scale: 0.98 }}
         transition={{ type: 'spring', stiffness: 350, damping: 28 }}
-        className={`fixed inset-x-3 sm:inset-x-6 lg:inset-x-0 lg:left-[5.5rem] lg:right-4 top-16 sm:top-20 z-40 h-[72vh] max-h-[calc(100vh-6rem)] rounded-3xl border border-white/20 bg-slate-950/92 p-6 sm:p-7 text-white shadow-2xl backdrop-blur-2xl dark:border-white/15 dark:bg-black/95 flex flex-col justify-between overflow-y-auto ${className}`}
+        className={`fixed inset-x-3 sm:inset-x-6 lg:inset-x-0 lg:left-[5.5rem] lg:right-4 top-16 sm:top-20 z-40 h-auto max-h-[calc(100vh-5.5rem)] rounded-3xl border border-white/20 bg-slate-950/92 p-6 sm:p-7 text-white shadow-2xl backdrop-blur-2xl dark:border-white/15 dark:bg-black/95 flex flex-col justify-between overflow-y-auto ${className}`}
       >
         {/* Header Ribbon */}
         <div className="mb-4 flex items-center justify-between gap-4 border-b border-white/15 pb-3 shrink-0">
@@ -126,15 +126,15 @@ export default function MorningKidsBanner({ now = new Date(), className = '' }: 
 
         {/* 3-Column Simultaneous Layout with Large, Distance-Readable Typography */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch flex-1 min-h-0">
-          {/* Card 1: Word of the Day */}
-          <div className="flex flex-col justify-between rounded-3xl border border-amber-500/35 bg-amber-500/10 p-6 shadow-sm backdrop-blur-md overflow-y-auto">
+          {/* Card 1: Word of the Day (Reduced font sizes by 1 step) */}
+          <div className="flex flex-col justify-between rounded-3xl border border-amber-500/35 bg-amber-500/10 p-6 shadow-sm backdrop-blur-md">
             <div>
               <div className="flex items-center justify-between mb-3">
-                <span className="inline-flex items-center gap-1.5 rounded-lg bg-amber-400/25 px-3 py-1 text-xs font-bold uppercase tracking-wider text-amber-300 border border-amber-400/40">
-                  <Icon name="menu_book" className="text-base" /> Word of the Day
+                <span className="inline-flex items-center gap-1.5 rounded-lg bg-amber-400/25 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-amber-300 border border-amber-400/40">
+                  <Icon name="menu_book" className="text-sm" /> Word of the Day
                 </span>
                 {data.word_of_the_day.part_of_speech && (
-                  <span className="text-sm italic text-white/70 font-medium">
+                  <span className="text-xs italic text-white/70 font-medium">
                     {data.word_of_the_day.part_of_speech}
                   </span>
                 )}
@@ -143,27 +143,27 @@ export default function MorningKidsBanner({ now = new Date(), className = '' }: 
               <div className="mt-2">
                 <h3
                   style={{ fontFamily: 'var(--font-body)' }}
-                  className="text-3xl font-semibold tracking-normal text-white drop-shadow-sm leading-tight"
+                  className="text-2xl sm:text-3xl font-semibold tracking-normal text-white drop-shadow-sm leading-tight"
                 >
                   {data.word_of_the_day.word}
                 </h3>
-                <p className="text-base sm:text-lg font-semibold text-amber-400 font-mono mt-1">
+                <p className="text-sm sm:text-base font-semibold text-amber-400 font-mono mt-1">
                   [{data.word_of_the_day.pronunciation}]
                 </p>
               </div>
 
-              <p className="mt-4 text-lg sm:text-xl lg:text-2xl text-white font-medium leading-relaxed">
+              <p className="mt-3.5 text-base sm:text-lg lg:text-xl text-white font-medium leading-relaxed">
                 {data.word_of_the_day.definition}
               </p>
             </div>
 
-            <div className="mt-4 rounded-2xl bg-amber-400/20 p-4 sm:p-5 text-base sm:text-lg text-white/95 italic border border-amber-400/30 leading-relaxed">
+            <div className="mt-4 rounded-2xl bg-amber-400/20 p-4 text-sm sm:text-base text-white/95 italic border border-amber-400/30 leading-relaxed">
               “{data.word_of_the_day.example}”
             </div>
           </div>
 
           {/* Card 2: Fun Fact of the Day */}
-          <div className="flex flex-col justify-between rounded-3xl border border-emerald-500/35 bg-emerald-500/10 p-6 shadow-sm backdrop-blur-md overflow-y-auto">
+          <div className="flex flex-col justify-between rounded-3xl border border-emerald-500/35 bg-emerald-500/10 p-6 shadow-sm backdrop-blur-md">
             <div>
               <div className="flex items-center justify-between mb-3">
                 <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-400/25 px-3 py-1 text-xs font-bold uppercase tracking-wider text-emerald-300 border border-emerald-400/40">
@@ -195,7 +195,7 @@ export default function MorningKidsBanner({ now = new Date(), className = '' }: 
           </div>
 
           {/* Card 3: STEM Challenges (5yo & 9yo) */}
-          <div className="flex flex-col justify-between rounded-3xl border border-purple-500/35 bg-purple-500/10 p-6 shadow-sm backdrop-blur-md overflow-y-auto">
+          <div className="flex flex-col justify-between rounded-3xl border border-purple-500/35 bg-purple-500/10 p-6 shadow-sm backdrop-blur-md">
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <span className="inline-flex items-center gap-1.5 rounded-lg bg-purple-400/25 px-3 py-1 text-xs font-bold uppercase tracking-wider text-purple-300 border border-purple-400/40">
