@@ -28,7 +28,6 @@ const Chores = lazy(() => import('./views/Chores'))
 const ToDos = lazy(() => import('./views/ToDos'))
 const Rewards = lazy(() => import('./views/Rewards'))
 const Shopping = lazy(() => import('./views/Shopping'))
-const Meals = lazy(() => import('./views/Meals'))
 const Recipes = lazy(() => import('./views/Recipes'))
 const Setup = lazy(() => import('./views/Setup'))
 const Photos = lazy(() => import('./views/Photos'))
@@ -43,8 +42,7 @@ const NAV = [
   { id: 'todos', label: 'To-Dos', icon: 'task_alt', view: ToDos, active: 'bg-emerald-200 text-emerald-950 dark:bg-emerald-900 dark:text-emerald-100', activeText: 'text-emerald-600 dark:text-emerald-400' },
   { id: 'ytmusic', label: 'YouTube Music', icon: 'graphic_eq', view: YTMusic, active: 'bg-rose-300 text-rose-950 dark:bg-rose-950 dark:text-rose-100', activeText: 'text-rose-600 dark:text-rose-400' },
   { id: 'shopping', label: 'Shopping', icon: 'shopping_cart', view: Shopping, active: 'bg-orange-200 text-orange-950 dark:bg-orange-900 dark:text-orange-100', activeText: 'text-orange-600 dark:text-orange-400' },
-  { id: 'meals', label: 'Meals', icon: 'restaurant', view: Meals, active: 'bg-teal-200 text-teal-950 dark:bg-teal-900 dark:text-teal-100', activeText: 'text-teal-600 dark:text-teal-400' },
-  { id: 'recipes', label: 'Recipes', icon: 'menu_book', view: Recipes, active: 'bg-pink-200 text-pink-950 dark:bg-pink-900 dark:text-pink-100', activeText: 'text-pink-600 dark:text-pink-400' },
+  { id: 'recipes', label: 'Recipes', icon: 'restaurant', view: Recipes, active: 'bg-pink-200 text-pink-950 dark:bg-pink-900 dark:text-pink-100', activeText: 'text-pink-600 dark:text-pink-400' },
   { id: 'photos', label: 'Photos', icon: 'photo_library', view: Photos, active: 'bg-indigo-200 text-indigo-950 dark:bg-indigo-900 dark:text-indigo-100', activeText: 'text-indigo-600 dark:text-indigo-400' },
   { id: 'setup', label: 'Setup', icon: 'settings', view: Setup, active: 'bg-slate-300 text-slate-950 dark:bg-slate-700 dark:text-slate-100', activeText: 'text-slate-600 dark:text-slate-400' },
 ] as const

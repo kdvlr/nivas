@@ -10,7 +10,7 @@ import TopClockHeader from '../components/TopClockHeader'
 import MorningKidsBanner from '../components/kids/MorningKidsBanner'
 import { useCelebration } from '../components/celebrations/CelebrationContext'
 import { useClock, useData, todayISO, addDaysISO } from '../lib/hooks'
-import type { CalendarStatus, CalEvent, ChoreItem, CoinBalance, MealDay, ShoppingItem, Task, WeatherData } from '../lib/types'
+import type { CalendarStatus, CalEvent, ChoreItem, CoinBalance, ShoppingItem, Task, WeatherData } from '../lib/types'
 
 const fmtTime = (iso: string) =>
   new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
@@ -156,7 +156,7 @@ const TITLE_FONTS = [
 ]
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<'all' | 'schedule' | 'tasks' | 'chores' | 'shopping' | 'meals'>('all')
+  const [activeTab, setActiveTab] = useState<'all' | 'schedule' | 'tasks' | 'chores' | 'shopping'>('all')
   const [completingIds, setCompletingIds] = useState<string[]>([])
   const [removedIds, setRemovedIds] = useState<string[]>([])
   const [fabOpen, setFabOpen] = useState(false)
@@ -181,7 +181,6 @@ export default function Home() {
   const { data: balances, loading: loadingBalances } = useData<CoinBalance[]>('/api/rewards/balances', ['chores', 'rewards'])
   const sortedBalances = useMemo(() => [...(balances ?? [])].sort((a, b) => b.balance - a.balance), [balances])
   const { data: shopping, loading: loadingShopping, reload: reloadShopping } = useData<ShoppingItem[]>('/api/shopping', ['shopping'])
-  const { data: meals, loading: loadingMeals } = useData<MealDay[]>(`/api/meals?start=${today}&days=1`, ['meals'])
   const { data: weather } = useData<WeatherData>('/api/weather', [], 15 * 60 * 1000)
   const { data: calStatus } = useData<CalendarStatus>('/api/calendar/status', ['calendar'])
   const { data: config } = useData<{ family_name: string; secondary_tz: string; secondary_tz_emoji: string }>(
@@ -209,7 +208,6 @@ export default function Home() {
     const active = shoppingOpen.filter((i) => !removedIds.includes(`shop-${i.id}`))
     return active.slice(0, 5)
   }, [shoppingOpen, removedIds])
-  const todayMeals = meals?.[0]?.slots
 
   // chores relevant today (one-offs due/overdue + recurring scheduled today)
   const choreDueToday = (c: ChoreItem) => {
@@ -800,42 +798,6 @@ export default function Home() {
     )
   }
 
-  const renderMeals = (isDesktop: boolean) => {
-    const isEmpty = !todayMeals || (!todayMeals.breakfast && !todayMeals.lunch && !todayMeals.dinner)
-    return (
-      <section className={`glass flex flex-col p-3.5 sm:p-4 ${loadingMeals ? 'shimmer-loading' : ''} ${isDesktop ? 'shrink-0 overflow-hidden' : (isEmpty ? 'h-auto' : 'flex-1 min-h-0 overflow-hidden')}`}>
-        <a href="#/meals" className="mb-2 flex items-center gap-3 text-lg font-normal text-ink">
-          <Icon name="restaurant" className="text-2xl" /> Today's Meals
-          <span className="ml-auto text-sm font-medium text-sky-600 dark:text-sky-400">plan ›</span>
-        </a>
-        <div className={`grid gap-2 ${isDesktop ? 'grid-cols-3' : 'grid-cols-1 flex-1 overflow-y-auto'}`}>
-          {(['breakfast', 'lunch', 'dinner'] as const).map((slot) => {
-            const s = todayMeals?.[slot]
-            const label = s?.recipe_title || s?.text
-            return (
-              <a
-                key={slot}
-                href={s?.recipe_id ? `#/recipes/${s.recipe_id}` : '#/meals'}
-                className="glass-inset p-2.5 active:surface-tile-high"
-              >
-                <div className="text-[0.65rem] font-medium uppercase tracking-wide text-ink-faint">
-                  {slot}
-                </div>
-                <div className="mt-0.5 whitespace-pre-line text-sm font-medium leading-tight text-ink">
-                  {label ? label : (
-                    <span className="flex items-center gap-1 text-[var(--primary)] opacity-85 hover:opacity-100 transition-opacity">
-                      <Icon name="add_circle" className="text-sm" /> Plan
-                    </span>
-                  )}
-                </div>
-              </a>
-            )
-          })}
-        </div>
-      </section>
-    )
-  }
-
   const renderShopping = (isDesktop: boolean) => {
     const isEmpty = shoppingCount === 0
     // Desktop: an explicit min-height replaces flexbox's default
@@ -936,7 +898,6 @@ export default function Home() {
           <div className="flex min-h-0 flex-col gap-4 overflow-hidden">
             {renderChores(true)}
             {renderTasks(true)}
-            {renderMeals(true)}
             {renderShopping(true)}
           </div>
         </div>
@@ -958,10 +919,7 @@ export default function Home() {
         {/* Slide 3: Tasks */}
         {renderMobileSlide('tasks', openTasks.length === 0, renderTasks(false))}
 
-        {/* Slide 4: Meals */}
-        {renderMobileSlide('meals', !todayMeals || (!todayMeals.breakfast && !todayMeals.lunch && !todayMeals.dinner), renderMeals(false))}
-
-        {/* Slide 5: Shopping */}
+        {/* Slide 4: Shopping */}
         {renderMobileSlide('shopping', shoppingCount === 0, renderShopping(false))}
       </div>
 
