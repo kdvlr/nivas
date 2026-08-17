@@ -7,6 +7,8 @@ router = APIRouter(prefix="/api/kids-daily", tags=["kids-daily"])
 
 class SettingsUpdateRequest(BaseModel):
     force_banner_active: Optional[bool] = None
+    gemini_api_key: Optional[str] = None
+    gemini_model: Optional[str] = None
 
 @router.get("/today")
 def get_today_content(date: Optional[str] = None):
@@ -52,6 +54,7 @@ def get_admin_content(date: Optional[str] = None):
     }
 
 @router.post("/regenerate")
+@router.post("/admin/regenerate")
 def regenerate_content(date: Optional[str] = None):
     """
     Force re-generation of today's content with Gemini AI.
@@ -71,4 +74,8 @@ def update_settings(body: SettingsUpdateRequest):
     updates = {}
     if body.force_banner_active is not None:
         updates["force_banner_active"] = body.force_banner_active
+    if body.gemini_api_key is not None:
+        updates["gemini_api_key"] = body.gemini_api_key
+    if body.gemini_model is not None:
+        updates["gemini_model"] = body.gemini_model
     return kids_daily_service.update_settings(updates)

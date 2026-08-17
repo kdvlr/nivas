@@ -225,6 +225,9 @@ export interface KidsDailyAdminResponse {
   content: KidsDailyAdminContent
   settings: {
     force_banner_active: boolean
+    has_gemini_api_key?: boolean
+    gemini_api_key_masked?: string
+    gemini_model?: string
   }
 }
 

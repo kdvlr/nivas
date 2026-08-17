@@ -61,3 +61,29 @@ def test_kids_daily_settings_toggle(client):
     res2 = client.post("/api/kids-daily/settings", json={"force_banner_active": False})
     assert res2.status_code == 200
     assert res2.json().get("force_banner_active") is False
+
+def test_kids_daily_fallback_catalog_length_and_rotation(client):
+    from app.services.kids_daily_service import FALLBACK_CATALOG
+    assert len(FALLBACK_CATALOG) >= 30
+
+    # Ensure consecutive days produce different content
+    p1 = kids_daily_service.get_today_payload("2026-08-01", force_regenerate=True)
+    p2 = kids_daily_service.get_today_payload("2026-08-02", force_regenerate=True)
+    p3 = kids_daily_service.get_today_payload("2026-08-03", force_regenerate=True)
+
+    w1 = p1["content"]["word_of_the_day"]["word"]
+    w2 = p2["content"]["word_of_the_day"]["word"]
+    w3 = p3["content"]["word_of_the_day"]["word"]
+    assert w1 != w2
+    assert w2 != w3
+    assert w1 != w3
+
+def test_kids_daily_regenerate_endpoint(client):
+    res = client.post("/api/kids-daily/regenerate")
+    assert res.status_code == 200
+    data = res.json()
+    assert "content" in data
+    assert "word_of_the_day" in data["content"]
+    assert "fun_fact" in data["content"]
+    assert "stem_5yo" in data["content"]
+    assert "stem_9yo" in data["content"]

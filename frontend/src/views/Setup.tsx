@@ -1599,9 +1599,14 @@ function KidsDailyCard() {
   const { data, reload, loading } = useData<KidsDailyAdminResponse>('/api/kids-daily/admin', [])
   const [regenerating, setRegenerating] = useState(false)
   const [toggling, setToggling] = useState(false)
+  const [geminiKeyInput, setGeminiKeyInput] = useState('')
+  const [savingKey, setSavingKey] = useState(false)
+  const [showKeyInput, setShowKeyInput] = useState(false)
 
   const content = data?.content
-  const isForceActive = Boolean(data?.settings?.force_banner_active)
+  const settings = data?.settings
+  const isForceActive = Boolean(settings?.force_banner_active)
+  const hasGeminiKey = Boolean(settings?.has_gemini_api_key)
 
   const handleToggleForce = async () => {
     setToggling(true)
@@ -1615,6 +1620,20 @@ function KidsDailyCard() {
     }
   }
 
+  const handleSaveGeminiKey = async () => {
+    setSavingKey(true)
+    try {
+      await api.post('/api/kids-daily/settings', {
+        gemini_api_key: geminiKeyInput.trim(),
+      })
+      setGeminiKeyInput('')
+      setShowKeyInput(false)
+      reload()
+    } finally {
+      setSavingKey(false)
+    }
+  }
+
   const handleRegenerate = async () => {
     setRegenerating(true)
     try {
@@ -1624,6 +1643,8 @@ function KidsDailyCard() {
       setRegenerating(false)
     }
   }
+
+  const isGemini = content?.generated_by?.startsWith('gemini_ai')
 
   return (
     <Card
@@ -1636,14 +1657,65 @@ function KidsDailyCard() {
         <Badge
           ok={Boolean(content)}
           label={
-            content?.generated_by === 'gemini_ai'
+            isGemini
               ? 'Gemini AI'
-              : 'Daily Catalog'
+              : '31-Day Rotating Catalog'
           }
         />
       }
     >
       <div className="flex flex-col gap-5">
+        {/* Gemini API Key Configuration Row */}
+        <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-4 flex flex-col gap-2.5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Icon name="psychology" className="text-indigo-500 text-lg" />
+              <div>
+                <span className="text-xs font-bold text-ink flex items-center gap-2">
+                  Gemini AI Generation
+                  {hasGeminiKey ? (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                      Key Active ({settings?.gemini_api_key_masked})
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-600 dark:text-amber-400">
+                      Offline 31-Day Catalog Active
+                    </span>
+                  )}
+                </span>
+                <p className="text-[11px] text-ink-soft">
+                  Generates fresh, unique vocabulary, fun facts, and STEM challenges every single morning.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowKeyInput(!showKeyInput)}
+              className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold hover:underline cursor-pointer"
+            >
+              {showKeyInput ? 'Cancel' : hasGeminiKey ? 'Change Key' : 'Add API Key'}
+            </button>
+          </div>
+
+          {showKeyInput && (
+            <div className="flex items-center gap-2 mt-1 pt-2 border-t border-indigo-500/10">
+              <input
+                type="password"
+                placeholder="Paste Gemini API Key (e.g., AIzaSy...)"
+                value={geminiKeyInput}
+                onChange={(e) => setGeminiKeyInput(e.target.value)}
+                className="flex-1 rounded-xl bg-white/80 dark:bg-black/40 border border-black/10 dark:border-white/10 px-3 py-1.5 text-xs text-ink focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+              />
+              <button
+                onClick={handleSaveGeminiKey}
+                disabled={savingKey || !geminiKeyInput.trim()}
+                className="btn-accent px-3 py-1.5 text-xs font-semibold disabled:opacity-50 cursor-pointer"
+              >
+                {savingKey ? 'Saving...' : 'Save & Enable'}
+              </button>
+            </div>
+          )}
+        </div>
+
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl bg-amber-500/10 p-4 border border-amber-500/20">
           <div>
             <h3 className="text-base font-semibold text-ink flex items-center gap-2">
