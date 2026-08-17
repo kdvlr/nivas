@@ -7,9 +7,16 @@ import type { KidsDailyPublicResponse } from '../../lib/types'
 interface MorningKidsBannerProps {
   now?: Date
   className?: string
+  forceOpen?: boolean
+  onClose?: () => void
 }
 
-export default function MorningKidsBanner({ now = new Date(), className = '' }: MorningKidsBannerProps) {
+export default function MorningKidsBanner({
+  now = new Date(),
+  className = '',
+  forceOpen = false,
+  onClose,
+}: MorningKidsBannerProps) {
   const [data, setData] = useState<KidsDailyPublicResponse | null>(null)
   const [dismissedDate, setDismissedDate] = useState<string | null>(null)
   const [manuallyDismissed, setManuallyDismissed] = useState(false)
@@ -38,13 +45,15 @@ export default function MorningKidsBanner({ now = new Date(), className = '' }: 
     return () => clearInterval(interval)
   }, [])
 
-  if (!data) return null
+  // When forceOpen is triggered (e.g. user clicked date in header), reset manuallyDismissed
+  useEffect(() => {
+    if (forceOpen) {
+      setManuallyDismissed(false)
+    }
+  }, [forceOpen])
 
-  // If user explicitly clicked 'X' in this session, immediately hide
-  if (manuallyDismissed) return null
-
-  const isForceActive = Boolean(data.force_active)
-  const isDismissedToday = dismissedDate === data.date
+  const isForceActive = Boolean(data?.force_active)
+  const isDismissedToday = dismissedDate === data?.date
 
   // Active time window check:
   // Weekday (0-4): 6am - 8am
@@ -59,28 +68,46 @@ export default function MorningKidsBanner({ now = new Date(), className = '' }: 
     ? minuteOfDay >= 9 * 60 && minuteOfDay < 11 * 60
     : minuteOfDay >= 6 * 60 && minuteOfDay < 8 * 60
 
-  const shouldDisplay = isForceActive || (isScheduleActive && !isDismissedToday)
-
-  if (!shouldDisplay) return null
+  const shouldDisplay = Boolean(
+    data &&
+      (forceOpen ||
+        (!manuallyDismissed && (isForceActive || (isScheduleActive && !isDismissedToday))))
+  )
 
   const handleDismiss = () => {
     setManuallyDismissed(true)
-    if (data.date) {
+    if (data?.date) {
       localStorage.setItem('kids_banner_dismissed_date', data.date)
       setDismissedDate(data.date)
     }
+    if (onClose) {
+      onClose()
+    }
   }
+
+  // Keyboard shortcut: Escape to close
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && shouldDisplay) {
+        handleDismiss()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [shouldDisplay])
 
   return (
     <AnimatePresence>
-      {/* Floating Window spanning full width of Dashboard and auto-growing to fit all STEM questions without scrolling */}
-      <motion.div
-        initial={{ opacity: 0, y: -20, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: -20, scale: 0.98 }}
-        transition={{ type: 'spring', stiffness: 350, damping: 28 }}
-        className={`fixed inset-x-3 sm:inset-x-6 lg:inset-x-0 lg:left-[5.5rem] lg:right-4 top-16 sm:top-20 z-40 h-auto max-h-[calc(100vh-5.5rem)] rounded-3xl border border-white/20 bg-slate-950/92 p-6 sm:p-7 text-white shadow-2xl backdrop-blur-2xl dark:border-white/15 dark:bg-black/95 flex flex-col justify-between overflow-y-auto ${className}`}
-      >
+      {shouldDisplay && data && (
+        /* Floating Window spanning full width of Dashboard and auto-growing to fit all STEM questions without scrolling */
+        <motion.div
+          key="morning-kids-banner"
+          initial={{ opacity: 0, y: -20, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -20, scale: 0.98 }}
+          transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+          className={`fixed inset-x-3 sm:inset-x-6 lg:inset-x-0 lg:left-[5.5rem] lg:right-4 top-16 sm:top-20 z-40 h-auto max-h-[calc(100vh-5.5rem)] rounded-3xl border border-white/20 bg-slate-950/92 p-6 sm:p-7 text-white shadow-2xl backdrop-blur-2xl dark:border-white/15 dark:bg-black/95 flex flex-col justify-between overflow-y-auto ${className}`}
+        >
         {/* Header Ribbon */}
         <div className="mb-4 flex items-center justify-between gap-4 border-b border-white/15 pb-3 shrink-0">
           <div className="flex items-center gap-3.5">
@@ -266,6 +293,7 @@ export default function MorningKidsBanner({ now = new Date(), className = '' }: 
           </div>
         </div>
       </motion.div>
+      )}
     </AnimatePresence>
   )
 }

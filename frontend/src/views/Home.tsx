@@ -166,6 +166,7 @@ export default function Home() {
   })
   const [selectedEvent, setSelectedEvent] = useState<CalEvent | null>(null)
   const [weatherOpen, setWeatherOpen] = useState(false)
+  const [kidsHubOpen, setKidsHubOpen] = useState(false)
   const now = useClock()
   const today = todayISO()
   const { data: events, loading: loadingEvents } = useData<CalEvent[]>(
@@ -397,9 +398,18 @@ export default function Home() {
     <header className="glass flex items-center justify-between gap-x-2 px-4 py-1.5 lg:px-8 lg:py-2.5 flex-nowrap">
       <div className="flex items-center gap-x-3 lg:gap-x-6 min-w-0">
         <div>
-          <h1 className="text-sm lg:text-2xl font-medium tracking-tight text-ink leading-none truncate">
-            {now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-          </h1>
+          <button
+            onClick={() => setKidsHubOpen((prev) => !prev)}
+            className="text-left group/date cursor-pointer transition-transform active:scale-95 flex items-center gap-1.5 focus:outline-none"
+            title="Click to view Morning Kids Discovery Hub"
+          >
+            <h1 className="text-sm lg:text-2xl font-medium tracking-tight text-ink leading-none truncate group-hover/date:text-[var(--primary)] transition-colors">
+              {now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+            </h1>
+            <span className="hidden xl:inline-flex items-center gap-1 opacity-0 group-hover/date:opacity-100 transition-opacity text-[11px] font-semibold text-[var(--primary)] bg-[var(--primary)]/10 px-2 py-0.5 rounded-full border border-[var(--primary)]/20">
+              Kids Hub 💡
+            </span>
+          </button>
         </div>
         {weather?.current && (
           <button
@@ -912,7 +922,11 @@ export default function Home() {
   return (
     <div className="h-full w-full lg:overflow-visible overflow-hidden relative">
       {/* Morning Kids Discovery Hub Floating Window */}
-      <MorningKidsBanner now={now} />
+      <MorningKidsBanner
+        now={now}
+        forceOpen={kidsHubOpen}
+        onClose={() => setKidsHubOpen(false)}
+      />
 
       {/* Desktop view */}
       <div className="hidden lg:flex h-full flex-col gap-4">
