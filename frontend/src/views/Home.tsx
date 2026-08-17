@@ -793,8 +793,8 @@ export default function Home() {
   const renderMeals = (isDesktop: boolean) => {
     const isEmpty = !todayMeals || (!todayMeals.breakfast && !todayMeals.lunch && !todayMeals.dinner)
     return (
-      <section className={`glass flex flex-col p-5 ${loadingMeals ? 'shimmer-loading' : ''} ${isDesktop ? 'shrink-0 overflow-hidden' : (isEmpty ? 'h-auto' : 'flex-1 min-h-0 overflow-hidden')}`}>
-        <a href="#/meals" className="mb-3 flex items-center gap-3 text-xl font-normal text-ink">
+      <section className={`glass flex flex-col p-3.5 sm:p-4 ${loadingMeals ? 'shimmer-loading' : ''} ${isDesktop ? 'shrink-0 overflow-hidden' : (isEmpty ? 'h-auto' : 'flex-1 min-h-0 overflow-hidden')}`}>
+        <a href="#/meals" className="mb-2 flex items-center gap-3 text-lg font-normal text-ink">
           <Icon name="restaurant" className="text-2xl" /> Today's Meals
           <span className="ml-auto text-sm font-medium text-sky-600 dark:text-sky-400">plan ›</span>
         </a>
