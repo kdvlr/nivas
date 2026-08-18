@@ -179,7 +179,7 @@ export default function MorningKidsBanner({
                 </p>
               </div>
 
-              <p className="mt-3.5 text-base sm:text-lg lg:text-xl text-white font-medium leading-relaxed">
+              <p className="mt-3.5 text-sm sm:text-base lg:text-lg text-white font-medium leading-relaxed">
                 {data.word_of_the_day.definition}
               </p>
             </div>
@@ -207,14 +207,14 @@ export default function MorningKidsBanner({
                 <span className="text-3xl shrink-0 select-none drop-shadow-md">
                   {data.fun_fact.emoji || '💡'}
                 </span>
-                <p className="text-xl font-normal text-white leading-snug">
+                <p className="text-lg font-normal text-white leading-snug">
                   {data.fun_fact.fact}
                 </p>
               </div>
             </div>
 
             {data.fun_fact.did_you_know && (
-              <div className="mt-4 rounded-2xl bg-emerald-400/20 p-4 sm:p-5 text-base sm:text-lg text-white/95 border border-emerald-400/30 leading-relaxed">
+              <div className="mt-4 rounded-2xl bg-emerald-400/20 p-4 sm:p-5 text-sm sm:text-base text-white/95 border border-emerald-400/30 leading-relaxed">
                 <strong className="font-bold text-emerald-300">Did you know? </strong>
                 {data.fun_fact.did_you_know}
               </div>
@@ -236,7 +236,6 @@ export default function MorningKidsBanner({
                 <div className="flex items-center justify-between gap-1 mb-2">
                   <span className="text-base font-bold text-purple-300 flex items-center gap-1.5">
                     <span>🎈 Age 5</span>
-                    <span className="text-xs sm:text-sm font-normal text-white/70">({data.stem_5yo.topic})</span>
                   </span>
                   {data.stem_5yo.hint && (
                     <button
@@ -247,7 +246,7 @@ export default function MorningKidsBanner({
                     </button>
                   )}
                 </div>
-                <p className="text-base sm:text-lg font-bold text-white leading-snug">
+                <p className="text-base sm:text-lg font-normal text-white leading-snug">
                   {data.stem_5yo.question}
                 </p>
                 {showHint5 && data.stem_5yo.hint && (
@@ -262,7 +261,6 @@ export default function MorningKidsBanner({
                 <div className="flex items-center justify-between gap-1 mb-2">
                   <span className="text-base font-bold text-indigo-300 flex items-center gap-1.5">
                     <span>🚀 Age 9</span>
-                    <span className="text-xs sm:text-sm font-normal text-white/70">({data.stem_9yo.topic})</span>
                   </span>
                   {data.stem_9yo.hint && (
                     <button
@@ -273,7 +271,7 @@ export default function MorningKidsBanner({
                     </button>
                   )}
                 </div>
-                <p className="text-base sm:text-lg font-bold text-white leading-snug">
+                <p className="text-base sm:text-lg font-normal text-white leading-snug">
                   {data.stem_9yo.question}
                 </p>
                 {showHint9 && data.stem_9yo.hint && (
