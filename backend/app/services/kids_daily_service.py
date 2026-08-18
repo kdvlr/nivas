@@ -1001,7 +1001,7 @@ class KidsDailyService:
         self._settings: Dict[str, Any] = {
             "force_banner_active": False,
             "gemini_api_key": "",
-            "gemini_model": "gemini-3.5-flash",
+            "gemini_model": "gemini-3.7-flash",
         }
         self._load_cache()
 
@@ -1058,7 +1058,7 @@ class KidsDailyService:
             "force_banner_active": bool(self._settings.get("force_banner_active", False)),
             "has_gemini_api_key": bool(effective_key),
             "gemini_api_key_masked": f"{effective_key[:6]}...{effective_key[-4:]}" if effective_key and len(effective_key) > 10 else "",
-            "gemini_model": self._settings.get("gemini_model") or s.gemini_model or "gemini-3.5-flash",
+            "gemini_model": self._settings.get("gemini_model") or s.gemini_model or "gemini-3.7-flash",
         }
 
     def update_settings(self, new_settings: Dict[str, Any]) -> Dict[str, Any]:
@@ -1091,7 +1091,7 @@ class KidsDailyService:
     def _generate_daily_content(self, date_str: str) -> Dict[str, Any]:
         s = get_settings()
         api_key = self._settings.get("gemini_api_key") or s.gemini_api_key
-        model_name = self._settings.get("gemini_model") or s.gemini_model or "gemini-3.5-flash"
+        model_name = self._settings.get("gemini_model") or s.gemini_model or "gemini-3.7-flash"
 
         if api_key:
             try:
@@ -1127,7 +1127,7 @@ class KidsDailyService:
             "Make all questions positive, curious, and fun. Ensure answers and parent explanations are accurate."
         )
 
-        candidate_models = [model_name, "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-flash-latest", "gemini-3.7-flash"]
+        candidate_models = [model_name, "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-flash-latest"]
         # Remove duplicates while preserving order
         unique_models = list(dict.fromkeys(candidate_models))
 
