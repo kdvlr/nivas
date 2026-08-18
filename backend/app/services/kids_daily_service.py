@@ -995,6 +995,23 @@ FALLBACK_CATALOG: List[Dict[str, Any]] = [
     },
 ]
 
+KIDS_CATEGORIES = [
+    "Astronomy & Deep Space",
+    "Deep Ocean & Marine Biology",
+    "Volcanoes, Crystals & Earth Sciences",
+    "Physics, Flight & Aerodynamics",
+    "Botany, Photosynthesis & Ancient Forests",
+    "Chemistry, Molecules & Polymers",
+    "Robotics, Machines & Inventions",
+    "Paleontology, Fossils & Ancient Life",
+    "Acoustics, Sound Waves & Resonance",
+    "Animal Biomimicry & Survival Adaptations",
+    "Extreme Weather, Atmosphere & Climate",
+    "Microbiology, Cells & Genetics",
+    "Architecture, Bridges & Engineering",
+    "Optical Illusions, Light & Lasers",
+]
+
 class KidsDailyService:
     def __init__(self):
         self._cache: Dict[str, Any] = {}
@@ -1115,16 +1132,26 @@ class KidsDailyService:
     def _generate_with_gemini(self, date_str: str, api_key: str, model_name: str) -> Optional[Dict[str, Any]]:
         from google import genai
         from google.genai import types
+        import random
+        import uuid
 
         client = genai.Client(api_key=api_key)
+        sample_cats = random.sample(KIDS_CATEGORIES, 4)
+        nonce = uuid.uuid4().hex[:8]
+
         prompt = (
-            f"Generate a daily morning educational kids bundle for {date_str}.\n"
+            f"Generate a completely fresh, creative, and inspiring daily morning educational kids bundle for {date_str} (Nonce: {nonce}).\n"
+            f"Category inspiration themes for today:\n"
+            f"- Word of the Day focus: {sample_cats[0]}\n"
+            f"- Fun Fact focus: {sample_cats[1]}\n"
+            f"- 5-Year-Old STEM challenge: {sample_cats[2]}\n"
+            f"- 9-Year-Old STEM challenge: {sample_cats[3]}\n\n"
             "Requirements:\n"
-            "1. word_of_the_day: A rich, inspiring vocabulary word suitable for elementary school kids (not too simplistic, e.g., 'Persevere', 'Bioluminescent', 'Momentum', 'Ecosystem', 'Telescopic', 'Resilient'). Include phonetic pronunciation, part of speech, kid-friendly definition, and an engaging example sentence.\n"
-            "2. fun_fact: An astonishing, true fact from science, animals, space, nature, or ocean life. Include an emoji, category, and a short 1-sentence 'did_you_know' extension.\n"
-            "3. stem_5yo: A curious STEM riddle/question for a 5-year-old (kindergarten level) about something they observe daily (e.g. magnets, shadows, ice melting, rainbow colors, insects, bird feathers). Include a helpful hint, a simple answer, and a clear 'parent_explanation' for parents to discuss.\n"
-            "4. stem_9yo: A thought-provoking STEM question for a 9-year-old (4th grade level) involving logic, physics, astronomy, engineering, or computing. Include a hint, clear answer, and a deeper 'parent_explanation'.\n"
-            "Make all questions positive, curious, and fun. Ensure answers and parent explanations are accurate."
+            "1. word_of_the_day: A rich, fascinating vocabulary word related to science, exploration, nature, physics, or discovery. Include phonetic pronunciation, part of speech, kid-friendly definition, and an engaging example sentence. Pick a unique and uncommon word (do NOT default to 'Curious', 'Resilient', or 'Bioluminescent').\n"
+            "2. fun_fact: An astonishing, true fact from science, animals, space, oceans, or planet Earth. Include a fitting emoji, specific category, and a short 1-sentence 'did_you_know' extension.\n"
+            "3. stem_5yo: A curious, playful STEM question/riddle for a 5-year-old (kindergarten level) about physical observations in daily life. Include a helpful hint, a simple clear answer, and an engaging 'parent_explanation' for parents to discuss.\n"
+            "4. stem_9yo: A thought-provoking STEM challenge for a 9-year-old (4th grade level) involving real physics, astronomy, engineering, chemistry, biology, or computing. Include a hint, a clear factual answer, and a deep conceptual 'parent_explanation'.\n\n"
+            "CRITICAL: All 4 sections (Word, Fun Fact, 5yo STEM, 9yo STEM) MUST be completely fresh, unique, varied, and specific to the designated themes."
         )
 
         candidate_models = [model_name, "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-flash-latest"]
@@ -1133,13 +1160,18 @@ class KidsDailyService:
 
         for m in unique_models:
             try:
+                gen_config = types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_json_schema=KIDS_DAILY_SCHEMA,
+                    temperature=1.0,
+                )
+                if "3.7" in m:
+                    gen_config.thinking_config = types.ThinkingConfig(thinking_budget=512)
+
                 resp = client.models.generate_content(
                     model=m,
                     contents=prompt,
-                    config=types.GenerateContentConfig(
-                        response_mime_type="application/json",
-                        response_json_schema=KIDS_DAILY_SCHEMA,
-                    ),
+                    config=gen_config,
                 )
                 data = json.loads(resp.text)
                 if (
