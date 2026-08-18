@@ -1127,7 +1127,7 @@ class KidsDailyService:
             "Make all questions positive, curious, and fun. Ensure answers and parent explanations are accurate."
         )
 
-        candidate_models = [model_name, "gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-flash-latest", "gemini-3.7-flash"]
+        candidate_models = [model_name, "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-flash-latest", "gemini-3.7-flash"]
         # Remove duplicates while preserving order
         unique_models = list(dict.fromkeys(candidate_models))
 
