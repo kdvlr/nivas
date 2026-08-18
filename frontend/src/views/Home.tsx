@@ -393,20 +393,17 @@ export default function Home() {
     const greeting = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening'
 
     return (
-    <header className="glass flex items-center justify-between gap-x-2 px-4 py-1.5 lg:px-8 lg:py-2.5 flex-nowrap">
-      <div className="flex items-center gap-x-3 lg:gap-x-6 min-w-0">
+    <header className="glass flex items-center justify-between gap-x-2 px-4 py-1.5 lg:px-6 lg:py-2.5 flex-nowrap">
+      <div className="flex items-center gap-x-3 lg:gap-x-4 min-w-0">
         <div>
           <button
             onClick={() => setKidsHubOpen((prev) => !prev)}
-            className="text-left group/date cursor-pointer transition-transform active:scale-95 flex items-center gap-1.5 focus:outline-none"
+            className="text-left group/date cursor-pointer transition-transform active:scale-95 focus:outline-none"
             title="Click to view Morning Kids Discovery Hub"
           >
             <h1 className="text-sm lg:text-2xl font-medium tracking-tight text-ink leading-none truncate group-hover/date:text-[var(--primary)] transition-colors">
               {now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
             </h1>
-            <span className="hidden xl:inline-flex items-center gap-1 opacity-0 group-hover/date:opacity-100 transition-opacity text-[11px] font-semibold text-[var(--primary)] bg-[var(--primary)]/10 px-2 py-0.5 rounded-full border border-[var(--primary)]/20">
-              Kids Hub 💡
-            </span>
           </button>
         </div>
         {weather?.current && (
