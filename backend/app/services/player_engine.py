@@ -66,6 +66,7 @@ class PlayerEngine:
         self.autoplay_enabled: bool = True
         self._last_audio_at: Optional[float] = None
         self.played_history: Dict[str, float] = {}
+        self.history: List[Dict[str, Any]] = []
         self._preferences_path = Path(get_settings().data_dir) / "airplay_preferences.json"
         self._hidden_device_ids, self._selected_device_ids, self._selected_device_names, self._device_volumes = self._load_preferences()
 
@@ -500,10 +501,17 @@ class PlayerEngine:
                     if first_dev.id not in self.active_targets:
                         self.active_targets.append(first_dev.id)
 
-    async def play_track(self, track: Dict[str, Any], queue: Optional[List[Dict[str, Any]]] = None):
+    async def play_track(self, track: Dict[str, Any], queue: Optional[List[Dict[str, Any]]] = None, is_back: bool = False):
         video_id = track.get("videoId")
         if not video_id:
             return self.get_state()
+
+        # Save currently playing track to history before switching to a new track
+        if not is_back and self.current_track and self.current_track.get("videoId"):
+            if self.current_track.get("videoId") != video_id:
+                self.history.append(dict(self.current_track))
+                if len(self.history) > 50:
+                    self.history = self.history[-50:]
 
         self._ensure_default_target()
         self._stop_current_stream()
@@ -1070,8 +1078,52 @@ class PlayerEngine:
         return self.get_state()
 
     async def prev_track(self):
-        self.elapsed_seconds = 0
-        self._broadcast_state()
+        if self._advancing:
+            return self.get_state()
+
+        # 1. If currently playing and more than 3 seconds elapsed, restart current track from beginning
+        if self.current_track and self.elapsed_seconds > 3.0:
+            logger.info("Restarting current track from beginning (elapsed > 3s)")
+            self.elapsed_seconds = 0
+            self._play_generation_id += 1
+            generation_id = self._play_generation_id
+            video_id = self.current_track.get("videoId")
+            wav_path = f"/tmp/ytmusic_{video_id}.wav"
+            artwork_path = f"/tmp/ytmusic_{video_id}_artwork.jpg"
+            artwork_arg = artwork_path if os.path.exists(artwork_path) and os.path.getsize(artwork_path) > 0 else None
+            if os.path.exists(wav_path) and os.path.getsize(wav_path) > 44:
+                self._stop_current_stream()
+                self.is_playing = self._start_airplay_streams(wav_path, self.current_track, artwork_arg)
+            else:
+                loop = asyncio.get_running_loop()
+                self._play_task = loop.create_task(self._orchestrate_playback(video_id, self.current_track, generation_id))
+            self._broadcast_state()
+            return self.get_state()
+
+        # 2. If less than or equal to 3 seconds elapsed (or at start) and history exists, go back to previous track
+        if self.history:
+            prev_t = self.history.pop()
+            # Place current track at front of queue so forward next can resume
+            remaining = list(self.queue)
+            if self.current_track and self.current_track.get("videoId") != prev_t.get("videoId"):
+                remaining.insert(0, self.current_track)
+            logger.info("Navigating back to previous track: %s", prev_t.get("title"))
+            await self.play_track(prev_t, remaining, is_back=True)
+            return self.get_state()
+
+        # 3. Fallback: restart current track from beginning if no history
+        if self.current_track:
+            self.elapsed_seconds = 0
+            video_id = self.current_track.get("videoId")
+            wav_path = f"/tmp/ytmusic_{video_id}.wav"
+            artwork_path = f"/tmp/ytmusic_{video_id}_artwork.jpg"
+            artwork_arg = artwork_path if os.path.exists(artwork_path) and os.path.getsize(artwork_path) > 0 else None
+            if os.path.exists(wav_path) and os.path.getsize(wav_path) > 44:
+                self._stop_current_stream()
+                self.is_playing = self._start_airplay_streams(wav_path, self.current_track, artwork_arg)
+            self._broadcast_state()
+            return self.get_state()
+
         return self.get_state()
 
     def toggle_device(self, device_id: str, selected: bool) -> Dict[str, Any]:

@@ -100,6 +100,13 @@ def get_album(browse_id: str):
         raise HTTPException(status_code=404, detail="Album not found")
     return data
 
+@router.get("/album/{browse_id}/songs")
+def get_album_songs(browse_id: str):
+    data = ytmusic_service.get_album_songs(browse_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="Album not found")
+    return data
+
 @router.get("/playlist/{playlist_id}")
 def get_playlist(playlist_id: str, limit: int = Query(100, ge=1, le=500)):
     data = ytmusic_service.get_playlist(playlist_id, limit=limit)

@@ -218,29 +218,54 @@ class YTMusicService:
             "expires": time.time() + ttl
         }
 
-    def search(self, query: str, filter_type: Optional[str] = None) -> List[Dict[str, Any]]:
-        cache_key = f"search:{query}:{filter_type or 'songs'}"
+    def search(self, query: str, filter_type: Optional[str] = None) -> Any:
+        effective_filter = filter_type or "all"
+        cache_key = f"search:{query}:{effective_filter}"
         cached = self._get_cache(cache_key)
         if cached is not None:
             return cached
 
         if not self._ytmusic:
-            return []
+            return {"songs": [], "albums": []} if effective_filter == "all" else []
 
         try:
-            results = self._ytmusic.search(query, filter=filter_type or "songs", limit=25)
-            normalized_results: List[Dict[str, Any]] = []
-            for item in results:
-                normalized = self.normalize_song(item)
-                if normalized:
-                    normalized_results.append(normalized)
-            # Prioritize pure audio tracks (ATV / song) above video / UGC tracks
-            normalized_results.sort(key=lambda x: 0 if x.get("isPureAudio") else 1)
-            self._set_cache(cache_key, normalized_results, CACHE_TTL["search"])
-            return normalized_results
+            if effective_filter == "songs":
+                results = self._ytmusic.search(query, filter="songs", limit=25)
+                normalized_songs = [self.normalize_song(i) for i in results if self.normalize_song(i)]
+                normalized_songs.sort(key=lambda x: 0 if x.get("isPureAudio") else 1)
+                self._set_cache(cache_key, normalized_songs, CACHE_TTL["search"])
+                return normalized_songs
+
+            elif effective_filter == "videos":
+                results = self._ytmusic.search(query, filter="videos", limit=25)
+                normalized_videos = [self.normalize_song(i) for i in results if self.normalize_song(i)]
+                self._set_cache(cache_key, normalized_videos, CACHE_TTL["search"])
+                return normalized_videos
+
+            elif effective_filter == "albums":
+                results = self._ytmusic.search(query, filter="albums", limit=15)
+                normalized_albums = [self.normalize_album(i) for i in results if self.normalize_album(i)]
+                self._set_cache(cache_key, normalized_albums, CACHE_TTL["search"])
+                return normalized_albums
+
+            else:
+                # "all" search: fetch both songs and albums
+                song_results = self._ytmusic.search(query, filter="songs", limit=25)
+                album_results = self._ytmusic.search(query, filter="albums", limit=10)
+
+                normalized_songs = [self.normalize_song(i) for i in song_results if self.normalize_song(i)]
+                normalized_songs.sort(key=lambda x: 0 if x.get("isPureAudio") else 1)
+                normalized_albums = [self.normalize_album(i) for i in album_results if self.normalize_album(i)]
+
+                structured = {
+                    "songs": normalized_songs,
+                    "albums": normalized_albums,
+                }
+                self._set_cache(cache_key, structured, CACHE_TTL["search"])
+                return structured
         except Exception as e:
             logger.error(f"YTMusic search error for query '{query}': {e}")
-            return []
+            return {"songs": [], "albums": []} if effective_filter == "all" else []
 
     def get_home(self, limit: int = 6) -> List[Dict[str, Any]]:
         cache_key = f"home:{limit}"
@@ -326,6 +351,40 @@ class YTMusicService:
         except Exception as e:
             logger.error(f"YTMusic get_album error '{browse_id}': {e}")
             return {}
+
+    def get_album_songs(self, browse_id: str) -> Dict[str, Any]:
+        """Return album metadata along with normalized playable tracks."""
+        cache_key = f"album-songs:{browse_id}"
+        cached = self._get_cache(cache_key)
+        if cached is not None:
+            return cached
+
+        album = self.get_album(browse_id)
+        if not album:
+            return {}
+
+        songs: List[Dict[str, Any]] = []
+        for item in album.get("tracks", []):
+            song = self.normalize_song(item)
+            if song:
+                if not song.get("thumbnail") and album.get("thumbnails"):
+                    song["thumbnail"] = self._thumbnail_url(album)
+                if not song.get("album"):
+                    song["album"] = album.get("title") or ""
+                songs.append(song)
+
+        result = {
+            "browseId": browse_id,
+            "playlistId": album.get("audioPlaylistId"),
+            "title": album.get("title") or "Album",
+            "artist": self._artist_text(album),
+            "description": album.get("description") or "",
+            "thumbnail": self._thumbnail_url(album),
+            "year": str(album.get("year") or ""),
+            "tracks": songs,
+        }
+        self._set_cache(cache_key, result, CACHE_TTL["album"])
+        return result
 
     def get_playlist(self, playlist_id: str, limit: int = 100) -> Dict[str, Any]:
         cache_key = f"playlist:{playlist_id}:{limit}"
@@ -486,6 +545,30 @@ class YTMusicService:
             "album": album or "",
             "duration": YTMusicService._parse_duration_seconds(duration),
             "isPureAudio": YTMusicService.is_pure_audio(item),
+        }
+
+    @staticmethod
+    def normalize_album(item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        if not item or not isinstance(item, dict):
+            return None
+        browse_id = item.get("browseId")
+        playlist_id = item.get("playlistId") or item.get("audioPlaylistId")
+        if not browse_id and not playlist_id:
+            return None
+        title = item.get("title") or "Unknown Album"
+        artist = YTMusicService._artist_text(item)
+        thumbnail = YTMusicService._thumbnail_url(item)
+        year = str(item.get("year") or "")
+        track_count = item.get("trackCount")
+        return {
+            "browseId": browse_id or playlist_id,
+            "playlistId": playlist_id,
+            "title": title,
+            "artist": artist or "Unknown Artist",
+            "thumbnail": thumbnail,
+            "year": year,
+            "trackCount": int(track_count) if isinstance(track_count, (int, float, str)) and str(track_count).isdigit() else None,
+            "type": "album",
         }
 
     def get_autoplay_tracks(self, video_id: str, limit: int = 12) -> List[Dict[str, Any]]:
