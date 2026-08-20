@@ -54,6 +54,9 @@ class QueueRequest(BaseModel):
 class QueueUpdateRequest(BaseModel):
     queue: List[Dict[str, Any]]
 
+class BatchQueueRequest(BaseModel):
+    tracks: List[Dict[str, Any]]
+
 @router.get("/auth")
 def get_auth_status():
     return ytmusic_service.get_auth_status()
@@ -182,6 +185,13 @@ def player_add_queue(req: QueueRequest):
 def player_play_next(req: QueueRequest):
     try:
         return player_engine.add_to_queue(req.model_dump(), play_next=True)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+@router.post("/player/queue/batch")
+def player_add_batch_queue(req: BatchQueueRequest, play_next: bool = Query(False)):
+    try:
+        return player_engine.add_tracks_to_queue(req.tracks, play_next=play_next)
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
 

@@ -1061,6 +1061,29 @@ class PlayerEngine:
         self._broadcast_state()
         return self.get_state()
 
+    def add_tracks_to_queue(self, tracks: List[Dict[str, Any]], play_next: bool = False) -> Dict[str, Any]:
+        normalized_tracks: List[Dict[str, Any]] = []
+        current_video_id = (self.current_track or {}).get("videoId")
+        for t in tracks:
+            normalized = ytmusic_service.normalize_song(t)
+            if normalized and normalized["videoId"] != current_video_id:
+                normalized_tracks.append(normalized)
+
+        if not normalized_tracks:
+            return self.get_state()
+
+        if play_next:
+            # Insert at beginning in the same order
+            for i, t in enumerate(normalized_tracks):
+                self.queue.insert(i, t)
+        else:
+            self.queue.extend(normalized_tracks)
+
+        if self._event_loop and self._event_loop.is_running():
+            self._event_loop.create_task(self._prefetch_next_track())
+        self._broadcast_state()
+        return self.get_state()
+
     def replace_queue(self, queue: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Replace the upcoming queue after a user reorder or removal."""
         normalized_queue: List[Dict[str, Any]] = []

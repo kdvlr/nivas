@@ -450,6 +450,60 @@ export default function YTMusicView({
     }
   }
 
+  const [queueingAlbumId, setQueueingAlbumId] = useState<string | null>(null)
+
+  // Add entire album to queue (either play next or append)
+  const queueAlbum = async (album: AlbumItem, playNext: boolean = false, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation()
+    setQueueingAlbumId(album.browseId)
+    try {
+      const res = await api.get<any>(`/api/ytmusic/album/${album.browseId}/songs`)
+      const tracks = (Array.isArray(res?.tracks) ? res.tracks : []).map(toTrack).filter((t: Track | null): t is Track => Boolean(t))
+      if (tracks && tracks.length) {
+        if (!currentTrack) {
+          syncUrlSubView('now-playing')
+          onPlayTrack(tracks[0], tracks.slice(1))
+        } else {
+          await api.post<any>(`/api/ytmusic/player/queue/batch?play_next=${playNext}`, { tracks })
+          if (onQueueChange) {
+            const nextQueue = playNext ? [...tracks, ...queue] : [...queue, ...tracks]
+            onQueueChange(nextQueue)
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to queue album tracks:', err)
+    } finally {
+      setQueueingAlbumId(null)
+    }
+  }
+
+  // Add entire playlist to queue (either play next or append)
+  const queuePlaylist = async (playlist: PlaylistItem, playNext: boolean = false, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation()
+    setOpeningPlaylistId(playlist.id)
+    try {
+      const res = await api.get<any>(`/api/ytmusic/playlist/${playlist.id}`)
+      const tracks = (Array.isArray(res?.tracks) ? res.tracks : []).map(toTrack).filter((t: Track | null): t is Track => Boolean(t))
+      if (tracks && tracks.length) {
+        if (!currentTrack) {
+          syncUrlSubView('now-playing')
+          onPlayTrack(tracks[0], tracks.slice(1))
+        } else {
+          await api.post<any>(`/api/ytmusic/player/queue/batch?play_next=${playNext}`, { tracks })
+          if (onQueueChange) {
+            const nextQueue = playNext ? [...tracks, ...queue] : [...queue, ...tracks]
+            onQueueChange(nextQueue)
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to queue playlist tracks:', err)
+    } finally {
+      setOpeningPlaylistId(null)
+    }
+  }
+
   useEffect(() => {
     if (!searchQuery.trim()) {
       setSearchTopResult(null)
@@ -548,12 +602,14 @@ export default function YTMusicView({
         {/* 2 Rows of 5 Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           {homePlaylists.map((pl) => (
-            <button
+            <div
               key={pl.id}
-              onClick={() => playAnyPlaylist(pl)}
-              className="group flex flex-col rounded-2xl bg-white/[0.06] hover:bg-white/[0.12] p-3 text-left transition active:scale-[0.98] border border-white/10 cursor-pointer"
+              className="group flex flex-col rounded-2xl bg-white/[0.06] hover:bg-white/[0.12] p-3 text-left transition border border-white/10"
             >
-              <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-white/10 shadow-md">
+              <div
+                onClick={() => playAnyPlaylist(pl)}
+                className="relative aspect-square w-full overflow-hidden rounded-xl bg-white/10 shadow-md cursor-pointer"
+              >
                 {pl.thumbnail ? (
                   <img
                     src={pl.thumbnail}
@@ -573,10 +629,32 @@ export default function YTMusicView({
                     <Icon name="progress_activity" className="animate-spin text-3xl text-white" />
                   </span>
                 )}
+                {/* Top-right quick queue buttons on hover */}
+                <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition z-10">
+                  <button
+                    onClick={(e) => queuePlaylist(pl, true, e)}
+                    title="Play playlist next"
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-black/80 hover:bg-black text-white border border-white/20 transition shadow hover:scale-105 cursor-pointer"
+                  >
+                    <Icon name="playlist_play" className="text-xl" />
+                  </button>
+                  <button
+                    onClick={(e) => queuePlaylist(pl, false, e)}
+                    title="Add playlist to queue"
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-black/80 hover:bg-black text-white border border-white/20 transition shadow hover:scale-105 cursor-pointer"
+                  >
+                    <Icon name="playlist_add" className="text-lg" />
+                  </button>
+                </div>
               </div>
-              <p className="mt-2.5 truncate font-bold text-white text-sm sm:text-base leading-snug">{pl.title}</p>
+              <p
+                onClick={() => playAnyPlaylist(pl)}
+                className="mt-2.5 truncate font-bold text-white text-sm sm:text-base leading-snug cursor-pointer hover:underline"
+              >
+                {pl.title}
+              </p>
               <p className="mt-0.5 truncate text-xs text-white/50">{pl.subtitle}</p>
-            </button>
+            </div>
           ))}
         </div>
       </section>
@@ -837,7 +915,7 @@ export default function YTMusicView({
                         </div>
 
                         {/* Top Result Action Buttons */}
-                        <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
+                        <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
                           <button
                             onClick={() => {
                               syncUrlSubView('now-playing', '')
@@ -849,9 +927,17 @@ export default function YTMusicView({
                             Play
                           </button>
                           <button
+                            onClick={() => onQueueTrack(searchTopResult, true)}
+                            title="Play next"
+                            className="flex items-center gap-1.5 rounded-full border border-white/20 bg-white/5 px-3.5 py-2 text-sm font-semibold text-white hover:bg-white/15 transition active:scale-95 cursor-pointer"
+                          >
+                            <Icon name="playlist_play" className="text-xl text-white" />
+                            Play next
+                          </button>
+                          <button
                             onClick={() => onQueueTrack(searchTopResult, false)}
                             title="Add to queue"
-                            className="flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/15 transition active:scale-95 cursor-pointer"
+                            className="flex items-center gap-1.5 rounded-full border border-white/20 bg-white/5 px-3.5 py-2 text-sm font-semibold text-white hover:bg-white/15 transition active:scale-95 cursor-pointer"
                           >
                             <Icon name="playlist_add" className="text-xl text-white" />
                             Save
@@ -898,12 +984,14 @@ export default function YTMusicView({
                       </div>
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                         {searchAlbums.map((album) => (
-                          <button
+                          <div
                             key={album.browseId}
-                            onClick={() => playAlbum(album)}
-                            className="group relative flex flex-col rounded-2xl bg-white/[0.04] p-3 text-left transition hover:bg-white/[0.09] focus:outline-none border border-white/5 cursor-pointer"
+                            className="group relative flex flex-col rounded-2xl bg-white/[0.04] p-3 text-left transition hover:bg-white/[0.09] border border-white/5"
                           >
-                            <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-white/10">
+                            <div
+                              onClick={() => playAlbum(album)}
+                              className="relative aspect-square w-full overflow-hidden rounded-xl bg-white/10 cursor-pointer"
+                            >
                               {album.thumbnail ? (
                                 <img
                                   src={album.thumbnail}
@@ -915,24 +1003,53 @@ export default function YTMusicView({
                                   <Icon name="album" className="text-4xl text-white/30" />
                                 </div>
                               )}
+
+                              {/* Center Play Overlay */}
                               <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition group-hover:opacity-100">
                                 <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-black shadow-lg transition transform group-hover:scale-105">
-                                  {openingAlbumId === album.browseId ? (
+                                  {openingAlbumId === album.browseId || queueingAlbumId === album.browseId ? (
                                     <Icon name="progress_activity" className="animate-spin text-2xl text-black" />
                                   ) : (
                                     <Icon name="play_arrow" filled className="text-2xl text-black" />
                                   )}
                                 </span>
                               </div>
+
+                              {/* Top-Right Quick Queue Action Pills on Hover */}
+                              <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition z-10">
+                                <button
+                                  onClick={(e) => queueAlbum(album, true, e)}
+                                  title="Play album next"
+                                  className="flex h-8 w-8 items-center justify-center rounded-full bg-black/80 hover:bg-black text-white border border-white/20 transition shadow hover:scale-105 cursor-pointer"
+                                >
+                                  <Icon name="playlist_play" className="text-xl" />
+                                </button>
+                                <button
+                                  onClick={(e) => queueAlbum(album, false, e)}
+                                  title="Add album to queue"
+                                  className="flex h-8 w-8 items-center justify-center rounded-full bg-black/80 hover:bg-black text-white border border-white/20 transition shadow hover:scale-105 cursor-pointer"
+                                >
+                                  <Icon name="playlist_add" className="text-lg" />
+                                </button>
+                              </div>
                             </div>
-                            <p className="mt-2.5 line-clamp-1 text-sm font-semibold text-white group-hover:text-white" title={album.title}>
-                              {album.title}
-                            </p>
-                            <p className="mt-0.5 line-clamp-1 text-xs text-white/50">
-                              {album.artist}
-                              {album.year ? ` · ${album.year}` : ''}
-                            </p>
-                          </button>
+
+                            <div className="mt-2.5 flex items-start justify-between gap-1">
+                              <div className="min-w-0 flex-1">
+                                <p
+                                  onClick={() => playAlbum(album)}
+                                  className="line-clamp-1 text-sm font-semibold text-white group-hover:text-white cursor-pointer hover:underline"
+                                  title={album.title}
+                                >
+                                  {album.title}
+                                </p>
+                                <p className="mt-0.5 line-clamp-1 text-xs text-white/50">
+                                  {album.artist}
+                                  {album.year ? ` · ${album.year}` : ''}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
                         ))}
                       </div>
                     </section>
@@ -1023,6 +1140,20 @@ export default function YTMusicView({
                                 <Icon name="play_arrow" filled className="text-xl" />
                                 <span>Play Playlist</span>
                               </button>
+                              <button
+                                onClick={() => queuePlaylist(pl, true)}
+                                className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 hover:bg-white/20 px-4 py-2.5 text-sm font-semibold text-white transition active:scale-95 cursor-pointer"
+                              >
+                                <Icon name="playlist_play" className="text-xl" />
+                                <span>Play next</span>
+                              </button>
+                              <button
+                                onClick={() => queuePlaylist(pl, false)}
+                                className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 hover:bg-white/20 px-4 py-2.5 text-sm font-semibold text-white transition active:scale-95 cursor-pointer"
+                              >
+                                <Icon name="playlist_add" className="text-xl" />
+                                <span>Add to queue</span>
+                              </button>
                             </div>
                           </div>
                         </div>
@@ -1036,13 +1167,29 @@ export default function YTMusicView({
                               </p>
                               <h3 className="text-2xl font-bold text-white tracking-tight">{pl.title}</h3>
                             </div>
-                            <button
-                              onClick={() => playAnyPlaylist(pl)}
-                              className="inline-flex items-center gap-1.5 rounded-full bg-white/15 hover:bg-white/25 px-4 py-1.5 text-xs font-semibold text-white transition active:scale-95 cursor-pointer"
-                            >
-                              <Icon name="play_arrow" filled className="text-base" />
-                              <span>Play All</span>
-                            </button>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => playAnyPlaylist(pl)}
+                                className="inline-flex items-center gap-1.5 rounded-full bg-white text-black hover:bg-white/90 px-4 py-1.5 text-xs font-bold transition active:scale-95 cursor-pointer"
+                              >
+                                <Icon name="play_arrow" filled className="text-base" />
+                                <span>Play All</span>
+                              </button>
+                              <button
+                                onClick={() => queuePlaylist(pl, true)}
+                                className="inline-flex items-center gap-1.5 rounded-full bg-white/15 hover:bg-white/25 px-3 py-1.5 text-xs font-semibold text-white transition active:scale-95 cursor-pointer"
+                              >
+                                <Icon name="playlist_play" className="text-base" />
+                                <span>Play next</span>
+                              </button>
+                              <button
+                                onClick={() => queuePlaylist(pl, false)}
+                                className="inline-flex items-center gap-1.5 rounded-full bg-white/15 hover:bg-white/25 px-3 py-1.5 text-xs font-semibold text-white transition active:scale-95 cursor-pointer"
+                              >
+                                <Icon name="playlist_add" className="text-base" />
+                                <span>Queue All</span>
+                              </button>
+                            </div>
                           </div>
                           {pl.tracks && pl.tracks.length ? (
                             <div className="grid grid-cols-1 gap-x-5 lg:grid-cols-2">
