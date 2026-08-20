@@ -11,6 +11,7 @@ export interface Track {
   thumbnail?: string
   album?: string
   duration?: number
+  isPureAudio?: boolean
 }
 
 interface MiniPlayerBarProps {
