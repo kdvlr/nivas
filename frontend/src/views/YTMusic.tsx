@@ -230,9 +230,11 @@ export default function YTMusicView({
   const initialParsed = getSubViewFromHash()
   const [searchQuery, setSearchQuery] = useState(initialParsed.search)
   const [videoOnly, setVideoOnly] = useState<boolean>(initialParsed.video)
+  const [searchTopResult, setSearchTopResult] = useState<Track | null>(null)
   const [searchSongs, setSearchSongs] = useState<Track[]>([])
   const [searchAlbums, setSearchAlbums] = useState<AlbumItem[]>([])
-  const [searchCategory, setSearchCategory] = useState<'all' | 'songs' | 'albums'>('all')
+  const [searchVideos, setSearchVideos] = useState<Track[]>([])
+  const [searchCategory, setSearchCategory] = useState<'all' | 'songs' | 'albums' | 'videos'>('all')
   const [openingAlbumId, setOpeningAlbumId] = useState<string | null>(null)
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -450,8 +452,10 @@ export default function YTMusicView({
 
   useEffect(() => {
     if (!searchQuery.trim()) {
+      setSearchTopResult(null)
       setSearchSongs([])
       setSearchAlbums([])
+      setSearchVideos([])
       setLoading(false)
       return
     }
@@ -462,21 +466,32 @@ export default function YTMusicView({
         .get<any>(`/api/ytmusic/search?q=${encodeURIComponent(searchQuery)}&filter=${filterType}`)
         .then((res) => {
           if (Array.isArray(res)) {
-            setSearchSongs(res.map(toTrack).filter((t: Track | null): t is Track => Boolean(t)))
+            const tracks = res.map(toTrack).filter((t: Track | null): t is Track => Boolean(t))
+            setSearchTopResult(tracks[0] || null)
+            setSearchSongs(tracks)
             setSearchAlbums([])
+            setSearchVideos(tracks)
           } else if (res && typeof res === 'object') {
+            const top = res.topResult ? toTrack(res.topResult) : null
             const songs = (Array.isArray(res.songs) ? res.songs : []).map(toTrack).filter((t: Track | null): t is Track => Boolean(t))
             const albums: AlbumItem[] = Array.isArray(res.albums) ? res.albums : []
+            const videos = (Array.isArray(res.videos) ? res.videos : []).map(toTrack).filter((t: Track | null): t is Track => Boolean(t))
+            setSearchTopResult(top || songs[0] || videos[0] || null)
             setSearchSongs(songs)
             setSearchAlbums(albums)
+            setSearchVideos(videos)
           } else {
+            setSearchTopResult(null)
             setSearchSongs([])
             setSearchAlbums([])
+            setSearchVideos([])
           }
         })
         .catch(() => {
+          setSearchTopResult(null)
           setSearchSongs([])
           setSearchAlbums([])
+          setSearchVideos([])
         })
         .finally(() => setLoading(false))
     }, 250)
@@ -712,52 +727,53 @@ export default function YTMusicView({
                   </label>
                 </div>
 
-                {/* Category Filter Chips */}
-                {!videoOnly && !loading && (searchAlbums.length > 0 || searchSongs.length > 0) && (
+                {/* Category Filter Chips (Matching YouTube Music) */}
+                {!videoOnly && !loading && (searchTopResult || searchSongs.length > 0 || searchAlbums.length > 0 || searchVideos.length > 0) && (
                   <div className="flex items-center gap-2 pt-1 overflow-x-auto">
                     <button
                       onClick={() => setSearchCategory('all')}
-                      className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+                      className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs md:text-sm font-semibold transition ${
                         searchCategory === 'all'
                           ? 'bg-white text-black'
-                          : 'bg-white/10 text-white/70 hover:bg-white/15 hover:text-white'
+                          : 'bg-[#282828] text-white/80 hover:bg-[#383838] hover:text-white'
                       }`}
                     >
                       All
-                      <span className={`text-[11px] ${searchCategory === 'all' ? 'text-black/60' : 'text-white/40'}`}>
-                        {searchAlbums.length + searchSongs.length}
-                      </span>
                     </button>
                     {searchSongs.length > 0 && (
                       <button
                         onClick={() => setSearchCategory('songs')}
-                        className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+                        className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs md:text-sm font-semibold transition ${
                           searchCategory === 'songs'
                             ? 'bg-white text-black'
-                            : 'bg-white/10 text-white/70 hover:bg-white/15 hover:text-white'
+                            : 'bg-[#282828] text-white/80 hover:bg-[#383838] hover:text-white'
                         }`}
                       >
-                        <Icon name="music_note" className="text-sm" />
                         Songs
-                        <span className={`text-[11px] ${searchCategory === 'songs' ? 'text-black/60' : 'text-white/40'}`}>
-                          {searchSongs.length}
-                        </span>
                       </button>
                     )}
                     {searchAlbums.length > 0 && (
                       <button
                         onClick={() => setSearchCategory('albums')}
-                        className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+                        className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs md:text-sm font-semibold transition ${
                           searchCategory === 'albums'
                             ? 'bg-white text-black'
-                            : 'bg-white/10 text-white/70 hover:bg-white/15 hover:text-white'
+                            : 'bg-[#282828] text-white/80 hover:bg-[#383838] hover:text-white'
                         }`}
                       >
-                        <Icon name="album" className="text-sm" />
                         Albums
-                        <span className={`text-[11px] ${searchCategory === 'albums' ? 'text-black/60' : 'text-white/40'}`}>
-                          {searchAlbums.length}
-                        </span>
+                      </button>
+                    )}
+                    {searchVideos.length > 0 && (
+                      <button
+                        onClick={() => setSearchCategory('videos')}
+                        className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs md:text-sm font-semibold transition ${
+                          searchCategory === 'videos'
+                            ? 'bg-white text-black'
+                            : 'bg-[#282828] text-white/80 hover:bg-[#383838] hover:text-white'
+                        }`}
+                      >
+                        Videos
                       </button>
                     )}
                   </div>
@@ -766,10 +782,111 @@ export default function YTMusicView({
 
               {loading ? (
                 <div className="flex items-center justify-center gap-3 py-24 text-white/50">
-                  <Icon name="progress_activity" className="animate-spin text-2xl" /> Finding {videoOnly ? 'videos' : 'songs and albums'}…
+                  <Icon name="progress_activity" className="animate-spin text-2xl" /> Finding results for “{searchQuery}”…
                 </div>
               ) : (
-                <div className="space-y-9">
+                <div className="space-y-10">
+                  {/* Top Result Card (Replicating YouTube Music Screenshot) */}
+                  {!videoOnly && searchCategory === 'all' && searchTopResult && (
+                    <section>
+                      <div className="group relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 rounded-2xl bg-[#212121] hover:bg-[#282828] p-4 sm:p-5 border border-white/10 transition shadow-xl">
+                        <div className="flex items-center gap-4 sm:gap-5 min-w-0 flex-1">
+                          <button
+                            onClick={() => {
+                              syncUrlSubView('now-playing', '')
+                              onPlayTrack(searchTopResult)
+                            }}
+                            className="relative h-20 w-20 sm:h-24 sm:w-24 shrink-0 overflow-hidden rounded-xl bg-white/10 shadow-md group/art cursor-pointer"
+                          >
+                            {searchTopResult.thumbnail ? (
+                              <img src={searchTopResult.thumbnail} alt="" className="h-full w-full object-cover transition group-hover/art:scale-105" />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center">
+                                <Icon name="music_note" className="text-3xl text-white/40" />
+                              </div>
+                            )}
+                            <span className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover/art:opacity-100 transition">
+                              <Icon name="play_arrow" filled className="text-2xl text-white" />
+                            </span>
+                          </button>
+                          <div className="min-w-0 flex-1">
+                            <h2
+                              onClick={() => {
+                                syncUrlSubView('now-playing', '')
+                                onPlayTrack(searchTopResult)
+                              }}
+                              className="text-lg sm:text-xl md:text-2xl font-bold text-white leading-snug line-clamp-1 cursor-pointer hover:underline"
+                              title={searchTopResult.title}
+                            >
+                              {searchTopResult.title}
+                            </h2>
+                            <p className="mt-1.5 text-sm sm:text-base text-white/60 truncate flex items-center gap-1.5 flex-wrap">
+                              <span className="font-medium text-white/70">
+                                {searchTopResult.isPureAudio === false ? 'Video' : 'Song'}
+                              </span>
+                              <span>•</span>
+                              <span className="font-medium text-white/90">{searchTopResult.artist}</span>
+                              {searchTopResult.duration ? (
+                                <>
+                                  <span>•</span>
+                                  <span className="tabular-nums">{formatTime(searchTopResult.duration)}</span>
+                                </>
+                              ) : null}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Top Result Action Buttons */}
+                        <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
+                          <button
+                            onClick={() => {
+                              syncUrlSubView('now-playing', '')
+                              onPlayTrack(searchTopResult)
+                            }}
+                            className="flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black hover:bg-white/90 transition active:scale-95 shadow-md cursor-pointer"
+                          >
+                            <Icon name="play_arrow" filled className="text-xl text-black" />
+                            Play
+                          </button>
+                          <button
+                            onClick={() => onQueueTrack(searchTopResult, false)}
+                            title="Add to queue"
+                            className="flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/15 transition active:scale-95 cursor-pointer"
+                          >
+                            <Icon name="playlist_add" className="text-xl text-white" />
+                            Save
+                          </button>
+                        </div>
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Songs List */}
+                  {(searchCategory === 'all' || searchCategory === 'songs') && searchSongs.length > 0 && (
+                    <section>
+                      <div className="mb-3 flex items-center justify-between">
+                        <h2 className="flex items-center gap-2 text-lg font-bold text-white">
+                          <Icon name="music_note" className="text-xl text-emerald-400" />
+                          Songs
+                        </h2>
+                      </div>
+                      <div className="divide-y divide-white/5 rounded-2xl bg-white/[0.02] border border-white/5">
+                        {searchSongs.map((track, index) => (
+                          <SongRow
+                            key={`${track.videoId}-${index}`}
+                            track={track}
+                            index={index}
+                            onPlay={() => {
+                              syncUrlSubView('now-playing', '')
+                              onPlayTrack(track)
+                            }}
+                            onQueue={(playNext) => onQueueTrack(track, playNext)}
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
                   {/* Albums Shelf */}
                   {!videoOnly && (searchCategory === 'all' || searchCategory === 'albums') && searchAlbums.length > 0 && (
                     <section>
@@ -777,7 +894,6 @@ export default function YTMusicView({
                         <h2 className="flex items-center gap-2 text-lg font-bold text-white">
                           <Icon name="album" className="text-xl text-rose-400" />
                           Albums
-                          <span className="text-xs font-semibold text-white/40">({searchAlbums.length})</span>
                         </h2>
                       </div>
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
@@ -785,7 +901,7 @@ export default function YTMusicView({
                           <button
                             key={album.browseId}
                             onClick={() => playAlbum(album)}
-                            className="group relative flex flex-col rounded-2xl bg-white/[0.04] p-3 text-left transition hover:bg-white/[0.09] focus:outline-none border border-white/5"
+                            className="group relative flex flex-col rounded-2xl bg-white/[0.04] p-3 text-left transition hover:bg-white/[0.09] focus:outline-none border border-white/5 cursor-pointer"
                           >
                             <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-white/10">
                               {album.thumbnail ? (
@@ -822,22 +938,19 @@ export default function YTMusicView({
                     </section>
                   )}
 
-                  {/* Songs List */}
-                  {(searchCategory === 'all' || searchCategory === 'songs') && searchSongs.length > 0 && (
+                  {/* Videos List */}
+                  {(searchCategory === 'all' || searchCategory === 'videos') && searchVideos.length > 0 && (
                     <section>
-                      {!videoOnly && searchCategory === 'all' && searchAlbums.length > 0 && (
-                        <div className="mb-3 flex items-center justify-between">
-                          <h2 className="flex items-center gap-2 text-lg font-bold text-white">
-                            <Icon name="music_note" className="text-xl text-emerald-400" />
-                            Songs
-                            <span className="text-xs font-semibold text-white/40">({searchSongs.length})</span>
-                          </h2>
-                        </div>
-                      )}
+                      <div className="mb-3 flex items-center justify-between">
+                        <h2 className="flex items-center gap-2 text-lg font-bold text-white">
+                          <Icon name="smart_display" className="text-xl text-rose-400" />
+                          Videos
+                        </h2>
+                      </div>
                       <div className="divide-y divide-white/5 rounded-2xl bg-white/[0.02] border border-white/5">
-                        {searchSongs.map((track, index) => (
+                        {searchVideos.map((track, index) => (
                           <SongRow
-                            key={`${track.videoId}-${index}`}
+                            key={`${track.videoId}-video-${index}`}
                             track={track}
                             index={index}
                             onPlay={() => {
@@ -852,7 +965,7 @@ export default function YTMusicView({
                   )}
 
                   {/* Empty state */}
-                  {searchSongs.length === 0 && (videoOnly || searchAlbums.length === 0) && (
+                  {!searchTopResult && searchSongs.length === 0 && searchAlbums.length === 0 && searchVideos.length === 0 && (
                     <div className="py-24 text-center text-white/45">
                       <Icon name="search_off" className="mx-auto text-4xl text-white/25 mb-2" />
                       <p className="text-base font-medium">No results found for “{searchQuery}”</p>

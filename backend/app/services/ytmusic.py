@@ -226,7 +226,7 @@ class YTMusicService:
             return cached
 
         if not self._ytmusic:
-            return {"songs": [], "albums": []} if effective_filter == "all" else []
+            return {"topResult": None, "songs": [], "albums": [], "videos": []} if effective_filter == "all" else []
 
         try:
             if effective_filter == "songs":
@@ -249,23 +249,47 @@ class YTMusicService:
                 return normalized_albums
 
             else:
-                # "all" search: fetch both songs and albums
-                song_results = self._ytmusic.search(query, filter="songs", limit=25)
+                # "all" search: fetch raw unfiltered search (for Top Result), plus songs, albums, and videos
+                raw_all = self._ytmusic.search(query, limit=20)
+                song_results = self._ytmusic.search(query, filter="songs", limit=20)
                 album_results = self._ytmusic.search(query, filter="albums", limit=10)
+                video_results = self._ytmusic.search(query, filter="videos", limit=15)
+
+                # Extract Top Result
+                top_raw = next((r for r in raw_all if r.get("category") == "Top result"), raw_all[0] if raw_all else None)
+                top_result = None
+                if top_raw:
+                    if top_raw.get("videoId"):
+                        top_result = self.normalize_song(top_raw)
+                    elif top_raw.get("browseId") or top_raw.get("playlistId"):
+                        top_result = self.normalize_album(top_raw)
 
                 normalized_songs = [self.normalize_song(i) for i in song_results if self.normalize_song(i)]
                 normalized_songs.sort(key=lambda x: 0 if x.get("isPureAudio") else 1)
+
                 normalized_albums = [self.normalize_album(i) for i in album_results if self.normalize_album(i)]
 
+                normalized_videos = [self.normalize_song(i) for i in video_results if self.normalize_song(i)]
+
+                if not top_result:
+                    if normalized_songs:
+                        top_result = normalized_songs[0]
+                    elif normalized_videos:
+                        top_result = normalized_videos[0]
+                    elif normalized_albums:
+                        top_result = normalized_albums[0]
+
                 structured = {
+                    "topResult": top_result,
                     "songs": normalized_songs,
                     "albums": normalized_albums,
+                    "videos": normalized_videos,
                 }
                 self._set_cache(cache_key, structured, CACHE_TTL["search"])
                 return structured
         except Exception as e:
             logger.error(f"YTMusic search error for query '{query}': {e}")
-            return {"songs": [], "albums": []} if effective_filter == "all" else []
+            return {"topResult": None, "songs": [], "albums": [], "videos": []} if effective_filter == "all" else []
 
     def get_home(self, limit: int = 6) -> List[Dict[str, Any]]:
         cache_key = f"home:{limit}"
@@ -488,13 +512,25 @@ class YTMusicService:
     def _artist_text(item: Dict[str, Any]) -> str:
         artists = item.get("artists")
         if isinstance(artists, list):
-            return ", ".join(
+            names = [
                 str(value.get("name"))
                 for value in artists
                 if isinstance(value, dict) and value.get("name")
-            )
+            ]
+            if names:
+                return ", ".join(names)
         raw_artist = item.get("artist")
-        return str(raw_artist.get("name", "")) if isinstance(raw_artist, dict) else str(raw_artist or "")
+        if isinstance(raw_artist, dict) and raw_artist.get("name"):
+            return str(raw_artist.get("name"))
+        if isinstance(raw_artist, str) and raw_artist:
+            return raw_artist
+        for field in ("podcast", "author", "uploader", "channel"):
+            val = item.get(field)
+            if isinstance(val, dict) and val.get("name"):
+                return str(val.get("name"))
+            if isinstance(val, str) and val:
+                return val
+        return ""
 
     @staticmethod
     def _thumbnail_url(item: Dict[str, Any]) -> Optional[str]:
