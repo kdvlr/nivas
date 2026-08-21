@@ -34,6 +34,7 @@ const Photos = lazy(() => import('./views/Photos'))
 const YTMusic = lazy(() => import('./views/YTMusic'))
 import MiniPlayerBar, { Track } from './components/ytmusic/MiniPlayerBar'
 import Slideshow, { hasSkyOverride } from './components/Slideshow'
+import { GlobalTooltip } from './components/GlobalTooltip'
 
 const NAV = [
   { id: 'home', label: 'Home', icon: 'home', view: Home, active: 'bg-sky-200 text-sky-950 dark:bg-sky-900 dark:text-sky-100', activeText: 'text-sky-600 dark:text-sky-400' },
@@ -964,6 +965,7 @@ function isWithinQuietHours(now: Date, startStr = '22:00', endStr = '06:00'): bo
             }}
           />
         )}
+        <GlobalTooltip />
       </RewardCelebrationProvider>
     </CelebrationProvider>
   )

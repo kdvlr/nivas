@@ -203,33 +203,23 @@ export default function YTMusicView({
   onQueueTrack,
   onQueueChange,
 }: YTMusicViewProps) {
-  const getSubViewFromHash = useCallback((): { view: MusicView; search: string; video: boolean } => {
+  const getSubViewFromHash = useCallback((): { view: MusicView; search: string } => {
     const hash = window.location.hash
     const queryIndex = hash.indexOf('?')
-    const savedVideoOnly = (() => {
-      try {
-        return localStorage.getItem('ytmusic_video_only') === 'true'
-      } catch {
-        return false
-      }
-    })()
     if (queryIndex === -1) {
-      return { view: currentTrack ? 'now-playing' : 'browse', search: '', video: savedVideoOnly }
+      return { view: currentTrack ? 'now-playing' : 'browse', search: '' }
     }
     const params = new URLSearchParams(hash.slice(queryIndex))
     const viewParam = params.get('view')
     const searchParam = params.get('search') || ''
-    const videoParam = params.has('video') ? params.get('video') === '1' || params.get('video') === 'true' : savedVideoOnly
     return {
       view: (viewParam === 'now-playing' || viewParam === 'browse') ? viewParam : (currentTrack ? 'now-playing' : 'browse'),
       search: searchParam,
-      video: videoParam,
     }
   }, [currentTrack])
 
   const initialParsed = getSubViewFromHash()
   const [searchQuery, setSearchQuery] = useState(initialParsed.search)
-  const [videoOnly, setVideoOnly] = useState<boolean>(initialParsed.video)
   const [searchTopResult, setSearchTopResult] = useState<Track | null>(null)
   const [searchSongs, setSearchSongs] = useState<Track[]>([])
   const [searchAlbums, setSearchAlbums] = useState<AlbumItem[]>([])
@@ -260,12 +250,10 @@ export default function YTMusicView({
   const activePointerIdRef = useRef<number | null>(null)
   const editableQueueRef = useRef<Track[]>(queue)
 
-  const syncUrlSubView = useCallback((nextView: MusicView, nextSearch: string = '', nextVideo?: boolean, replace = false) => {
+  const syncUrlSubView = useCallback((nextView: MusicView, nextSearch: string = '', replace = false) => {
     const params = new URLSearchParams()
     if (nextView) params.set('view', nextView)
     if (nextSearch) params.set('search', nextSearch)
-    const effectiveVideo = typeof nextVideo === 'boolean' ? nextVideo : videoOnly
-    if (effectiveVideo) params.set('video', '1')
     const newHash = `#/ytmusic${params.toString() ? `?${params.toString()}` : ''}`
     if (window.location.hash !== newHash) {
       if (replace) {
@@ -276,25 +264,7 @@ export default function YTMusicView({
     }
     setActiveView(nextView)
     setSearchQuery(nextSearch)
-    if (typeof nextVideo === 'boolean') {
-      setVideoOnly(nextVideo)
-      try {
-        localStorage.setItem('ytmusic_video_only', String(nextVideo))
-      } catch {
-        // Ignore
-      }
-    }
-  }, [videoOnly])
-
-  const handleToggleVideoOnly = useCallback((enabled: boolean) => {
-    setVideoOnly(enabled)
-    try {
-      localStorage.setItem('ytmusic_video_only', String(enabled))
-    } catch {
-      // Ignore
-    }
-    syncUrlSubView(activeView, searchQuery, enabled, true)
-  }, [activeView, searchQuery, syncUrlSubView])
+  }, [])
 
   useEffect(() => {
     const handlePopState = () => {
@@ -302,7 +272,6 @@ export default function YTMusicView({
         const parsed = getSubViewFromHash()
         setActiveView(parsed.view)
         setSearchQuery(parsed.search)
-        setVideoOnly(parsed.video)
       }
     }
     window.addEventListener('popstate', handlePopState)
@@ -514,10 +483,9 @@ export default function YTMusicView({
       return
     }
     setLoading(true)
-    const filterType = videoOnly ? 'videos' : 'all'
     const handle = window.setTimeout(() => {
       api
-        .get<any>(`/api/ytmusic/search?q=${encodeURIComponent(searchQuery)}&filter=${filterType}`)
+        .get<any>(`/api/ytmusic/search?q=${encodeURIComponent(searchQuery)}&filter=all`)
         .then((res) => {
           if (Array.isArray(res)) {
             const tracks = res.map(toTrack).filter((t: Track | null): t is Track => Boolean(t))
@@ -550,7 +518,7 @@ export default function YTMusicView({
         .finally(() => setLoading(false))
     }, 250)
     return () => window.clearTimeout(handle)
-  }, [searchQuery, videoOnly])
+  }, [searchQuery])
 
   useEffect(() => {
     setLyrics('')
@@ -666,48 +634,34 @@ export default function YTMusicView({
       {/* Top Header */}
       <header className="flex shrink-0 min-h-[4rem] md:min-h-[4.5rem] items-center gap-2 md:gap-4 border-b border-white/15 bg-black/95 px-3 md:px-8 backdrop-blur-xl">
         {mobileSearchOpen ? (
-          <div className="flex md:hidden flex-1 flex-col gap-2 py-2">
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-xl text-white/55" />
-                <input
-                  autoFocus
-                  value={searchQuery}
-                  onChange={(e) => syncUrlSubView('browse', e.target.value, undefined, true)}
-                  placeholder="Search songs, albums..."
-                  className="h-10 w-full rounded-xl border border-white/20 bg-[#292929] pl-10 pr-9 text-sm text-white outline-none placeholder:text-white/50 focus:border-white/45"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => syncUrlSubView('browse', '')}
-                    className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center text-white/55 hover:text-white"
-                  >
-                    <Icon name="close" className="text-lg" />
-                  </button>
-                )}
-              </div>
-              <button
-                onClick={() => {
-                  syncUrlSubView('browse', '')
-                  setMobileSearchOpen(false)
-                }}
-                className="px-2 text-sm font-semibold text-white/70 hover:text-white shrink-0"
-              >
-                Cancel
-              </button>
+          <div className="flex md:hidden flex-1 items-center gap-2 py-2">
+            <div className="relative flex-1">
+              <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-xl text-white/55" />
+              <input
+                autoFocus
+                value={searchQuery}
+                onChange={(e) => syncUrlSubView('browse', e.target.value, true)}
+                placeholder="Search songs, albums..."
+                className="h-10 w-full rounded-xl border border-white/20 bg-[#292929] pl-10 pr-9 text-sm text-white outline-none placeholder:text-white/50 focus:border-white/45"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => syncUrlSubView('browse', '')}
+                  className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center text-white/55 hover:text-white"
+                >
+                  <Icon name="close" className="text-lg" />
+                </button>
+              )}
             </div>
-            <div className="flex items-center justify-between px-1">
-              <label className="flex items-center gap-2 text-xs font-medium text-white/80 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={videoOnly}
-                  onChange={(e) => handleToggleVideoOnly(e.target.checked)}
-                  className="h-3.5 w-3.5 rounded border-white/30 bg-black/40 text-rose-500 focus:ring-0 accent-rose-500 cursor-pointer"
-                />
-                <Icon name="smart_display" className={`text-base ${videoOnly ? 'text-rose-400' : 'text-white/60'}`} />
-                <span>Video only songs</span>
-              </label>
-            </div>
+            <button
+              onClick={() => {
+                syncUrlSubView('browse', '')
+                setMobileSearchOpen(false)
+              }}
+              className="px-2 text-sm font-semibold text-white/70 hover:text-white shrink-0"
+            >
+              Cancel
+            </button>
           </div>
         ) : (
           <>
@@ -738,8 +692,8 @@ export default function YTMusicView({
                 <Icon name="search" className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-white/55" />
                 <input
                   value={searchQuery}
-                  onChange={(e) => syncUrlSubView('browse', e.target.value, undefined, true)}
-                  placeholder="Search songs, albums..."
+                  onChange={(e) => syncUrlSubView('browse', e.target.value, true)}
+                  placeholder="Search songs, albums, videos..."
                   className="h-14 w-full rounded-xl border border-white/20 bg-[#292929] pl-14 pr-12 text-lg text-white outline-none placeholder:text-white/50 focus:border-white/45"
                 />
                 {searchQuery && (
@@ -751,19 +705,6 @@ export default function YTMusicView({
                   </button>
                 )}
               </div>
-              <label
-                title="Filter for video-only songs"
-                className="flex items-center gap-2 cursor-pointer select-none rounded-xl border border-white/15 bg-white/[0.08] hover:bg-white/[0.14] px-3.5 py-3 text-sm font-medium text-white transition shrink-0"
-              >
-                <input
-                  type="checkbox"
-                  checked={videoOnly}
-                  onChange={(e) => handleToggleVideoOnly(e.target.checked)}
-                  className="h-4 w-4 rounded border-white/30 bg-black/40 text-rose-500 focus:ring-0 accent-rose-500 cursor-pointer"
-                />
-                <Icon name="smart_display" className={`text-lg ${videoOnly ? 'text-rose-400' : 'text-white/60'}`} />
-                <span className="whitespace-nowrap">Videos only</span>
-              </label>
             </div>
 
             <div className="ml-auto flex shrink-0 items-center gap-2 md:gap-3">
@@ -786,27 +727,15 @@ export default function YTMusicView({
           {searchIsOpen ? (
             <>
               <div className="mb-6 space-y-4 border-b border-white/15 pb-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">Search results</p>
-                    <h1 className="mt-1 text-2xl font-bold">
-                      {videoOnly ? 'Videos' : 'Results'} matching “{searchQuery}”
-                    </h1>
-                  </div>
-                  <label className="flex items-center gap-2 text-sm text-white/80 cursor-pointer select-none hover:text-white transition rounded-xl bg-white/[0.08] hover:bg-white/[0.14] px-3.5 py-2 border border-white/15">
-                    <input
-                      type="checkbox"
-                      checked={videoOnly}
-                      onChange={(e) => handleToggleVideoOnly(e.target.checked)}
-                      className="h-4 w-4 rounded border-white/30 bg-black/40 text-rose-500 focus:ring-0 accent-rose-500 cursor-pointer"
-                    />
-                    <Icon name="smart_display" className={`text-base ${videoOnly ? 'text-rose-400' : 'text-white/60'}`} />
-                    <span>Video only songs</span>
-                  </label>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">Search results</p>
+                  <h1 className="mt-1 text-2xl font-bold">
+                    Results matching “{searchQuery}”
+                  </h1>
                 </div>
 
                 {/* Category Filter Chips (Matching YouTube Music) */}
-                {!videoOnly && !loading && (searchTopResult || searchSongs.length > 0 || searchAlbums.length > 0 || searchVideos.length > 0) && (
+                {!loading && (searchTopResult || searchSongs.length > 0 || searchAlbums.length > 0 || searchVideos.length > 0) && (
                   <div className="flex items-center gap-2 pt-1 overflow-x-auto">
                     <button
                       onClick={() => setSearchCategory('all')}
@@ -865,7 +794,7 @@ export default function YTMusicView({
               ) : (
                 <div className="space-y-10">
                   {/* Top Result Card (Replicating YouTube Music Screenshot) */}
-                  {!videoOnly && searchCategory === 'all' && searchTopResult && (
+                  {searchCategory === 'all' && searchTopResult && (
                     <section>
                       <div className="group relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 rounded-2xl bg-[#212121] hover:bg-[#282828] p-4 sm:p-5 border border-white/10 transition shadow-xl">
                         <div className="flex items-center gap-4 sm:gap-5 min-w-0 flex-1">
@@ -974,7 +903,7 @@ export default function YTMusicView({
                   )}
 
                   {/* Albums Shelf */}
-                  {!videoOnly && (searchCategory === 'all' || searchCategory === 'albums') && searchAlbums.length > 0 && (
+                  {(searchCategory === 'all' || searchCategory === 'albums') && searchAlbums.length > 0 && (
                     <section>
                       <div className="mb-3 flex items-center justify-between">
                         <h2 className="flex items-center gap-2 text-lg font-bold text-white">
