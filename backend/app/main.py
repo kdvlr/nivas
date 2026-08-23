@@ -14,6 +14,7 @@ from . import scheduler
 from .db import init_db
 from .routers import calendar, chores, meals, recipes, rewards, setup, shopping, tasks, weather, photos, ytmusic, kids_daily
 from .services.player_engine import player_engine
+from .services.local_music import local_music_service
 from .ws import manager
 from .config import get_settings
 
@@ -33,6 +34,7 @@ async def lifespan(app: FastAPI):
     manager.set_loop(asyncio.get_running_loop())
     scheduler.start()
     player_engine.start()
+    local_music_service.start_background_scan()
     yield
     player_engine.stop()
     scheduler.stop()

@@ -4,6 +4,7 @@ import { api } from '../lib/api'
 import { Track } from '../components/ytmusic/MiniPlayerBar'
 import AirPlaySelectorModal from '../components/ytmusic/AirPlaySelectorModal'
 import TopClockHeader from '../components/TopClockHeader'
+import MusicSourceIcon from '../components/ytmusic/MusicSourceIcon'
 
 interface YTMusicViewProps {
   now?: Date
@@ -48,6 +49,7 @@ interface AlbumItem {
   thumbnail?: string
   year?: string
   trackCount?: number
+  source?: 'local' | 'youtube' | string
 }
 
 const isSong = (item: any) => {
@@ -81,6 +83,7 @@ const toTrack = (item: any): Track | null => {
     album: item.album?.name || item.album || '',
     duration,
     isPureAudio: item.isPureAudio !== undefined ? item.isPureAudio : (item.resultType === 'video' ? false : true),
+    source: item.source || (item.videoId?.startsWith('local:') ? 'local' : 'youtube'),
   }
 }
 
@@ -148,7 +151,8 @@ function SongRow({
         </span>
       </button>
       <button onClick={onPlay} className="min-w-0 flex-1 text-left cursor-pointer">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <MusicSourceIcon source={track.source} size={13} />
           <p className="truncate text-[0.95rem] font-semibold text-ink">{track.title}</p>
           {track.isPureAudio === false && (
             <span className="inline-flex items-center gap-1 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/30">
@@ -224,10 +228,14 @@ export default function YTMusicView({
   const [searchSongs, setSearchSongs] = useState<Track[]>([])
   const [searchAlbums, setSearchAlbums] = useState<AlbumItem[]>([])
   const [searchVideos, setSearchVideos] = useState<Track[]>([])
-  const [searchCategory, setSearchCategory] = useState<'all' | 'songs' | 'albums' | 'videos'>('all')
+  const [searchCategory, setSearchCategory] = useState<'all' | 'songs' | 'albums' | 'local' | 'videos'>('all')
   const [openingAlbumId, setOpeningAlbumId] = useState<string | null>(null)
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+
+  // Local Library State (/Media/Music)
+  const [localAlbums, setLocalAlbums] = useState<AlbumItem[]>([])
+  const [localStatus, setLocalStatus] = useState<any>(null)
 
   // YouTube Music Home 10 Playlists (2 rows of 5)
   const [homePlaylists, setHomePlaylists] = useState<PlaylistItem[]>([])
@@ -488,11 +496,29 @@ export default function YTMusicView({
         .get<any>(`/api/ytmusic/search?q=${encodeURIComponent(searchQuery)}&filter=all`)
         .then((res) => {
           if (Array.isArray(res)) {
-            const tracks = res.map(toTrack).filter((t: Track | null): t is Track => Boolean(t))
+            const tracks: Track[] = []
+            const albums: AlbumItem[] = []
+            for (const item of res) {
+              if (item.browseId && (item.resultType === 'album' || item.trackCount !== undefined || item.browseId.startsWith('local:'))) {
+                albums.push({
+                  browseId: item.browseId,
+                  playlistId: item.playlistId,
+                  title: item.title || 'Unknown Album',
+                  artist: item.artist || 'Unknown Artist',
+                  thumbnail: thumbnailUrl(item),
+                  year: item.year,
+                  trackCount: item.trackCount,
+                  source: item.source || (item.browseId.startsWith('local:') ? 'local' : 'youtube'),
+                })
+              } else {
+                const trk = toTrack(item)
+                if (trk) tracks.push(trk)
+              }
+            }
             setSearchTopResult(tracks[0] || null)
             setSearchSongs(tracks)
-            setSearchAlbums([])
-            setSearchVideos(tracks)
+            setSearchAlbums(albums)
+            setSearchVideos(tracks.filter((t) => t.isPureAudio === false))
           } else if (res && typeof res === 'object') {
             const top = res.topResult ? toTrack(res.topResult) : null
             const songs = (Array.isArray(res.songs) ? res.songs : []).map(toTrack).filter((t: Track | null): t is Track => Boolean(t))
@@ -771,6 +797,19 @@ export default function YTMusicView({
                         Albums
                       </button>
                     )}
+                    {(searchSongs.some((t) => t.source === 'local') || searchAlbums.some((a) => a.source === 'local')) && (
+                      <button
+                        onClick={() => setSearchCategory('local')}
+                        className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs md:text-sm font-semibold transition cursor-pointer ${
+                          searchCategory === 'local'
+                            ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-sm'
+                            : 'bg-[var(--sc)] text-ink-soft hover:bg-[var(--sc-high)] hover:text-ink border border-[var(--outline-var)]'
+                        }`}
+                      >
+                        <MusicSourceIcon source="local" size={13} />
+                        Local
+                      </button>
+                    )}
                     {searchVideos.length > 0 && (
                       <button
                         onClick={() => setSearchCategory('videos')}
@@ -794,7 +833,7 @@ export default function YTMusicView({
               ) : (
                 <div className="space-y-10">
                   {/* Top Result Card */}
-                  {searchCategory === 'all' && searchTopResult && (
+                  {(searchCategory === 'all' || (searchCategory === 'local' && searchTopResult?.source === 'local')) && searchTopResult && (
                     <section>
                       <div className="group relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 rounded-2xl glass p-4 sm:p-5 border border-[var(--outline-var)] transition shadow-xl">
                         <div className="flex items-center gap-4 sm:gap-5 min-w-0 flex-1">
@@ -817,19 +856,22 @@ export default function YTMusicView({
                             </span>
                           </button>
                           <div className="min-w-0 flex-1">
-                            <h2
-                              onClick={() => {
-                                syncUrlSubView('now-playing', '')
-                                onPlayTrack(searchTopResult)
-                              }}
-                              className="text-lg sm:text-xl md:text-2xl font-bold text-ink leading-snug line-clamp-1 cursor-pointer hover:underline"
-                              title={searchTopResult.title}
-                            >
-                              {searchTopResult.title}
-                            </h2>
+                            <div className="flex items-center gap-2 min-w-0">
+                              <MusicSourceIcon source={searchTopResult.source} size={16} />
+                              <h2
+                                onClick={() => {
+                                  syncUrlSubView('now-playing', '')
+                                  onPlayTrack(searchTopResult)
+                                }}
+                                className="text-lg sm:text-xl md:text-2xl font-bold text-ink leading-snug line-clamp-1 cursor-pointer hover:underline"
+                                title={searchTopResult.title}
+                              >
+                                {searchTopResult.title}
+                              </h2>
+                            </div>
                             <p className="mt-1.5 text-sm sm:text-base text-ink-soft truncate flex items-center gap-1.5 flex-wrap">
                               <span className="font-medium text-ink">
-                                {searchTopResult.isPureAudio === false ? 'Video' : 'Song'}
+                                {searchTopResult.source === 'local' ? 'Local' : searchTopResult.isPureAudio === false ? 'Video' : 'Song'}
                               </span>
                               <span>•</span>
                               <span className="font-medium text-ink">{searchTopResult.artist}</span>
@@ -965,13 +1007,16 @@ export default function YTMusicView({
 
                             <div className="mt-2.5 flex items-start justify-between gap-1">
                               <div className="min-w-0 flex-1">
-                                <p
-                                  onClick={() => playAlbum(album)}
-                                  className="line-clamp-1 text-sm font-semibold text-ink cursor-pointer hover:underline"
-                                  title={album.title}
-                                >
-                                  {album.title}
-                                </p>
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <MusicSourceIcon source={album.source} size={12} />
+                                  <p
+                                    onClick={() => playAlbum(album)}
+                                    className="line-clamp-1 text-sm font-semibold text-ink cursor-pointer hover:underline"
+                                    title={album.title}
+                                  >
+                                    {album.title}
+                                  </p>
+                                </div>
                                 <p className="mt-0.5 line-clamp-1 text-xs text-ink-soft">
                                   {album.artist}
                                   {album.year ? ` · ${album.year}` : ''}
@@ -1023,6 +1068,94 @@ export default function YTMusicView({
             </>
           ) : (
             <div className="space-y-12">
+              {/* Local Library Shelf (/Media/Music) */}
+              {localAlbums.length > 0 && (
+                <section className="pt-2">
+                  <div className="mb-4 flex items-center justify-between border-b border-[var(--outline-var)]/40 pb-3">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ink-soft flex items-center gap-1.5">
+                        <MusicSourceIcon source="local" size={13} /> Local Library · /Media/Music
+                      </p>
+                      <h3 className="text-2xl font-bold text-ink tracking-tight">Your Lossless Albums</h3>
+                    </div>
+                    <span className="text-xs text-ink-soft font-medium">
+                      {localAlbums.length} albums · {localStatus?.totalTracks || ''} tracks
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                    {localAlbums.slice(0, 12).map((album) => (
+                      <div
+                        key={album.browseId}
+                        className="group relative flex flex-col rounded-2xl glass-inset p-3 text-left transition hover:bg-[var(--sc-high)] border border-[var(--outline-var)]"
+                      >
+                        <div
+                          onClick={() => playAlbum(album)}
+                          className="relative aspect-square w-full overflow-hidden rounded-xl bg-[var(--sc-high)] border border-[var(--outline-var)] cursor-pointer"
+                        >
+                          {album.thumbnail ? (
+                            <img
+                              src={album.thumbnail}
+                              alt={album.title}
+                              className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center">
+                              <Icon name="album" className="text-4xl text-ink-soft/30" />
+                            </div>
+                          )}
+
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition group-hover:opacity-100">
+                            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--on-primary)] shadow-lg transition transform group-hover:scale-105">
+                              {openingAlbumId === album.browseId || queueingAlbumId === album.browseId ? (
+                                <Icon name="progress_activity" className="animate-spin text-2xl" />
+                              ) : (
+                                <Icon name="play_arrow" filled className="text-2xl" />
+                              )}
+                            </span>
+                          </div>
+
+                          <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition z-10">
+                            <button
+                              onClick={(e) => queueAlbum(album, true, e)}
+                              title="Play album next"
+                              className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface)]/90 hover:bg-[var(--surface)] text-ink border border-[var(--outline-var)] transition shadow hover:scale-105 cursor-pointer"
+                            >
+                              <Icon name="playlist_play" className="text-xl" />
+                            </button>
+                            <button
+                              onClick={(e) => queueAlbum(album, false, e)}
+                              title="Add album to queue"
+                              className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface)]/90 hover:bg-[var(--surface)] text-ink border border-[var(--outline-var)] transition shadow hover:scale-105 cursor-pointer"
+                            >
+                              <Icon name="playlist_add" className="text-lg" />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="mt-2.5 flex items-start justify-between gap-1">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <MusicSourceIcon source="local" size={12} />
+                              <p
+                                onClick={() => playAlbum(album)}
+                                className="line-clamp-1 text-sm font-semibold text-ink cursor-pointer hover:underline"
+                                title={album.title}
+                              >
+                                {album.title}
+                              </p>
+                            </div>
+                            <p className="mt-0.5 line-clamp-1 text-xs text-ink-soft">
+                              {album.artist}
+                              {album.year ? ` · ${album.year}` : ''}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
               {discoveryLoading && (
                 <div className="flex items-center justify-center gap-3 py-16 text-ink-soft">
                   <Icon name="progress_activity" className="animate-spin text-2xl text-[var(--primary)]" /> Loading YouTube Music…

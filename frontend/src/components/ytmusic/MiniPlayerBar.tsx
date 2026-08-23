@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import Icon from '../Icon'
 import { api } from '../../lib/api'
 import AirPlaySelectorModal from './AirPlaySelectorModal'
+import MusicSourceIcon from './MusicSourceIcon'
 
 export interface Track {
   videoId: string
@@ -12,6 +13,7 @@ export interface Track {
   album?: string
   duration?: number
   isPureAudio?: boolean
+  source?: 'local' | 'youtube' | string
 }
 
 interface MiniPlayerBarProps {
@@ -127,9 +129,12 @@ export default function MiniPlayerBar({
           </div>
 
           <div className="min-w-0 flex-1">
-            <h4 className="text-sm font-semibold truncate text-ink leading-tight group-hover:text-[var(--primary)] transition">
-              {currentTrack.title}
-            </h4>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <MusicSourceIcon source={currentTrack.source} size={13} />
+              <h4 className="text-sm font-semibold truncate text-ink leading-tight group-hover:text-[var(--primary)] transition">
+                {currentTrack.title}
+              </h4>
+            </div>
             <p className="text-xs text-ink-soft truncate mt-1 leading-tight font-normal">
               {currentTrack.artist || 'Unknown Artist'}
             </p>

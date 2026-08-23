@@ -1,6 +1,7 @@
 import React from 'react'
 import Icon from '../Icon'
 import { Track } from './MiniPlayerBar'
+import MusicSourceIcon from './MusicSourceIcon'
 
 interface NowPlayingQueueProps {
   currentTrack: Track | null
@@ -50,7 +51,10 @@ export default function NowPlayingQueue({
             <span className={`h-2 w-2 rounded-full ${isPlaying ? 'animate-pulse bg-[var(--primary)]' : 'bg-[var(--outline)]'}`} />
             {isPlaying ? 'Now playing' : 'Paused'}
           </div>
-          <h2 className={`${compact ? 'text-base' : 'text-2xl'} truncate font-black text-ink`}>{currentTrack.title}</h2>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <MusicSourceIcon source={currentTrack.source} size={compact ? 13 : 16} />
+            <h2 className={`${compact ? 'text-base' : 'text-2xl'} truncate font-black text-ink`}>{currentTrack.title}</h2>
+          </div>
           <p className="truncate text-sm text-ink-soft">{currentTrack.artist}</p>
           {!compact && currentTrack.album && <p className="mt-1 truncate text-xs text-ink-faint">{currentTrack.album}</p>}
         </div>
@@ -92,9 +96,12 @@ export default function NowPlayingQueue({
             {upcoming.map((track, index) => (
               <div key={`${track.videoId}-${index}`} className="flex items-center gap-2.5 rounded-xl bg-[var(--sc)] border border-[var(--outline-var)]/30 p-2">
                 <span className="w-4 text-center font-mono text-[10px] text-ink-soft">{index + 1}</span>
-                {track.thumbnail && <img src={track.thumbnail} alt="" className="h-8 w-8 rounded-lg object-cover" />}
+                {track.thumbnail && <img src={track.thumbnail} alt="" className="h-8 w-8 rounded-lg object-cover shrink-0" />}
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-semibold text-ink">{track.title}</p>
+                  <div className="flex items-center gap-1 min-w-0">
+                    <MusicSourceIcon source={track.source} size={11} />
+                    <p className="truncate text-xs font-semibold text-ink">{track.title}</p>
+                  </div>
                   <p className="truncate text-[10px] text-ink-soft">{track.artist}</p>
                 </div>
               </div>

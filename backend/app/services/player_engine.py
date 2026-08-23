@@ -569,6 +569,24 @@ class PlayerEngine:
                 recent_1h = self.get_recently_played_ids(hours=1.0)
                 filtered_recs = [r for r in recommendations if r["videoId"] not in recent_1h] or recommendations
 
+            # Upgrade candidate recommendations to local files if matching tracks exist
+            try:
+                from .local_music import local_music_service
+                upgraded_recs = []
+                for rec in filtered_recs:
+                    local_match = local_music_service.find_matching_track(
+                        rec.get("title", ""),
+                        artist=rec.get("artist", ""),
+                        duration=rec.get("duration"),
+                    )
+                    if local_match:
+                        upgraded_recs.append(local_match)
+                    else:
+                        upgraded_recs.append(rec)
+                filtered_recs = upgraded_recs
+            except Exception as e:
+                logger.debug(f"Local track matching on recommendations error: {e}")
+
             existing_ids = {video_id, *(item["videoId"] for item in self.queue)}
             added = False
             for recommendation in filtered_recs:
@@ -724,6 +742,30 @@ class PlayerEngine:
         if os.path.exists(output_path) and os.path.getsize(output_path) > 44:
             return
         try:
+            # 0. Local filesystem audio file (e.g. local:track_id or absolute path)
+            local_file = None
+            if source.startswith("local:"):
+                try:
+                    from .local_music import local_music_service
+                    trk_id = source.split("local:", 1)[1]
+                    trk = local_music_service.get_track(trk_id)
+                    if trk and trk.get("filePath") and os.path.exists(trk["filePath"]):
+                        local_file = trk["filePath"]
+                except Exception as e:
+                    logger.debug(f"Error finding local track for source {source}: {e}")
+            elif os.path.exists(source):
+                local_file = source
+
+            if local_file:
+                cmd = [
+                    "ffmpeg", "-y", "-i", local_file,
+                    "-vn", "-ar", "44100", "-ac", "2", "-acodec", "pcm_s16le",
+                    output_path
+                ]
+                subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                logger.info(f"Transcoded local audio file {local_file} directly to {output_path}")
+                return
+
             # 1. Direct HTTP/HTTPS audio URL (non-YouTube)
             if source.startswith("http://") or (source.startswith("https://") and not ("youtube.com" in source or "youtu.be" in source)):
                 cmd = [
@@ -1002,6 +1044,19 @@ class PlayerEngine:
         if not url:
             return None
         try:
+            if url.startswith("/api/ytmusic/local/artwork/"):
+                alb_id = url.split("/api/ytmusic/local/artwork/", 1)[1]
+                try:
+                    from .local_music import local_music_service
+                    art_file = local_music_service.get_artwork_path(alb_id)
+                    if art_file and os.path.exists(art_file):
+                        with Image.open(art_file) as image:
+                            image.convert("RGB").save(output_path, format="JPEG", quality=90)
+                        return output_path
+                except Exception as e:
+                    logger.debug(f"Error extracting local artwork: {e}")
+                return None
+
             response = httpx.get(url, timeout=15, follow_redirects=True)
             response.raise_for_status()
             with Image.open(io.BytesIO(response.content)) as image:

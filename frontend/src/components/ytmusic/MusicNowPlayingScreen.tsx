@@ -1,6 +1,7 @@
 import React from 'react'
 import Icon from '../Icon'
 import { Track } from './MiniPlayerBar'
+import MusicSourceIcon from './MusicSourceIcon'
 
 interface Props {
   currentTrack: Track
@@ -30,7 +31,10 @@ export default function MusicNowPlayingScreen({ currentTrack, queue, isPlaying, 
       <aside className="flex min-h-0 flex-col border-l border-[var(--outline-var)] p-8 xl:p-12" onPointerDown={(event) => event.stopPropagation()}>
         <div className="mt-auto">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-soft">Now playing</p>
-          <h1 className="mt-3 text-4xl font-bold leading-tight text-ink">{currentTrack.title}</h1>
+          <div className="mt-3 flex items-center gap-2.5">
+            <MusicSourceIcon source={currentTrack.source} size={20} />
+            <h1 className="text-3xl xl:text-4xl font-bold leading-tight text-ink truncate">{currentTrack.title}</h1>
+          </div>
           <p className="mt-2 text-xl text-ink-soft">{currentTrack.artist}</p>
           <div className="mt-8 flex items-center justify-center gap-5">
             <button onClick={onPrevious} className="flex h-16 w-16 items-center justify-center rounded-full hover:bg-[var(--sc-high)] text-ink-soft hover:text-ink cursor-pointer"><Icon name="skip_previous" className="text-4xl" /></button>
@@ -45,7 +49,18 @@ export default function MusicNowPlayingScreen({ currentTrack, queue, isPlaying, 
         <div className="mt-10 min-h-0 flex-1 overflow-hidden border-t border-[var(--outline-var)] pt-5">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-soft">Up next</h2>
           <div className="max-h-full overflow-y-auto">
-            {queue.slice(0, 8).map((track) => <div key={track.videoId} className="flex items-center gap-3 border-b border-[var(--outline-var)]/30 py-3">{track.thumbnail && <img src={track.thumbnail} alt="" className="h-12 w-12 rounded-xl object-cover" />}<div className="min-w-0"><p className="truncate font-semibold text-ink">{track.title}</p><p className="truncate text-sm text-ink-soft">{track.artist}</p></div></div>)}
+            {queue.slice(0, 8).map((track) => (
+              <div key={track.videoId} className="flex items-center gap-3 border-b border-[var(--outline-var)]/30 py-3">
+                {track.thumbnail && <img src={track.thumbnail} alt="" className="h-12 w-12 rounded-xl object-cover shrink-0" />}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <MusicSourceIcon source={track.source} size={13} />
+                    <p className="truncate font-semibold text-ink">{track.title}</p>
+                  </div>
+                  <p className="truncate text-sm text-ink-soft">{track.artist}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </aside>

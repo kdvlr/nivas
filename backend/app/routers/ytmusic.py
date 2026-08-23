@@ -8,6 +8,7 @@ import httpx
 
 from ..services.ytmusic import ytmusic_service
 from ..services.player_engine import player_engine
+from ..services.local_music import local_music_service
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,8 @@ class PlayRequest(BaseModel):
     thumbnail: Optional[str] = None
     album: Optional[str] = None
     duration: Optional[int] = 0
+    source: Optional[str] = "youtube"
+    filePath: Optional[str] = None
     queue: Optional[List[Dict[str, Any]]] = None
 
 class QueueRequest(BaseModel):
@@ -50,6 +53,8 @@ class QueueRequest(BaseModel):
     thumbnail: Optional[str] = None
     album: Optional[str] = None
     duration: Optional[int] = 0
+    source: Optional[str] = "youtube"
+    filePath: Optional[str] = None
 
 class QueueUpdateRequest(BaseModel):
     queue: List[Dict[str, Any]]
@@ -75,7 +80,56 @@ def clear_auth():
 
 @router.get("/search")
 def search(q: str = Query(..., min_length=1), filter: Optional[str] = None):
-    return ytmusic_service.search(query=q, filter_type=filter)
+    local_tracks = []
+    local_albums = []
+    if filter in (None, "songs", "tracks"):
+        local_tracks = local_music_service.search(query=q, limit=12)
+    if filter in (None, "albums"):
+        local_albums = local_music_service.search_albums(query=q, limit=6)
+
+    ytm_results = ytmusic_service.search(query=q, filter_type=filter) or []
+    for item in ytm_results:
+        if not item.get("source"):
+            item["source"] = "youtube"
+
+    if filter == "albums":
+        return [*local_albums, *ytm_results]
+    elif filter in ("songs", "tracks"):
+        return [*local_tracks, *ytm_results]
+    else:
+        return [*local_tracks, *local_albums, *ytm_results]
+
+@router.get("/local/status")
+def get_local_status():
+    return local_music_service.get_status()
+
+@router.post("/local/scan")
+def trigger_local_scan():
+    local_music_service.start_background_scan()
+    return {"status": "scanning_started"}
+
+@router.get("/local/artists")
+def get_local_artists():
+    return local_music_service.get_artists()
+
+@router.get("/local/albums")
+def get_local_albums(artist: Optional[str] = None):
+    return local_music_service.get_albums(artist=artist)
+
+@router.get("/local/tracks")
+def get_local_tracks(album_id: str = Query(...)):
+    data = local_music_service.get_album_tracks(album_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="Album not found")
+    return data
+
+@router.get("/local/artwork/{album_id}")
+def get_local_artwork(album_id: str):
+    art_path = local_music_service.get_artwork_path(album_id)
+    if art_path and os.path.exists(art_path):
+        media_type = "image/png" if art_path.lower().endswith(".png") else "image/jpeg"
+        return FileResponse(art_path, media_type=media_type)
+    raise HTTPException(status_code=404, detail="Artwork not found")
 
 @router.get("/home")
 def get_home(limit: int = Query(6, ge=1, le=20)):
@@ -98,6 +152,13 @@ def get_artist(channel_id: str):
 
 @router.get("/album/{browse_id}")
 def get_album(browse_id: str):
+    if browse_id.startswith("local:"):
+        alb_id = browse_id.split("local:", 1)[1]
+        data = local_music_service.get_album_tracks(alb_id)
+        if not data:
+            raise HTTPException(status_code=404, detail="Local album not found")
+        return data
+
     data = ytmusic_service.get_album(browse_id)
     if not data:
         raise HTTPException(status_code=404, detail="Album not found")
@@ -105,6 +166,13 @@ def get_album(browse_id: str):
 
 @router.get("/album/{browse_id}/songs")
 def get_album_songs(browse_id: str):
+    if browse_id.startswith("local:"):
+        alb_id = browse_id.split("local:", 1)[1]
+        data = local_music_service.get_album_tracks(alb_id)
+        if not data:
+            raise HTTPException(status_code=404, detail="Local album not found")
+        return data
+
     data = ytmusic_service.get_album_songs(browse_id)
     if not data:
         raise HTTPException(status_code=404, detail="Album not found")
