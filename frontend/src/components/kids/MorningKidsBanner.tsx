@@ -120,19 +120,9 @@ export default function MorningKidsBanner({
                 <Icon name="wb_sunny" className="text-2xl" />
               </span>
               <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-none">
-                    Kid's Brain Nuggets
-                  </h2>
-                  {isForceActive && (
-                    <span className="rounded-md bg-rose-500/30 px-2.5 py-0.5 text-xs font-bold text-rose-300 border border-rose-400/40">
-                      TEST MODE
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs sm:text-sm font-medium text-amber-200/90 mt-0.5">
-                  Daily Vocabulary, Fun Fact & STEM Challenges
-                </p>
+                <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-none">
+                  Kid's Brain Nuggets
+                </h2>
               </div>
             </div>
 
@@ -228,11 +218,11 @@ export default function MorningKidsBanner({
               )}
             </div>
 
-            {/* Card 3: STEM Challenges (Purple/Indigo Theme) */}
+            {/* Card 3: Quiz (Purple/Indigo Theme) */}
             <div className="flex flex-col justify-between rounded-2xl border border-purple-500/35 bg-purple-500/10 p-3.5 sm:p-4 lg:p-5 shadow-sm backdrop-blur-md overflow-hidden min-h-0">
               <div className="flex items-center justify-between mb-1.5 shrink-0">
                 <span className="inline-flex items-center gap-1.5 rounded-lg bg-purple-400/25 px-2.5 py-0.5 text-xs font-black uppercase tracking-wider text-purple-300 border border-purple-400/40">
-                  <Icon name="psychology" className="text-sm" /> STEM Questions
+                  <Icon name="psychology" className="text-sm" /> Quiz
                 </span>
                 <span className="text-xs sm:text-sm font-bold text-purple-200">Ages 5 & 9</span>
               </div>
@@ -301,7 +291,7 @@ export default function MorningKidsBanner({
                   onClick={() => setShowAnswersModal(true)}
                   className="font-extrabold text-amber-300 hover:text-white hover:underline flex items-center gap-1 cursor-pointer"
                 >
-                  <Icon name="psychology" className="text-base" /> Answers Modal →
+                  <Icon name="psychology" className="text-base" /> Answers →
                 </button>
               </div>
             </div>
