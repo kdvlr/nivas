@@ -82,22 +82,56 @@ def clear_auth():
 def search(q: str = Query(..., min_length=1), filter: Optional[str] = None):
     local_tracks = []
     local_albums = []
-    if filter in (None, "songs", "tracks"):
+    if filter in (None, "all", "songs", "tracks"):
         local_tracks = local_music_service.search(query=q, limit=12)
-    if filter in (None, "albums"):
+    if filter in (None, "all", "albums"):
         local_albums = local_music_service.search_albums(query=q, limit=6)
 
-    ytm_results = ytmusic_service.search(query=q, filter_type=filter) or []
-    for item in ytm_results:
-        if not item.get("source"):
-            item["source"] = "youtube"
+    ytm_results = ytmusic_service.search(query=q, filter_type=filter)
 
-    if filter == "albums":
-        return [*local_albums, *ytm_results]
-    elif filter in ("songs", "tracks"):
-        return [*local_tracks, *ytm_results]
+    if isinstance(ytm_results, dict):
+        # Category dict format: {"topResult": ..., "songs": [...], "albums": [...], "videos": [...]}
+        top_res = ytm_results.get("topResult")
+        songs = ytm_results.get("songs") or []
+        albums = ytm_results.get("albums") or []
+        videos = ytm_results.get("videos") or []
+
+        for item in songs:
+            if isinstance(item, dict) and not item.get("source"):
+                item["source"] = "youtube"
+        for item in albums:
+            if isinstance(item, dict) and not item.get("source"):
+                item["source"] = "youtube"
+        for item in videos:
+            if isinstance(item, dict) and not item.get("source"):
+                item["source"] = "youtube"
+        if isinstance(top_res, dict) and not top_res.get("source"):
+            top_res["source"] = "youtube"
+
+        # Prioritize local track as top result if available
+        combined_top = local_tracks[0] if local_tracks else (top_res or (songs[0] if songs else None))
+        combined_songs = [*local_tracks, *songs]
+        combined_albums = [*local_albums, *albums]
+
+        return {
+            "topResult": combined_top,
+            "songs": combined_songs,
+            "albums": combined_albums,
+            "videos": videos,
+        }
+    elif isinstance(ytm_results, list):
+        for item in ytm_results:
+            if isinstance(item, dict) and not item.get("source"):
+                item["source"] = "youtube"
+
+        if filter == "albums":
+            return [*local_albums, *ytm_results]
+        elif filter in ("songs", "tracks"):
+            return [*local_tracks, *ytm_results]
+        else:
+            return [*local_tracks, *local_albums, *ytm_results]
     else:
-        return [*local_tracks, *local_albums, *ytm_results]
+        return [*local_tracks, *local_albums]
 
 @router.get("/local/status")
 def get_local_status():
