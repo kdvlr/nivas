@@ -376,7 +376,6 @@ class YTMusicService:
             logger.error(f"YTMusic get_album error '{browse_id}': {e}")
             return {}
 
-    def get_album_songs(self, browse_id: str) -> Dict[str, Any]:
     def resolve_pure_audio_song(
         self,
         song: Optional[Dict[str, Any]],
