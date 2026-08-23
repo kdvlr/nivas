@@ -251,9 +251,15 @@ export default function App() {
     api.post<any>('/api/ytmusic/player/prev').catch(() => {})
   }
 
+  const seekDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const handleSeek = (secs: number) => {
     setElapsedSeconds(secs)
-    api.post<any>('/api/ytmusic/player/seek', { seconds: secs }).catch(() => {})
+    if (seekDebounceRef.current) {
+      clearTimeout(seekDebounceRef.current)
+    }
+    seekDebounceRef.current = setTimeout(() => {
+      api.post<any>('/api/ytmusic/player/seek', { seconds: secs }).catch(() => {})
+    }, 120)
   }
 
   const handleStopPlayer = () => {

@@ -81,6 +81,7 @@ class PlayerEngine:
         self._event_loop: Optional[asyncio.AbstractEventLoop] = None
         self._advancing = False
         self._play_generation_id: int = 0
+        self._stream_start_offset: float = 0.0
         self._prefetching_video_ids: set[str] = set()
         self._paused_session_timeout = max(
             1,
@@ -515,6 +516,7 @@ class PlayerEngine:
 
         self._ensure_default_target()
         self._stop_current_stream()
+        self._stream_start_offset = 0.0
 
         self._play_generation_id += 1
         generation_id = self._play_generation_id
@@ -527,6 +529,7 @@ class PlayerEngine:
             "thumbnail": track.get("thumbnail"),
             "album": track.get("album"),
             "duration": parsed_duration,
+            "isPureAudio": track.get("isPureAudio", False),
         }
         self.played_history[video_id] = time.time()
         self.elapsed_seconds = 0
@@ -589,6 +592,14 @@ class PlayerEngine:
             loop = asyncio.get_running_loop()
 
             async def _prefetch_single(track_item: Dict[str, Any]):
+                if not track_item.get("isPureAudio"):
+                    resolved = await loop.run_in_executor(
+                        None,
+                        ytmusic_service.resolve_pure_audio_song,
+                        track_item,
+                    )
+                    if resolved and resolved.get("videoId"):
+                        track_item.update(resolved)
                 vid = track_item.get("videoId")
                 if not vid or vid in self._prefetching_video_ids:
                     return
@@ -624,6 +635,30 @@ class PlayerEngine:
     async def _orchestrate_playback(self, video_id: str, track_info: Dict[str, Any], generation_id: int):
         try:
             loop = asyncio.get_running_loop()
+
+            # Ensure pure audio studio release is used instead of promotional video cuts
+            if not track_info.get("isPureAudio"):
+                resolved = await loop.run_in_executor(
+                    None,
+                    ytmusic_service.resolve_pure_audio_song,
+                    track_info,
+                )
+                if resolved and resolved.get("videoId") and resolved["videoId"] != video_id:
+                    logger.info(
+                        "Resolved music video %s (%s) to pure audio release %s (%s)",
+                        track_info.get("title"),
+                        video_id,
+                        resolved.get("title"),
+                        resolved.get("videoId"),
+                    )
+                    video_id = resolved["videoId"]
+                    track_info.update(resolved)
+                    if self.current_track and generation_id == self._play_generation_id:
+                        self.current_track.update(resolved)
+                        if resolved.get("duration"):
+                            self.duration_seconds = float(resolved["duration"])
+                        self._broadcast_state()
+
             wav_path = f"/tmp/ytmusic_{video_id}.wav"
             artwork_path = f"/tmp/ytmusic_{video_id}_artwork.jpg"
 
@@ -810,10 +845,11 @@ class PlayerEngine:
                         try:
                             pos_str = line_clean.split("Position:")[1].split("s,")[0].strip()
                             pos_sec = int(float(pos_str))
+                            calculated_sec = max(0, int(self._stream_start_offset + pos_sec))
                             if self.duration_seconds > 0:
-                                self.elapsed_seconds = min(self.duration_seconds, max(0, pos_sec))
+                                self.elapsed_seconds = min(self.duration_seconds, calculated_sec)
                             else:
-                                self.elapsed_seconds = max(0, pos_sec)
+                                self.elapsed_seconds = calculated_sec
                         except Exception:
                             pass
             except Exception as e:
@@ -1008,7 +1044,47 @@ class PlayerEngine:
         return self.get_state()
 
     async def seek(self, seconds: float):
-        self.elapsed_seconds = max(0, min(self.duration_seconds, seconds))
+        if not self.current_track:
+            return self.get_state()
+
+        target_seconds = max(0.0, min(self.duration_seconds, float(seconds)))
+        self.elapsed_seconds = target_seconds
+        self._stream_start_offset = target_seconds
+
+        video_id = self.current_track.get("videoId")
+        wav_path = f"/tmp/ytmusic_{video_id}.wav"
+
+        if os.path.exists(wav_path) and os.path.getsize(wav_path) > 44:
+            was_paused = not self.is_playing
+            self._stop_current_stream()
+
+            audio_target = wav_path
+            if target_seconds > 0.5:
+                offset_wav = f"/tmp/ytmusic_{video_id}_offset.wav"
+                try:
+                    cmd = [
+                        "ffmpeg", "-y", "-ss", str(target_seconds),
+                        "-i", wav_path, "-vn", "-ar", "44100",
+                        "-ac", "2", "-acodec", "pcm_s16le", offset_wav
+                    ]
+                    subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    if os.path.exists(offset_wav) and os.path.getsize(offset_wav) > 0:
+                        audio_target = offset_wav
+                except Exception as e:
+                    logger.warning(f"Could not create seeked audio file: {e}")
+
+            artwork_path = f"/tmp/ytmusic_{video_id}_artwork.jpg"
+            artwork_arg = artwork_path if os.path.exists(artwork_path) and os.path.getsize(artwork_path) > 0 else None
+            started = self._start_airplay_streams(audio_target, self.current_track, artwork_arg)
+            if started:
+                self.elapsed_seconds = target_seconds
+                if was_paused:
+                    self._write_stream_command("pause")
+                    self._paused_at = time.monotonic()
+                else:
+                    self.is_playing = True
+                    self._paused_at = None
+
         self._broadcast_state()
         return self.get_state()
 
@@ -1108,6 +1184,7 @@ class PlayerEngine:
         if self.current_track and self.elapsed_seconds > 3.0:
             logger.info("Restarting current track from beginning (elapsed > 3s)")
             self.elapsed_seconds = 0
+            self._stream_start_offset = 0.0
             self._play_generation_id += 1
             generation_id = self._play_generation_id
             video_id = self.current_track.get("videoId")
@@ -1137,6 +1214,7 @@ class PlayerEngine:
         # 3. Fallback: restart current track from beginning if no history
         if self.current_track:
             self.elapsed_seconds = 0
+            self._stream_start_offset = 0.0
             video_id = self.current_track.get("videoId")
             wav_path = f"/tmp/ytmusic_{video_id}.wav"
             artwork_path = f"/tmp/ytmusic_{video_id}_artwork.jpg"
@@ -1177,6 +1255,7 @@ class PlayerEngine:
                     was_paused = not self.is_playing
                     current_offset = max(0.0, self.elapsed_seconds)
                     self._stop_current_stream()
+                    self._stream_start_offset = current_offset
 
                     audio_target = wav_path
                     if current_offset > 1:

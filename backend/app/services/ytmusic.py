@@ -377,6 +377,60 @@ class YTMusicService:
             return {}
 
     def get_album_songs(self, browse_id: str) -> Dict[str, Any]:
+    def resolve_pure_audio_song(
+        self,
+        song: Optional[Dict[str, Any]],
+        fallback_thumbnail: Optional[str] = None,
+        fallback_album: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """If a track is a music video / teaser, resolve it to the full official pure-audio studio release."""
+        if not song or not isinstance(song, dict) or not song.get("videoId"):
+            return song
+        if song.get("isPureAudio", False):
+            return song
+
+        title = str(song.get("title") or "").strip()
+        artist = str(song.get("artist") or "").strip()
+        if not title:
+            return song
+
+        # Clean title by removing (From "...") or official video suffixes
+        clean_title = re.sub(r"\s*\((?:From|Official|Lyrical|Video|Teaser)[^\)]*\)", "", title, flags=re.IGNORECASE).strip()
+        query = f"{clean_title} {artist}".strip()
+        try:
+            candidates = self.search(query, filter_type="songs")
+            target_dur = song.get("duration", 0)
+
+            # 1. First pass: look for a pure audio candidate matching target duration closely
+            for candidate in candidates:
+                cand_norm = self.normalize_song(candidate) if "isPureAudio" not in candidate else candidate
+                if cand_norm and cand_norm.get("isPureAudio", False):
+                    cand_dur = cand_norm.get("duration", 0)
+                    if target_dur > 0 and cand_dur > 0 and abs(cand_dur - target_dur) > 15:
+                        continue
+                    res = dict(cand_norm)
+                    if not res.get("thumbnail") and (song.get("thumbnail") or fallback_thumbnail):
+                        res["thumbnail"] = song.get("thumbnail") or fallback_thumbnail
+                    if not res.get("album") and (song.get("album") or fallback_album):
+                        res["album"] = song.get("album") or fallback_album
+                    return res
+
+            # 2. Second pass: return first pure audio candidate
+            for candidate in candidates:
+                cand_norm = self.normalize_song(candidate) if "isPureAudio" not in candidate else candidate
+                if cand_norm and cand_norm.get("isPureAudio", False):
+                    res = dict(cand_norm)
+                    if not res.get("thumbnail") and (song.get("thumbnail") or fallback_thumbnail):
+                        res["thumbnail"] = song.get("thumbnail") or fallback_thumbnail
+                    if not res.get("album") and (song.get("album") or fallback_album):
+                        res["album"] = song.get("album") or fallback_album
+                    return res
+        except Exception as e:
+            logger.debug(f"Could not resolve pure audio track for {title}: {e}")
+
+        return song
+
+    def get_album_songs(self, browse_id: str) -> Dict[str, Any]:
         """Return album metadata along with normalized playable tracks."""
         cache_key = f"album-songs:{browse_id}"
         cached = self._get_cache(cache_key)
@@ -387,23 +441,26 @@ class YTMusicService:
         if not album:
             return {}
 
+        album_thumb = self._thumbnail_url(album)
+        album_title = album.get("title") or ""
         songs: List[Dict[str, Any]] = []
         for item in album.get("tracks", []):
             song = self.normalize_song(item)
             if song:
-                if not song.get("thumbnail") and album.get("thumbnails"):
-                    song["thumbnail"] = self._thumbnail_url(album)
-                if not song.get("album"):
-                    song["album"] = album.get("title") or ""
-                songs.append(song)
+                if not song.get("thumbnail") and album_thumb:
+                    song["thumbnail"] = album_thumb
+                if not song.get("album") and album_title:
+                    song["album"] = album_title
+                resolved = self.resolve_pure_audio_song(song, fallback_thumbnail=album_thumb, fallback_album=album_title)
+                songs.append(resolved or song)
 
         result = {
             "browseId": browse_id,
             "playlistId": album.get("audioPlaylistId"),
-            "title": album.get("title") or "Album",
+            "title": album_title or "Album",
             "artist": self._artist_text(album),
             "description": album.get("description") or "",
-            "thumbnail": self._thumbnail_url(album),
+            "thumbnail": album_thumb,
             "year": str(album.get("year") or ""),
             "tracks": songs,
         }
@@ -438,26 +495,19 @@ class YTMusicService:
         if not playlist:
             return {}
 
+        playlist_thumb = self._thumbnail_url(playlist)
         songs: List[Dict[str, Any]] = []
         seen = set()
         for item in playlist.get("tracks", []):
             song = self.normalize_song(item)
             if not song:
                 continue
-            # If the track is a video/OMV, try to resolve to a pure audio song if available
-            if not song.get("isPureAudio") and item.get("videoId"):
-                artists = self._artist_text(item)
-                query = " ".join(value for value in (item.get("title"), artists) if value)
-                candidates = self.search(query, filter_type="songs")
-                for candidate in candidates:
-                    cand_norm = self.normalize_song(candidate) if "isPureAudio" not in candidate else candidate
-                    if cand_norm and cand_norm.get("isPureAudio", False):
-                        song = cand_norm
-                        break
-            if not song or song["videoId"] in seen:
+            resolved = self.resolve_pure_audio_song(song, fallback_thumbnail=playlist_thumb)
+            final_song = resolved or song
+            if not final_song or final_song["videoId"] in seen:
                 continue
-            seen.add(song["videoId"])
-            songs.append(song)
+            seen.add(final_song["videoId"])
+            songs.append(final_song)
             if len(songs) >= limit:
                 break
 
@@ -465,7 +515,7 @@ class YTMusicService:
             "id": playlist.get("id") or playlist_id,
             "title": playlist.get("title") or "Playlist",
             "description": playlist.get("description") or "",
-            "thumbnail": self._thumbnail_url(playlist),
+            "thumbnail": playlist_thumb,
             "tracks": songs,
         }
         self._set_cache(cache_key, result, CACHE_TTL["playlist"])
