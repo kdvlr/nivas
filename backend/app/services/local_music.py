@@ -123,9 +123,19 @@ class LocalMusicService:
 
         discovered_tracks = []
         album_map = {}  # album_id -> dict
+        batch_size = 100
+        uncommitted_tracks = []
 
         try:
+            # Clear old index before scan
+            with self._get_conn() as conn:
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM tracks")
+                cursor.execute("DELETE FROM albums")
+                conn.commit()
+
             for root, _, files in os.walk(self.music_dir):
+                folder_has_art = any(f.lower() in ARTWORK_NAMES for f in files)
                 for file in files:
                     ext = os.path.splitext(file)[1].lower()
                     if ext not in SUPPORTED_EXTENSIONS:
@@ -139,51 +149,45 @@ class LocalMusicService:
                     except OSError:
                         continue
 
-                    track_info = self._extract_metadata(full_path, file, root, ext, mutagen)
-                    track_info["file_size"] = file_size
-                    track_info["mtime"] = mtime
-                    discovered_tracks.append(track_info)
+                    try:
+                        track_info = self._extract_metadata(full_path, file, root, ext, mutagen, folder_has_art)
+                        track_info["file_size"] = file_size
+                        track_info["mtime"] = mtime
+                        discovered_tracks.append(track_info)
+                        uncommitted_tracks.append(track_info)
 
-                    # Group into albums
-                    alb_id = track_info["album_id"]
-                    if alb_id not in album_map:
-                        album_map[alb_id] = {
-                            "id": alb_id,
-                            "title": track_info["album"],
-                            "artist": track_info["artist"],
-                            "year": track_info["year"],
-                            "track_count": 0,
-                            "has_artwork": track_info["has_artwork"],
-                            "folder_path": root
-                        }
-                    album_map[alb_id]["track_count"] += 1
-                    if track_info["has_artwork"]:
-                        album_map[alb_id]["has_artwork"] = 1
+                        # Group into albums
+                        alb_id = track_info["album_id"]
+                        if alb_id not in album_map:
+                            album_map[alb_id] = {
+                                "id": alb_id,
+                                "title": track_info["album"],
+                                "artist": track_info["artist"],
+                                "year": track_info["year"],
+                                "track_count": 0,
+                                "has_artwork": track_info["has_artwork"],
+                                "folder_path": root
+                            }
+                        album_map[alb_id]["track_count"] += 1
+                        if track_info["has_artwork"]:
+                            album_map[alb_id]["has_artwork"] = 1
 
-            # Write to SQLite
+                        if len(uncommitted_tracks) >= batch_size:
+                            self._commit_track_batch(uncommitted_tracks)
+                            uncommitted_tracks = []
+                            self._total_tracks = len(discovered_tracks)
+                            self._total_albums = len(album_map)
+                    except Exception as e:
+                        logger.debug(f"Error parsing track {full_path}: {e}")
+
+            # Commit remaining tracks
+            if uncommitted_tracks:
+                self._commit_track_batch(uncommitted_tracks)
+                uncommitted_tracks = []
+
+            # Save all albums
             with self._get_conn() as conn:
                 cursor = conn.cursor()
-                # Clear and insert in batch
-                cursor.execute("DELETE FROM tracks")
-                cursor.execute("DELETE FROM albums")
-
-                track_rows = [
-                    (
-                        t["id"], t["file_path"], t["title"], t["artist"], t["album"],
-                        t["album_id"], t["track_number"], t["disc_number"], t["duration"],
-                        t["year"], t["genre"], t["file_format"], t["file_size"], t["mtime"],
-                        t["has_artwork"]
-                    )
-                    for t in discovered_tracks
-                ]
-                cursor.executemany("""
-                    INSERT INTO tracks (
-                        id, file_path, title, artist, album, album_id,
-                        track_number, disc_number, duration, year, genre,
-                        file_format, file_size, mtime, has_artwork
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, track_rows)
-
                 album_rows = [
                     (
                         a["id"], a["title"], a["artist"], a["year"],
@@ -192,11 +196,10 @@ class LocalMusicService:
                     for a in album_map.values()
                 ]
                 cursor.executemany("""
-                    INSERT INTO albums (
+                    INSERT OR REPLACE INTO albums (
                         id, title, artist, year, track_count, has_artwork, folder_path
                     ) VALUES (?, ?, ?, ?, ?, ?, ?)
                 """, album_rows)
-
                 conn.commit()
 
             self._last_scan_time = time.time()
@@ -215,7 +218,31 @@ class LocalMusicService:
         finally:
             self._is_scanning = False
 
-    def _extract_metadata(self, full_path: str, filename: str, folder_path: str, ext: str, mutagen_mod) -> Dict[str, Any]:
+    def _commit_track_batch(self, tracks: List[Dict[str, Any]]):
+        try:
+            with self._get_conn() as conn:
+                cursor = conn.cursor()
+                track_rows = [
+                    (
+                        t["id"], t["file_path"], t["title"], t["artist"], t["album"],
+                        t["album_id"], t["track_number"], t["disc_number"], t["duration"],
+                        t["year"], t["genre"], t["file_format"], t["file_size"], t["mtime"],
+                        t["has_artwork"]
+                    )
+                    for t in tracks
+                ]
+                cursor.executemany("""
+                    INSERT OR REPLACE INTO tracks (
+                        id, file_path, title, artist, album, album_id,
+                        track_number, disc_number, duration, year, genre,
+                        file_format, file_size, mtime, has_artwork
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, track_rows)
+                conn.commit()
+        except Exception as e:
+            logger.error(f"Failed to commit track batch: {e}")
+
+    def _extract_metadata(self, full_path: str, filename: str, folder_path: str, ext: str, mutagen_mod, folder_has_artwork: bool = False) -> Dict[str, Any]:
         """Extracts audio tags using Mutagen with safe heuristic fallbacks."""
         # Clean defaults from directory & filename structure
         base_name = os.path.splitext(filename)[0]
@@ -234,98 +261,110 @@ class LocalMusicService:
         duration = 0.0
         year = ""
         genre = ""
-        has_artwork = 0
-
-        # Check for folder artwork
-        for art_name in ARTWORK_NAMES:
-            if os.path.exists(os.path.join(folder_path, art_name)):
-                has_artwork = 1
-                break
+        has_artwork = 1 if folder_has_artwork else 0
 
         if mutagen_mod:
             try:
-                audio = mutagen_mod.File(full_path)
-                if audio is not None:
-                    if hasattr(audio, "info") and hasattr(audio.info, "length"):
+                if ext in (".m4a", ".alac"):
+                    from mutagen.mp4 import MP4
+                    audio = MP4(full_path)
+                    if audio and audio.info and hasattr(audio.info, "length"):
                         duration = float(audio.info.length)
-
-                    tags = audio.tags
+                    tags = audio.tags if audio else {}
                     if tags:
-                        # Extract tags for MP4 / ALAC (.m4a)
-                        if ext in (".m4a", ".alac") and hasattr(tags, "get"):
-                            t_title = tags.get("\xa9nam") or tags.get("title")
-                            if t_title:
-                                title = str(t_title[0]) if isinstance(t_title, (list, tuple)) else str(t_title)
-                            
-                            t_artist = tags.get("\xa9ART") or tags.get("artist") or tags.get("aART")
-                            if t_artist:
-                                artist = str(t_artist[0]) if isinstance(t_artist, (list, tuple)) else str(t_artist)
+                        if "\xa9nam" in tags:
+                            title = str(tags["\xa9nam"][0])
+                        elif "title" in tags:
+                            title = str(tags["title"][0])
 
-                            t_album = tags.get("\xa9alb") or tags.get("album")
-                            if t_album:
-                                album = str(t_album[0]) if isinstance(t_album, (list, tuple)) else str(t_album)
+                        if "\xa9ART" in tags:
+                            artist = str(tags["\xa9ART"][0])
+                        elif "aART" in tags:
+                            artist = str(tags["aART"][0])
+                        elif "artist" in tags:
+                            artist = str(tags["artist"][0])
 
-                            t_year = tags.get("\xa9day") or tags.get("date")
-                            if t_year:
-                                year = str(t_year[0])[:4] if isinstance(t_year, (list, tuple)) else str(t_year)[:4]
+                        if "\xa9alb" in tags:
+                            album = str(tags["\xa9alb"][0])
+                        elif "album" in tags:
+                            album = str(tags["album"][0])
 
-                            t_trkn = tags.get("trkn")
-                            if t_trkn and isinstance(t_trkn, (list, tuple)) and t_trkn[0]:
-                                track_number = int(t_trkn[0][0])
-                            
-                            t_disc = tags.get("disk")
-                            if t_disc and isinstance(t_disc, (list, tuple)) and t_disc[0]:
-                                disc_number = int(t_disc[0][0])
+                        if "\xa9day" in tags:
+                            year = str(tags["\xa9day"][0])[:4]
+                        elif "date" in tags:
+                            year = str(tags["date"][0])[:4]
 
-                            if tags.get("covr"):
-                                has_artwork = 1
+                        if "trkn" in tags and tags["trkn"] and isinstance(tags["trkn"], (list, tuple)):
+                            try:
+                                track_number = int(tags["trkn"][0][0])
+                            except Exception:
+                                pass
 
-                        # Extract tags for FLAC / Vorbis
-                        elif ext == ".flac":
-                            if hasattr(tags, "get"):
-                                title = str(tags.get("title", [title])[0])
-                                artist = str(tags.get("artist", [artist])[0])
-                                album = str(tags.get("album", [album])[0])
-                                date_val = tags.get("date", tags.get("year", [""]))[0]
-                                if date_val:
-                                    year = str(date_val)[:4]
-                                trk_val = tags.get("tracknumber", ["1"])[0]
+                        if "disk" in tags and tags["disk"] and isinstance(tags["disk"], (list, tuple)):
+                            try:
+                                disc_number = int(tags["disk"][0][0])
+                            except Exception:
+                                pass
+
+                        if "covr" in tags and tags["covr"]:
+                            has_artwork = 1
+                elif ext == ".flac":
+                    from mutagen.flac import FLAC
+                    audio = FLAC(full_path)
+                    if audio and audio.info and hasattr(audio.info, "length"):
+                        duration = float(audio.info.length)
+                    tags = audio.tags if audio else {}
+                    if tags:
+                        if "title" in tags:
+                            title = str(tags["title"][0])
+                        if "artist" in tags:
+                            artist = str(tags["artist"][0])
+                        if "album" in tags:
+                            album = str(tags["album"][0])
+                        if "date" in tags:
+                            year = str(tags["date"][0])[:4]
+                        elif "year" in tags:
+                            year = str(tags["year"][0])[:4]
+                        if "tracknumber" in tags:
+                            try:
+                                track_number = int(str(tags["tracknumber"][0]).split("/")[0])
+                            except Exception:
+                                pass
+                    if audio and audio.pictures:
+                        has_artwork = 1
+                else:
+                    audio = mutagen_mod.File(full_path)
+                    if audio is not None:
+                        if hasattr(audio, "info") and hasattr(audio.info, "length"):
+                            duration = float(audio.info.length)
+                        tags = audio.tags
+                        if tags and hasattr(tags, "get"):
+                            for t_k in ("TIT2", "title"):
+                                if t_k in tags:
+                                    title = str(tags[t_k])
+                                    break
+                            for a_k in ("TPE1", "TPE2", "artist"):
+                                if a_k in tags:
+                                    artist = str(tags[a_k])
+                                    break
+                            for alb_k in ("TALB", "album"):
+                                if alb_k in tags:
+                                    album = str(tags[alb_k])
+                                    break
+                            for y_k in ("TDRC", "TYER", "date", "year"):
+                                if y_k in tags:
+                                    year = str(tags[y_k])[:4]
+                                    break
+                            trk_tag = tags.get("TRCK")
+                            if trk_tag:
                                 try:
-                                    track_number = int(str(trk_val).split("/")[0])
+                                    track_number = int(str(trk_tag).split("/")[0])
                                 except ValueError:
                                     pass
-                            if hasattr(audio, "pictures") and audio.pictures:
-                                has_artwork = 1
-
-                        # Extract tags for MP3 / ID3
-                        elif ext == ".mp3":
-                            if hasattr(tags, "get"):
-                                for t_k in ("TIT2", "title"):
-                                    if t_k in tags:
-                                        title = str(tags[t_k])
-                                        break
-                                for a_k in ("TPE1", "TPE2", "artist"):
-                                    if a_k in tags:
-                                        artist = str(tags[a_k])
-                                        break
-                                for alb_k in ("TALB", "album"):
-                                    if alb_k in tags:
-                                        album = str(tags[alb_k])
-                                        break
-                                for y_k in ("TDRC", "TYER", "date", "year"):
-                                    if y_k in tags:
-                                        year = str(tags[y_k])[:4]
-                                        break
-                                trk_tag = tags.get("TRCK")
-                                if trk_tag:
-                                    try:
-                                        track_number = int(str(trk_tag).split("/")[0])
-                                    except ValueError:
-                                        pass
-                                for k in tags.keys():
-                                    if k.startswith("APIC"):
-                                        has_artwork = 1
-                                        break
+                            for k in tags.keys():
+                                if k.startswith("APIC"):
+                                    has_artwork = 1
+                                    break
             except Exception as e:
                 logger.debug(f"Error parsing mutagen tags for {full_path}: {e}")
 
