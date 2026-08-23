@@ -24,7 +24,8 @@ interface YTMusicViewProps {
 }
 
 type PlayerTab = 'queue' | 'lyrics'
-type MusicView = 'browse' | 'now-playing'
+type MusicView = 'browse' | 'local' | 'now-playing'
+type LocalTab = 'albums' | 'artists'
 
 const TARGET_PLAYLISTS = [
   { id: 'RDCLAK5uy_lBNUteBRencHzKelu5iDHwLF6mYqjL-JU', defaultTitle: 'Top Hindi Hits' },
@@ -217,7 +218,7 @@ export default function YTMusicView({
     const viewParam = params.get('view')
     const searchParam = params.get('search') || ''
     return {
-      view: (viewParam === 'now-playing' || viewParam === 'browse') ? viewParam : (currentTrack ? 'now-playing' : 'browse'),
+      view: (viewParam === 'now-playing' || viewParam === 'browse' || viewParam === 'local') ? viewParam : (currentTrack ? 'now-playing' : 'browse'),
       search: searchParam,
     }
   }, [currentTrack])
@@ -234,8 +235,12 @@ export default function YTMusicView({
   const [loading, setLoading] = useState(false)
 
   // Local Library State (/Media/Music)
+  const [localTab, setLocalTab] = useState<LocalTab>('albums')
   const [localAlbums, setLocalAlbums] = useState<AlbumItem[]>([])
+  const [localArtists, setLocalArtists] = useState<any[]>([])
+  const [selectedArtist, setSelectedArtist] = useState<string | null>(null)
   const [localStatus, setLocalStatus] = useState<any>(null)
+  const [scanningStatus, setScanningStatus] = useState<boolean>(false)
 
   // YouTube Music Home 10 Playlists (2 rows of 5)
   const [homePlaylists, setHomePlaylists] = useState<PlaylistItem[]>([])
@@ -334,6 +339,51 @@ export default function YTMusicView({
     setEditableQueue(nextQueue)
     onQueueChange(nextQueue)
   }
+
+  // Load Local Library (/Media/Music)
+  const loadLocalLibrary = useCallback(async () => {
+    try {
+      const [status, albums, artists] = await Promise.all([
+        api.get<any>('/api/ytmusic/local/status').catch(() => null),
+        api.get<any[]>('/api/ytmusic/local/albums').catch(() => []),
+        api.get<any[]>('/api/ytmusic/local/artists').catch(() => []),
+      ])
+      if (status) {
+        setLocalStatus(status)
+        setScanningStatus(status.isScanning)
+      }
+      if (Array.isArray(albums)) {
+        setLocalAlbums(albums.map((a: any) => ({
+          browseId: a.browseId || `local:${a.id}`,
+          title: a.title,
+          artist: a.artist,
+          year: a.year,
+          trackCount: a.trackCount,
+          thumbnail: a.thumbnail || `/api/ytmusic/local/artwork/${a.id}`,
+          source: 'local',
+        })))
+      }
+      if (Array.isArray(artists)) {
+        setLocalArtists(artists)
+      }
+    } catch (err) {
+      console.error('Failed to load local music library:', err)
+    }
+  }, [])
+
+  const triggerRescan = async () => {
+    setScanningStatus(true)
+    try {
+      await api.post('/api/ytmusic/local/scan', {})
+      setTimeout(loadLocalLibrary, 1500)
+    } catch (e) {
+      console.error('Failed to trigger scan:', e)
+    }
+  }
+
+  useEffect(() => {
+    loadLocalLibrary()
+  }, [loadLocalLibrary])
 
   // Load Top 10 YouTube Music Home playlists + The 4 Target Playlists
   useEffect(() => {
@@ -580,7 +630,7 @@ export default function YTMusicView({
   }, [targetPlaylists, now])
 
   const searchIsOpen = Boolean(searchQuery.trim())
-  const browseIsOpen = searchIsOpen || activeView === 'browse' || !currentTrack
+  const browseIsOpen = searchIsOpen || activeView === 'browse' || activeView === 'local' || !currentTrack
   const effectiveDuration = durationSeconds || currentTrack?.duration || 0
 
   // Render Top 10 YouTube Music Home Playlists in 2 rows of 5
@@ -698,8 +748,17 @@ export default function YTMusicView({
                   activeView === 'browse' && !searchIsOpen ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-sm' : 'text-ink-soft hover:text-ink'
                 }`}
               >
-                <Icon name="home" className="text-lg md:text-xl" />
-                Home
+                <Icon name="explore" className="text-lg md:text-xl" />
+                Browse
+              </button>
+              <button
+                onClick={() => syncUrlSubView('local', '')}
+                className={`flex h-9 md:h-11 items-center gap-1.5 md:gap-2 rounded-full px-3 md:px-4 text-xs md:text-sm font-semibold transition cursor-pointer ${
+                  activeView === 'local' && !searchIsOpen ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-sm' : 'text-ink-soft hover:text-ink'
+                }`}
+              >
+                <MusicSourceIcon source="local" size={15} />
+                <span className="whitespace-nowrap">Local Library</span>
               </button>
               <button
                 disabled={!currentTrack}
@@ -1066,6 +1125,206 @@ export default function YTMusicView({
                 </div>
               )}
             </>
+          ) : activeView === 'local' ? (
+            <div className="space-y-8">
+              {/* Local Library Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--outline-var)]/60 pb-5">
+                <div>
+                  <div className="flex items-center gap-2.5">
+                    <MusicSourceIcon source="local" size={22} />
+                    <h1 className="text-2xl sm:text-3xl font-extrabold text-ink tracking-tight">
+                      Local Music Library
+                    </h1>
+                  </div>
+                  <p className="mt-1 text-xs sm:text-sm text-ink-soft">
+                    Mounted from <span className="font-mono text-ink">/Media/Music</span> · {localStatus?.totalTracks || 0} tracks indexed · {localAlbums.length} albums
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  {/* Category Switcher: Albums / Artists */}
+                  <div className="flex rounded-xl bg-[var(--sc)] border border-[var(--outline-var)] p-1">
+                    <button
+                      onClick={() => {
+                        setSelectedArtist(null)
+                        setLocalTab('albums')
+                      }}
+                      className={`px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition cursor-pointer ${
+                        localTab === 'albums' && !selectedArtist
+                          ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-sm'
+                          : 'text-ink-soft hover:text-ink'
+                      }`}
+                    >
+                      Albums ({localAlbums.length})
+                    </button>
+                    <button
+                      onClick={() => setLocalTab('artists')}
+                      className={`px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition cursor-pointer ${
+                        localTab === 'artists'
+                          ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-sm'
+                          : 'text-ink-soft hover:text-ink'
+                      }`}
+                    >
+                      Artists ({localArtists.length})
+                    </button>
+                  </div>
+
+                  {/* Rescan Button */}
+                  <button
+                    onClick={triggerRescan}
+                    disabled={scanningStatus}
+                    title="Rescan /Media/Music directory"
+                    className="flex items-center gap-1.5 rounded-xl border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] px-3.5 py-1.5 text-xs sm:text-sm font-semibold text-ink transition active:scale-95 disabled:opacity-50 cursor-pointer"
+                  >
+                    <Icon name="sync" className={`text-base ${scanningStatus ? 'animate-spin' : ''}`} />
+                    {scanningStatus ? 'Scanning…' : 'Rescan'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Filter by artist banner */}
+              {selectedArtist && (
+                <div className="flex items-center justify-between bg-[var(--sc-high)] border border-[var(--outline-var)] rounded-2xl px-5 py-3 shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <Icon name="person" className="text-xl text-[var(--primary)]" />
+                    <span className="text-sm sm:text-base font-semibold text-ink">
+                      Showing albums by <span className="text-[var(--primary)] font-bold">{selectedArtist}</span>
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setSelectedArtist(null)}
+                    className="text-xs sm:text-sm font-semibold text-ink-soft hover:text-ink underline cursor-pointer"
+                  >
+                    Show all albums
+                  </button>
+                </div>
+              )}
+
+              {/* Albums View */}
+              {localTab === 'albums' && (
+                <div>
+                  {localAlbums.length === 0 ? (
+                    <div className="py-24 text-center text-ink-soft">
+                      <Icon name="album" className="mx-auto text-5xl text-ink-soft/30 mb-3" />
+                      <p className="text-base font-medium">No albums found in /Media/Music</p>
+                      <p className="text-xs text-ink-soft/70 mt-1">Click Rescan to index files in /Media/Music</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                      {(selectedArtist
+                        ? localAlbums.filter((a) => a.artist.toLowerCase() === selectedArtist.toLowerCase())
+                        : localAlbums
+                      ).map((album) => (
+                        <div
+                          key={album.browseId}
+                          className="group relative flex flex-col rounded-2xl glass-inset p-3 text-left transition hover:bg-[var(--sc-high)] border border-[var(--outline-var)]"
+                        >
+                          <div
+                            onClick={() => playAlbum(album)}
+                            className="relative aspect-square w-full overflow-hidden rounded-xl bg-[var(--sc-high)] border border-[var(--outline-var)] cursor-pointer"
+                          >
+                            {album.thumbnail ? (
+                              <img
+                                src={album.thumbnail}
+                                alt={album.title}
+                                className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center">
+                                <Icon name="album" className="text-4xl text-ink-soft/30" />
+                              </div>
+                            )}
+
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition group-hover:opacity-100">
+                              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--on-primary)] shadow-lg transition transform group-hover:scale-105">
+                                {openingAlbumId === album.browseId || queueingAlbumId === album.browseId ? (
+                                  <Icon name="progress_activity" className="animate-spin text-2xl" />
+                                ) : (
+                                  <Icon name="play_arrow" filled className="text-2xl" />
+                                )}
+                              </span>
+                            </div>
+
+                            <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition z-10">
+                              <button
+                                onClick={(e) => queueAlbum(album, true, e)}
+                                title="Play album next"
+                                className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface)]/90 hover:bg-[var(--surface)] text-ink border border-[var(--outline-var)] transition shadow hover:scale-105 cursor-pointer"
+                              >
+                                <Icon name="playlist_play" className="text-xl" />
+                              </button>
+                              <button
+                                onClick={(e) => queueAlbum(album, false, e)}
+                                title="Add album to queue"
+                                className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface)]/90 hover:bg-[var(--surface)] text-ink border border-[var(--outline-var)] transition shadow hover:scale-105 cursor-pointer"
+                              >
+                                <Icon name="playlist_add" className="text-lg" />
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="mt-2.5 min-w-0">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <MusicSourceIcon source="local" size={12} />
+                              <p
+                                onClick={() => playAlbum(album)}
+                                className="truncate font-bold text-ink text-sm sm:text-base leading-snug cursor-pointer hover:underline"
+                                title={album.title}
+                              >
+                                {album.title}
+                              </p>
+                            </div>
+                            <p className="mt-0.5 truncate text-xs text-ink-soft">
+                              {album.artist} {album.year ? `· ${album.year}` : ''}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Artists View */}
+              {localTab === 'artists' && (
+                <div>
+                  {localArtists.length === 0 ? (
+                    <div className="py-24 text-center text-ink-soft">
+                      <Icon name="person" className="mx-auto text-5xl text-ink-soft/30 mb-3" />
+                      <p className="text-base font-medium">No artists found in /Media/Music</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                      {localArtists.map((artistItem) => (
+                        <div
+                          key={artistItem.artist}
+                          onClick={() => {
+                            setSelectedArtist(artistItem.artist)
+                            setLocalTab('albums')
+                          }}
+                          className="flex items-center justify-between p-4 rounded-2xl glass-inset border border-[var(--outline-var)] hover:bg-[var(--sc-high)] transition cursor-pointer group"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--sc-high)] border border-[var(--outline-var)] text-ink-soft group-hover:text-ink">
+                              <Icon name="person" className="text-xl" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-semibold text-ink text-sm sm:text-base truncate group-hover:underline">
+                                {artistItem.artist}
+                              </p>
+                              <p className="text-xs text-ink-soft">
+                                {artistItem.albumCount} {artistItem.albumCount === 1 ? 'album' : 'albums'} · {artistItem.trackCount} tracks
+                              </p>
+                            </div>
+                          </div>
+                          <Icon name="chevron_right" className="text-ink-soft group-hover:text-ink text-lg shrink-0" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           ) : (
             <div className="space-y-12">
               {/* Local Library Shelf (/Media/Music) */}

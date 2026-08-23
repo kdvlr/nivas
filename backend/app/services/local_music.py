@@ -500,6 +500,27 @@ class LocalMusicService:
                     """)
                 for row in cursor.fetchall():
                     albums.append(self._format_album_dict(row))
+
+                # If albums table is empty, synthesize from tracks table
+                if not albums:
+                    if artist:
+                        cursor.execute("""
+                            SELECT album_id as id, album as title, artist, MAX(year) as year, COUNT(*) as track_count, MAX(has_artwork) as has_artwork
+                            FROM tracks
+                            WHERE artist = ? AND album IS NOT NULL AND album != ''
+                            GROUP BY album_id, album, artist
+                            ORDER BY year DESC, title COLLATE NOCASE ASC
+                        """, (artist,))
+                    else:
+                        cursor.execute("""
+                            SELECT album_id as id, album as title, artist, MAX(year) as year, COUNT(*) as track_count, MAX(has_artwork) as has_artwork
+                            FROM tracks
+                            WHERE album IS NOT NULL AND album != ''
+                            GROUP BY album_id, album, artist
+                            ORDER BY title COLLATE NOCASE ASC
+                        """)
+                    for row in cursor.fetchall():
+                        albums.append(self._format_album_dict(row))
         except Exception as e:
             logger.error(f"Error fetching local albums: {e}")
         return albums
@@ -511,17 +532,34 @@ class LocalMusicService:
                 cursor = conn.cursor()
                 cursor.execute("SELECT * FROM albums WHERE id = ?", (album_id,))
                 alb_row = cursor.fetchone()
-                if not alb_row:
-                    return {}
 
                 cursor.execute("""
                     SELECT * FROM tracks
                     WHERE album_id = ?
                     ORDER BY disc_number ASC, track_number ASC, title ASC
                 """, (album_id,))
-                tracks = [self._format_track_dict(row) for row in cursor.fetchall()]
+                track_rows = cursor.fetchall()
+                if not track_rows and not alb_row:
+                    return {}
 
-                album_dict = self._format_album_dict(alb_row)
+                tracks = [self._format_track_dict(row) for row in track_rows]
+
+                if alb_row:
+                    album_dict = self._format_album_dict(alb_row)
+                else:
+                    first_trk = tracks[0] if tracks else {}
+                    album_dict = {
+                        "browseId": f"local:{album_id}",
+                        "id": album_id,
+                        "title": first_trk.get("album", "Unknown Album"),
+                        "artist": first_trk.get("artist", "Unknown Artist"),
+                        "year": first_trk.get("year", ""),
+                        "trackCount": len(tracks),
+                        "thumbnail": first_trk.get("thumbnail", ""),
+                        "source": "local",
+                        "isPureAudio": True,
+                    }
+
                 album_dict["tracks"] = tracks
                 return album_dict
         except Exception as e:
