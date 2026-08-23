@@ -156,14 +156,14 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
               right: position.isMobile ? undefined : position.right,
               transformOrigin: position.origin,
             }}
-            className={`fixed z-[150] overflow-hidden rounded-[1.35rem] border border-white/15 bg-[#242427]/95 p-2.5 text-white shadow-[0_20px_55px_rgba(0,0,0,0.55)] backdrop-blur-2xl ${
+            className={`fixed z-[150] overflow-hidden rounded-[1.35rem] border border-[var(--outline-var)] glass p-2.5 text-ink shadow-[0_20px_55px_rgba(0,0,0,0.35)] backdrop-blur-2xl ${
               position.isMobile
                 ? 'left-3 right-3 mx-auto w-auto max-w-[23rem]'
                 : 'w-[23rem]'
             }`}
           >
             {!showHidden && (
-              <div className="mb-2 border-b border-white/10 px-1 pb-2">
+              <div className="mb-2 border-b border-[var(--outline-var)] px-1 pb-2">
                 <VolumeCapsuleScrubber
                   value={masterVolume}
                   onChange={setGroupVolume}
@@ -178,12 +178,12 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
                     type="button"
                     onClick={() => device.isHidden ? setDeviceHidden(device.id, false) : toggleDevice(device)}
                     aria-label={device.isHidden ? `Show ${device.name}` : `${device.isSelected ? 'Deselect' : 'Select'} ${device.name}`}
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition ${
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition cursor-pointer ${
                       device.isHidden
-                        ? 'border-white/30 text-white/70'
+                        ? 'border-[var(--outline)] text-ink-soft'
                         : device.isSelected
-                          ? 'border-sky-400 bg-sky-500 text-white'
-                          : 'border-white/35 text-transparent hover:border-white/65'
+                          ? 'border-[var(--primary)] bg-[var(--primary)] text-[var(--on-primary)] shadow-sm'
+                          : 'border-[var(--outline)] text-transparent hover:border-[var(--primary)]'
                     }`}
                   >
                     <Icon name={device.isHidden ? 'add' : 'check'} filled className="text-lg" />
@@ -199,11 +199,11 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
                     ) : (
                       <div
                         onClick={() => !device.isHidden && toggleDevice(device)}
-                        className={`flex h-11 min-w-0 flex-1 items-center px-3 rounded-xl border border-white/5 bg-white/[0.03] transition ${
-                          device.isHidden ? 'cursor-default opacity-60' : 'cursor-pointer hover:bg-white/[0.06]'
+                        className={`flex h-11 min-w-0 flex-1 items-center px-3 rounded-xl border border-[var(--outline-var)] bg-[var(--sc)] transition ${
+                          device.isHidden ? 'cursor-default opacity-60' : 'cursor-pointer hover:bg-[var(--sc-high)]'
                         }`}
                       >
-                        <span className="truncate text-[0.92rem] font-medium text-white/80">
+                        <span className="truncate text-[0.92rem] font-medium text-ink">
                           {device.name}
                         </span>
                       </div>
@@ -216,14 +216,14 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
                       onClick={() => setDeviceHidden(device.id, true)}
                       aria-label={`Hide ${device.name}`}
                       title="Hide speaker"
-                      className="flex h-9 w-8 shrink-0 items-center justify-center rounded-full text-white/25 transition hover:bg-white/10 hover:text-white/65"
+                      className="flex h-9 w-8 shrink-0 items-center justify-center rounded-full text-ink-soft transition hover:bg-[var(--sc-high)] hover:text-ink cursor-pointer"
                     >
                       <Icon name="visibility_off" className="text-lg" />
                     </button>
                   )}
                 </div>
               )) : (
-                <div className="flex h-24 items-center justify-center gap-2 text-sm text-white/45">
+                <div className="flex h-24 items-center justify-center gap-2 text-sm text-ink-soft">
                   {loading && <Icon name="progress_activity" className="animate-spin" />}
                   {showHidden ? 'No hidden speakers' : 'Looking for speakers…'}
                 </div>
@@ -234,7 +234,7 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
               <button
                 type="button"
                 onClick={() => setShowHidden((value) => !value)}
-                className="mt-1 flex h-10 w-full items-center justify-center gap-2 border-t border-white/10 text-xs font-medium text-white/45 transition hover:text-white/75"
+                className="mt-1 flex h-10 w-full items-center justify-center gap-2 border-t border-[var(--outline-var)] text-xs font-medium text-ink-soft transition hover:text-ink cursor-pointer"
               >
                 <Icon name={showHidden ? 'arrow_back' : 'visibility'} className="text-base" />
                 {showHidden ? 'Speakers' : `${hiddenDevices.length} hidden`}
