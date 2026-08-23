@@ -31,10 +31,16 @@ export const getStyle = (): ThemeStyle => {
   return s === 'glass' || s === 'woodland' ? s : 'material'
 }
 
+/** Returns true between 6:00 AM (06:00) and 7:00 PM (19:00) */
+export const isDaytime = (date: Date = new Date()): boolean => {
+  const hour = date.getHours()
+  return hour >= 6 && hour < 19
+}
+
 export function applyTheme(appearance: Appearance = getAppearance(), style: ThemeStyle = getStyle()) {
   const dark =
     appearance === 'dark' ||
-    (appearance === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches)
+    (appearance === 'auto' && !isDaytime())
   document.documentElement.classList.toggle('dark', dark)
   document.documentElement.dataset.theme = style
   document.documentElement.dataset.font = getFont()
@@ -67,12 +73,24 @@ export function setAccentColor(color: string | null) {
   applyTheme(getAppearance(), getStyle())
 }
 
-/** Re-apply when the OS switches light/dark while in auto mode. Returns unsubscribe. */
+/** Re-apply when the time crosses daytime/nighttime boundaries (6 AM / 7 PM) or OS switches while in auto mode. Returns unsubscribe. */
 export function watchSystemTheme(): () => void {
   const mq = matchMedia('(prefers-color-scheme: dark)')
-  const fn = () => {
+  const check = () => {
     if (getAppearance() === 'auto') applyTheme()
   }
-  mq.addEventListener('change', fn)
-  return () => mq.removeEventListener('change', fn)
+  mq.addEventListener('change', check)
+  const timer = setInterval(check, 30000)
+  const onVis = () => {
+    if (document.visibilityState === 'visible' && getAppearance() === 'auto') {
+      applyTheme()
+    }
+  }
+  document.addEventListener('visibilitychange', onVis)
+
+  return () => {
+    mq.removeEventListener('change', check)
+    clearInterval(timer)
+    document.removeEventListener('visibilitychange', onVis)
+  }
 }

@@ -30,7 +30,9 @@
     <script>
       // apply theme before first paint to avoid a flash
       const a = localStorage.getItem('appearance') || localStorage.getItem('theme') || 'auto'
-      const dark = a === 'dark' || (a !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)
+      const h = new Date().getHours()
+      const isDay = h >= 6 && h < 19
+      const dark = a === 'dark' || (a === 'auto' && !isDay)
       if (dark) document.documentElement.classList.add('dark')
       const style = localStorage.getItem('themeStyle')
       document.documentElement.dataset.theme =

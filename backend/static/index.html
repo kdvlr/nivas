@@ -30,7 +30,9 @@
     <script>
       // apply theme before first paint to avoid a flash
       const a = localStorage.getItem('appearance') || localStorage.getItem('theme') || 'auto'
-      const dark = a === 'dark' || (a !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)
+      const h = new Date().getHours()
+      const isDay = h >= 6 && h < 19
+      const dark = a === 'dark' || (a === 'auto' && !isDay)
       if (dark) document.documentElement.classList.add('dark')
       const style = localStorage.getItem('themeStyle')
       document.documentElement.dataset.theme =
@@ -38,7 +40,7 @@
       const f = localStorage.getItem('fontFamily')
       document.documentElement.dataset.font = !f || f === 'google-sans' ? 'outfit' : f
     </script>
-    <script type="module" crossorigin src="/assets/index-BSc-84o1.js"></script>
+    <script type="module" crossorigin src="/assets/index-deovnJs1.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/vendor_motion-C1zUxZoQ.js">
     <link rel="modulepreload" crossorigin href="/assets/vendor_fullcalendar-DNKbLTrF.js">
     <link rel="stylesheet" crossorigin href="/assets/index-C4tFjhjw.css">

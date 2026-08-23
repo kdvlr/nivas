@@ -1175,13 +1175,13 @@ function AppearanceCard() {
         <div>
           <div className="flex items-center justify-between mb-2">
             <p className="text-base font-medium text-ink-soft">
-              Mode — Auto follows the device's light/dark setting
+              Mode — Auto switches to Light mode (6 AM – 7 PM) and Dark mode (7 PM – 6 AM)
             </p>
             <motion.button
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => pickAppearance(appearance, true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-[var(--primary)]/15 text-[var(--primary)] hover:bg-[var(--primary)]/25 transition-all border border-[var(--primary)]/20"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-[var(--primary)]/15 text-[var(--primary)] hover:bg-[var(--primary)]/25 transition-all border border-[var(--primary)]/20 cursor-pointer"
             >
               <Icon name={syncing ? 'sync' : 'devices'} className={syncing ? 'animate-spin text-sm' : 'text-sm'} />
               <span>{syncing ? 'Broadcasting...' : 'Sync Theme to All Displays'}</span>
