@@ -22,8 +22,6 @@ export default function MorningKidsBanner({
   const [manuallyDismissed, setManuallyDismissed] = useState(false)
   const [showHint5, setShowHint5] = useState(false)
   const [showHint9, setShowHint9] = useState(false)
-  const [showAnswer5, setShowAnswer5] = useState(false)
-  const [showAnswer9, setShowAnswer9] = useState(false)
   const [showAnswersModal, setShowAnswersModal] = useState(false)
 
   // Fetch daily bundle
@@ -106,232 +104,204 @@ export default function MorningKidsBanner({
   return (
     <AnimatePresence>
       {shouldDisplay && data && (
-        /* Floating Window spanning full width & expanded height of Dashboard */
+        /* Zero-Scroll 7ft Kiosk Card: Viewport-fitted, high contrast, auto-stretching */
         <motion.div
           key="morning-kids-banner"
           initial={{ opacity: 0, y: -20, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -20, scale: 0.98 }}
           transition={{ type: 'spring', stiffness: 350, damping: 28 }}
-          className={`fixed top-8 sm:top-10 lg:top-12 z-40 w-[96vw] sm:w-[94vw] lg:w-[calc(100vw-3.5rem)] max-w-6xl xl:max-w-7xl 2xl:max-w-[92rem] lg:left-[calc(4.5rem+(100vw-4.5rem)/2)] lg:-translate-x-1/2 left-1/2 -translate-x-1/2 h-auto max-h-[calc(100vh-3rem)] rounded-3xl border border-white/20 bg-slate-950/95 p-5 sm:p-6 lg:p-7 text-white shadow-2xl backdrop-blur-2xl dark:border-white/15 dark:bg-black/95 flex flex-col justify-between overflow-y-auto ${className}`}
+          className={`fixed inset-x-2 sm:inset-x-4 lg:inset-x-6 top-2 sm:top-3 lg:top-4 bottom-2 sm:bottom-3 lg:bottom-4 z-40 max-w-[1820px] mx-auto rounded-3xl border border-white/20 bg-slate-950/95 p-3.5 sm:p-4 lg:p-5 text-white shadow-2xl backdrop-blur-2xl dark:border-white/15 dark:bg-black/95 flex flex-col justify-between overflow-hidden ${className}`}
         >
           {/* Header Ribbon */}
-          <div className="mb-4 flex items-center justify-between gap-4 border-b border-white/15 pb-3.5 shrink-0">
-            <div className="flex items-center gap-3.5">
+          <div className="flex items-center justify-between gap-4 border-b border-white/15 pb-2.5 shrink-0">
+            <div className="flex items-center gap-3">
               <span className="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-500/25 text-amber-400 shadow-inner">
                 <Icon name="wb_sunny" className="text-2xl" />
               </span>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-white leading-tight">
+                  <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-none">
                     Kid's Brain Nuggets
                   </h2>
                   {isForceActive && (
                     <span className="rounded-md bg-rose-500/30 px-2.5 py-0.5 text-xs font-bold text-rose-300 border border-rose-400/40">
-                      TEST MODE ACTIVE
+                      TEST MODE
                     </span>
                   )}
                 </div>
-                <p className="text-sm sm:text-base text-white/75 mt-0.5">
-                  Daily morning vocabulary, fascinating fact, and STEM challenges
+                <p className="text-xs sm:text-sm font-medium text-amber-200/90 mt-0.5">
+                  Daily Vocabulary, Fun Fact & STEM Challenges
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-2.5 shrink-0">
               <button
                 onClick={() => setShowAnswersModal(true)}
                 title="View answers & explanations"
-                className="inline-flex items-center gap-2 rounded-2xl bg-amber-400 text-black hover:bg-amber-300 px-4 py-2.5 text-sm sm:text-base font-bold transition active:scale-95 shadow-md cursor-pointer"
+                className="inline-flex items-center gap-2 rounded-2xl bg-amber-400 text-black hover:bg-amber-300 px-4 sm:px-5 py-2 text-sm sm:text-base font-extrabold transition active:scale-95 shadow-md cursor-pointer"
               >
-                <Icon name="psychology" className="text-xl text-black" />
+                <Icon name="psychology" className="text-xl sm:text-2xl text-black" />
                 <span>Answers</span>
               </button>
               <button
                 onClick={handleDismiss}
                 title="Dismiss for today"
                 aria-label="Dismiss for today"
-                className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-2xl bg-white/10 text-white/80 hover:bg-rose-500/30 hover:text-white hover:border-rose-400/40 border border-white/15 transition active:scale-90 cursor-pointer"
+                className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-2xl bg-white/10 text-white/80 hover:bg-rose-500/30 hover:text-white hover:border-rose-400/40 border border-white/15 transition active:scale-90 cursor-pointer"
               >
-                <Icon name="close" className="text-2xl" />
+                <Icon name="close" className="text-xl sm:text-2xl" />
               </button>
             </div>
           </div>
 
-          {/* 3-Column Simultaneous Layout */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 lg:gap-6 items-stretch flex-1 min-h-0">
-            {/* Card 1: Word of the Day */}
-            <div className="flex flex-col justify-between rounded-3xl border border-amber-500/35 bg-amber-500/10 p-5 sm:p-6 shadow-sm backdrop-blur-md">
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-amber-400/25 px-3 py-1 text-xs sm:text-sm font-bold uppercase tracking-wider text-amber-300 border border-amber-400/40">
-                    <Icon name="menu_book" className="text-sm sm:text-base" /> Word of the Day
+          {/* 3-Column Simultaneous Full-Height Grid (Zero Scroll on 1080p) */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-5 flex-1 min-h-0 items-stretch mt-3">
+            {/* Card 1: Word of the Day (Amber Theme) */}
+            <div className="flex flex-col justify-between rounded-2xl border border-amber-500/35 bg-amber-500/10 p-3.5 sm:p-4 lg:p-5 shadow-sm backdrop-blur-md overflow-hidden min-h-0">
+              <div className="flex-1 min-h-0 flex flex-col justify-start">
+                <div className="flex items-center justify-between mb-2 shrink-0">
+                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-amber-400/25 px-2.5 py-0.5 text-xs font-black uppercase tracking-wider text-amber-300 border border-amber-400/40">
+                    <Icon name="menu_book" className="text-sm" /> Word of the Day
                   </span>
                   {data.word_of_the_day.part_of_speech && (
-                    <span className="text-sm italic text-white/75 font-medium">
+                    <span className="text-xs sm:text-sm italic text-white/80 font-semibold">
                       {data.word_of_the_day.part_of_speech}
                     </span>
                   )}
                 </div>
 
-                <div className="mt-2.5">
+                <div className="mt-1 shrink-0">
                   <h3
                     style={{ fontFamily: 'var(--font-body)' }}
-                    className="text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-normal text-white drop-shadow-sm leading-tight"
+                    className="text-3xl sm:text-4xl xl:text-5xl font-black tracking-normal text-white drop-shadow leading-tight"
                   >
                     {data.word_of_the_day.word}
                   </h3>
-                  <p className="text-sm sm:text-base font-semibold text-amber-400 font-mono mt-1">
+                  <p className="text-sm sm:text-base font-bold text-amber-300 font-mono mt-0.5">
                     [{data.word_of_the_day.pronunciation}]
                   </p>
                 </div>
 
-                <p className="mt-3.5 text-base sm:text-lg lg:text-xl text-white font-medium leading-relaxed">
-                  {data.word_of_the_day.definition}
-                </p>
+                <div className="mt-2.5 flex-1 min-h-0 overflow-hidden">
+                  <p className="text-base sm:text-lg xl:text-xl font-medium text-white/95 leading-snug line-clamp-4">
+                    {data.word_of_the_day.definition}
+                  </p>
+                </div>
               </div>
 
-              <div className="mt-4 rounded-2xl bg-amber-400/20 p-3.5 sm:p-4 text-sm sm:text-base lg:text-lg text-white/95 italic border border-amber-400/30 leading-relaxed">
+              <div className="mt-2.5 rounded-xl bg-amber-400/20 p-2.5 sm:p-3 text-sm sm:text-base xl:text-lg text-amber-100 italic border border-amber-400/30 leading-snug shrink-0">
                 “{data.word_of_the_day.example}”
               </div>
             </div>
 
-            {/* Card 2: Fun Fact of the Day */}
-            <div className="flex flex-col justify-between rounded-3xl border border-emerald-500/35 bg-emerald-500/10 p-5 sm:p-6 shadow-sm backdrop-blur-md">
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-400/25 px-3 py-1 text-xs sm:text-sm font-bold uppercase tracking-wider text-emerald-300 border border-emerald-400/40">
-                    <Icon name="lightbulb" className="text-sm sm:text-base" /> Fun Fact
+            {/* Card 2: Fun Fact of the Day (Emerald Theme) */}
+            <div className="flex flex-col justify-between rounded-2xl border border-emerald-500/35 bg-emerald-500/10 p-3.5 sm:p-4 lg:p-5 shadow-sm backdrop-blur-md overflow-hidden min-h-0">
+              <div className="flex-1 min-h-0 flex flex-col justify-start">
+                <div className="flex items-center justify-between mb-2 shrink-0">
+                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-400/25 px-2.5 py-0.5 text-xs font-black uppercase tracking-wider text-emerald-300 border border-emerald-400/40">
+                    <Icon name="lightbulb" className="text-sm" /> Fun Fact
                   </span>
                   {data.fun_fact.category && (
-                    <span className="text-sm font-semibold text-white/75">
+                    <span className="text-xs sm:text-sm font-bold text-emerald-200 bg-emerald-400/20 px-2 py-0.5 rounded-md">
                       {data.fun_fact.category}
                     </span>
                   )}
                 </div>
 
-                <div className="flex items-start gap-3.5 mt-3.5">
-                  <span className="text-3xl sm:text-4xl shrink-0 select-none drop-shadow-md">
+                <div className="flex items-start gap-3 mt-1.5 flex-1 min-h-0 overflow-hidden">
+                  <span className="text-3xl sm:text-4xl xl:text-5xl shrink-0 select-none drop-shadow-md">
                     {data.fun_fact.emoji || '💡'}
                   </span>
-                  <p className="text-lg sm:text-xl lg:text-2xl font-normal text-white leading-snug">
+                  <p className="text-lg sm:text-xl xl:text-2xl font-semibold text-white leading-snug drop-shadow line-clamp-5">
                     {data.fun_fact.fact}
                   </p>
                 </div>
               </div>
 
               {data.fun_fact.did_you_know && (
-                <div className="mt-4 rounded-2xl bg-emerald-400/20 p-3.5 sm:p-4 text-sm sm:text-base lg:text-lg text-white/95 border border-emerald-400/30 leading-relaxed">
-                  <strong className="font-bold text-emerald-300">Did you know? </strong>
+                <div className="mt-2.5 rounded-xl bg-emerald-400/20 p-2.5 sm:p-3 text-sm sm:text-base xl:text-lg text-emerald-50 border border-emerald-400/30 leading-snug shrink-0">
+                  <strong className="font-black text-emerald-300">Did you know? </strong>
                   {data.fun_fact.did_you_know}
                 </div>
               )}
             </div>
 
-            {/* Card 3: STEM Challenges (5yo & 9yo) */}
-            <div className="flex flex-col justify-between rounded-3xl border border-purple-500/35 bg-purple-500/10 p-5 sm:p-6 shadow-sm backdrop-blur-md">
-              <div className="flex flex-col gap-3.5">
-                <div className="flex items-center justify-between">
-                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-purple-400/25 px-3 py-1 text-xs sm:text-sm font-bold uppercase tracking-wider text-purple-300 border border-purple-400/40">
-                    <Icon name="psychology" className="text-sm sm:text-base" /> STEM Questions
-                  </span>
-                  <span className="text-sm font-semibold text-white/75">Ages 5 & 9</span>
-                </div>
+            {/* Card 3: STEM Challenges (Purple/Indigo Theme) */}
+            <div className="flex flex-col justify-between rounded-2xl border border-purple-500/35 bg-purple-500/10 p-3.5 sm:p-4 lg:p-5 shadow-sm backdrop-blur-md overflow-hidden min-h-0">
+              <div className="flex items-center justify-between mb-1.5 shrink-0">
+                <span className="inline-flex items-center gap-1.5 rounded-lg bg-purple-400/25 px-2.5 py-0.5 text-xs font-black uppercase tracking-wider text-purple-300 border border-purple-400/40">
+                  <Icon name="psychology" className="text-sm" /> STEM Questions
+                </span>
+                <span className="text-xs sm:text-sm font-bold text-purple-200">Ages 5 & 9</span>
+              </div>
 
-                {/* 5-Year Old Question */}
-                <div className="rounded-2xl bg-purple-400/20 p-4 border border-purple-400/30 space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-base sm:text-lg font-bold text-purple-300 flex items-center gap-1.5">
-                      <span>🎈 Age 5</span>
-                    </span>
-                    <div className="flex items-center gap-2">
+              <div className="flex-1 min-h-0 flex flex-col justify-between gap-2">
+                {/* 5-Year Old Question Tile */}
+                <div className="rounded-xl bg-purple-400/20 p-2.5 sm:p-3 border border-purple-400/30 flex-1 min-h-0 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between gap-1 mb-1">
+                      <span className="text-sm sm:text-base font-extrabold text-purple-200 flex items-center gap-1.5">
+                        <span>🎈 Age 5</span>
+                        <span className="text-[11px] font-bold text-purple-300/80">• {data.stem_5yo.topic}</span>
+                      </span>
                       {data.stem_5yo.hint && (
                         <button
                           onClick={() => setShowHint5(!showHint5)}
-                          className="text-xs sm:text-sm font-bold text-purple-300 hover:text-white underline cursor-pointer"
+                          className="text-xs font-bold text-purple-300 hover:text-white underline cursor-pointer"
                         >
                           {showHint5 ? 'Hide Hint' : '💡 Hint'}
                         </button>
                       )}
-                      {data.stem_5yo.answer && (
-                        <button
-                          onClick={() => setShowAnswer5(!showAnswer5)}
-                          className="text-xs sm:text-sm font-bold text-amber-300 hover:text-white underline cursor-pointer"
-                        >
-                          {showAnswer5 ? 'Hide Answer' : '🔑 Answer'}
-                        </button>
-                      )}
                     </div>
+                    <p className="text-sm sm:text-base xl:text-lg font-medium text-white leading-snug line-clamp-3">
+                      {data.stem_5yo.question}
+                    </p>
                   </div>
-                  <p className="text-base sm:text-lg font-normal text-white leading-snug">
-                    {data.stem_5yo.question}
-                  </p>
                   {showHint5 && data.stem_5yo.hint && (
-                    <p className="text-sm sm:text-base text-purple-100 italic bg-black/50 p-3 rounded-xl border border-purple-400/40 leading-snug">
+                    <p className="mt-1 text-xs sm:text-sm text-purple-100 italic bg-black/60 p-2 rounded-lg border border-purple-400/40 leading-snug">
                       Hint: {data.stem_5yo.hint}
                     </p>
                   )}
-                  {showAnswer5 && data.stem_5yo.answer && (
-                    <div className="text-sm sm:text-base text-emerald-200 bg-emerald-950/70 p-3 rounded-xl border border-emerald-400/40 leading-snug space-y-1">
-                      <p className="font-bold text-emerald-300">Answer: {data.stem_5yo.answer}</p>
-                      {data.stem_5yo.parent_explanation && (
-                        <p className="text-xs sm:text-sm text-emerald-100/90 italic">{data.stem_5yo.parent_explanation}</p>
-                      )}
-                    </div>
-                  )}
                 </div>
 
-                {/* 9-Year Old Question */}
-                <div className="rounded-2xl bg-indigo-400/20 p-4 border border-indigo-400/30 space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-base sm:text-lg font-bold text-indigo-300 flex items-center gap-1.5">
-                      <span>🚀 Age 9</span>
-                    </span>
-                    <div className="flex items-center gap-2">
+                {/* 9-Year Old Question Tile */}
+                <div className="rounded-xl bg-indigo-400/20 p-2.5 sm:p-3 border border-indigo-400/30 flex-1 min-h-0 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between gap-1 mb-1">
+                      <span className="text-sm sm:text-base font-extrabold text-indigo-200 flex items-center gap-1.5">
+                        <span>🚀 Age 9</span>
+                        <span className="text-[11px] font-bold text-indigo-300/80">• {data.stem_9yo.topic}</span>
+                      </span>
                       {data.stem_9yo.hint && (
                         <button
                           onClick={() => setShowHint9(!showHint9)}
-                          className="text-xs sm:text-sm font-bold text-indigo-300 hover:text-white underline cursor-pointer"
+                          className="text-xs font-bold text-indigo-300 hover:text-white underline cursor-pointer"
                         >
                           {showHint9 ? 'Hide Hint' : '💡 Hint'}
                         </button>
                       )}
-                      {data.stem_9yo.answer && (
-                        <button
-                          onClick={() => setShowAnswer9(!showAnswer9)}
-                          className="text-xs sm:text-sm font-bold text-amber-300 hover:text-white underline cursor-pointer"
-                        >
-                          {showAnswer9 ? 'Hide Answer' : '🔑 Answer'}
-                        </button>
-                      )}
                     </div>
+                    <p className="text-sm sm:text-base xl:text-lg font-medium text-white leading-snug line-clamp-3">
+                      {data.stem_9yo.question}
+                    </p>
                   </div>
-                  <p className="text-base sm:text-lg font-normal text-white leading-snug">
-                    {data.stem_9yo.question}
-                  </p>
                   {showHint9 && data.stem_9yo.hint && (
-                    <p className="text-sm sm:text-base text-indigo-100 italic bg-black/50 p-3 rounded-xl border border-indigo-400/30 leading-snug">
+                    <p className="mt-1 text-xs sm:text-sm text-indigo-100 italic bg-black/60 p-2 rounded-lg border border-indigo-400/30 leading-snug">
                       Hint: {data.stem_9yo.hint}
                     </p>
-                  )}
-                  {showAnswer9 && data.stem_9yo.answer && (
-                    <div className="text-sm sm:text-base text-emerald-200 bg-emerald-950/70 p-3 rounded-xl border border-emerald-400/40 leading-snug space-y-1">
-                      <p className="font-bold text-emerald-300">Answer: {data.stem_9yo.answer}</p>
-                      {data.stem_9yo.parent_explanation && (
-                        <p className="text-xs sm:text-sm text-emerald-100/90 italic">{data.stem_9yo.parent_explanation}</p>
-                      )}
-                    </div>
                   )}
                 </div>
               </div>
 
-              <div className="mt-4 flex items-center justify-between text-sm sm:text-base text-white/80 pt-2.5 border-t border-purple-400/20">
-                <span>Discuss at breakfast!</span>
+              <div className="mt-2 flex items-center justify-between text-xs sm:text-sm text-white/80 pt-1.5 border-t border-purple-400/20 shrink-0">
+                <span className="font-semibold text-purple-200">Discuss at breakfast!</span>
                 <button
                   onClick={() => setShowAnswersModal(true)}
-                  className="font-bold text-amber-400 hover:text-white hover:underline flex items-center gap-1.5 cursor-pointer"
+                  className="font-extrabold text-amber-300 hover:text-white hover:underline flex items-center gap-1 cursor-pointer"
                 >
-                  <Icon name="psychology" className="text-base" /> View All Answers →
+                  <Icon name="psychology" className="text-base" /> Answers Modal →
                 </button>
               </div>
             </div>
@@ -353,52 +323,52 @@ export default function MorningKidsBanner({
                   exit={{ scale: 0.95, opacity: 0, y: 15 }}
                   transition={{ type: 'spring', stiffness: 350, damping: 28 }}
                   onClick={(e) => e.stopPropagation()}
-                  className="w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-3xl border border-white/20 bg-[#161618] p-6 sm:p-7 text-white shadow-2xl flex flex-col gap-6"
+                  className="w-full max-w-3xl max-h-[88vh] overflow-y-auto rounded-3xl border border-white/20 bg-[#161618] p-5 sm:p-7 text-white shadow-2xl flex flex-col gap-5"
                 >
-                  <div className="flex items-center justify-between border-b border-white/15 pb-4">
+                  <div className="flex items-center justify-between border-b border-white/15 pb-4 shrink-0">
                     <div className="flex items-center gap-3">
                       <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-500/25 text-amber-400">
                         <Icon name="psychology" className="text-2xl" />
                       </span>
                       <div>
-                        <h3 className="text-2xl font-bold text-white">
+                        <h3 className="text-2xl sm:text-3xl font-extrabold text-white">
                           Kid's Brain Nuggets — Answers
                         </h3>
-                        <p className="text-xs sm:text-sm text-white/70">
+                        <p className="text-xs sm:text-sm font-medium text-white/70">
                           Parent talking points & full explanations
                         </p>
                       </div>
                     </div>
                     <button
                       onClick={() => setShowAnswersModal(false)}
-                      className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-white/80 hover:bg-white/20 transition cursor-pointer"
+                      className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 text-white/80 hover:bg-white/20 transition cursor-pointer"
                     >
-                      <Icon name="close" className="text-xl" />
+                      <Icon name="close" className="text-2xl" />
                     </button>
                   </div>
 
-                  <div className="space-y-5">
+                  <div className="space-y-4">
                     {/* Age 5 Answer */}
-                    <div className="rounded-2xl border border-purple-500/35 bg-purple-500/10 p-5 space-y-3">
+                    <div className="rounded-2xl border border-purple-500/35 bg-purple-500/10 p-4.5 space-y-2.5">
                       <div className="flex items-center justify-between">
                         <span className="text-base sm:text-lg font-bold text-purple-300 flex items-center gap-2">
                           <span>🎈 Age 5 Challenge</span>
-                          <span className="text-xs font-semibold px-2 py-0.5 rounded bg-purple-400/25 text-purple-200">
+                          <span className="text-xs font-bold px-2 py-0.5 rounded bg-purple-400/25 text-purple-200">
                             {data.stem_5yo.topic}
                           </span>
                         </span>
                       </div>
-                      <p className="text-sm sm:text-base text-white/90 italic">
+                      <p className="text-base text-white/90 italic font-medium">
                         “{data.stem_5yo.question}”
                       </p>
-                      <div className="rounded-2xl bg-purple-950/60 p-4 border border-purple-400/30">
-                        <p className="text-xs font-bold uppercase tracking-wider text-purple-300">Answer</p>
-                        <p className="mt-1 text-base sm:text-lg font-bold text-white">
+                      <div className="rounded-xl bg-purple-950/70 p-4 border border-purple-400/30 space-y-2">
+                        <p className="text-xs font-black uppercase tracking-wider text-purple-300">Answer</p>
+                        <p className="text-base sm:text-lg font-bold text-white leading-snug">
                           {data.stem_5yo.answer || 'Discuss together with hint'}
                         </p>
                         {data.stem_5yo.parent_explanation && (
-                          <div className="mt-3 pt-3 border-t border-purple-400/20">
-                            <p className="text-xs font-bold uppercase tracking-wider text-purple-300/80">Explanation for Parents</p>
+                          <div className="mt-2.5 pt-2.5 border-t border-purple-400/20">
+                            <p className="text-xs font-black uppercase tracking-wider text-purple-300/80">Explanation for Parents</p>
                             <p className="mt-1 text-sm sm:text-base text-purple-100/95 leading-relaxed">
                               {data.stem_5yo.parent_explanation}
                             </p>
@@ -408,26 +378,26 @@ export default function MorningKidsBanner({
                     </div>
 
                     {/* Age 9 Answer */}
-                    <div className="rounded-2xl border border-indigo-500/35 bg-indigo-500/10 p-5 space-y-3">
+                    <div className="rounded-2xl border border-indigo-500/35 bg-indigo-500/10 p-4.5 space-y-2.5">
                       <div className="flex items-center justify-between">
                         <span className="text-base sm:text-lg font-bold text-indigo-300 flex items-center gap-2">
                           <span>🚀 Age 9 Challenge</span>
-                          <span className="text-xs font-semibold px-2 py-0.5 rounded bg-indigo-400/25 text-indigo-200">
+                          <span className="text-xs font-bold px-2 py-0.5 rounded bg-indigo-400/25 text-indigo-200">
                             {data.stem_9yo.topic}
                           </span>
                         </span>
                       </div>
-                      <p className="text-sm sm:text-base text-white/90 italic">
+                      <p className="text-base text-white/90 italic font-medium">
                         “{data.stem_9yo.question}”
                       </p>
-                      <div className="rounded-2xl bg-indigo-950/60 p-4 border border-indigo-400/30">
-                        <p className="text-xs font-bold uppercase tracking-wider text-indigo-300">Answer</p>
-                        <p className="mt-1 text-base sm:text-lg font-bold text-white">
+                      <div className="rounded-xl bg-indigo-950/70 p-4 border border-indigo-400/30 space-y-2">
+                        <p className="text-xs font-black uppercase tracking-wider text-indigo-300">Answer</p>
+                        <p className="text-base sm:text-lg font-bold text-white leading-snug">
                           {data.stem_9yo.answer || 'Discuss together with hint'}
                         </p>
                         {data.stem_9yo.parent_explanation && (
-                          <div className="mt-3 pt-3 border-t border-indigo-400/20">
-                            <p className="text-xs font-bold uppercase tracking-wider text-indigo-300/80">Explanation for Parents</p>
+                          <div className="mt-2.5 pt-2.5 border-t border-indigo-400/20">
+                            <p className="text-xs font-black uppercase tracking-wider text-indigo-300/80">Explanation for Parents</p>
                             <p className="mt-1 text-sm sm:text-base text-indigo-100/95 leading-relaxed">
                               {data.stem_9yo.parent_explanation}
                             </p>
@@ -437,12 +407,12 @@ export default function MorningKidsBanner({
                     </div>
                   </div>
 
-                  <div className="flex justify-end pt-2">
+                  <div className="flex justify-end pt-1 shrink-0">
                     <button
                       onClick={() => setShowAnswersModal(false)}
-                      className="flex items-center gap-2 rounded-2xl bg-white px-5 py-2.5 text-sm sm:text-base font-bold text-black hover:bg-white/90 active:scale-95 transition shadow-md cursor-pointer"
+                      className="flex items-center gap-2 rounded-2xl bg-white px-6 py-2.5 text-base font-black text-black hover:bg-white/90 active:scale-95 transition shadow-md cursor-pointer"
                     >
-                      <Icon name="check" className="text-lg" />
+                      <Icon name="check" className="text-xl" />
                       Got it!
                     </button>
                   </div>
