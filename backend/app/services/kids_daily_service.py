@@ -11,49 +11,98 @@ logger = logging.getLogger(__name__)
 def _get_kids_daily_file() -> Path:
     return Path(get_settings().data_dir) / "kids_daily.json"
 
+
+# These limits are part of the 1920x1080 wall-display contract. They keep the
+# generated copy concise enough to remain readable without scrolling, clipping,
+# ellipses, or shrinking the type below its across-the-room size.
+KIDS_DAILY_DISPLAY_LIMITS: Dict[str, Dict[str, int]] = {
+    "word_of_the_day": {
+        "word": 24,
+        "pronunciation": 32,
+        "part_of_speech": 16,
+        "definition": 140,
+        "example": 140,
+    },
+    "fun_fact": {
+        "fact": 180,
+        "category": 32,
+        "emoji": 8,
+        "did_you_know": 180,
+    },
+    "stem_5yo": {
+        "topic": 40,
+        "question": 160,
+        "hint": 140,
+        "answer": 200,
+        "parent_explanation": 220,
+    },
+    "stem_9yo": {
+        "topic": 40,
+        "question": 160,
+        "hint": 140,
+        "answer": 200,
+        "parent_explanation": 220,
+    },
+}
+
+
+def content_fits_display_limits(content: Dict[str, Any]) -> bool:
+    """Return True when every supplied display field fits the kiosk budget."""
+    for section_name, field_limits in KIDS_DAILY_DISPLAY_LIMITS.items():
+        section = content.get(section_name)
+        if not isinstance(section, dict):
+            return False
+        for field_name, max_length in field_limits.items():
+            value = section.get(field_name)
+            if value is None:
+                continue
+            if not isinstance(value, str) or len(value.strip()) > max_length:
+                return False
+    return True
+
 KIDS_DAILY_SCHEMA = {
     "type": "OBJECT",
     "properties": {
         "word_of_the_day": {
             "type": "OBJECT",
             "properties": {
-                "word": {"type": "STRING"},
-                "pronunciation": {"type": "STRING"},
-                "part_of_speech": {"type": "STRING"},
-                "definition": {"type": "STRING"},
-                "example": {"type": "STRING"},
+                "word": {"type": "STRING", "maxLength": KIDS_DAILY_DISPLAY_LIMITS["word_of_the_day"]["word"]},
+                "pronunciation": {"type": "STRING", "maxLength": KIDS_DAILY_DISPLAY_LIMITS["word_of_the_day"]["pronunciation"]},
+                "part_of_speech": {"type": "STRING", "maxLength": KIDS_DAILY_DISPLAY_LIMITS["word_of_the_day"]["part_of_speech"]},
+                "definition": {"type": "STRING", "maxLength": KIDS_DAILY_DISPLAY_LIMITS["word_of_the_day"]["definition"]},
+                "example": {"type": "STRING", "maxLength": KIDS_DAILY_DISPLAY_LIMITS["word_of_the_day"]["example"]},
             },
             "required": ["word", "pronunciation", "definition", "example"],
         },
         "fun_fact": {
             "type": "OBJECT",
             "properties": {
-                "fact": {"type": "STRING"},
-                "category": {"type": "STRING"},
-                "emoji": {"type": "STRING"},
-                "did_you_know": {"type": "STRING"},
+                "fact": {"type": "STRING", "maxLength": KIDS_DAILY_DISPLAY_LIMITS["fun_fact"]["fact"]},
+                "category": {"type": "STRING", "maxLength": KIDS_DAILY_DISPLAY_LIMITS["fun_fact"]["category"]},
+                "emoji": {"type": "STRING", "maxLength": KIDS_DAILY_DISPLAY_LIMITS["fun_fact"]["emoji"]},
+                "did_you_know": {"type": "STRING", "maxLength": KIDS_DAILY_DISPLAY_LIMITS["fun_fact"]["did_you_know"]},
             },
             "required": ["fact", "emoji", "did_you_know"],
         },
         "stem_5yo": {
             "type": "OBJECT",
             "properties": {
-                "topic": {"type": "STRING"},
-                "question": {"type": "STRING"},
-                "hint": {"type": "STRING"},
-                "answer": {"type": "STRING"},
-                "parent_explanation": {"type": "STRING"},
+                "topic": {"type": "STRING", "maxLength": KIDS_DAILY_DISPLAY_LIMITS["stem_5yo"]["topic"]},
+                "question": {"type": "STRING", "maxLength": KIDS_DAILY_DISPLAY_LIMITS["stem_5yo"]["question"]},
+                "hint": {"type": "STRING", "maxLength": KIDS_DAILY_DISPLAY_LIMITS["stem_5yo"]["hint"]},
+                "answer": {"type": "STRING", "maxLength": KIDS_DAILY_DISPLAY_LIMITS["stem_5yo"]["answer"]},
+                "parent_explanation": {"type": "STRING", "maxLength": KIDS_DAILY_DISPLAY_LIMITS["stem_5yo"]["parent_explanation"]},
             },
             "required": ["topic", "question", "answer", "parent_explanation"],
         },
         "stem_9yo": {
             "type": "OBJECT",
             "properties": {
-                "topic": {"type": "STRING"},
-                "question": {"type": "STRING"},
-                "hint": {"type": "STRING"},
-                "answer": {"type": "STRING"},
-                "parent_explanation": {"type": "STRING"},
+                "topic": {"type": "STRING", "maxLength": KIDS_DAILY_DISPLAY_LIMITS["stem_9yo"]["topic"]},
+                "question": {"type": "STRING", "maxLength": KIDS_DAILY_DISPLAY_LIMITS["stem_9yo"]["question"]},
+                "hint": {"type": "STRING", "maxLength": KIDS_DAILY_DISPLAY_LIMITS["stem_9yo"]["hint"]},
+                "answer": {"type": "STRING", "maxLength": KIDS_DAILY_DISPLAY_LIMITS["stem_9yo"]["answer"]},
+                "parent_explanation": {"type": "STRING", "maxLength": KIDS_DAILY_DISPLAY_LIMITS["stem_9yo"]["parent_explanation"]},
             },
             "required": ["topic", "question", "answer", "parent_explanation"],
         },
@@ -1090,9 +1139,12 @@ class KidsDailyService:
 
     def get_today_payload(self, date_str: Optional[str] = None, force_regenerate: bool = False) -> Dict[str, Any]:
         today_key = date_str or date.today().isoformat()
-        if not force_regenerate and today_key in self._cache:
+        cached_content = self._cache.get(today_key)
+        if not force_regenerate and cached_content and content_fits_display_limits(cached_content):
             content = self._cache[today_key]
         else:
+            if cached_content and not content_fits_display_limits(cached_content):
+                logger.info("Regenerating kids daily content that exceeds the wall-display limits")
             content = self._generate_daily_content(today_key)
             self._cache[today_key] = content
             self._save_cache()
@@ -1151,6 +1203,7 @@ class KidsDailyService:
             "2. fun_fact: An astonishing, true fact from science, animals, space, oceans, or planet Earth. Include a fitting emoji, specific category, and a short 1-sentence 'did_you_know' extension.\n"
             "3. stem_5yo: A curious, playful STEM question/riddle for a 5-year-old (kindergarten level) about physical observations in daily life. Include a helpful hint, a simple clear answer, and an engaging 'parent_explanation' for parents to discuss.\n"
             "4. stem_9yo: A thought-provoking STEM challenge for a 9-year-old (4th grade level) involving real physics, astronomy, engineering, chemistry, biology, or computing. Include a hint, a clear factual answer, and a deep conceptual 'parent_explanation'.\n\n"
+            "Wall-display length limits (characters, including spaces): word 24, pronunciation 32, part of speech 16, definition 140, example 140; fun fact 180, category 32, did-you-know 180; each topic 40, question 160, hint 140, answer 200, and parent explanation 220. Write complete concise sentences within every limit—never use ellipses or incomplete phrases.\n\n"
             "CRITICAL: All 4 sections (Word, Fun Fact, 5yo STEM, 9yo STEM) MUST be completely fresh, unique, varied, and specific to the designated themes."
         )
 
@@ -1179,9 +1232,11 @@ class KidsDailyService:
                     and data.get("fun_fact")
                     and data.get("stem_5yo")
                     and data.get("stem_9yo")
+                    and content_fits_display_limits(data)
                 ):
                     data["generated_by"] = f"gemini_ai ({m})"
                     return data
+                logger.warning("Generated kids daily content exceeded the wall-display limits")
             except Exception as e:
                 logger.warning(f"Failed generation with model {m}: {e}")
                 continue

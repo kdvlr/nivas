@@ -2,7 +2,13 @@ import pytest
 from datetime import datetime
 from fastapi.testclient import TestClient
 from app.main import app
-from app.services.kids_daily_service import kids_daily_service
+from app.services.kids_daily_service import (
+    FALLBACK_CATALOG,
+    KIDS_DAILY_DISPLAY_LIMITS,
+    KIDS_DAILY_SCHEMA,
+    content_fits_display_limits,
+    kids_daily_service,
+)
 
 @pytest.fixture
 def client():
@@ -33,9 +39,11 @@ def test_kids_daily_public_endpoint(client):
     assert "fun_fact" in data
     assert "stem_5yo" in data
     assert "stem_9yo" in data
-    # Ensure answer is not leaked in public endpoint
-    assert "answer" not in data["stem_5yo"]
-    assert "answer" not in data["stem_9yo"]
+    # The kiosk's Answers board is driven by the same daily payload.
+    assert "answer" in data["stem_5yo"]
+    assert "parent_explanation" in data["stem_5yo"]
+    assert "answer" in data["stem_9yo"]
+    assert "parent_explanation" in data["stem_9yo"]
 
 def test_kids_daily_admin_endpoint(client):
     res = client.get("/api/kids-daily/admin")
@@ -63,7 +71,6 @@ def test_kids_daily_settings_toggle(client):
     assert res2.json().get("force_banner_active") is False
 
 def test_kids_daily_fallback_catalog_length_and_rotation(client):
-    from app.services.kids_daily_service import FALLBACK_CATALOG
     assert len(FALLBACK_CATALOG) >= 30
 
     # Ensure consecutive days produce different content
@@ -77,6 +84,28 @@ def test_kids_daily_fallback_catalog_length_and_rotation(client):
     assert w1 != w2
     assert w2 != w3
     assert w1 != w3
+
+
+def test_kids_daily_catalog_fits_wall_display_limits():
+    assert all(content_fits_display_limits(content) for content in FALLBACK_CATALOG)
+
+
+def test_kids_daily_schema_enforces_wall_display_limits():
+    for section_name, fields in KIDS_DAILY_DISPLAY_LIMITS.items():
+        schema_fields = KIDS_DAILY_SCHEMA["properties"][section_name]["properties"]
+        for field_name, expected_limit in fields.items():
+            assert schema_fields[field_name]["maxLength"] == expected_limit
+
+
+def test_kids_daily_display_limits_reject_overlong_copy():
+    content = {
+        section_name: {field_name: "ok" for field_name in fields}
+        for section_name, fields in KIDS_DAILY_DISPLAY_LIMITS.items()
+    }
+    content["stem_9yo"]["question"] = "x" * (
+        KIDS_DAILY_DISPLAY_LIMITS["stem_9yo"]["question"] + 1
+    )
+    assert content_fits_display_limits(content) is False
 
 def test_kids_daily_regenerate_endpoint(client):
     res = client.post("/api/kids-daily/regenerate")
