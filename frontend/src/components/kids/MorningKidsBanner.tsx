@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { api } from '../../lib/api'
 import Icon from '../Icon'
@@ -23,6 +23,8 @@ export default function MorningKidsBanner({
   const [showHint5, setShowHint5] = useState(false)
   const [showHint9, setShowHint9] = useState(false)
   const [showAnswersModal, setShowAnswersModal] = useState(false)
+  const [density, setDensity] = useState<0 | 1 | 2>(0)
+  const panelRef = useRef<HTMLDivElement>(null)
 
   // Fetch daily bundle
   const loadDailyContent = async () => {
@@ -101,6 +103,88 @@ export default function MorningKidsBanner({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [shouldDisplay, showAnswersModal])
 
+  // Start each content/hint state at the most readable scale, then step down
+  // only when real rendered children leave their card. Checking descendants'
+  // rectangles catches visible overflow that scrollHeight alone can miss.
+  useLayoutEffect(() => {
+    setDensity(0)
+  }, [data, shouldDisplay, showHint5, showHint9])
+
+  useLayoutEffect(() => {
+    const panel = panelRef.current
+    if (!panel || !shouldDisplay) return
+
+    const measureContainment = () => {
+      const panelRect = panel.getBoundingClientRect()
+      const cards = Array.from(panel.querySelectorAll<HTMLElement>('[data-fit-card]'))
+      const hasOverflow = cards.some((card) => {
+        const cardRect = card.getBoundingClientRect()
+        const cardOutsidePanel =
+          cardRect.left < panelRect.left - 1 ||
+          cardRect.right > panelRect.right + 1 ||
+          cardRect.top < panelRect.top - 1 ||
+          cardRect.bottom > panelRect.bottom + 1
+        const childOutsideCard = Array.from(card.querySelectorAll<HTMLElement>('[data-fit-content]')).some(
+          (child) => {
+            const childRect = child.getBoundingClientRect()
+            return (
+              childRect.left < cardRect.left - 1 ||
+              childRect.right > cardRect.right + 1 ||
+              childRect.top < cardRect.top - 1 ||
+              childRect.bottom > cardRect.bottom + 1
+            )
+          },
+        )
+        return cardOutsidePanel || childOutsideCard || card.scrollHeight > card.clientHeight + 1
+      })
+
+      if (hasOverflow) {
+        setDensity((current) => (current < 2 ? ((current + 1) as 1 | 2) : current))
+      }
+    }
+
+    const frame = requestAnimationFrame(measureContainment)
+    const observer = new ResizeObserver(measureContainment)
+    observer.observe(panel)
+    return () => {
+      cancelAnimationFrame(frame)
+      observer.disconnect()
+    }
+  }, [data, density, shouldDisplay, showHint5, showHint9])
+
+  const typeScale = [
+    {
+      word: 'lg:text-[3rem] xl:text-[3.25rem]',
+      definition: 'lg:text-[1.35rem] xl:text-[1.5rem]',
+      example: 'lg:text-[1.2rem] xl:text-[1.35rem]',
+      fact: 'lg:text-[1.55rem] xl:text-[1.75rem]',
+      support: 'lg:text-[1.2rem] xl:text-[1.35rem]',
+      question: 'lg:text-[1.4rem] xl:text-[1.55rem]',
+      hint: 'lg:text-base xl:text-lg',
+      topic: 'lg:text-base xl:text-lg',
+    },
+    {
+      word: 'lg:text-[2.75rem] xl:text-[3rem]',
+      definition: 'lg:text-xl xl:text-[1.35rem]',
+      example: 'lg:text-lg xl:text-xl',
+      fact: 'lg:text-[1.4rem] xl:text-[1.55rem]',
+      support: 'lg:text-lg xl:text-xl',
+      question: 'lg:text-[1.3rem] xl:text-[1.4rem]',
+      hint: 'lg:text-[0.95rem] xl:text-base',
+      topic: 'lg:text-[0.95rem] xl:text-base',
+    },
+    {
+      word: 'lg:text-[2.5rem] xl:text-[2.75rem]',
+      definition: 'lg:text-lg xl:text-xl',
+      example: 'lg:text-base xl:text-lg',
+      fact: 'lg:text-[1.25rem] xl:text-[1.4rem]',
+      support: 'lg:text-base xl:text-lg',
+      question: 'lg:text-xl xl:text-[1.3rem]',
+      hint: 'lg:text-sm xl:text-[0.95rem]',
+      topic: 'lg:text-sm xl:text-[0.95rem]',
+    },
+  ][density]
+
   return (
     <AnimatePresence>
       {shouldDisplay && data && (
@@ -112,6 +196,8 @@ export default function MorningKidsBanner({
           exit={{ opacity: 0, y: -20, scale: 0.98 }}
           transition={{ type: 'spring', stiffness: 350, damping: 28 }}
           data-testid="kids-nuggets-panel"
+          data-density={density}
+          ref={panelRef}
           className={`fixed inset-x-2 top-2 bottom-2 sm:inset-x-4 sm:top-3 sm:bottom-3 lg:inset-x-8 lg:top-4 lg:bottom-4 z-40 mx-auto flex max-w-[1856px] flex-col rounded-3xl border border-white/20 bg-slate-950/95 p-3.5 text-white shadow-2xl backdrop-blur-2xl sm:p-4 lg:p-5 dark:border-white/15 dark:bg-black/95 overflow-y-auto lg:overflow-hidden ${className}`}
         >
           {/* Header Ribbon */}
@@ -147,10 +233,10 @@ export default function MorningKidsBanner({
             </div>
           </div>
 
-          {/* 2x2 wall-display grid: wide reading measures and no hidden copy. */}
-          <div className="mt-3 grid flex-1 grid-cols-1 gap-3 sm:gap-4 lg:min-h-0 lg:grid-cols-12 lg:grid-rows-[minmax(0,0.54fr)_minmax(0,0.46fr)] lg:gap-4">
+          {/* Full-height columns prevent one section from painting into another row. */}
+          <div data-testid="kids-content-grid" className="mt-3 grid flex-1 grid-cols-1 gap-3 sm:gap-4 lg:min-h-0 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.05fr)_minmax(0,1.05fr)] lg:grid-rows-1 lg:gap-4">
             {/* Card 1: Word of the Day (Amber Theme) */}
-            <section data-testid="kids-word-card" className="flex min-h-0 flex-col justify-between rounded-2xl border border-amber-500/35 bg-amber-500/10 p-3.5 shadow-sm backdrop-blur-md sm:p-4 lg:col-span-5 lg:p-5">
+            <section data-testid="kids-word-card" data-fit-card className="flex min-h-0 flex-col justify-between rounded-2xl border border-amber-500/40 bg-[#1b1200] p-3.5 shadow-sm sm:p-4 lg:p-5">
               <div className="flex flex-col justify-start">
                 <div className="flex items-center justify-between mb-2 shrink-0">
                   <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/40 bg-amber-400/25 px-2.5 py-0.5 text-xs font-black uppercase tracking-wider text-amber-300 lg:text-base">
@@ -166,7 +252,8 @@ export default function MorningKidsBanner({
                 <div className="mt-1 shrink-0">
                   <h3
                     style={{ fontFamily: 'var(--font-body)' }}
-                    className="break-words text-4xl font-black leading-tight tracking-normal text-white drop-shadow [overflow-wrap:anywhere] sm:text-5xl lg:text-[3.5rem] xl:text-[4rem]"
+                    data-fit-content
+                    className={`break-words text-4xl font-black leading-tight tracking-normal text-white drop-shadow [overflow-wrap:anywhere] sm:text-5xl ${typeScale.word}`}
                   >
                     {data.word_of_the_day.word}
                   </h3>
@@ -176,19 +263,19 @@ export default function MorningKidsBanner({
                 </div>
 
                 <div className="mt-2.5">
-                  <p className="break-words text-base font-medium leading-snug text-white/95 [overflow-wrap:anywhere] sm:text-lg lg:text-[1.55rem] xl:text-[1.7rem]">
+                  <p data-fit-content className={`break-words text-base font-medium leading-snug text-white/95 [overflow-wrap:anywhere] sm:text-lg ${typeScale.definition}`}>
                     {data.word_of_the_day.definition}
                   </p>
                 </div>
               </div>
 
-              <div className="mt-2.5 shrink-0 break-words rounded-xl border border-amber-400/30 bg-amber-400/20 p-2.5 text-base font-medium italic leading-snug text-amber-100 [overflow-wrap:anywhere] sm:p-3 sm:text-lg lg:text-[1.35rem] xl:text-[1.5rem]">
+              <div data-fit-content className={`mt-2.5 shrink-0 break-words rounded-xl border border-amber-400/30 bg-[#4a3500] p-2.5 text-base font-medium italic leading-snug text-amber-100 [overflow-wrap:anywhere] sm:p-3 sm:text-lg ${typeScale.example}`}>
                 “{data.word_of_the_day.example}”
               </div>
             </section>
 
             {/* Card 2: Fun Fact of the Day (Emerald Theme) */}
-            <section data-testid="kids-fact-card" className="flex min-h-0 flex-col justify-between rounded-2xl border border-emerald-500/35 bg-emerald-500/10 p-3.5 shadow-sm backdrop-blur-md sm:p-4 lg:col-span-7 lg:p-5">
+            <section data-testid="kids-fact-card" data-fit-card className="flex min-h-0 flex-col justify-between rounded-2xl border border-emerald-500/40 bg-[#001b12] p-3.5 shadow-sm sm:p-4 lg:p-5">
               <div className="flex flex-col justify-start">
                 <div className="flex items-center justify-between mb-2 shrink-0">
                   <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-400/40 bg-emerald-400/25 px-2.5 py-0.5 text-xs font-black uppercase tracking-wider text-emerald-300 lg:text-base">
@@ -205,29 +292,31 @@ export default function MorningKidsBanner({
                   <span className="shrink-0 select-none text-4xl drop-shadow-md sm:text-5xl lg:text-6xl">
                     {data.fun_fact.emoji || '💡'}
                   </span>
-                  <p className="break-words text-lg font-semibold leading-snug text-white drop-shadow [overflow-wrap:anywhere] sm:text-xl lg:text-[1.75rem] xl:text-[2rem]">
+                  <p data-fit-content className={`break-words text-lg font-semibold leading-snug text-white drop-shadow [overflow-wrap:anywhere] sm:text-xl ${typeScale.fact}`}>
                     {data.fun_fact.fact}
                   </p>
                 </div>
               </div>
 
               {data.fun_fact.did_you_know && (
-                <div className="mt-2.5 shrink-0 break-words rounded-xl border border-emerald-400/30 bg-emerald-400/20 p-2.5 text-base font-medium leading-snug text-emerald-50 [overflow-wrap:anywhere] sm:p-3 sm:text-lg lg:text-[1.35rem] xl:text-[1.5rem]">
+                <div data-fit-content className={`mt-2.5 shrink-0 break-words rounded-xl border border-emerald-400/30 bg-[#103e2c] p-2.5 text-base font-medium leading-snug text-emerald-50 [overflow-wrap:anywhere] sm:p-3 sm:text-lg ${typeScale.support}`}>
                   <strong className="font-black text-emerald-300">Did you know? </strong>
                   {data.fun_fact.did_you_know}
                 </div>
               )}
             </section>
 
-            {/* Card 3: Age 5 challenge */}
-            <section data-testid="kids-age-5-card" className="flex min-h-0 flex-col justify-between rounded-2xl border border-purple-500/35 bg-purple-500/10 p-3.5 shadow-sm backdrop-blur-md sm:p-4 lg:col-span-6 lg:p-5">
+            {/* Card 3: both challenges share one full-height column. */}
+            <section data-testid="kids-quiz-card" className="grid gap-3 lg:min-h-0 lg:grid-rows-2">
+            {/* Age 5 challenge */}
+            <section data-testid="kids-age-5-card" data-fit-card className="flex min-h-0 flex-col justify-between rounded-2xl border border-purple-500/40 bg-[#18091f] p-3 shadow-sm sm:p-3.5 lg:p-4">
               <div>
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-purple-400/40 bg-purple-400/25 px-2.5 py-0.5 text-xs font-black uppercase tracking-wider text-purple-300 lg:text-base">
-                      <Icon name="psychology" className="text-sm lg:text-xl" /> 🎈 Age 5 Challenge
+                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-purple-400/40 bg-[#4b285d] px-2.5 py-0.5 text-xs font-black uppercase tracking-wider text-purple-200 lg:text-sm xl:text-base">
+                      <Icon name="psychology" className="text-sm lg:text-lg" /> 🎈 Age 5 Challenge
                     </span>
-                    <p className="mt-2 break-words text-sm font-bold text-purple-200/90 [overflow-wrap:anywhere] sm:text-base lg:text-xl">
+                    <p data-fit-content className={`mt-1.5 break-words text-sm font-bold text-purple-200/90 [overflow-wrap:anywhere] sm:text-base ${typeScale.topic}`}>
                       {data.stem_5yo.topic}
                     </p>
                   </div>
@@ -235,37 +324,35 @@ export default function MorningKidsBanner({
                     <button
                       onClick={() => setShowHint5(!showHint5)}
                       aria-expanded={showHint5}
-                      className="shrink-0 rounded-xl border border-purple-400/30 bg-purple-400/20 px-3 py-1.5 text-sm font-black text-purple-200 transition hover:bg-purple-400/30 hover:text-white active:scale-95 lg:text-lg"
+                      className="shrink-0 rounded-xl border border-purple-400/40 bg-[#382044] px-3 py-1.5 text-sm font-black text-purple-100 transition hover:bg-[#4b285d] hover:text-white active:scale-95 lg:text-base"
                     >
                       {showHint5 ? 'Hide Hint' : '💡 Hint'}
                     </button>
                   )}
                 </div>
-                <p className="break-words text-xl font-bold leading-snug text-white [overflow-wrap:anywhere] sm:text-2xl lg:text-[1.8rem] xl:text-[2rem]">
+                <p data-fit-content className={`break-words text-xl font-bold leading-snug text-white [overflow-wrap:anywhere] sm:text-2xl ${typeScale.question}`}>
                   {data.stem_5yo.question}
                 </p>
               </div>
 
-              <div className="mt-3 flex min-h-20 shrink-0 items-center rounded-xl border border-purple-400/30 bg-black/35 p-3 lg:min-h-24 lg:p-4">
-                {showHint5 && data.stem_5yo.hint ? (
-                  <p className="break-words text-base font-medium italic leading-snug text-purple-100 [overflow-wrap:anywhere] sm:text-lg lg:text-[1.35rem] xl:text-[1.5rem]">
+              {showHint5 && data.stem_5yo.hint && (
+                <div data-fit-content className="mt-2 shrink-0 rounded-xl border border-purple-400/30 bg-[#0e0712] p-2.5 lg:p-3">
+                  <p className={`break-words text-base font-medium italic leading-snug text-purple-100 [overflow-wrap:anywhere] sm:text-lg ${typeScale.hint}`}>
                     <strong className="font-black not-italic text-purple-300">Hint: </strong>{data.stem_5yo.hint}
                   </p>
-                ) : (
-                  <p className="text-sm font-bold text-purple-200/70 sm:text-base lg:text-lg">Think it through together—or reveal a hint.</p>
-                )}
-              </div>
+                </div>
+              )}
             </section>
 
-            {/* Card 4: Age 9 challenge */}
-            <section data-testid="kids-age-9-card" className="flex min-h-0 flex-col justify-between rounded-2xl border border-indigo-500/35 bg-indigo-500/10 p-3.5 shadow-sm backdrop-blur-md sm:p-4 lg:col-span-6 lg:p-5">
+            {/* Age 9 challenge */}
+            <section data-testid="kids-age-9-card" data-fit-card className="flex min-h-0 flex-col justify-between rounded-2xl border border-indigo-500/40 bg-[#0d1025] p-3 shadow-sm sm:p-3.5 lg:p-4">
               <div>
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-400/40 bg-indigo-400/25 px-2.5 py-0.5 text-xs font-black uppercase tracking-wider text-indigo-300 lg:text-base">
-                      <Icon name="psychology" className="text-sm lg:text-xl" /> 🚀 Age 9 Challenge
+                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-400/40 bg-[#26365d] px-2.5 py-0.5 text-xs font-black uppercase tracking-wider text-indigo-200 lg:text-sm xl:text-base">
+                      <Icon name="psychology" className="text-sm lg:text-lg" /> 🚀 Age 9 Challenge
                     </span>
-                    <p className="mt-2 break-words text-sm font-bold text-indigo-200/90 [overflow-wrap:anywhere] sm:text-base lg:text-xl">
+                    <p data-fit-content className={`mt-1.5 break-words text-sm font-bold text-indigo-200/90 [overflow-wrap:anywhere] sm:text-base ${typeScale.topic}`}>
                       {data.stem_9yo.topic}
                     </p>
                   </div>
@@ -273,26 +360,25 @@ export default function MorningKidsBanner({
                     <button
                       onClick={() => setShowHint9(!showHint9)}
                       aria-expanded={showHint9}
-                      className="shrink-0 rounded-xl border border-indigo-400/30 bg-indigo-400/20 px-3 py-1.5 text-sm font-black text-indigo-200 transition hover:bg-indigo-400/30 hover:text-white active:scale-95 lg:text-lg"
+                      className="shrink-0 rounded-xl border border-indigo-400/40 bg-[#202b4d] px-3 py-1.5 text-sm font-black text-indigo-100 transition hover:bg-[#26365d] hover:text-white active:scale-95 lg:text-base"
                     >
                       {showHint9 ? 'Hide Hint' : '💡 Hint'}
                     </button>
                   )}
                 </div>
-                <p className="break-words text-xl font-bold leading-snug text-white [overflow-wrap:anywhere] sm:text-2xl lg:text-[1.8rem] xl:text-[2rem]">
+                <p data-fit-content className={`break-words text-xl font-bold leading-snug text-white [overflow-wrap:anywhere] sm:text-2xl ${typeScale.question}`}>
                   {data.stem_9yo.question}
                 </p>
               </div>
 
-              <div className="mt-3 flex min-h-20 shrink-0 items-center rounded-xl border border-indigo-400/30 bg-black/35 p-3 lg:min-h-24 lg:p-4">
-                {showHint9 && data.stem_9yo.hint ? (
-                  <p className="break-words text-base font-medium italic leading-snug text-indigo-100 [overflow-wrap:anywhere] sm:text-lg lg:text-[1.35rem] xl:text-[1.5rem]">
+              {showHint9 && data.stem_9yo.hint && (
+                <div data-fit-content className="mt-2 shrink-0 rounded-xl border border-indigo-400/30 bg-[#070914] p-2.5 lg:p-3">
+                  <p className={`break-words text-base font-medium italic leading-snug text-indigo-100 [overflow-wrap:anywhere] sm:text-lg ${typeScale.hint}`}>
                     <strong className="font-black not-italic text-indigo-300">Hint: </strong>{data.stem_9yo.hint}
                   </p>
-                ) : (
-                  <p className="text-sm font-bold text-indigo-200/70 sm:text-base lg:text-lg">Make a prediction first—then reveal a hint.</p>
-                )}
-              </div>
+                </div>
+              )}
+            </section>
             </section>
           </div>
 
@@ -340,7 +426,7 @@ export default function MorningKidsBanner({
 
                   <div className="grid flex-1 grid-cols-1 gap-4 lg:min-h-0 lg:grid-cols-2">
                     {/* Age 5 Answer */}
-                    <section data-testid="kids-age-5-answer" className="flex min-h-0 flex-col gap-3 rounded-2xl border border-purple-500/35 bg-purple-500/10 p-4 lg:p-5">
+                    <section data-testid="kids-age-5-answer" className="flex min-h-0 flex-col gap-3 rounded-2xl border border-purple-500/35 bg-[#1b1022] p-4 lg:p-5">
                       <div className="flex items-center justify-between">
                         <span className="flex min-w-0 flex-wrap items-center gap-2 text-base font-bold text-purple-300 sm:text-lg lg:text-2xl">
                           <span>🎈 Age 5 Challenge</span>
@@ -369,7 +455,7 @@ export default function MorningKidsBanner({
                     </section>
 
                     {/* Age 9 Answer */}
-                    <section data-testid="kids-age-9-answer" className="flex min-h-0 flex-col gap-3 rounded-2xl border border-indigo-500/35 bg-indigo-500/10 p-4 lg:p-5">
+                    <section data-testid="kids-age-9-answer" className="flex min-h-0 flex-col gap-3 rounded-2xl border border-indigo-500/35 bg-[#11142b] p-4 lg:p-5">
                       <div className="flex items-center justify-between">
                         <span className="flex min-w-0 flex-wrap items-center gap-2 text-base font-bold text-indigo-300 sm:text-lg lg:text-2xl">
                           <span>🚀 Age 9 Challenge</span>
