@@ -191,7 +191,7 @@ export default function MorningKidsBanner({
                 </div>
               </div>
 
-              <div className="mt-2.5 rounded-xl bg-amber-400/20 p-2.5 sm:p-3 text-sm sm:text-base xl:text-lg text-amber-100 italic border border-amber-400/30 leading-snug shrink-0">
+              <div className="mt-2.5 rounded-xl bg-amber-400/20 p-2.5 sm:p-3 text-base sm:text-lg xl:text-xl text-amber-100 font-medium italic border border-amber-400/30 leading-snug shrink-0">
                 “{data.word_of_the_day.example}”
               </div>
             </div>
@@ -221,7 +221,7 @@ export default function MorningKidsBanner({
               </div>
 
               {data.fun_fact.did_you_know && (
-                <div className="mt-2.5 rounded-xl bg-emerald-400/20 p-2.5 sm:p-3 text-sm sm:text-base xl:text-lg text-emerald-50 border border-emerald-400/30 leading-snug shrink-0">
+                <div className="mt-2.5 rounded-xl bg-emerald-400/20 p-2.5 sm:p-3 text-base sm:text-lg xl:text-xl text-emerald-50 font-medium border border-emerald-400/30 leading-snug shrink-0">
                   <strong className="font-black text-emerald-300">Did you know? </strong>
                   {data.fun_fact.did_you_know}
                 </div>
@@ -255,7 +255,7 @@ export default function MorningKidsBanner({
                         </button>
                       )}
                     </div>
-                    <p className="text-sm sm:text-base xl:text-lg font-medium text-white leading-snug line-clamp-3">
+                    <p className="text-base sm:text-lg xl:text-xl font-semibold text-white leading-snug line-clamp-3">
                       {data.stem_5yo.question}
                     </p>
                   </div>
@@ -283,7 +283,7 @@ export default function MorningKidsBanner({
                         </button>
                       )}
                     </div>
-                    <p className="text-sm sm:text-base xl:text-lg font-medium text-white leading-snug line-clamp-3">
+                    <p className="text-base sm:text-lg xl:text-xl font-semibold text-white leading-snug line-clamp-3">
                       {data.stem_9yo.question}
                     </p>
                   </div>
@@ -358,7 +358,7 @@ export default function MorningKidsBanner({
                           </span>
                         </span>
                       </div>
-                      <p className="text-base text-white/90 italic font-medium">
+                      <p className="text-base sm:text-lg text-white/95 italic font-medium">
                         “{data.stem_5yo.question}”
                       </p>
                       <div className="rounded-xl bg-purple-950/70 p-4 border border-purple-400/30 space-y-2">
@@ -387,7 +387,7 @@ export default function MorningKidsBanner({
                           </span>
                         </span>
                       </div>
-                      <p className="text-base text-white/90 italic font-medium">
+                      <p className="text-base sm:text-lg text-white/95 italic font-medium">
                         “{data.stem_9yo.question}”
                       </p>
                       <div className="rounded-xl bg-indigo-950/70 p-4 border border-indigo-400/30 space-y-2">
