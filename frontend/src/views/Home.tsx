@@ -399,7 +399,7 @@ export default function Home() {
           <button
             onClick={() => setKidsHubOpen((prev) => !prev)}
             className="text-left group/date cursor-pointer transition-transform active:scale-95 focus:outline-none"
-            title="Click to view Morning Kids Discovery Hub"
+            title="Click to view Kid's Brain Nuggets"
           >
             <h1 className="text-sm lg:text-2xl font-medium tracking-tight text-ink leading-none truncate group-hover/date:text-[var(--primary)] transition-colors">
               {now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}

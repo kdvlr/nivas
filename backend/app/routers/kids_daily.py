@@ -13,22 +13,25 @@ class SettingsUpdateRequest(BaseModel):
 @router.get("/today")
 def get_today_content(date: Optional[str] = None):
     """
-    Public endpoint for the Home banner.
-    Returns today's word, fun fact, and STEM questions (without revealing answers).
+    Public endpoint for Kid's Brain Nuggets banner & popup answers.
+    Returns today's word, fun fact, and STEM questions with answers and explanations.
     """
     payload = kids_daily_service.get_today_payload(date_str=date)
     content = payload.get("content", {})
     
-    # Strip answers for public view
-    public_stem_5yo = {
+    stem_5yo = {
         "topic": content.get("stem_5yo", {}).get("topic", "Science"),
         "question": content.get("stem_5yo", {}).get("question", ""),
         "hint": content.get("stem_5yo", {}).get("hint", ""),
+        "answer": content.get("stem_5yo", {}).get("answer", ""),
+        "parent_explanation": content.get("stem_5yo", {}).get("parent_explanation", ""),
     }
-    public_stem_9yo = {
+    stem_9yo = {
         "topic": content.get("stem_9yo", {}).get("topic", "STEM"),
         "question": content.get("stem_9yo", {}).get("question", ""),
         "hint": content.get("stem_9yo", {}).get("hint", ""),
+        "answer": content.get("stem_9yo", {}).get("answer", ""),
+        "parent_explanation": content.get("stem_9yo", {}).get("parent_explanation", ""),
     }
 
     return {
@@ -37,8 +40,8 @@ def get_today_content(date: Optional[str] = None):
         "force_active": payload.get("force_active"),
         "word_of_the_day": content.get("word_of_the_day", {}),
         "fun_fact": content.get("fun_fact", {}),
-        "stem_5yo": public_stem_5yo,
-        "stem_9yo": public_stem_9yo,
+        "stem_5yo": stem_5yo,
+        "stem_9yo": stem_9yo,
     }
 
 @router.get("/admin")
