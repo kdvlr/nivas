@@ -76,7 +76,7 @@ export default function MorningKidsBanner({
   const shouldDisplay = Boolean(
     data &&
       (forceOpen ||
-        (!manuallyDismissed && (isForceActive || (isScheduleActive && !isDismissedToday))))
+        (!manuallyDismissed && !isDismissedToday && (isForceActive || isScheduleActive)))
   )
 
   const handleDismiss = () => {
