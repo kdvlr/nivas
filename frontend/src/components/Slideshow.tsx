@@ -753,15 +753,15 @@ export default function Slideshow({
 
       {/* Clock & Date Ambient Glass Overlay */}
       <div className="absolute top-6 right-6 z-40 flex flex-col items-end pointer-events-none select-none">
-        <div className="bg-black/30 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/15 text-white shadow-2xl flex flex-col items-end">
-          <div className="text-2xl sm:text-3xl lg:text-4xl font-normal tabular-nums tracking-tight text-white leading-none drop-shadow-md">
+        <div className="bg-black/30 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/15 text-white shadow-2xl flex flex-col items-end">
+          <div className="text-3xl sm:text-4xl lg:text-5xl font-normal tabular-nums tracking-tight text-white leading-none drop-shadow-md">
             {now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
           </div>
-          <div className="text-xs sm:text-sm font-medium text-white/80 mt-1.5 leading-none drop-shadow-sm">
+          <div className="text-sm sm:text-base font-medium text-white/80 mt-2 leading-none drop-shadow-sm">
             {now.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
           </div>
           {secondaryFormatted && (
-            <div className="text-[11px] sm:text-xs text-white/70 mt-1.5 leading-none flex items-center gap-1.5 font-light">
+            <div className="text-xs sm:text-sm text-white/70 mt-2 leading-none flex items-center gap-1.5 font-light">
               <span>{secondaryEmoji}</span>
               <span>{secondaryFormatted}</span>
             </div>
@@ -771,9 +771,9 @@ export default function Slideshow({
               e.stopPropagation()
               setOverlayVisible(!overlayVisible)
             }}
-            className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-xl bg-white/15 hover:bg-white/25 text-white/90 transition-all pointer-events-auto border border-white/15 shadow-sm active:scale-95"
+            className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold px-3.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white/90 transition-all pointer-events-auto border border-white/15 shadow-sm active:scale-95"
           >
-            <Icon name="calendar_month" className="text-sm text-[var(--primary)] shrink-0" />
+            <Icon name="calendar_month" className="text-base text-[var(--primary)] shrink-0" />
             <span>{overlayVisible ? 'Hide Agenda' : 'View Agenda'}</span>
           </button>
         </div>
