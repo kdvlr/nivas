@@ -5,6 +5,7 @@ import os
 import re
 import tempfile
 import time
+from difflib import SequenceMatcher
 from typing import Any, Dict, List, Optional, Tuple
 from pathlib import Path
 
@@ -382,7 +383,7 @@ class YTMusicService:
         fallback_thumbnail: Optional[str] = None,
         fallback_album: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
-        """If a track is a music video / teaser, resolve it to the full official pure-audio studio release."""
+        """If a track is a music video / promotional cut, resolve it to the full official studio release if a validated audio match exists."""
         if not song or not isinstance(song, dict) or not song.get("videoId"):
             return song
         if song.get("isPureAudio", False):
@@ -393,31 +394,68 @@ class YTMusicService:
         if not title:
             return song
 
-        # Clean title by removing (From "...") or official video suffixes
-        clean_title = re.sub(r"\s*\((?:From|Official|Lyrical|Video|Teaser)[^\)]*\)", "", title, flags=re.IGNORECASE).strip()
-        query = f"{clean_title} {artist}".strip()
+        # Clean title by removing (From "..."), (Official Video), [4K], etc.
+        clean_title = re.sub(r"\s*\((?:From|Official|Lyrical|Video|Teaser|Full)[^\)]*\)", "", title, flags=re.IGNORECASE).strip()
+        clean_title = re.sub(r"\s*\[(?:Official|Lyrical|Video|4K|Audio)[^\]]*\]", "", clean_title, flags=re.IGNORECASE).strip()
+        clean_title = re.split(r"[-|–|—|:|\|]", clean_title)[0].strip()
+
+        queries = []
+        if artist and artist.lower() not in ("unknown artist", "various artists", "various"):
+            queries.append(f"{clean_title} {artist}".strip())
+        queries.append(clean_title)
+
         try:
-            candidates = self.search(query, filter_type="songs")
-            target_dur = song.get("duration", 0)
+            target_dur = song.get("duration", 0) or 0
+            v_combined = f"{title} {artist}".lower()
 
-            # 1. First pass: look for a pure audio candidate matching target duration closely
-            for candidate in candidates:
-                cand_norm = self.normalize_song(candidate) if "isPureAudio" not in candidate else candidate
-                if cand_norm and cand_norm.get("isPureAudio", False):
-                    cand_dur = cand_norm.get("duration", 0)
-                    if target_dur > 0 and cand_dur > 0 and abs(cand_dur - target_dur) > 15:
+            for query in queries:
+                candidates = self.search(query, filter_type="songs")
+                for candidate in candidates:
+                    cand_norm = self.normalize_song(candidate) if "isPureAudio" not in candidate else candidate
+                    if not cand_norm or not cand_norm.get("isPureAudio", False):
                         continue
-                    res = dict(cand_norm)
-                    if not res.get("thumbnail") and (song.get("thumbnail") or fallback_thumbnail):
-                        res["thumbnail"] = song.get("thumbnail") or fallback_thumbnail
-                    if not res.get("album") and (song.get("album") or fallback_album):
-                        res["album"] = song.get("album") or fallback_album
-                    return res
 
-            # 2. Second pass: return first pure audio candidate
-            for candidate in candidates:
-                cand_norm = self.normalize_song(candidate) if "isPureAudio" not in candidate else candidate
-                if cand_norm and cand_norm.get("isPureAudio", False):
+                    c_title = str(cand_norm.get("title") or "").strip()
+                    c_artist = str(cand_norm.get("artist") or "").strip()
+                    c_album = str(cand_norm.get("album") or "").strip()
+                    c_dur = cand_norm.get("duration", 0) or 0
+
+                    # 1. Base title similarity check
+                    clean_c_title = re.sub(r"\s*\((?:From|Official|Lyrical|Video|Teaser|Full)[^\)]*\)", "", c_title, flags=re.IGNORECASE).strip()
+                    clean_c_title = re.sub(r"\s*\[(?:Official|Lyrical|Video|4K|Audio)[^\]]*\]", "", clean_c_title, flags=re.IGNORECASE).strip()
+                    clean_c_title = re.split(r"[-|–|—|:|\|]", clean_c_title)[0].strip()
+
+                    title_sim = SequenceMatcher(None, clean_title.lower(), clean_c_title.lower()).ratio()
+                    title_matches = (
+                        (title_sim >= 0.65)
+                        or (clean_title.lower() in clean_c_title.lower())
+                        or (clean_c_title.lower() in clean_title.lower())
+                    )
+                    if not title_matches:
+                        continue
+
+                    # 2. Artist / Album / Contributor overlap check
+                    c_combined = f"{c_title} {c_artist} {c_album}".lower()
+                    ignored = {"song", "from", "with", "feat", "music", "records", "audio", "official", "full", "video", "lyric", "lyrics", "unknown", "artist", "cast"}
+                    c_tokens = [w.strip() for w in re.split(r"[,|/&;+\s]", c_artist.lower()) if len(w.strip()) > 2 and w.strip() not in ignored]
+                    v_tokens = [w.strip() for w in re.split(r"[,|/&;+\s]", artist.lower()) if len(w.strip()) > 2 and w.strip() not in ignored]
+
+                    # Check for movie/album name match (e.g. "Beast", "Main Vaapas Aaunga", "Brahmastra")
+                    album_matches = bool(c_album and len(c_album) > 3 and c_album.lower() in v_combined)
+
+                    artist_matches = (
+                        album_matches
+                        or any(tok in v_combined for tok in c_tokens)
+                        or any(tok in c_combined for tok in v_tokens)
+                    )
+
+                    if not artist_matches:
+                        continue
+
+                    # 3. Duration compatibility check (within 60s tolerance for music video dialogues)
+                    if target_dur > 0 and c_dur > 0 and abs(c_dur - target_dur) > 60:
+                        continue
+
                     res = dict(cand_norm)
                     if not res.get("thumbnail") and (song.get("thumbnail") or fallback_thumbnail):
                         res["thumbnail"] = song.get("thumbnail") or fallback_thumbnail
@@ -427,6 +465,7 @@ class YTMusicService:
         except Exception as e:
             logger.debug(f"Could not resolve pure audio track for {title}: {e}")
 
+        # If no valid studio candidate passed verification, keep the original video track untouched
         return song
 
     def get_album_songs(self, browse_id: str) -> Dict[str, Any]:
