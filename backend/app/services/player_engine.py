@@ -522,6 +522,7 @@ class PlayerEngine:
         generation_id = self._play_generation_id
 
         parsed_duration = ytmusic_service._parse_duration_seconds(track.get("duration"))
+        is_local = str(video_id).startswith("local:")
         self.current_track = {
             "videoId": video_id,
             "title": track.get("title", "Unknown Title"),
@@ -529,7 +530,8 @@ class PlayerEngine:
             "thumbnail": track.get("thumbnail"),
             "album": track.get("album"),
             "duration": parsed_duration,
-            "isPureAudio": track.get("isPureAudio", False),
+            "isPureAudio": True if is_local else track.get("isPureAudio", False),
+            "source": "local" if is_local else track.get("source", "youtube"),
         }
         self.played_history[video_id] = time.time()
         self.elapsed_seconds = 0
@@ -555,10 +557,31 @@ class PlayerEngine:
             if not self.autoplay_enabled:
                 return
             loop = asyncio.get_running_loop()
+
+            # For local tracks, seed recommendations using track title and artist
+            seed_video_id = video_id
+            if str(video_id).startswith("local:"):
+                track_title = self.current_track.get("title", "")
+                track_artist = self.current_track.get("artist", "")
+                search_seed = f"{track_artist} {track_title}".strip()
+                if search_seed:
+                    yt_seed = await loop.run_in_executor(
+                        None,
+                        ytmusic_service.search_songs,
+                        search_seed,
+                        1,
+                    )
+                    if yt_seed and yt_seed[0].get("videoId"):
+                        seed_video_id = yt_seed[0]["videoId"]
+                    else:
+                        return
+                else:
+                    return
+
             recommendations = await loop.run_in_executor(
                 None,
                 ytmusic_service.get_autoplay_tracks,
-                video_id,
+                seed_video_id,
             )
             if not recommendations or self.current_track.get("videoId") != video_id:
                 return
@@ -610,7 +633,8 @@ class PlayerEngine:
             loop = asyncio.get_running_loop()
 
             async def _prefetch_single(track_item: Dict[str, Any]):
-                if not track_item.get("isPureAudio"):
+                vid = track_item.get("videoId")
+                if not str(vid).startswith("local:") and not track_item.get("isPureAudio"):
                     resolved = await loop.run_in_executor(
                         None,
                         ytmusic_service.resolve_pure_audio_song,
@@ -618,7 +642,7 @@ class PlayerEngine:
                     )
                     if resolved and resolved.get("videoId"):
                         track_item.update(resolved)
-                vid = track_item.get("videoId")
+                        vid = track_item.get("videoId")
                 if not vid or vid in self._prefetching_video_ids:
                     return
                 self._prefetching_video_ids.add(vid)
@@ -654,8 +678,8 @@ class PlayerEngine:
         try:
             loop = asyncio.get_running_loop()
 
-            # Ensure pure audio studio release is used instead of promotional video cuts
-            if not track_info.get("isPureAudio"):
+            # Ensure pure audio studio release is used instead of promotional video cuts for YouTube tracks (NEVER for local tracks)
+            if not str(video_id).startswith("local:") and not track_info.get("isPureAudio"):
                 resolved = await loop.run_in_executor(
                     None,
                     ytmusic_service.resolve_pure_audio_song,

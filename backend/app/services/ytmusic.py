@@ -622,14 +622,19 @@ class YTMusicService:
         if isinstance(album, dict):
             album = album.get("name")
         duration = item.get("duration_seconds") or item.get("durationSeconds") or item.get("duration") or item.get("length") or 0
+        vid = str(item["videoId"])
+        is_local = vid.startswith("local:")
+        source = item.get("source") or ("local" if is_local else "youtube")
+        is_pure = True if is_local else (item.get("isPureAudio") if item.get("isPureAudio") is not None else YTMusicService.is_pure_audio(item))
         return {
-            "videoId": item["videoId"],
+            "videoId": vid,
             "title": item.get("title") or "Unknown Title",
             "artist": artist or "Unknown Artist",
             "thumbnail": thumbnail,
             "album": album or "",
             "duration": YTMusicService._parse_duration_seconds(duration),
-            "isPureAudio": YTMusicService.is_pure_audio(item),
+            "isPureAudio": is_pure,
+            "source": source,
         }
 
     @staticmethod

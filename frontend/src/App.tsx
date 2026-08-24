@@ -220,6 +220,8 @@ export default function App() {
       thumbnail: track.thumbnail,
       album: track.album,
       duration: track.duration,
+      isPureAudio: track.isPureAudio,
+      source: track.source,
       queue,
     }).then((res) => {
       if (res) {
