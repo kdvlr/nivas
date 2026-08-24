@@ -348,6 +348,11 @@ class LocalMusicService:
                             except Exception:
                                 pass
 
+                        if "\xa9gen" in tags:
+                            genre = str(tags["\xa9gen"][0])
+                        elif "genre" in tags:
+                            genre = str(tags["genre"][0])
+
                         if "covr" in tags and tags["covr"]:
                             has_artwork = 1
                 elif ext == ".flac":
@@ -370,6 +375,11 @@ class LocalMusicService:
                         for ck in ("compilation", "COMPILATION"):
                             if ck in tags:
                                 is_compilation = str(tags[ck][0]).strip() in ("1", "True", "true")
+                                break
+
+                        for gk in ("genre", "GENRE", "Genre"):
+                            if gk in tags:
+                                genre = str(tags[gk][0])
                                 break
 
                         if "album" in tags:
@@ -407,6 +417,10 @@ class LocalMusicService:
                             for c_k in ("TCMP", "compilation", "COMPILATION"):
                                 if c_k in tags:
                                     is_compilation = str(tags[c_k]).strip() in ("1", "True", "true")
+                                    break
+                            for g_k in ("TCON", "genre", "GENRE"):
+                                if g_k in tags:
+                                    genre = str(tags[g_k])
                                     break
                             for alb_k in ("TALB", "album"):
                                 if alb_k in tags:
