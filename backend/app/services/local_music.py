@@ -811,8 +811,48 @@ class LocalMusicService:
                         except Exception as e:
                             logger.debug(f"Failed to cache artwork for {album_id}: {e}")
                             return None
+
+                # 3. Online fallback (iTunes Store API) if no local art exists
+                cursor.execute("SELECT title, artist FROM albums WHERE id = ?", (album_id,))
+                alb_meta = cursor.fetchone()
+                if alb_meta and alb_meta["title"]:
+                    online_bytes = self._fetch_online_artwork(alb_meta["title"], alb_meta["artist"])
+                    if online_bytes:
+                        try:
+                            with open(cached_art, "wb") as f:
+                                f.write(online_bytes)
+                            return cached_art
+                        except Exception as e:
+                            logger.debug(f"Failed to save online artwork for {album_id}: {e}")
         except Exception as e:
             logger.debug(f"Error retrieving artwork path for {album_id}: {e}")
+        return None
+
+    def _fetch_online_artwork(self, title: str, artist: str) -> Optional[bytes]:
+        """Fetches high-resolution album artwork from iTunes Search API."""
+        try:
+            import urllib.request
+            import urllib.parse
+            import json
+
+            # Clean query terms
+            clean_artist = "" if artist.lower() in ("various artists", "various", "compilations", "soundtrack") else artist
+            clean_title = title.split("(")[0].split("-")[0].replace("_", " ").strip()
+            query = f"{clean_artist} {clean_title}".strip()
+            term = urllib.parse.quote(query)
+            url = f"https://itunes.apple.com/search?term={term}&entity=album&limit=1"
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=4) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                if data.get("resultCount", 0) > 0:
+                    raw_art_url = data["results"][0].get("artworkUrl100", "")
+                    if raw_art_url:
+                        hi_res_url = raw_art_url.replace("100x100bb.jpg", "600x600bb.jpg")
+                        art_req = urllib.request.Request(hi_res_url, headers={"User-Agent": "Mozilla/5.0"})
+                        with urllib.request.urlopen(art_req, timeout=4) as art_resp:
+                            return art_resp.read()
+        except Exception as e:
+            logger.debug(f"Online artwork lookup failed for '{artist} - {title}': {e}")
         return None
 
     def _extract_embedded_artwork_bytes(self, file_path: str) -> Optional[bytes]:
