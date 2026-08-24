@@ -767,27 +767,39 @@ class PlayerEngine:
             return
         try:
             # 0. Local filesystem audio file (e.g. local:track_id or absolute path)
-            local_file = None
             if source.startswith("local:"):
+                local_file = None
                 try:
                     from .local_music import local_music_service
                     trk_id = source.split("local:", 1)[1]
                     trk = local_music_service.get_track(trk_id)
                     if trk and trk.get("filePath") and os.path.exists(trk["filePath"]):
                         local_file = trk["filePath"]
+                    elif self.current_track and self.current_track.get("filePath") and os.path.exists(self.current_track["filePath"]):
+                        local_file = self.current_track["filePath"]
                 except Exception as e:
                     logger.debug(f"Error finding local track for source {source}: {e}")
-            elif os.path.exists(source):
-                local_file = source
 
-            if local_file:
+                if local_file:
+                    cmd = [
+                        "ffmpeg", "-y", "-i", local_file,
+                        "-vn", "-ar", "44100", "-ac", "2", "-acodec", "pcm_s16le",
+                        output_path
+                    ]
+                    subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    logger.info(f"Transcoded local audio file {local_file} directly to {output_path}")
+                else:
+                    logger.warning(f"Local audio file for {source} not found on disk")
+                return
+
+            if os.path.exists(source):
                 cmd = [
-                    "ffmpeg", "-y", "-i", local_file,
+                    "ffmpeg", "-y", "-i", source,
                     "-vn", "-ar", "44100", "-ac", "2", "-acodec", "pcm_s16le",
                     output_path
                 ]
                 subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                logger.info(f"Transcoded local audio file {local_file} directly to {output_path}")
+                logger.info(f"Transcoded direct audio file {source} to {output_path}")
                 return
 
             # 1. Direct HTTP/HTTPS audio URL (non-YouTube)
