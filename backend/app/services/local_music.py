@@ -143,9 +143,18 @@ class LocalMusicService:
         uncommitted_tracks = []
 
         try:
-            for root, _, files in os.walk(self.music_dir):
-                folder_has_art = any(f.lower() in ARTWORK_NAMES for f in files)
+            for root, dirs, files in os.walk(self.music_dir):
+                # Exclude hidden and system directories (e.g. .AppleDouble, .Trashes)
+                dirs[:] = [d for d in dirs if not d.startswith(".")]
+
+                # Check for folder artwork ignoring hidden files
+                folder_has_art = any(
+                    not f.startswith(".") and (f.lower() in ARTWORK_NAMES or f.lower().endswith((".jpg", ".jpeg", ".png", ".webp")))
+                    for f in files
+                )
                 for file in files:
+                    if file.startswith("."):
+                        continue
                     ext = os.path.splitext(file)[1].lower()
                     if ext not in SUPPORTED_EXTENSIONS:
                         continue
@@ -223,7 +232,10 @@ class LocalMusicService:
                         for chunk_start in range(0, len(deleted_ids), 500):
                             chunk = list(deleted_ids)[chunk_start:chunk_start + 500]
                             cursor.execute(f"DELETE FROM tracks WHERE id IN ({','.join('?' for _ in chunk)})", chunk)
-                    cursor.execute("DELETE FROM albums WHERE id NOT IN (SELECT DISTINCT album_id FROM tracks)")
+
+                # Purge any dot-underscore or orphaned records
+                cursor.execute("DELETE FROM tracks WHERE file_path LIKE '%/._%' OR file_path LIKE '%/.%'")
+                cursor.execute("DELETE FROM albums WHERE id NOT IN (SELECT DISTINCT album_id FROM tracks)")
 
                 conn.commit()
 
@@ -436,10 +448,13 @@ class LocalMusicService:
                                     track_number = int(str(trk_tag).split("/")[0])
                                 except ValueError:
                                     pass
-                            for k in tags.keys():
-                                if k.startswith("APIC"):
-                                    has_artwork = 1
-                                    break
+                            if hasattr(tags, "getall") and tags.getall("APIC"):
+                                has_artwork = 1
+                            else:
+                                for k in tags.keys():
+                                    if str(k).startswith("APIC"):
+                                        has_artwork = 1
+                                        break
             except Exception as e:
                 logger.debug(f"Error parsing mutagen tags for {full_path}: {e}")
 
@@ -754,7 +769,7 @@ class LocalMusicService:
     def get_artwork_path(self, album_id: str) -> Optional[str]:
         """Extracts and returns the cached JPEG/PNG artwork path for an album."""
         cached_art = os.path.join(self.artwork_cache_dir, f"{album_id}.jpg")
-        if os.path.exists(cached_art):
+        if os.path.exists(cached_art) and os.path.getsize(cached_art) > 0:
             return cached_art
 
         # Find album folder and track
@@ -763,26 +778,39 @@ class LocalMusicService:
                 cursor = conn.cursor()
                 cursor.execute("SELECT folder_path FROM albums WHERE id = ?", (album_id,))
                 alb_row = cursor.fetchone()
-                if not alb_row:
-                    return None
-                folder_path = alb_row["folder_path"]
+                folder_path = alb_row["folder_path"] if alb_row else None
 
-                # 1. Check folder for artwork files
-                for art_name in ARTWORK_NAMES:
-                    art_file = os.path.join(folder_path, art_name)
-                    if os.path.exists(art_file):
-                        return art_file
+                # 1. Check folder for artwork files or any image file
+                if folder_path and os.path.exists(folder_path):
+                    try:
+                        for f in os.listdir(folder_path):
+                            if f.startswith("."):
+                                continue
+                            f_lower = f.lower()
+                            if f_lower in ARTWORK_NAMES or f_lower.endswith((".jpg", ".jpeg", ".png", ".webp")):
+                                return os.path.join(folder_path, f)
+                    except Exception:
+                        pass
 
-                # 2. Extract embedded artwork from first track
-                cursor.execute("SELECT file_path, file_format FROM tracks WHERE album_id = ? LIMIT 1", (album_id,))
-                trk_row = cursor.fetchone()
-                if trk_row:
+                # 2. Extract embedded artwork from any track in this album, prioritizing tracks marked has_artwork=1
+                cursor.execute("""
+                    SELECT file_path FROM tracks 
+                    WHERE album_id = ? 
+                    ORDER BY has_artwork DESC, disc_number ASC, track_number ASC
+                """, (album_id,))
+                for trk_row in cursor.fetchall():
                     track_file = trk_row["file_path"]
+                    if not track_file or not os.path.exists(track_file):
+                        continue
                     art_bytes = self._extract_embedded_artwork_bytes(track_file)
                     if art_bytes:
-                        with open(cached_art, "wb") as f:
-                            f.write(art_bytes)
-                        return cached_art
+                        try:
+                            with open(cached_art, "wb") as f:
+                                f.write(art_bytes)
+                            return cached_art
+                        except Exception as e:
+                            logger.debug(f"Failed to cache artwork for {album_id}: {e}")
+                            return None
         except Exception as e:
             logger.debug(f"Error retrieving artwork path for {album_id}: {e}")
         return None
@@ -796,11 +824,11 @@ class LocalMusicService:
             from mutagen.id3 import ID3, APIC
 
             audio = mutagen.File(file_path)
-            if not audio or not audio.tags:
+            if not audio:
                 return None
 
             # MP4 / ALAC
-            if hasattr(audio.tags, "get"):
+            if hasattr(audio, "tags") and audio.tags and hasattr(audio.tags, "get"):
                 covr = audio.tags.get("covr")
                 if covr and len(covr) > 0:
                     return bytes(covr[0])
@@ -810,16 +838,21 @@ class LocalMusicService:
                 return audio.pictures[0].data
 
             # ID3 (MP3)
-            for tag in audio.tags.values():
-                if isinstance(tag, APIC):
-                    return tag.data
+            if hasattr(audio, "tags") and audio.tags:
+                if hasattr(audio.tags, "getall"):
+                    apics = audio.tags.getall("APIC")
+                    if apics:
+                        return apics[0].data
+                for tag in audio.tags.values():
+                    if isinstance(tag, APIC):
+                        return tag.data
         except Exception as e:
             logger.debug(f"Error extracting embedded artwork bytes from {file_path}: {e}")
         return None
 
     def _format_track_dict(self, row: sqlite3.Row) -> Dict[str, Any]:
         album_id = row["album_id"]
-        thumbnail = f"/api/ytmusic/local/artwork/{album_id}" if row["has_artwork"] else ""
+        thumbnail = f"/api/ytmusic/local/artwork/{album_id}"
         row_keys = row.keys() if hasattr(row, "keys") else []
         album_artist = row["album_artist"] if "album_artist" in row_keys and row["album_artist"] else row["artist"]
         return {
@@ -844,7 +877,7 @@ class LocalMusicService:
 
     def _format_album_dict(self, row: sqlite3.Row) -> Dict[str, Any]:
         album_id = row["id"]
-        thumbnail = f"/api/ytmusic/local/artwork/{album_id}" if row["has_artwork"] else ""
+        thumbnail = f"/api/ytmusic/local/artwork/{album_id}"
         row_keys = row.keys() if hasattr(row, "keys") else []
         is_comp = bool(row["is_compilation"]) if "is_compilation" in row_keys else False
         return {
