@@ -107,11 +107,15 @@ def search(q: str = Query(..., min_length=1), filter: Optional[str] = None):
         for item in videos:
             if isinstance(item, dict) and not item.get("source"):
                 item["source"] = "youtube"
-        if isinstance(top_res, dict) and not top_res.get("source"):
-            top_res["source"] = "youtube"
+        # Prioritize local album / track match as top result if available
+        combined_top = top_res
+        if local_albums and any(q.lower() in (a.get("title") or "").lower() for a in local_albums):
+            combined_top = local_albums[0]
+        elif local_tracks and any(q.lower() in (t.get("title") or "").lower() for t in local_tracks):
+            combined_top = local_tracks[0]
+        elif not combined_top:
+            combined_top = local_tracks[0] if local_tracks else (local_albums[0] if local_albums else (songs[0] if songs else None))
 
-        # Prioritize local track as top result if available
-        combined_top = local_tracks[0] if local_tracks else (top_res or (songs[0] if songs else None))
         combined_songs = [*local_tracks, *songs]
         combined_albums = [*local_albums, *albums]
 
