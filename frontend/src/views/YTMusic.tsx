@@ -243,6 +243,18 @@ export default function YTMusicView({
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null)
   const [localStatus, setLocalStatus] = useState<any>(null)
   const [scanningStatus, setScanningStatus] = useState<boolean>(false)
+  const [reshuffleKey, setReshuffleKey] = useState<number>(0)
+
+  // Random sample of up to 12 albums for the Browse page shelf
+  const randomBrowseAlbums = useMemo(() => {
+    if (!localAlbums || localAlbums.length === 0) return []
+    const shuffled = [...localAlbums]
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+    }
+    return shuffled.slice(0, 12)
+  }, [localAlbums, reshuffleKey])
 
   // YouTube Music Home 10 Playlists (2 rows of 5)
   const [homePlaylists, setHomePlaylists] = useState<PlaylistItem[]>([])
@@ -1431,12 +1443,22 @@ export default function YTMusicView({
                       </p>
                       <h3 className="text-2xl font-bold text-ink tracking-tight">Local Albums</h3>
                     </div>
-                    <span className="text-xs text-ink-soft font-medium">
-                      {localAlbums.length} albums · {localStatus?.totalTracks || ''} tracks
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setReshuffleKey((k) => k + 1)}
+                        title="Shuffle albums"
+                        className="flex items-center gap-1 text-xs font-semibold text-ink-soft hover:text-ink px-2.5 py-1 rounded-lg border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] transition cursor-pointer"
+                      >
+                        <Icon name="shuffle" className="text-sm" />
+                        <span>Shuffle</span>
+                      </button>
+                      <span className="text-xs text-ink-soft font-medium">
+                        {localAlbums.length} albums · {localStatus?.totalTracks || ''} tracks
+                      </span>
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                    {localAlbums.slice(0, 12).map((album) => (
+                    {randomBrowseAlbums.map((album) => (
                       <div
                         key={album.browseId}
                         className="group relative flex flex-col rounded-2xl glass-inset p-3 text-left transition hover:bg-[var(--sc-high)] border border-[var(--outline-var)]"
