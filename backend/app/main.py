@@ -34,7 +34,7 @@ async def lifespan(app: FastAPI):
     manager.set_loop(asyncio.get_running_loop())
     scheduler.start()
     player_engine.start()
-    local_music_service.start_background_scan()
+    local_music_service.start_background_scan(only_if_empty=True)
     yield
     player_engine.stop()
     scheduler.stop()

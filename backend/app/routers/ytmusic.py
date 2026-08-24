@@ -152,9 +152,13 @@ def trigger_local_scan():
 def get_local_artists():
     return local_music_service.get_artists()
 
+@router.get("/local/genres")
+def get_local_genres():
+    return local_music_service.get_genres()
+
 @router.get("/local/albums")
-def get_local_albums(artist: Optional[str] = None):
-    return local_music_service.get_albums(artist=artist)
+def get_local_albums(artist: Optional[str] = None, genre: Optional[str] = None):
+    return local_music_service.get_albums(artist=artist, genre=genre)
 
 @router.get("/local/tracks")
 def get_local_tracks(album_id: str = Query(...)):

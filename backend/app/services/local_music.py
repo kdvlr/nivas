@@ -103,9 +103,12 @@ class LocalMusicService:
         except Exception as e:
             logger.error(f"Error updating local music counts: {e}")
 
-    def start_background_scan(self):
+    def start_background_scan(self, only_if_empty: bool = False):
         """Spawns an asynchronous background scan if not already scanning."""
         if self._is_scanning:
+            return
+        if only_if_empty and self._total_tracks > 0:
+            logger.info(f"Local music database already indexed ({self._total_tracks} tracks, {self._total_albums} albums). Reusing scan index.")
             return
         threading.Thread(target=self.scan_library, daemon=True, name="local-music-scanner").start()
 
@@ -134,18 +137,12 @@ class LocalMusicService:
             mutagen = None
 
         discovered_tracks = []
+        scanned_track_ids = set()
         album_map = {}  # album_id -> dict
         batch_size = 100
         uncommitted_tracks = []
 
         try:
-            # Clear old index before scan
-            with self._get_conn() as conn:
-                cursor = conn.cursor()
-                cursor.execute("DELETE FROM tracks")
-                cursor.execute("DELETE FROM albums")
-                conn.commit()
-
             for root, _, files in os.walk(self.music_dir):
                 folder_has_art = any(f.lower() in ARTWORK_NAMES for f in files)
                 for file in files:
@@ -166,6 +163,7 @@ class LocalMusicService:
                         track_info["file_size"] = file_size
                         track_info["mtime"] = mtime
                         discovered_tracks.append(track_info)
+                        scanned_track_ids.add(track_info["id"])
                         uncommitted_tracks.append(track_info)
 
                         # Group into albums using resolved album_artist
@@ -198,7 +196,7 @@ class LocalMusicService:
                 self._commit_track_batch(uncommitted_tracks)
                 uncommitted_tracks = []
 
-            # Save all albums
+            # Save all albums and clean up deleted files
             with self._get_conn() as conn:
                 cursor = conn.cursor()
                 album_rows = [
@@ -214,6 +212,19 @@ class LocalMusicService:
                         id, title, artist, year, track_count, has_artwork, folder_path, is_compilation
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """, album_rows)
+
+                # Clean up tracks no longer on disk if scan discovered tracks
+                if scanned_track_ids:
+                    cursor.execute("SELECT id FROM tracks")
+                    existing_ids = {row[0] for row in cursor.fetchall()}
+                    deleted_ids = existing_ids - scanned_track_ids
+                    if deleted_ids:
+                        logger.info(f"Pruning {len(deleted_ids)} deleted tracks from database.")
+                        for chunk_start in range(0, len(deleted_ids), 500):
+                            chunk = list(deleted_ids)[chunk_start:chunk_start + 500]
+                            cursor.execute(f"DELETE FROM tracks WHERE id IN ({','.join('?' for _ in chunk)})", chunk)
+                    cursor.execute("DELETE FROM albums WHERE id NOT IN (SELECT DISTINCT album_id FROM tracks)")
+
                 conn.commit()
 
             self._last_scan_time = time.time()
@@ -545,8 +556,8 @@ class LocalMusicService:
             logger.error(f"Error fetching local artists: {e}")
         return artists
 
-    def get_albums(self, artist: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Returns list of albums, optionally filtered by artist."""
+    def get_albums(self, artist: Optional[str] = None, genre: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Returns list of albums, optionally filtered by artist or genre."""
         albums = []
         try:
             with self._get_conn() as conn:
@@ -557,6 +568,12 @@ class LocalMusicService:
                         WHERE artist = ? OR id IN (SELECT DISTINCT album_id FROM tracks WHERE artist = ? OR album_artist = ?)
                         ORDER BY year DESC, title COLLATE NOCASE ASC
                     """, (artist, artist, artist))
+                elif genre:
+                    cursor.execute("""
+                        SELECT * FROM albums
+                        WHERE id IN (SELECT DISTINCT album_id FROM tracks WHERE genre = ? COLLATE NOCASE)
+                        ORDER BY year DESC, title COLLATE NOCASE ASC
+                    """, (genre,))
                 else:
                     cursor.execute("""
                         SELECT * FROM albums
@@ -575,6 +592,14 @@ class LocalMusicService:
                             GROUP BY album_id, album, COALESCE(NULLIF(album_artist, ''), artist)
                             ORDER BY year DESC, title COLLATE NOCASE ASC
                         """, (artist, artist))
+                    elif genre:
+                        cursor.execute("""
+                            SELECT album_id as id, album as title, COALESCE(NULLIF(album_artist, ''), artist) as artist, MAX(year) as year, COUNT(*) as track_count, MAX(has_artwork) as has_artwork
+                            FROM tracks
+                            WHERE genre = ? COLLATE NOCASE AND album IS NOT NULL AND album != ''
+                            GROUP BY album_id, album, COALESCE(NULLIF(album_artist, ''), artist)
+                            ORDER BY year DESC, title COLLATE NOCASE ASC
+                        """, (genre,))
                     else:
                         cursor.execute("""
                             SELECT album_id as id, album as title, COALESCE(NULLIF(album_artist, ''), artist) as artist, MAX(year) as year, COUNT(*) as track_count, MAX(has_artwork) as has_artwork
@@ -588,6 +613,30 @@ class LocalMusicService:
         except Exception as e:
             logger.error(f"Error fetching local albums: {e}")
         return albums
+
+    def get_genres(self) -> List[Dict[str, Any]]:
+        """Returns list of genres with album and track counts."""
+        genres = []
+        try:
+            with self._get_conn() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT genre, COUNT(DISTINCT album_id) as album_count, COUNT(*) as track_count
+                    FROM tracks
+                    WHERE genre IS NOT NULL AND TRIM(genre) != ''
+                    GROUP BY genre
+                    ORDER BY genre COLLATE NOCASE ASC
+                """)
+                for row in cursor.fetchall():
+                    genres.append({
+                        "genre": row["genre"].strip(),
+                        "albumCount": row["album_count"],
+                        "trackCount": row["track_count"],
+                        "source": "local"
+                    })
+        except Exception as e:
+            logger.error(f"Error fetching local genres: {e}")
+        return genres
 
     def get_album_tracks(self, album_id: str) -> Dict[str, Any]:
         """Returns album info and its ordered tracks."""

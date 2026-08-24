@@ -41,7 +41,7 @@ const NAV = [
   { id: 'calendar', label: 'Calendar', icon: 'calendar_month', view: Calendar, active: 'bg-rose-200 text-rose-950 dark:bg-rose-900 dark:text-rose-100', activeText: 'text-rose-600 dark:text-rose-400' },
   { id: 'chores', label: 'Chores', icon: 'family_star', view: Chores, active: 'bg-amber-200 text-amber-950 dark:bg-amber-900 dark:text-amber-100', activeText: 'text-amber-600 dark:text-amber-400' },
   { id: 'todos', label: 'To-Dos', icon: 'task_alt', view: ToDos, active: 'bg-emerald-200 text-emerald-950 dark:bg-emerald-900 dark:text-emerald-100', activeText: 'text-emerald-600 dark:text-emerald-400' },
-  { id: 'ytmusic', label: 'YouTube Music', icon: 'graphic_eq', view: YTMusic, active: 'bg-rose-300 text-rose-950 dark:bg-rose-950 dark:text-rose-100', activeText: 'text-rose-600 dark:text-rose-400' },
+  { id: 'ytmusic', label: 'Music', icon: 'graphic_eq', view: YTMusic, active: 'bg-rose-300 text-rose-950 dark:bg-rose-950 dark:text-rose-100', activeText: 'text-rose-600 dark:text-rose-400' },
   { id: 'shopping', label: 'Shopping', icon: 'shopping_cart', view: Shopping, active: 'bg-orange-200 text-orange-950 dark:bg-orange-900 dark:text-orange-100', activeText: 'text-orange-600 dark:text-orange-400' },
   { id: 'recipes', label: 'Recipes', icon: 'restaurant', view: Recipes, active: 'bg-pink-200 text-pink-950 dark:bg-pink-900 dark:text-pink-100', activeText: 'text-pink-600 dark:text-pink-400' },
   { id: 'photos', label: 'Photos', icon: 'photo_library', view: Photos, active: 'bg-indigo-200 text-indigo-950 dark:bg-indigo-900 dark:text-indigo-100', activeText: 'text-indigo-600 dark:text-indigo-400' },
