@@ -394,9 +394,9 @@ class YTMusicService:
         if not title:
             return song
 
-        # Clean title by removing (From "..."), (Official Video), [4K], etc.
-        clean_title = re.sub(r"\s*\((?:From|Official|Lyrical|Video|Teaser|Full)[^\)]*\)", "", title, flags=re.IGNORECASE).strip()
-        clean_title = re.sub(r"\s*\[(?:Official|Lyrical|Video|4K|Audio)[^\]]*\]", "", clean_title, flags=re.IGNORECASE).strip()
+        # Clean title by removing (From "..."), (Official Video), (feat. ...), [4K], etc.
+        clean_title = re.sub(r"\s*\((?:From|Official|Lyrical|Video|Teaser|Full|feat|ft)[^\)]*\)", "", title, flags=re.IGNORECASE).strip()
+        clean_title = re.sub(r"\s*\[(?:Official|Lyrical|Video|4K|Audio|feat|ft)[^\]]*\]", "", clean_title, flags=re.IGNORECASE).strip()
         clean_title = re.split(r"[-|–|—|:|\|]", clean_title)[0].strip()
 
         queries = []
@@ -406,7 +406,7 @@ class YTMusicService:
 
         try:
             target_dur = song.get("duration", 0) or 0
-            v_combined = f"{title} {artist}".lower()
+            v_text = f"{title} {artist}".lower()
 
             for query in queries:
                 candidates = self.search(query, filter_type="songs")
@@ -421,8 +421,8 @@ class YTMusicService:
                     c_dur = cand_norm.get("duration", 0) or 0
 
                     # 1. Base title similarity check
-                    clean_c_title = re.sub(r"\s*\((?:From|Official|Lyrical|Video|Teaser|Full)[^\)]*\)", "", c_title, flags=re.IGNORECASE).strip()
-                    clean_c_title = re.sub(r"\s*\[(?:Official|Lyrical|Video|4K|Audio)[^\]]*\]", "", clean_c_title, flags=re.IGNORECASE).strip()
+                    clean_c_title = re.sub(r"\s*\((?:From|Official|Lyrical|Video|Teaser|Full|feat|ft)[^\)]*\)", "", c_title, flags=re.IGNORECASE).strip()
+                    clean_c_title = re.sub(r"\s*\[(?:Official|Lyrical|Video|4K|Audio|feat|ft)[^\]]*\]", "", clean_c_title, flags=re.IGNORECASE).strip()
                     clean_c_title = re.split(r"[-|–|—|:|\|]", clean_c_title)[0].strip()
 
                     title_sim = SequenceMatcher(None, clean_title.lower(), clean_c_title.lower()).ratio()
@@ -434,22 +434,41 @@ class YTMusicService:
                     if not title_matches:
                         continue
 
-                    # 2. Artist / Album / Contributor overlap check
-                    c_combined = f"{c_title} {c_artist} {c_album}".lower()
-                    ignored = {"song", "from", "with", "feat", "music", "records", "audio", "official", "full", "video", "lyric", "lyrics", "unknown", "artist", "cast"}
-                    c_tokens = [w.strip() for w in re.split(r"[,|/&;+\s]", c_artist.lower()) if len(w.strip()) > 2 and w.strip() not in ignored]
-                    v_tokens = [w.strip() for w in re.split(r"[,|/&;+\s]", artist.lower()) if len(w.strip()) > 2 and w.strip() not in ignored]
+                    # 2. Strict Artist / Movie album match check
+                    c_artists = [re.sub(r"[^a-zA-Z0-9\s]", "", a).strip().lower() for a in re.split(r"[,|/&;+]|\band\b|\bfeat\.?\b|\bft\.?\b", c_artist) if a.strip()]
+                    c_artists = [a for a in c_artists if len(a) > 2 and a not in {"various artists", "unknown artist", "unknown", "cast"}]
 
-                    # Check for movie/album name match (e.g. "Beast", "Main Vaapas Aaunga", "Brahmastra")
-                    album_matches = bool(c_album and len(c_album) > 3 and c_album.lower() in v_combined)
+                    v_artists = [re.sub(r"[^a-zA-Z0-9\s]", "", a).strip().lower() for a in re.split(r"[,|/&;+]|\band\b|\bfeat\.?\b|\bft\.?\b", artist) if a.strip()]
+                    v_artists = [a for a in v_artists if len(a) > 2 and a not in {"various artists", "unknown artist", "unknown", "cast"}]
 
-                    artist_matches = (
-                        album_matches
-                        or any(tok in v_combined for tok in c_tokens)
-                        or any(tok in c_combined for tok in v_tokens)
-                    )
+                    artist_matched = False
+                    for ca in c_artists:
+                        if ca in v_text:
+                            artist_matched = True
+                            break
+                        for w in ca.split():
+                            if len(w) >= 4 and w in v_text:
+                                artist_matched = True
+                                break
+                        if artist_matched:
+                            break
 
-                    if not artist_matches:
+                    if not artist_matched:
+                        for va in v_artists:
+                            for w in va.split():
+                                if len(w) >= 4 and w in c_artist.lower():
+                                    artist_matched = True
+                                    break
+                            if artist_matched:
+                                break
+
+                    # Check movie album match (only if album title is not just the single's song title)
+                    if not artist_matched and c_album and len(c_album) > 3:
+                        clean_c_alb = c_album.split("(")[0].strip().lower()
+                        if clean_c_alb != clean_c_title.lower() and clean_c_alb in v_text:
+                            artist_matched = True
+
+                    if not artist_matched:
                         continue
 
                     # 3. Duration compatibility check (within 60s tolerance for music video dialogues)
