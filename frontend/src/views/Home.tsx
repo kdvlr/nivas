@@ -398,12 +398,23 @@ export default function Home() {
         <div>
           <button
             onClick={() => setKidsHubOpen((prev) => !prev)}
-            className="text-left group/date cursor-pointer transition-transform active:scale-95 focus:outline-none"
+            className="text-left group/date cursor-pointer transition-transform active:scale-95 focus:outline-none flex flex-col justify-center"
             title="Click to view Kid's Brain Nuggets"
           >
-            <h1 className="text-sm lg:text-2xl font-medium tracking-tight text-ink leading-none truncate group-hover/date:text-[var(--primary)] transition-colors">
-              {now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+            {/* Mobile / Tablet compact single line */}
+            <h1 className="text-sm font-medium tracking-tight text-ink leading-none truncate group-hover/date:text-[var(--primary)] transition-colors lg:hidden">
+              {now.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
             </h1>
+
+            {/* 1080p / Desktop 2-line display: Day and Date */}
+            <div className="hidden lg:flex flex-col items-start leading-tight">
+              <span className="text-2xl font-semibold tracking-tight text-ink group-hover/date:text-[var(--primary)] transition-colors">
+                {now.toLocaleDateString(undefined, { weekday: 'long' })}
+              </span>
+              <span className="text-sm font-medium tracking-tight text-ink-soft group-hover/date:text-[var(--primary)] transition-colors">
+                {now.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}
+              </span>
+            </div>
           </button>
         </div>
         {weather?.current && (
