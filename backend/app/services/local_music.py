@@ -86,6 +86,22 @@ class LocalMusicService:
                     cursor.execute("ALTER TABLE albums ADD COLUMN is_compilation INTEGER DEFAULT 0")
                 except Exception:
                     pass
+                try:
+                    cursor.execute("ALTER TABLE albums ADD COLUMN file_format TEXT")
+                except Exception:
+                    pass
+                try:
+                    cursor.execute("""
+                        UPDATE albums
+                        SET file_format = (
+                            SELECT GROUP_CONCAT(DISTINCT file_format)
+                            FROM tracks
+                            WHERE tracks.album_id = albums.id
+                        )
+                        WHERE file_format IS NULL OR file_format = ''
+                    """)
+                except Exception:
+                    pass
                 conn.commit()
         except Exception as e:
             logger.error(f"Error initializing local music db: {e}")
@@ -187,10 +203,13 @@ class LocalMusicService:
                                 "has_artwork": track_info["has_artwork"],
                                 "folder_path": root,
                                 "is_compilation": track_info.get("is_compilation", 0),
+                                "formats": set(),
                             }
                         album_map[alb_id]["track_count"] += 1
                         if track_info["has_artwork"]:
                             album_map[alb_id]["has_artwork"] = 1
+                        if track_info.get("file_format"):
+                            album_map[alb_id]["formats"].add(track_info["file_format"])
 
                         if len(uncommitted_tracks) >= batch_size:
                             self._commit_track_batch(uncommitted_tracks)
@@ -212,14 +231,15 @@ class LocalMusicService:
                     (
                         a["id"], a["title"], a["artist"], a["year"],
                         a["track_count"], a["has_artwork"], a["folder_path"],
-                        a.get("is_compilation", 0)
+                        a.get("is_compilation", 0),
+                        "/".join(sorted(a.get("formats", []))) if a.get("formats") else ""
                     )
                     for a in album_map.values()
                 ]
                 cursor.executemany("""
                     INSERT OR REPLACE INTO albums (
-                        id, title, artist, year, track_count, has_artwork, folder_path, is_compilation
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        id, title, artist, year, track_count, has_artwork, folder_path, is_compilation, file_format
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, album_rows)
 
                 # Clean up tracks no longer on disk if scan discovered tracks
@@ -303,13 +323,36 @@ class LocalMusicService:
         genre = ""
         has_artwork = 1 if folder_has_artwork else 0
 
+        ext_clean = ext.lstrip(".").upper()
+        if ext_clean in ("M4A", "MP4"):
+            file_format = "M4A"
+        elif ext_clean == "ALAC":
+            file_format = "ALAC"
+        elif ext_clean == "MP3":
+            file_format = "MP3"
+        elif ext_clean == "FLAC":
+            file_format = "FLAC"
+        elif ext_clean in ("AIF", "AIFF"):
+            file_format = "AIFF"
+        elif ext_clean == "WAV":
+            file_format = "WAV"
+        else:
+            file_format = ext_clean
+
         if mutagen_mod:
             try:
-                if ext in (".m4a", ".alac"):
+                if ext in (".m4a", ".alac", ".mp4"):
                     from mutagen.mp4 import MP4
                     audio = MP4(full_path)
-                    if audio and audio.info and hasattr(audio.info, "length"):
-                        duration = float(audio.info.length)
+                    if audio and audio.info:
+                        if hasattr(audio.info, "length"):
+                            duration = float(audio.info.length)
+                        if hasattr(audio.info, "codec"):
+                            c_str = str(audio.info.codec).lower()
+                            if "alac" in c_str:
+                                file_format = "ALAC"
+                            else:
+                                file_format = "M4A"
                     tags = audio.tags if audio else {}
                     if tags:
                         if "\xa9nam" in tags:
@@ -490,7 +533,7 @@ class LocalMusicService:
             "duration": round(duration),
             "year": year.strip(),
             "genre": genre.strip(),
-            "file_format": ext.lstrip(".").upper(),
+            "file_format": file_format,
             "has_artwork": 1 if has_artwork else 0,
             "is_compilation": 1 if is_compilation else 0,
         }
@@ -615,7 +658,7 @@ class LocalMusicService:
                 if not albums:
                     if artist:
                         cursor.execute("""
-                            SELECT album_id as id, album as title, COALESCE(NULLIF(album_artist, ''), artist) as artist, MAX(year) as year, COUNT(*) as track_count, MAX(has_artwork) as has_artwork
+                            SELECT album_id as id, album as title, COALESCE(NULLIF(album_artist, ''), artist) as artist, MAX(year) as year, COUNT(*) as track_count, MAX(has_artwork) as has_artwork, GROUP_CONCAT(DISTINCT file_format) as file_formats
                             FROM tracks
                             WHERE (artist = ? OR album_artist = ?) AND album IS NOT NULL AND album != ''
                             GROUP BY album_id, album, COALESCE(NULLIF(album_artist, ''), artist)
@@ -623,7 +666,7 @@ class LocalMusicService:
                         """, (artist, artist))
                     elif genre:
                         cursor.execute("""
-                            SELECT album_id as id, album as title, COALESCE(NULLIF(album_artist, ''), artist) as artist, MAX(year) as year, COUNT(*) as track_count, MAX(has_artwork) as has_artwork
+                            SELECT album_id as id, album as title, COALESCE(NULLIF(album_artist, ''), artist) as artist, MAX(year) as year, COUNT(*) as track_count, MAX(has_artwork) as has_artwork, GROUP_CONCAT(DISTINCT file_format) as file_formats
                             FROM tracks
                             WHERE genre = ? COLLATE NOCASE AND album IS NOT NULL AND album != ''
                             GROUP BY album_id, album, COALESCE(NULLIF(album_artist, ''), artist)
@@ -631,7 +674,7 @@ class LocalMusicService:
                         """, (genre,))
                     else:
                         cursor.execute("""
-                            SELECT album_id as id, album as title, COALESCE(NULLIF(album_artist, ''), artist) as artist, MAX(year) as year, COUNT(*) as track_count, MAX(has_artwork) as has_artwork
+                            SELECT album_id as id, album as title, COALESCE(NULLIF(album_artist, ''), artist) as artist, MAX(year) as year, COUNT(*) as track_count, MAX(has_artwork) as has_artwork, GROUP_CONCAT(DISTINCT file_format) as file_formats
                             FROM tracks
                             WHERE album IS NOT NULL AND album != ''
                             GROUP BY album_id, album, COALESCE(NULLIF(album_artist, ''), artist)
@@ -700,7 +743,14 @@ class LocalMusicService:
                         "thumbnail": first_trk.get("thumbnail", ""),
                         "source": "local",
                         "isPureAudio": True,
+                        "fileFormat": "",
                     }
+
+                # Ensure fileFormat is derived from tracks if missing
+                if not album_dict.get("fileFormat") and tracks:
+                    track_formats = sorted(list({t.get("fileFormat") for t in tracks if t.get("fileFormat")}))
+                    if track_formats:
+                        album_dict["fileFormat"] = "/".join(track_formats)
 
                 album_dict["tracks"] = tracks
                 return album_dict
@@ -920,6 +970,17 @@ class LocalMusicService:
         thumbnail = f"/api/ytmusic/local/artwork/{album_id}"
         row_keys = row.keys() if hasattr(row, "keys") else []
         is_comp = bool(row["is_compilation"]) if "is_compilation" in row_keys else False
+        raw_fmt = ""
+        if "file_format" in row_keys and row["file_format"]:
+            raw_fmt = str(row["file_format"]).strip()
+        elif "file_formats" in row_keys and row["file_formats"]:
+            raw_fmt = str(row["file_formats"]).strip()
+
+        file_format = ""
+        if raw_fmt:
+            fmts = [f.strip() for f in raw_fmt.replace(",", "/").split("/") if f.strip()]
+            file_format = "/".join(sorted(list(set(fmts))))
+
         return {
             "browseId": f"local:{album_id}",
             "id": album_id,
@@ -929,6 +990,7 @@ class LocalMusicService:
             "trackCount": row["track_count"],
             "thumbnail": thumbnail,
             "isCompilation": is_comp,
+            "fileFormat": file_format,
             "source": "local",
             "isPureAudio": True,
         }

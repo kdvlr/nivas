@@ -51,6 +51,7 @@ interface AlbumItem {
   year?: string
   trackCount?: number
   source?: 'local' | 'youtube' | string
+  fileFormat?: string
 }
 
 const isSong = (item: any) => {
@@ -85,6 +86,7 @@ const toTrack = (item: any): Track | null => {
     duration,
     isPureAudio: item.isPureAudio !== undefined ? item.isPureAudio : (item.resultType === 'video' ? false : true),
     source: item.source || (item.videoId?.startsWith('local:') ? 'local' : 'youtube'),
+    fileFormat: item.fileFormat || item.file_format,
   }
 }
 
@@ -390,6 +392,7 @@ export default function YTMusicView({
           trackCount: a.trackCount,
           thumbnail: a.thumbnail || `/api/ytmusic/local/artwork/${a.id}`,
           source: 'local',
+          fileFormat: a.fileFormat || a.file_format || a.formats || '',
         })))
       }
       if (Array.isArray(artists)) {
@@ -565,6 +568,11 @@ export default function YTMusicView({
       ? `${Math.floor(totalDurationSecs / 3600)} hr ${Math.floor((totalDurationSecs % 3600) / 60)} min`
       : `${Math.floor(totalDurationSecs / 60)} min`
 
+    const albumFormats = Array.from(new Set(tracks.map((t) => t.fileFormat).filter(Boolean)))
+    const formatLabel = albumFormats.length > 0
+      ? albumFormats.join('/')
+      : (selectedAlbum.fileFormat || (selectedAlbum.source === 'local' ? 'Local' : 'Album'))
+
     return (
       <div className="space-y-6 animate-fadeIn">
         {/* Top Header with Back Navigation and Clock */}
@@ -604,7 +612,7 @@ export default function YTMusicView({
               <div className="flex items-center justify-center md:justify-start gap-2">
                 <span className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--primary-container)] px-3 py-1 text-xs font-bold uppercase tracking-wider text-[var(--on-primary-container)] border border-[var(--primary)]/30">
                   <MusicSourceIcon source={selectedAlbum.source} size={14} />
-                  {selectedAlbum.source === 'local' ? 'Local Lossless Album' : 'Album'}
+                  {selectedAlbum.source === 'local' ? `${formatLabel} Album` : 'Album'}
                 </span>
                 {selectedAlbum.year && (
                   <span className="text-xs font-semibold text-ink-soft">{selectedAlbum.year}</span>
@@ -733,6 +741,11 @@ export default function YTMusicView({
                       >
                         {track.title}
                       </p>
+                      {track.fileFormat && track.source === 'local' && (
+                        <span className="shrink-0 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-[var(--sc-high)] text-ink-soft border border-[var(--outline-var)]">
+                          {track.fileFormat}
+                        </span>
+                      )}
                     </div>
                     <p className="truncate text-xs text-ink-soft">
                       {track.artist}
@@ -824,6 +837,7 @@ export default function YTMusicView({
                   year: item.year,
                   trackCount: item.trackCount,
                   source: item.source || (item.browseId.startsWith('local:') ? 'local' : 'youtube'),
+                  fileFormat: item.fileFormat || item.file_format || item.formats || '',
                 })
               } else {
                 const trk = toTrack(item)
@@ -1301,6 +1315,15 @@ export default function YTMusicView({
                                 </div>
                               )}
 
+                              {/* Format Badge Tag on Top-Left */}
+                              {album.fileFormat && (
+                                <div className="absolute top-2 left-2 z-10 pointer-events-none">
+                                  <span className="inline-flex items-center rounded-md bg-black/75 backdrop-blur-md px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-white shadow border border-white/15">
+                                    {album.fileFormat}
+                                  </span>
+                                </div>
+                              )}
+
                               {/* Center Play Overlay */}
                               <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition group-hover:opacity-100">
                                 <span
@@ -1347,6 +1370,9 @@ export default function YTMusicView({
                                   </p>
                                 </div>
                                 <p className="mt-0.5 line-clamp-1 text-xs text-ink-soft">
+                                  {album.fileFormat && (
+                                    <span className="font-semibold text-ink-soft/90 mr-1">{album.fileFormat} ·</span>
+                                  )}
                                   {album.artist}
                                   {album.year ? ` · ${album.year}` : ''}
                                 </p>
@@ -1541,6 +1567,15 @@ export default function YTMusicView({
                               </div>
                             )}
 
+                            {/* Format Badge Tag on Top-Left */}
+                            {album.fileFormat && (
+                              <div className="absolute top-2 left-2 z-10 pointer-events-none">
+                                <span className="inline-flex items-center rounded-md bg-black/75 backdrop-blur-md px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-white shadow border border-white/15">
+                                  {album.fileFormat}
+                                </span>
+                              </div>
+                            )}
+
                             <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition group-hover:opacity-100">
                               <span
                                 onClick={(e) => playAlbum(album, e)}
@@ -1584,6 +1619,9 @@ export default function YTMusicView({
                               </p>
                             </div>
                             <p className="mt-0.5 truncate text-xs text-ink-soft">
+                              {album.fileFormat && (
+                                <span className="font-semibold text-ink-soft/90 mr-1">{album.fileFormat} ·</span>
+                              )}
                               {album.artist} {album.year ? `· ${album.year}` : ''}
                             </p>
                           </div>
@@ -1726,6 +1764,15 @@ export default function YTMusicView({
                             </div>
                           )}
 
+                          {/* Format Badge Tag on Top-Left */}
+                          {album.fileFormat && (
+                            <div className="absolute top-2 left-2 z-10 pointer-events-none">
+                              <span className="inline-flex items-center rounded-md bg-black/75 backdrop-blur-md px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-white shadow border border-white/15">
+                                {album.fileFormat}
+                              </span>
+                            </div>
+                          )}
+
                           <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition group-hover:opacity-100">
                             <span
                               onClick={(e) => playAlbum(album, e)}
@@ -1770,6 +1817,9 @@ export default function YTMusicView({
                               </p>
                             </div>
                             <p className="mt-0.5 line-clamp-1 text-xs text-ink-soft">
+                              {album.fileFormat && (
+                                <span className="font-semibold text-ink-soft/90 mr-1">{album.fileFormat} ·</span>
+                              )}
                               {album.artist}
                               {album.year ? ` · ${album.year}` : ''}
                             </p>

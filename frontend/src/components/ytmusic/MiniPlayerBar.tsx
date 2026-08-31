@@ -14,6 +14,7 @@ export interface Track {
   duration?: number
   isPureAudio?: boolean
   source?: 'local' | 'youtube' | string
+  fileFormat?: string
 }
 
 interface MiniPlayerBarProps {
