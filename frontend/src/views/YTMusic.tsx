@@ -577,7 +577,7 @@ export default function YTMusicView({
     return (
       <div className="space-y-6 animate-fadeIn">
         {/* Top Header with Back Navigation and Clock */}
-        <div className="glass flex flex-row items-center justify-between gap-4 px-4 py-2 lg:px-6 lg:py-2.5">
+        <div className="flex shrink-0 items-center justify-between gap-4 mb-4">
           <button
             onClick={() => {
               setSelectedAlbum(null)
@@ -986,9 +986,9 @@ export default function YTMusicView({
   }
 
   return (
-    <div className={`text-ink flex flex-col gap-3 lg:gap-4 ${browseIsOpen ? 'min-h-full' : 'h-full flex-1 min-h-0 overflow-hidden'}`}>
+    <div className={`text-ink flex flex-col px-4 lg:px-8 pb-4 lg:pb-6 ${browseIsOpen ? 'min-h-full' : 'h-full flex-1 min-h-0 overflow-hidden'}`}>
       {/* Top Header */}
-      <header className="glass flex shrink-0 items-center justify-between gap-2 md:gap-4 px-4 py-2 lg:px-6 lg:py-2.5 flex-nowrap">
+      <header className="flex shrink-0 items-center justify-between gap-3 mb-3 lg:mb-4">
         {mobileSearchOpen ? (
           <div className="flex md:hidden flex-1 items-center gap-2 py-1">
             <div className="relative flex-1">
@@ -1021,54 +1021,57 @@ export default function YTMusicView({
           </div>
         ) : (
           <>
-            <div className="flex shrink-0 rounded-full bg-[var(--sc)] border border-[var(--outline-var)] p-1">
-              <button
-                onClick={() => syncUrlSubView('browse', '')}
-                className={`flex h-9 md:h-11 items-center gap-1.5 md:gap-2 rounded-full px-3 md:px-4 text-xs md:text-sm font-semibold transition cursor-pointer ${
-                  activeView === 'browse' && !searchIsOpen ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-sm' : 'text-ink-soft hover:text-ink'
-                }`}
-              >
-                <Icon name="explore" className="text-lg md:text-xl" />
-                Browse
-              </button>
-              <button
-                onClick={() => syncUrlSubView('local', '')}
-                className={`flex h-9 md:h-11 items-center gap-1.5 md:gap-2 rounded-full px-3 md:px-4 text-xs md:text-sm font-semibold transition cursor-pointer ${
-                  activeView === 'local' && !searchIsOpen ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-sm' : 'text-ink-soft hover:text-ink'
-                }`}
-              >
-                <MusicSourceIcon source="local" size={15} />
-                <span className="whitespace-nowrap">Local Library</span>
-              </button>
-              <button
-                disabled={!currentTrack}
-                onClick={() => syncUrlSubView('now-playing', '')}
-                className={`flex h-9 md:h-11 items-center gap-1.5 md:gap-2 rounded-full px-3 md:px-4 text-xs md:text-sm font-semibold disabled:opacity-30 transition cursor-pointer ${
-                  activeView === 'now-playing' && !searchIsOpen ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-sm' : 'text-ink-soft hover:text-ink'
-                }`}
-              >
-                <Icon name="graphic_eq" className="text-lg md:text-xl" /> <span className="whitespace-nowrap">Now Playing</span>
-              </button>
-            </div>
+            <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
+              <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink mr-1 shrink-0">Music</h1>
+              <div className="flex shrink-0 rounded-full bg-[var(--sc)] border border-[var(--outline-var)] p-1">
+                <button
+                  onClick={() => syncUrlSubView('browse', '')}
+                  className={`flex h-9 md:h-11 items-center gap-1.5 md:gap-2 rounded-full px-3 md:px-4 text-xs md:text-sm font-semibold transition cursor-pointer ${
+                    activeView === 'browse' && !searchIsOpen ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-sm' : 'text-ink-soft hover:text-ink'
+                  }`}
+                >
+                  <Icon name="explore" className="text-lg md:text-xl" />
+                  Browse
+                </button>
+                <button
+                  onClick={() => syncUrlSubView('local', '')}
+                  className={`flex h-9 md:h-11 items-center gap-1.5 md:gap-2 rounded-full px-3 md:px-4 text-xs md:text-sm font-semibold transition cursor-pointer ${
+                    activeView === 'local' && !searchIsOpen ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-sm' : 'text-ink-soft hover:text-ink'
+                  }`}
+                >
+                  <MusicSourceIcon source="local" size={15} />
+                  <span className="whitespace-nowrap">Local Library</span>
+                </button>
+                <button
+                  disabled={!currentTrack}
+                  onClick={() => syncUrlSubView('now-playing', '')}
+                  className={`flex h-9 md:h-11 items-center gap-1.5 md:gap-2 rounded-full px-3 md:px-4 text-xs md:text-sm font-semibold disabled:opacity-30 transition cursor-pointer ${
+                    activeView === 'now-playing' && !searchIsOpen ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-sm' : 'text-ink-soft hover:text-ink'
+                  }`}
+                >
+                  <Icon name="graphic_eq" className="text-lg md:text-xl" /> <span className="whitespace-nowrap">Now Playing</span>
+                </button>
+              </div>
 
-            {/* Desktop Search Bar */}
-            <div className="hidden md:relative md:flex md:flex-1 max-w-[52rem] items-center gap-2.5">
-              <div className="relative flex-1">
-                <Icon name="search" className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-ink-soft" />
-                <input
-                  value={searchQuery}
-                  onChange={(e) => syncUrlSubView('browse', e.target.value, true)}
-                  placeholder="Search songs, albums, videos..."
-                  className="h-11 md:h-12 w-full rounded-2xl border border-[var(--outline-var)] bg-[var(--sc)] pl-12 pr-11 text-base text-ink outline-none placeholder:text-ink-soft/60 focus:border-[var(--primary)] shadow-inner"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => syncUrlSubView('browse', '')}
-                    className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-ink-soft hover:text-ink cursor-pointer"
-                  >
-                    <Icon name="close" />
-                  </button>
-                )}
+              {/* Desktop Search Bar */}
+              <div className="hidden md:relative md:flex md:flex-1 max-w-[36rem] items-center gap-2.5">
+                <div className="relative flex-1">
+                  <Icon name="search" className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-ink-soft" />
+                  <input
+                    value={searchQuery}
+                    onChange={(e) => syncUrlSubView('browse', e.target.value, true)}
+                    placeholder="Search songs, albums, videos..."
+                    className="h-11 md:h-12 w-full rounded-2xl border border-[var(--outline-var)] bg-[var(--sc)] pl-12 pr-11 text-base text-ink outline-none placeholder:text-ink-soft/60 focus:border-[var(--primary)] shadow-inner"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => syncUrlSubView('browse', '')}
+                      className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-ink-soft hover:text-ink cursor-pointer"
+                    >
+                      <Icon name="close" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -1962,7 +1965,7 @@ export default function YTMusicView({
         </main>
       ) : (
         /* Now Playing View */
-        <main className="flex-1 min-h-0 overflow-hidden flex flex-col xl:grid xl:grid-cols-[minmax(24rem,1.1fr)_minmax(24rem,0.9fr)]">
+        <main className="glass flex-1 min-h-0 overflow-hidden flex flex-col xl:grid xl:grid-cols-[minmax(24rem,1.1fr)_minmax(24rem,0.9fr)]">
           {/* Desktop Artwork View */}
           <section className="hidden xl:flex h-full min-w-0 flex-col items-center justify-center overflow-hidden p-8">
             <div

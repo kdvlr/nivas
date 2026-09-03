@@ -701,11 +701,11 @@ export default function Home() {
     const isEmpty = sortedBalances.length === 0
     return (
       <section
-        className={`glass flex flex-col p-4 ${loadingBalances ? 'shimmer-loading' : ''} ${
-          isDesktop ? (isEmpty ? 'flex-none' : 'flex-1 min-h-[120px]') : (isEmpty ? 'h-auto' : 'flex-1 min-h-0 overflow-hidden')
+        className={`glass flex flex-col p-3.5 ${loadingBalances ? 'shimmer-loading' : ''} ${
+          isDesktop ? (isEmpty ? 'flex-none' : 'flex-1 min-h-0 overflow-hidden') : (isEmpty ? 'h-auto' : 'flex-1 min-h-0 overflow-hidden')
         }`}
       >
-        <a href="#/chores" className="mb-2.5 flex items-center gap-3 text-lg font-normal text-ink group">
+        <a href="#/chores" className="mb-2 flex items-center gap-3 text-lg font-normal text-ink group">
           <Icon name="emoji_events" className="text-2xl text-amber-500" />
           <span className="font-semibold">Chore Leaderboard</span>
           <span className="ml-auto rounded-full bg-amber-100 dark:bg-amber-900/40 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:text-amber-300">
@@ -717,24 +717,24 @@ export default function Home() {
             No family balances yet
           </p>
         ) : (
-          <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pb-1">
+          <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pb-1">
             {sortedBalances.map((b, index) => {
               const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`
               return (
                 <a
                   key={b.person_name}
                   href="#/chores"
-                  className="glass-inset flex shrink-0 items-center gap-3 px-3 py-2 text-left hover:bg-black/5 dark:hover:bg-white/5 transition-all rounded-xl"
+                  className="glass-inset flex shrink-0 items-center gap-2.5 px-3 py-1.5 text-left hover:bg-black/5 dark:hover:bg-white/5 transition-all rounded-xl"
                   style={{ borderLeft: `4px solid ${b.color}` }}
                 >
                   <span className="text-base font-bold w-6 text-center shrink-0 text-ink-soft">
                     {medal}
                   </span>
-                  <Avatar name={b.person_name} color={b.color} src={b.avatar} emoji={b.avatar_emoji} size={30} />
+                  <Avatar name={b.person_name} color={b.color} src={b.avatar} emoji={b.avatar_emoji} size={28} />
                   <span className="min-w-0 flex-1 truncate text-base font-bold leading-tight" style={{ color: b.color }}>
                     {b.person_name}
                   </span>
-                  <div className="flex items-center gap-1.5 rounded-full bg-amber-500/10 dark:bg-amber-400/15 px-3 py-1 text-amber-700 dark:text-amber-300 font-bold text-sm tabular-nums">
+                  <div className="flex items-center gap-1.5 rounded-full bg-amber-500/10 dark:bg-amber-400/15 px-2.5 py-0.5 text-amber-700 dark:text-amber-300 font-bold text-sm tabular-nums">
                     <CoinIcon className="text-sm" />
                     <span>{b.balance}</span>
                   </div>
@@ -749,10 +749,11 @@ export default function Home() {
 
   const renderTasks = (isDesktop: boolean) => {
     const isEmpty = openTasks.length === 0
+    const tasksPeek = isDesktop ? openTasks.slice(0, 3) : openTasks
     return (
       <section
-        className={`glass flex flex-col p-4 ${loadingTasks ? 'shimmer-loading' : ''} ${
-          isDesktop ? (isEmpty ? 'flex-none' : 'flex-1 min-h-[120px]') : (isEmpty ? 'h-auto' : 'flex-1 min-h-0 overflow-hidden')
+        className={`glass flex flex-col p-3.5 ${loadingTasks ? 'shimmer-loading' : ''} ${
+          isDesktop ? (isEmpty ? 'flex-none' : 'flex-1 min-h-0 overflow-hidden') : (isEmpty ? 'h-auto' : 'flex-1 min-h-0 overflow-hidden')
         }`}
       >
         <a href="#/todos" className="mb-2 flex items-center gap-3 text-lg font-normal text-ink">
@@ -768,7 +769,7 @@ export default function Home() {
         ) : (
           <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pb-1">
             <AnimatePresence initial={false}>
-              {openTasks.map((t) => (
+              {tasksPeek.map((t) => (
                 <motion.button
                   key={`${t.source}-${t.id}`}
                   layout
@@ -812,6 +813,11 @@ export default function Home() {
                 </motion.button>
               ))}
             </AnimatePresence>
+            {openTasks.length > tasksPeek.length && (
+              <a href="#/todos" className="text-center text-xs font-medium text-sky-600 dark:text-sky-400 mt-1 shrink-0">
+                +{openTasks.length - tasksPeek.length} more {openTasks.length - tasksPeek.length === 1 ? 'task' : 'tasks'}
+              </a>
+            )}
           </div>
         )}
       </section>
@@ -820,10 +826,11 @@ export default function Home() {
 
   const renderShopping = (isDesktop: boolean) => {
     const isEmpty = shoppingCount === 0
+    const peekItems = isDesktop ? shoppingPeek.slice(0, 3) : shoppingPeek
     return (
       <section
-        className={`glass flex flex-col p-4 ${loadingShopping ? 'shimmer-loading' : ''} ${
-          isDesktop ? (isEmpty ? 'flex-none' : 'flex-1 min-h-[120px]') : (isEmpty ? 'h-auto' : 'flex-1 min-h-0 overflow-hidden')
+        className={`glass flex flex-col p-3.5 ${loadingShopping ? 'shimmer-loading' : ''} ${
+          isDesktop ? (isEmpty ? 'flex-none' : 'flex-1 min-h-0 overflow-hidden') : (isEmpty ? 'h-auto' : 'flex-1 min-h-0 overflow-hidden')
         }`}
       >
         <a href="#/shopping" className="flex items-center gap-3 text-lg font-normal text-ink">
@@ -835,9 +842,9 @@ export default function Home() {
         {isEmpty ? (
           <p className="my-auto text-center text-lg text-ink-faint py-3">Nothing on the list 🎉</p>
         ) : (
-          <div className="mt-2 flex flex-col gap-1.5 overflow-y-auto flex-1 pb-1">
+          <div className="mt-1.5 flex flex-col gap-1 overflow-y-auto flex-1 pb-1">
             <AnimatePresence initial={false}>
-              {shoppingPeek.map((i) => (
+              {peekItems.map((i) => (
                 <motion.button
                   key={i.id}
                   layout
@@ -853,7 +860,7 @@ export default function Home() {
                     transition: { duration: 0.45, ease: 'easeInOut' }
                   }}
                   onClick={() => buyItem(i)}
-                  className="glass-inset flex items-center gap-2.5 px-2.5 py-1.5 text-left active:surface-tile-high"
+                  className="glass-inset flex shrink-0 items-center gap-2.5 px-2.5 py-1 text-left active:surface-tile-high"
                 >
                   <div className="h-5 w-5 shrink-0 rounded-full border-2 border-sky-300 flex items-center justify-center overflow-hidden relative">
                     {completingIds.includes(`shop-${i.id}`) && (
@@ -873,9 +880,9 @@ export default function Home() {
                 </motion.button>
               ))}
             </AnimatePresence>
-            {shoppingCount > shoppingPeek.length && (
-              <a href="#/shopping" className="text-center text-xs font-medium text-sky-600 dark:text-sky-400 mt-1">
-                +{shoppingCount - shoppingPeek.length} more on the list
+            {shoppingCount > peekItems.length && (
+              <a href="#/shopping" className="text-center text-xs font-medium text-sky-600 dark:text-sky-400 mt-1 shrink-0">
+                +{shoppingCount - peekItems.length} more on the list
               </a>
             )}
           </div>
@@ -913,7 +920,7 @@ export default function Home() {
         {renderHeader()}
         <div className="grid min-h-0 flex-1 grid-cols-3 gap-4">
           {renderSchedule(true)}
-          <div className="flex min-h-0 flex-col gap-4 overflow-hidden">
+          <div className="flex min-h-0 flex-1 flex-col gap-3 lg:gap-4 overflow-y-auto pr-1 scrollbar-none pb-24 lg:pb-0">
             {renderChores(true)}
             {renderTasks(true)}
             {renderShopping(true)}
