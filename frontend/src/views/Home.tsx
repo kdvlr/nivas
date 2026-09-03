@@ -701,8 +701,9 @@ export default function Home() {
     const isEmpty = sortedBalances.length === 0
     return (
       <section
-        className={`glass flex flex-col p-4 ${loadingBalances ? 'shimmer-loading' : ''} ${isDesktop ? 'min-h-28' : (isEmpty ? 'h-auto' : 'flex-1 min-h-0 overflow-hidden')}`}
-        style={isDesktop ? { flexGrow: Math.max(sortedBalances.length, 1) } : undefined}
+        className={`glass flex flex-col p-4 ${loadingBalances ? 'shimmer-loading' : ''} ${
+          isDesktop ? (isEmpty ? 'flex-none' : 'flex-1 min-h-[120px]') : (isEmpty ? 'h-auto' : 'flex-1 min-h-0 overflow-hidden')
+        }`}
       >
         <a href="#/chores" className="mb-2.5 flex items-center gap-3 text-lg font-normal text-ink group">
           <Icon name="emoji_events" className="text-2xl text-amber-500" />
@@ -716,7 +717,7 @@ export default function Home() {
             No family balances yet
           </p>
         ) : (
-          <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+          <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pb-1">
             {sortedBalances.map((b, index) => {
               const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`
               return (
@@ -750,8 +751,9 @@ export default function Home() {
     const isEmpty = openTasks.length === 0
     return (
       <section
-        className={`glass flex flex-col p-4 ${loadingTasks ? 'shimmer-loading' : ''} ${isDesktop ? 'min-h-28' : (isEmpty ? 'h-auto' : 'flex-1 min-h-0 overflow-hidden')}`}
-        style={isDesktop ? { flexGrow: Math.max(openTasks.length, 1) } : undefined}
+        className={`glass flex flex-col p-4 ${loadingTasks ? 'shimmer-loading' : ''} ${
+          isDesktop ? (isEmpty ? 'flex-none' : 'flex-1 min-h-[120px]') : (isEmpty ? 'h-auto' : 'flex-1 min-h-0 overflow-hidden')
+        }`}
       >
         <a href="#/todos" className="mb-2 flex items-center gap-3 text-lg font-normal text-ink">
           <Icon name="task_alt" className="text-2xl" /> To-Dos
@@ -764,7 +766,7 @@ export default function Home() {
             {tasks.length === 0 ? "Nothing to do" : "All done! 🎉"}
           </p>
         ) : (
-          <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto">
+          <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pb-1">
             <AnimatePresence initial={false}>
               {openTasks.map((t) => (
                 <motion.button
@@ -818,13 +820,11 @@ export default function Home() {
 
   const renderShopping = (isDesktop: boolean) => {
     const isEmpty = shoppingCount === 0
-    // Desktop: an explicit min-height replaces flexbox's default
-    // `min-height: auto`, which otherwise refuses to shrink the card below its
-    // content and pushes the column off the bottom of the page.
     return (
       <section
-        className={`glass flex flex-col p-4 ${loadingShopping ? 'shimmer-loading' : ''} ${isDesktop ? 'min-h-0 overflow-hidden' : (isEmpty ? 'h-auto' : 'flex-1 min-h-0 overflow-hidden')}`}
-        style={isDesktop ? { flexGrow: Math.max(shoppingPeek.length, 1) } : undefined}
+        className={`glass flex flex-col p-4 ${loadingShopping ? 'shimmer-loading' : ''} ${
+          isDesktop ? (isEmpty ? 'flex-none' : 'flex-1 min-h-[120px]') : (isEmpty ? 'h-auto' : 'flex-1 min-h-0 overflow-hidden')
+        }`}
       >
         <a href="#/shopping" className="flex items-center gap-3 text-lg font-normal text-ink">
           <Icon name="shopping_cart" className="text-2xl" /> Shopping
@@ -835,7 +835,7 @@ export default function Home() {
         {isEmpty ? (
           <p className="my-auto text-center text-lg text-ink-faint py-3">Nothing on the list 🎉</p>
         ) : (
-          <div className="mt-2 flex flex-col gap-1.5 overflow-y-auto flex-1">
+          <div className="mt-2 flex flex-col gap-1.5 overflow-y-auto flex-1 pb-1">
             <AnimatePresence initial={false}>
               {shoppingPeek.map((i) => (
                 <motion.button

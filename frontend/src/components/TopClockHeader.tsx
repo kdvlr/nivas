@@ -53,7 +53,7 @@ export default function TopClockHeader({ now, config, className = '' }: TopClock
 
   return (
     <div className={`flex flex-col items-end text-right shrink-0 ${className}`}>
-      <div className="text-4xl lg:text-5xl font-semibold tabular-nums tracking-tight text-[var(--primary)] leading-none">
+      <div className="text-4xl sm:text-5xl lg:text-5xl font-bold tabular-nums tracking-tight text-[var(--primary)] leading-none">
         {now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
       </div>
       <div className="mt-1 flex items-center gap-2 text-sm lg:text-base font-semibold text-ink-soft">

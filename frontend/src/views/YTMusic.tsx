@@ -197,6 +197,7 @@ function SongRow({
 
 export default function YTMusicView({
   now: initialNow,
+  config,
   currentTrack,
   isPlaying,
   queue,
@@ -576,7 +577,7 @@ export default function YTMusicView({
     return (
       <div className="space-y-6 animate-fadeIn">
         {/* Top Header with Back Navigation and Clock */}
-        <div className="flex flex-row items-center justify-between gap-4 border-b border-[var(--outline-var)]/40 pb-4">
+        <div className="glass flex flex-row items-center justify-between gap-4 px-4 py-2 lg:px-6 lg:py-2.5">
           <button
             onClick={() => {
               setSelectedAlbum(null)
@@ -588,7 +589,7 @@ export default function YTMusicView({
             <span>Back</span>
           </button>
 
-          <TopClockHeader now={now} className="hidden sm:flex text-ink [&_*]:text-ink" />
+          <TopClockHeader now={now} config={config} className="hidden sm:flex" />
         </div>
 
         {/* Hero Album Card */}
@@ -985,11 +986,11 @@ export default function YTMusicView({
   }
 
   return (
-    <div className={`text-ink ${browseIsOpen ? 'min-h-full' : 'h-dvh flex flex-col overflow-hidden'}`}>
+    <div className={`text-ink flex flex-col gap-3 lg:gap-4 ${browseIsOpen ? 'min-h-full' : 'h-full flex-1 min-h-0 overflow-hidden'}`}>
       {/* Top Header */}
-      <header className="flex shrink-0 min-h-[4rem] md:min-h-[4.5rem] items-center gap-2 md:gap-4 border-b border-[var(--outline-var)] bg-[var(--surface)]/90 px-3 md:px-8 backdrop-blur-xl">
+      <header className="glass flex shrink-0 items-center justify-between gap-2 md:gap-4 px-4 py-2 lg:px-6 lg:py-2.5 flex-nowrap">
         {mobileSearchOpen ? (
-          <div className="flex md:hidden flex-1 items-center gap-2 py-2">
+          <div className="flex md:hidden flex-1 items-center gap-2 py-1">
             <div className="relative flex-1">
               <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-xl text-ink-soft" />
               <input
@@ -1058,12 +1059,12 @@ export default function YTMusicView({
                   value={searchQuery}
                   onChange={(e) => syncUrlSubView('browse', e.target.value, true)}
                   placeholder="Search songs, albums, videos..."
-                  className="h-14 w-full rounded-2xl border border-[var(--outline-var)] bg-[var(--sc)] pl-14 pr-12 text-lg text-ink outline-none placeholder:text-ink-soft/60 focus:border-[var(--primary)] shadow-inner"
+                  className="h-11 md:h-12 w-full rounded-2xl border border-[var(--outline-var)] bg-[var(--sc)] pl-12 pr-11 text-base text-ink outline-none placeholder:text-ink-soft/60 focus:border-[var(--primary)] shadow-inner"
                 />
                 {searchQuery && (
                   <button
                     onClick={() => syncUrlSubView('browse', '')}
-                    className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center text-ink-soft hover:text-ink cursor-pointer"
+                    className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-ink-soft hover:text-ink cursor-pointer"
                   >
                     <Icon name="close" />
                   </button>
@@ -1072,7 +1073,7 @@ export default function YTMusicView({
             </div>
 
             <div className="ml-auto flex shrink-0 items-center gap-2 md:gap-3">
-              <TopClockHeader now={now} className="hidden sm:flex text-ink [&_*]:text-ink" />
+              <TopClockHeader now={now} config={config} className="hidden sm:flex" />
               <button
                 onClick={() => setMobileSearchOpen(true)}
                 title="Search music"
