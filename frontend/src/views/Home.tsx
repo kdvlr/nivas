@@ -767,54 +767,56 @@ export default function Home() {
             {tasks.length === 0 ? "Nothing to do" : "All done! 🎉"}
           </p>
         ) : (
-          <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pb-1">
-            <AnimatePresence initial={false}>
-              {tasksPeek.map((t) => (
-                <motion.button
-                  key={`${t.source}-${t.id}`}
-                  layout
-                  initial={{ opacity: 1, height: 'auto' }}
-                  exit={{
-                    opacity: 0,
-                    height: 0,
-                    paddingTop: 0,
-                    paddingBottom: 0,
-                    marginTop: 0,
-                    marginBottom: 0,
-                    overflow: 'hidden',
-                    transition: { duration: 0.45, ease: 'easeInOut' }
-                  }}
-                  onClick={() => completeTask(t)}
-                  className="glass-inset flex shrink-0 items-center gap-2.5 px-2.5 py-1.5 text-left active:surface-tile-high"
-                >
-                  <div className="h-6 w-6 shrink-0 rounded-full border-[2.5px] border-emerald-300 flex items-center justify-center overflow-hidden relative">
-                    {completingIds.includes(`task-${t.source}-${t.id}`) && (
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                        className="absolute inset-0 bg-emerald-500 flex items-center justify-center"
-                      >
-                        <Icon name="check" className="text-white text-xs font-bold" />
-                      </motion.div>
-                    )}
-                  </div>
-                  <span className="min-w-0 flex-1 truncate text-[0.95rem] font-normal text-ink">
-                    {t.title}
-                  </span>
-                  {t.due_date && (
-                    <span className="text-xs font-medium text-ink-soft">
-                      {new Date(t.due_date).toLocaleDateString(undefined, {
-                        month: 'short',
-                        day: 'numeric',
-                      })}
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pb-0.5">
+              <AnimatePresence initial={false}>
+                {tasksPeek.map((t) => (
+                  <motion.button
+                    key={`${t.source}-${t.id}`}
+                    layout
+                    initial={{ opacity: 1, height: 'auto' }}
+                    exit={{
+                      opacity: 0,
+                      height: 0,
+                      paddingTop: 0,
+                      paddingBottom: 0,
+                      marginTop: 0,
+                      marginBottom: 0,
+                      overflow: 'hidden',
+                      transition: { duration: 0.45, ease: 'easeInOut' }
+                    }}
+                    onClick={() => completeTask(t)}
+                    className="glass-inset flex shrink-0 items-center gap-2.5 px-2.5 py-1 text-left active:surface-tile-high"
+                  >
+                    <div className="h-5 w-5 shrink-0 rounded-full border-[2px] border-emerald-300 flex items-center justify-center overflow-hidden relative">
+                      {completingIds.includes(`task-${t.source}-${t.id}`) && (
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                          className="absolute inset-0 bg-emerald-500 flex items-center justify-center"
+                        >
+                          <Icon name="check" className="text-white text-[10px] font-bold" />
+                        </motion.div>
+                      )}
+                    </div>
+                    <span className="min-w-0 flex-1 truncate text-[0.95rem] font-normal text-ink">
+                      {t.title}
                     </span>
-                  )}
-                </motion.button>
-              ))}
-            </AnimatePresence>
+                    {t.due_date && (
+                      <span className="text-xs font-medium text-ink-soft">
+                        {new Date(t.due_date).toLocaleDateString(undefined, {
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </span>
+                    )}
+                  </motion.button>
+                ))}
+              </AnimatePresence>
+            </div>
             {openTasks.length > tasksPeek.length && (
-              <a href="#/todos" className="text-center text-xs font-medium text-sky-600 dark:text-sky-400 mt-1 shrink-0">
+              <a href="#/todos" className="text-center text-xs font-medium text-sky-600 dark:text-sky-400 pt-1 shrink-0">
                 +{openTasks.length - tasksPeek.length} more {openTasks.length - tasksPeek.length === 1 ? 'task' : 'tasks'}
               </a>
             )}
@@ -842,46 +844,48 @@ export default function Home() {
         {isEmpty ? (
           <p className="my-auto text-center text-lg text-ink-faint py-3">Nothing on the list 🎉</p>
         ) : (
-          <div className="mt-1.5 flex flex-col gap-1 overflow-y-auto flex-1 pb-1">
-            <AnimatePresence initial={false}>
-              {peekItems.map((i) => (
-                <motion.button
-                  key={i.id}
-                  layout
-                  initial={{ opacity: 1, height: 'auto' }}
-                  exit={{
-                    opacity: 0,
-                    height: 0,
-                    paddingTop: 0,
-                    paddingBottom: 0,
-                    marginTop: 0,
-                    marginBottom: 0,
-                    overflow: 'hidden',
-                    transition: { duration: 0.45, ease: 'easeInOut' }
-                  }}
-                  onClick={() => buyItem(i)}
-                  className="glass-inset flex shrink-0 items-center gap-2.5 px-2.5 py-1 text-left active:surface-tile-high"
-                >
-                  <div className="h-5 w-5 shrink-0 rounded-full border-2 border-sky-300 flex items-center justify-center overflow-hidden relative">
-                    {completingIds.includes(`shop-${i.id}`) && (
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                        className="absolute inset-0 bg-sky-500 flex items-center justify-center"
-                      >
-                        <Icon name="check" className="text-white text-[10px] font-bold" />
-                      </motion.div>
-                    )}
-                  </div>
-                  <span className="min-w-0 flex-1 truncate text-[0.95rem] font-normal text-ink">
-                    {i.title}
-                  </span>
-                </motion.button>
-              ))}
-            </AnimatePresence>
+          <div className="mt-1.5 flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pb-0.5">
+              <AnimatePresence initial={false}>
+                {peekItems.map((i) => (
+                  <motion.button
+                    key={i.id}
+                    layout
+                    initial={{ opacity: 1, height: 'auto' }}
+                    exit={{
+                      opacity: 0,
+                      height: 0,
+                      paddingTop: 0,
+                      paddingBottom: 0,
+                      marginTop: 0,
+                      marginBottom: 0,
+                      overflow: 'hidden',
+                      transition: { duration: 0.45, ease: 'easeInOut' }
+                    }}
+                    onClick={() => buyItem(i)}
+                    className="glass-inset flex shrink-0 items-center gap-2.5 px-2.5 py-1 text-left active:surface-tile-high"
+                  >
+                    <div className="h-5 w-5 shrink-0 rounded-full border-2 border-sky-300 flex items-center justify-center overflow-hidden relative">
+                      {completingIds.includes(`shop-${i.id}`) && (
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                          className="absolute inset-0 bg-sky-500 flex items-center justify-center"
+                        >
+                          <Icon name="check" className="text-white text-[10px] font-bold" />
+                        </motion.div>
+                      )}
+                    </div>
+                    <span className="min-w-0 flex-1 truncate text-[0.95rem] font-normal text-ink">
+                      {i.title}
+                    </span>
+                  </motion.button>
+                ))}
+              </AnimatePresence>
+            </div>
             {shoppingCount > peekItems.length && (
-              <a href="#/shopping" className="text-center text-xs font-medium text-sky-600 dark:text-sky-400 mt-1 shrink-0">
+              <a href="#/shopping" className="text-center text-xs font-medium text-sky-600 dark:text-sky-400 pt-1 shrink-0">
                 +{shoppingCount - peekItems.length} more on the list
               </a>
             )}
