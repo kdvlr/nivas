@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useState } from 'react'
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import Icon from '../Icon'
 import { api } from '../../lib/api'
@@ -37,11 +37,48 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
   const [showHidden, setShowHidden] = useState(false)
   const [position, setPosition] = useState<PanelPosition>({ top: 84, right: 20, isMobile: false, origin: 'top right' })
 
+  const isInteractingRef = useRef(false)
+  const lastInteractionTimeRef = useRef(0)
+
+  // Network queue for device volume
+  const deviceInFlightRef = useRef<Map<string, boolean>>(new Map())
+  const pendingDeviceVolRef = useRef<Map<string, number>>(new Map())
+  const deviceThrottleTimerRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+
+  // Network queue for group/master volume
+  const masterInFlightRef = useRef(false)
+  const pendingMasterVolRef = useRef<number | null>(null)
+  const masterThrottleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (masterThrottleTimerRef.current) clearTimeout(masterThrottleTimerRef.current)
+      deviceThrottleTimerRef.current.forEach((timer) => clearTimeout(timer))
+      deviceThrottleTimerRef.current.clear()
+    }
+  }, [])
+
   const fetchDevices = async () => {
     try {
       const response = await api.get<any>('/api/ytmusic/player/state')
-      if (Array.isArray(response?.devices)) setDevices(response.devices)
-      if (typeof response?.masterVolume === 'number') setMasterVolume(response.masterVolume)
+      const isInteracting = isInteractingRef.current || (Date.now() - lastInteractionTimeRef.current < 1500)
+      if (Array.isArray(response?.devices)) {
+        if (isInteracting) {
+          // Preserve local optimistic volumes, update other metadata
+          setDevices((previous) => {
+            const prevMap = new Map(previous.map((d) => [d.id, d]))
+            return response.devices.map((remote: AirPlayDevice) => {
+              const local = prevMap.get(remote.id)
+              return local ? { ...remote, volume: local.volume } : remote
+            })
+          })
+        } else {
+          setDevices(response.devices)
+        }
+      }
+      if (typeof response?.masterVolume === 'number' && !isInteracting) {
+        setMasterVolume(response.masterVolume)
+      }
     } catch (error) {
       console.error('Failed to fetch AirPlay devices', error)
     }
@@ -95,34 +132,151 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
 
   const toggleDevice = async (device: AirPlayDevice) => {
     const selected = !device.isSelected
-    setDevices((previous) => previous.map((item) => item.id === device.id ? { ...item, isSelected: selected } : item))
+    setDevices((previous) => {
+      const next = previous.map((item) => item.id === device.id ? { ...item, isSelected: selected } : item)
+      const selectedDevs = next.filter((d) => d.isSelected)
+      if (selectedDevs.length > 0) {
+        const avg = Math.round(selectedDevs.reduce((sum, d) => sum + d.volume, 0) / selectedDevs.length)
+        setMasterVolume(avg)
+      }
+      return next
+    })
     try {
       const response = await api.post<any>('/api/ytmusic/airplay/devices/toggle', { deviceId: device.id, selected })
-      if (Array.isArray(response?.devices)) setDevices(response.devices)
+      if (Array.isArray(response?.devices)) {
+        if (!isInteractingRef.current) setDevices(response.devices)
+      }
     } catch (error) {
       console.error('Failed to toggle AirPlay device', error)
       fetchDevices()
     }
   }
 
-  const setDeviceVolume = async (deviceId: string, volume: number) => {
-    setDevices((previous) => previous.map((device) => device.id === deviceId ? { ...device, volume } : device))
+  const sendDeviceVolumeRequest = async (deviceId: string, volume: number) => {
+    deviceInFlightRef.current.set(deviceId, true)
     try {
-      const response = await api.post<any>('/api/ytmusic/airplay/volume/device', { deviceId, volume })
-      if (Array.isArray(response?.devices)) setDevices(response.devices)
+      await api.post<any>('/api/ytmusic/airplay/volume/device', { deviceId, volume })
     } catch (error) {
       console.error('Failed to update AirPlay volume', error)
+    } finally {
+      deviceInFlightRef.current.set(deviceId, false)
+      if (pendingDeviceVolRef.current.has(deviceId)) {
+        const nextVol = pendingDeviceVolRef.current.get(deviceId)!
+        pendingDeviceVolRef.current.delete(deviceId)
+        sendDeviceVolumeRequest(deviceId, nextVol)
+      }
     }
   }
 
-  const setGroupVolume = async (volume: number) => {
-    setMasterVolume(volume)
-    setDevices((previous) => previous.map((device) => device.isSelected ? { ...device, volume } : device))
+  const handleDeviceVolumeChange = (deviceId: string, volume: number) => {
+    isInteractingRef.current = true
+    lastInteractionTimeRef.current = Date.now()
+
+    setDevices((previous) => {
+      const next = previous.map((device) =>
+        device.id === deviceId ? { ...device, volume } : device
+      )
+      const selected = next.filter((d) => d.isSelected)
+      if (selected.length > 0) {
+        const avg = Math.round(selected.reduce((sum, d) => sum + d.volume, 0) / selected.length)
+        setMasterVolume(avg)
+      }
+      return next
+    })
+
+    pendingDeviceVolRef.current.set(deviceId, volume)
+    if (!deviceThrottleTimerRef.current.has(deviceId)) {
+      const timer = setTimeout(() => {
+        deviceThrottleTimerRef.current.delete(deviceId)
+        if (!deviceInFlightRef.current.get(deviceId) && pendingDeviceVolRef.current.has(deviceId)) {
+          const nextVol = pendingDeviceVolRef.current.get(deviceId)!
+          pendingDeviceVolRef.current.delete(deviceId)
+          sendDeviceVolumeRequest(deviceId, nextVol)
+        }
+      }, 80)
+      deviceThrottleTimerRef.current.set(deviceId, timer)
+    }
+  }
+
+  const handleDeviceVolumeCommit = (deviceId: string, volume: number) => {
+    isInteractingRef.current = false
+    lastInteractionTimeRef.current = Date.now()
+
+    const timer = deviceThrottleTimerRef.current.get(deviceId)
+    if (timer) {
+      clearTimeout(timer)
+      deviceThrottleTimerRef.current.delete(deviceId)
+    }
+
+    if (deviceInFlightRef.current.get(deviceId)) {
+      pendingDeviceVolRef.current.set(deviceId, volume)
+    } else {
+      pendingDeviceVolRef.current.delete(deviceId)
+      sendDeviceVolumeRequest(deviceId, volume)
+    }
+  }
+
+  const sendGroupVolumeRequest = async (volume: number) => {
+    masterInFlightRef.current = true
     try {
-      const response = await api.post<any>('/api/ytmusic/airplay/volume/master', { volume })
-      if (Array.isArray(response?.devices)) setDevices(response.devices)
+      await api.post<any>('/api/ytmusic/airplay/volume/master', { volume })
     } catch (error) {
       console.error('Failed to update group volume', error)
+    } finally {
+      masterInFlightRef.current = false
+      if (pendingMasterVolRef.current !== null) {
+        const nextVol = pendingMasterVolRef.current
+        pendingMasterVolRef.current = null
+        sendGroupVolumeRequest(nextVol)
+      }
+    }
+  }
+
+  const handleGroupVolumeChange = (newVolume: number) => {
+    isInteractingRef.current = true
+    lastInteractionTimeRef.current = Date.now()
+
+    setMasterVolume((prevMaster) => {
+      const delta = newVolume - prevMaster
+      setDevices((previous) =>
+        previous.map((device) => {
+          if (!device.isSelected) return device
+          return {
+            ...device,
+            volume: Math.max(0, Math.min(100, device.volume + delta)),
+          }
+        })
+      )
+      return newVolume
+    })
+
+    pendingMasterVolRef.current = newVolume
+    if (!masterThrottleTimerRef.current) {
+      masterThrottleTimerRef.current = setTimeout(() => {
+        masterThrottleTimerRef.current = null
+        if (!masterInFlightRef.current && pendingMasterVolRef.current !== null) {
+          const nextVol = pendingMasterVolRef.current
+          pendingMasterVolRef.current = null
+          sendGroupVolumeRequest(nextVol)
+        }
+      }, 80)
+    }
+  }
+
+  const handleGroupVolumeCommit = (newVolume: number) => {
+    isInteractingRef.current = false
+    lastInteractionTimeRef.current = Date.now()
+
+    if (masterThrottleTimerRef.current) {
+      clearTimeout(masterThrottleTimerRef.current)
+      masterThrottleTimerRef.current = null
+    }
+
+    if (masterInFlightRef.current) {
+      pendingMasterVolRef.current = newVolume
+    } else {
+      pendingMasterVolRef.current = null
+      sendGroupVolumeRequest(newVolume)
     }
   }
 
@@ -166,7 +320,8 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
               <div className="mb-2 border-b border-[var(--outline-var)] px-1 pb-2">
                 <VolumeCapsuleScrubber
                   value={masterVolume}
-                  onChange={setGroupVolume}
+                  onChange={handleGroupVolumeChange}
+                  onChangeEnd={handleGroupVolumeCommit}
                   label="All Speakers"
                 />
               </div>
@@ -193,7 +348,8 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
                     {device.isSelected ? (
                       <VolumeCapsuleScrubber
                         value={device.volume}
-                        onChange={(vol) => setDeviceVolume(device.id, vol)}
+                        onChange={(vol) => handleDeviceVolumeChange(device.id, vol)}
+                        onChangeEnd={(vol) => handleDeviceVolumeCommit(device.id, vol)}
                         label={device.name}
                       />
                     ) : (

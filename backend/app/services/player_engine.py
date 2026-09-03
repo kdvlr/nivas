@@ -92,6 +92,8 @@ class PlayerEngine:
             on_state_change=self._on_external_sonos_state,
         )
         self.media_remote = MediaRemotePublisher(display_name="Nivas", port=49152)
+        self._save_pref_lock = threading.Lock()
+        self._save_pref_timer: Optional[threading.Timer] = None
 
     @staticmethod
     def _reap_orphaned_airplay_processes(tracked_pids: Optional[set[int]] = None):
@@ -148,7 +150,19 @@ class PlayerEngine:
         hidden, _, _, _ = self._load_preferences()
         return hidden
 
+    def _schedule_save_preferences(self, delay: float = 0.5) -> None:
+        with self._save_pref_lock:
+            if self._save_pref_timer is not None:
+                self._save_pref_timer.cancel()
+            self._save_pref_timer = threading.Timer(delay, self._save_preferences)
+            self._save_pref_timer.daemon = True
+            self._save_pref_timer.start()
+
     def _save_preferences(self) -> None:
+        with self._save_pref_lock:
+            if self._save_pref_timer is not None:
+                self._save_pref_timer.cancel()
+                self._save_pref_timer = None
         try:
             self._preferences_path.parent.mkdir(parents=True, exist_ok=True)
             temporary_path = self._preferences_path.with_suffix(".tmp")
@@ -1423,6 +1437,7 @@ class PlayerEngine:
                     self._write_stream_command(
                         f"volume {dev.address} {dev.volume / 100.0:.4f}"
                     )
+        self._update_master_volume_from_devices()
         self._save_preferences()
         self._broadcast_state()
         return self.get_state()
