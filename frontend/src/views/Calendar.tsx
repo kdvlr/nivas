@@ -532,7 +532,7 @@ export default function Calendar() {
   }
 
   const renderMobileSchedule = () => (
-    <div className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-4">
+    <div className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-4 pb-36">
       {mobileDaysList.map((dayIso, idx) => {
         const dayEvents = mobileEventsByDay.get(dayIso) ?? []
         const dayWeather = weather?.daily?.find((d) => d.date === dayIso)
@@ -643,7 +643,32 @@ export default function Calendar() {
             </div>
           )}
         </div>
-        <TopClockHeader now={new Date()} />
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              if (!selections.length) return
+              const now = new Date()
+              const start = new Date(now)
+              start.setMinutes(start.getMinutes() >= 30 ? 60 : 30, 0, 0)
+              const end = new Date(start.getTime() + 60 * 60 * 1000)
+              setDraft({
+                selection_id: selections[0].id,
+                title: '',
+                start: toLocalInput(start),
+                end: toLocalInput(end),
+                all_day: false,
+                location: '',
+                description: '',
+              })
+            }}
+            className="btn-primary flex items-center gap-1.5 px-3 py-1.5 lg:px-4 lg:py-2 text-sm lg:text-base font-semibold cursor-pointer active:scale-95 transition-transform"
+            title="Add event"
+          >
+            <Icon name="add" className="text-base lg:text-xl font-bold" />
+            <span>Add Event</span>
+          </button>
+          <TopClockHeader now={new Date()} />
+        </div>
       </div>
       {error && (
         <div className="mb-3 flex items-center">
