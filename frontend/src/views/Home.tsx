@@ -169,7 +169,6 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<'all' | 'schedule' | 'tasks' | 'chores' | 'shopping'>('all')
   const [completingIds, setCompletingIds] = useState<string[]>([])
   const [removedIds, setRemovedIds] = useState<string[]>([])
-  const [fabOpen, setFabOpen] = useState(false)
   const [fontIdx, setFontIdx] = useState(() => {
     const saved = localStorage.getItem('davuluri_title_font')
     return saved ? Math.max(0, TITLE_FONTS.findIndex(f => f.name === saved)) : 0
@@ -1031,53 +1030,6 @@ export default function Home() {
           </div>
         </Modal>
       )}
-
-      {/* Mobile FAB */}
-      <div className="lg:hidden fixed bottom-24 right-4 z-50 flex flex-col items-end gap-3 pointer-events-none">
-        <AnimatePresence>
-          {fabOpen && (
-            <motion.div
-              initial={{ opacity: 0, y: 20, scale: 0.8 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 20, scale: 0.8 }}
-              className="flex flex-col items-end gap-2 pointer-events-auto"
-            >
-              <a href="#/shopping" className="flex items-center gap-3 bg-white dark:bg-slate-800 rounded-full py-2 px-4 shadow-lg text-sm font-bold text-ink active:scale-95 transition-transform border border-ink-faint" onClick={() => setFabOpen(false)}>
-                <span>Add Shopping</span>
-                <Icon name="shopping_cart" className="text-orange-500" />
-              </a>
-              <a href="#/todos" className="flex items-center gap-3 bg-white dark:bg-slate-800 rounded-full py-2 px-4 shadow-lg text-sm font-bold text-ink active:scale-95 transition-transform border border-ink-faint" onClick={() => setFabOpen(false)}>
-                <span>Add To-Do</span>
-                <Icon name="task_alt" className="text-emerald-500" />
-              </a>
-              <a href="#/calendar" className="flex items-center gap-3 bg-white dark:bg-slate-800 rounded-full py-2 px-4 shadow-lg text-sm font-bold text-ink active:scale-95 transition-transform border border-ink-faint" onClick={() => setFabOpen(false)}>
-                <span>Add Event</span>
-                <Icon name="event" className="text-[var(--primary)]" />
-              </a>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        {/* Backdrop for FAB menu */}
-        <AnimatePresence>
-          {fabOpen && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/20 dark:bg-black/40 pointer-events-auto -z-10"
-              onClick={() => setFabOpen(false)}
-            />
-          )}
-        </AnimatePresence>
-        <button
-          onClick={() => setFabOpen(!fabOpen)}
-          className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full shadow-xl bg-[var(--primary)] text-white hover:scale-105 active:scale-95 transition-all relative"
-        >
-          <motion.div animate={{ rotate: fabOpen ? 45 : 0 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }}>
-            <Icon name="add" className="text-3xl" />
-          </motion.div>
-        </button>
-      </div>
     </div>
   )
 }

@@ -216,6 +216,42 @@ export default function Calendar() {
     })
   }
 
+  const openNewEventModal = useCallback(() => {
+    if (!selections.length) return
+    const now = new Date()
+    const start = new Date(now)
+    start.setMinutes(start.getMinutes() >= 30 ? 60 : 30, 0, 0)
+    const end = new Date(start.getTime() + 60 * 60 * 1000)
+    setDraft({
+      selection_id: selections[0].id,
+      title: '',
+      start: toLocalInput(start),
+      end: toLocalInput(end),
+      all_day: false,
+      location: '',
+      description: '',
+    })
+  }, [selections])
+
+  useEffect(() => {
+    const handleCreateItem = (e: Event) => {
+      const customEvent = e as CustomEvent
+      if (customEvent.detail?.type === 'event') {
+        openNewEventModal()
+      }
+    }
+    window.addEventListener('nivas:create-item', handleCreateItem)
+
+    if (location.hash.includes('action=new') && selections.length > 0) {
+      openNewEventModal()
+      history.replaceState(null, '', '#/calendar')
+    }
+
+    return () => {
+      window.removeEventListener('nivas:create-item', handleCreateItem)
+    }
+  }, [openNewEventModal, selections])
+
   // Fit the visible hours to the events of the currently-shown days: the axis
   // shrinks to [earliest .. latest] (anchored near the top, min 6h) and each
   // slot's pixel height is computed so the whole window fits the pane without
@@ -643,32 +679,7 @@ export default function Calendar() {
             </div>
           )}
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => {
-              if (!selections.length) return
-              const now = new Date()
-              const start = new Date(now)
-              start.setMinutes(start.getMinutes() >= 30 ? 60 : 30, 0, 0)
-              const end = new Date(start.getTime() + 60 * 60 * 1000)
-              setDraft({
-                selection_id: selections[0].id,
-                title: '',
-                start: toLocalInput(start),
-                end: toLocalInput(end),
-                all_day: false,
-                location: '',
-                description: '',
-              })
-            }}
-            className="btn-primary flex items-center gap-1.5 px-3 py-1.5 lg:px-4 lg:py-2 text-sm lg:text-base font-semibold cursor-pointer active:scale-95 transition-transform"
-            title="Add event"
-          >
-            <Icon name="add" className="text-base lg:text-xl font-bold" />
-            <span>Add Event</span>
-          </button>
-          <TopClockHeader now={new Date()} />
-        </div>
+        <TopClockHeader now={new Date()} />
       </div>
       {error && (
         <div className="mb-3 flex items-center">

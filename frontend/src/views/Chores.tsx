@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence, LayoutGroup, useMotionValue, useTransform } from 'framer-motion'
 import { PRESS_SPRING, EXPRESSIVE_ENTER } from '../lib/motion'
 import Avatar from '../components/Avatar'
@@ -203,6 +203,29 @@ export default function Chores() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
+  const openNewChoreModal = useCallback(() => {
+    setDraft(emptyDraft())
+  }, [])
+
+  useEffect(() => {
+    const handleCreateItem = (e: Event) => {
+      const customEvent = e as CustomEvent
+      if (customEvent.detail?.type === 'chore') {
+        openNewChoreModal()
+      }
+    }
+    window.addEventListener('nivas:create-item', handleCreateItem)
+
+    if (location.hash.includes('action=new')) {
+      openNewChoreModal()
+      history.replaceState(null, '', '#/chores')
+    }
+
+    return () => {
+      window.removeEventListener('nivas:create-item', handleCreateItem)
+    }
+  }, [openNewChoreModal])
+
   const { data: chores, reload } = useData<ChoreItem[]>('/api/chores', ['chores'])
   const { data: people } = useData<Person[]>('/api/setup/people', ['chores'])
   const { data: balances } = useData<CoinBalance[]>('/api/rewards/balances', ['chores', 'rewards'])
@@ -309,15 +332,6 @@ export default function Chores() {
             )}
           </div>
           <div className="flex items-center gap-2 lg:gap-3">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              transition={PRESS_SPRING}
-              onClick={() => setDraft(emptyDraft())}
-              className="btn-primary px-4 py-2 lg:px-6 lg:py-3 text-base lg:text-lg cursor-pointer"
-            >
-              <Icon name="add" /> Add
-            </motion.button>
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}

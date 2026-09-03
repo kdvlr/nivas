@@ -29,6 +29,7 @@ interface MiniPlayerBarProps {
   onOpenFullPlayer: () => void
   onClose?: () => void
   slideshowMode?: boolean
+  docked?: boolean
   className?: string
 }
 
@@ -42,6 +43,7 @@ export default function MiniPlayerBar({
   onOpenFullPlayer,
   onClose,
   slideshowMode = false,
+  docked = false,
   className = '',
 }: MiniPlayerBarProps) {
   const [showAirPlayModal, setShowAirPlayModal] = useState(false)
@@ -80,7 +82,11 @@ export default function MiniPlayerBar({
         exit={{ y: 20, opacity: 0, scale: 0.95 }}
         transition={{ duration: 0.2, ease: 'easeOut' }}
         onClick={(e) => e.stopPropagation()}
-        className={`fixed bottom-[calc(4.25rem+env(safe-area-inset-bottom,0px))] inset-x-3 sm:inset-x-auto sm:right-6 sm:bottom-6 select-none glass border border-[var(--outline-var)] p-3 text-ink shadow-2xl transition-all w-auto max-w-[320px] mx-auto sm:mx-0 sm:w-[310px] ${
+        className={`${
+          docked
+            ? 'relative w-auto max-w-[320px] sm:w-[310px]'
+            : 'fixed bottom-[calc(4.25rem+env(safe-area-inset-bottom,0px))] inset-x-3 sm:inset-x-auto sm:right-6 sm:bottom-6 w-auto max-w-[320px] mx-auto sm:mx-0 sm:w-[310px]'
+        } select-none glass border border-[var(--outline-var)] p-3 text-ink shadow-2xl transition-all ${
           slideshowMode ? 'z-[110]' : 'z-40'
         } ${className}`}
       >

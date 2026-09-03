@@ -269,6 +269,27 @@ export default function Recipes() {
     setError('')
   }
 
+  useEffect(() => {
+    const handleCreateItem = (e: Event) => {
+      const customEvent = e as CustomEvent
+      if (customEvent.detail?.type === 'recipe') {
+        resetAddForm()
+        setShowAddModal(true)
+      }
+    }
+    window.addEventListener('nivas:create-item', handleCreateItem)
+
+    if (location.hash.includes('action=new')) {
+      resetAddForm()
+      setShowAddModal(true)
+      history.replaceState(null, '', '#/recipes')
+    }
+
+    return () => {
+      window.removeEventListener('nivas:create-item', handleCreateItem)
+    }
+  }, [])
+
   const filteredRecipes = useMemo(() => {
     const q = searchQuery.toLowerCase().trim()
     if (!q) return recipes ?? []
@@ -381,21 +402,7 @@ export default function Recipes() {
               : `${recipes?.length ?? 0} saved`}
           </span>
         </div>
-        <div className="flex items-center gap-3">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            transition={PRESS_SPRING}
-            onClick={() => {
-              resetAddForm()
-              setShowAddModal(true)
-            }}
-            className="btn-primary px-4 py-2 lg:px-6 lg:py-3 text-base lg:text-lg cursor-pointer flex items-center gap-1.5"
-          >
-            <Icon name="add" /> Add
-          </motion.button>
-          <TopClockHeader now={new Date()} />
-        </div>
+        <TopClockHeader now={new Date()} />
       </div>
 
       {/* Search Bar */}

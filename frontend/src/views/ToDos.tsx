@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence, LayoutGroup, useMotionValue, useTransform } from 'framer-motion'
 import { PRESS_SPRING, EXPRESSIVE_ENTER } from '../lib/motion'
 import Icon from '../components/Icon'
@@ -189,6 +189,29 @@ export default function ToDos() {
     reload()
   }
 
+  const openNewTodoModal = useCallback(() => {
+    setDraft({ source: 'local', title: '', person: '', due: todayISO(), recurrence: '', weekDays: [] })
+  }, [])
+
+  useEffect(() => {
+    const handleCreateItem = (e: Event) => {
+      const customEvent = e as CustomEvent
+      if (customEvent.detail?.type === 'todo') {
+        openNewTodoModal()
+      }
+    }
+    window.addEventListener('nivas:create-item', handleCreateItem)
+
+    if (location.hash.includes('action=new')) {
+      openNewTodoModal()
+      history.replaceState(null, '', '#/todos')
+    }
+
+    return () => {
+      window.removeEventListener('nivas:create-item', handleCreateItem)
+    }
+  }, [openNewTodoModal])
+
   const saveDraft = async () => {
     if (!draft) return
     const title = draft.title.trim()
@@ -261,18 +284,7 @@ export default function ToDos() {
             {open} to do{done ? ` · ${done} done 🎉` : ''}
           </span>
         </div>
-        <div className="flex items-center gap-3">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            transition={PRESS_SPRING}
-            onClick={() => setDraft({ source: 'local', title: '', person: '', due: todayISO(), recurrence: '', weekDays: [] })}
-            className="btn-primary px-4 py-2 lg:px-6 lg:py-3 text-base lg:text-lg cursor-pointer"
-          >
-            <Icon name="add" /> Add
-          </motion.button>
-          <TopClockHeader now={new Date()} />
-        </div>
+        <TopClockHeader now={new Date()} />
       </div>
 
       {tasks.length === 0 ? (
