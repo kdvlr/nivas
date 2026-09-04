@@ -860,13 +860,8 @@ function isWithinQuietHours(now: Date, startStr = '22:00', endStr = '06:00'): bo
             </AnimatePresence>
           </main>
 
-          {/* Floating Dock: Themed FAB + MiniPlayerBar */}
+          {/* Floating Dock: MiniPlayerBar (left on desktop, top on mobile) + Themed FAB (constant position) */}
           <div className="fixed bottom-[calc(4.25rem+env(safe-area-inset-bottom,0px)+8px)] right-4 sm:bottom-6 sm:right-6 z-40 flex flex-col items-end sm:flex-row sm:items-end gap-3 pointer-events-none">
-            <FloatingActionButton
-              route={route}
-              hasPlayer={Boolean(currentTrack)}
-              className="pointer-events-auto shrink-0"
-            />
             {route !== 'ytmusic' && currentTrack && (
               <MiniPlayerBar
                 docked
@@ -883,6 +878,11 @@ function isWithinQuietHours(now: Date, startStr = '22:00', endStr = '06:00'): bo
                 className="pointer-events-auto shrink-0"
               />
             )}
+            <FloatingActionButton
+              route={route}
+              hasPlayer={Boolean(currentTrack)}
+              className="pointer-events-auto shrink-0"
+            />
           </div>
         </div>
 

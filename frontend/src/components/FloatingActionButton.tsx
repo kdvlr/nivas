@@ -108,7 +108,7 @@ export default function FloatingActionButton({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="fixed inset-0 z-30 bg-black/25 dark:bg-black/45 backdrop-blur-[2px]"
+            className="fixed inset-0 z-40 bg-black/25 dark:bg-black/45 backdrop-blur-[2px]"
             onClick={() => setOpen(false)}
           />
         )}
@@ -122,7 +122,7 @@ export default function FloatingActionButton({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.88 }}
             transition={{ type: 'spring', stiffness: 350, damping: 24 }}
-            className="absolute bottom-[4.25rem] right-0 z-40 flex flex-col items-end gap-2.5 min-w-[170px]"
+            className="absolute bottom-[4.25rem] right-0 z-50 flex flex-col items-end gap-2.5 min-w-[170px]"
           >
             {SPEED_DIAL_ITEMS.map((item, idx) => (
               <motion.button
@@ -157,7 +157,7 @@ export default function FloatingActionButton({
         whileTap={{ scale: 0.92 }}
         transition={PRESS_SPRING}
         onClick={handleMainButtonClick}
-        className={`relative z-40 flex h-14 w-14 items-center justify-center rounded-full shadow-2xl bg-[var(--primary)] text-[var(--on-primary)] border border-white/20 hover:brightness-110 active:brightness-95 cursor-pointer transition-shadow`}
+        className={`relative z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-2xl bg-[var(--primary)] text-[var(--on-primary)] border border-white/20 hover:brightness-110 active:brightness-95 cursor-pointer transition-shadow`}
       >
         <motion.div
           animate={{ rotate: isDashboard && open ? 45 : 0 }}
