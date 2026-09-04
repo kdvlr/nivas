@@ -116,3 +116,32 @@ def test_kids_daily_regenerate_endpoint(client):
     assert "fun_fact" in data["content"]
     assert "stem_5yo" in data["content"]
     assert "stem_9yo" in data["content"]
+
+def test_kids_daily_category_pool_and_recent_history():
+    from app.services.kids_daily_service import KIDS_CATEGORIES
+    # Category pool should be expansive to prevent early repetition
+    assert len(KIDS_CATEGORIES) >= 60
+
+    # Test recent history extraction
+    service = kids_daily_service
+    service._cache["2026-08-20"] = {
+        "word_of_the_day": {"word": "Barycenter"},
+        "fun_fact": {"category": "Astronomy", "fact": "Planets orbit a barycenter."},
+        "stem_5yo": {"topic": "Gravity"},
+        "stem_9yo": {"topic": "Orbital Mechanics"},
+    }
+    service._cache["2026-08-24"] = {
+        "word_of_the_day": {"word": "Keystone"},
+        "fun_fact": {"category": "Architecture", "fact": "Arches need a keystone."},
+        "stem_5yo": {"topic": "Arches"},
+        "stem_9yo": {"topic": "Trusses"},
+    }
+
+    history = service._get_recent_history("2026-08-25", days_back=30)
+    assert "barycenter" in history["used_words"]
+    assert "keystone" in history["used_words"]
+    assert "Barycenter" in history["used_word_list"]
+    assert "Keystone" in history["used_word_list"]
+    assert "astronomy" in history["recent_categories"]
+    assert "architecture" in history["recent_categories"]
+

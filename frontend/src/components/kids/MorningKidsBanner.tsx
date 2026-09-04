@@ -212,60 +212,44 @@ export default function MorningKidsBanner({
 
   const typeScale = [
     {
-      word: 'lg:text-[3rem] xl:text-[3.25rem]',
-      definition: 'lg:text-[1.35rem] xl:text-[1.5rem]',
-      example: 'lg:text-[1.2rem] xl:text-[1.35rem]',
-      fact: 'lg:text-[1.55rem] xl:text-[1.75rem]',
-      support: 'lg:text-[1.2rem] xl:text-[1.35rem]',
-      question: 'lg:text-[1.4rem] xl:text-[1.55rem]',
-      hint: 'lg:text-base xl:text-lg',
-      topic: 'lg:text-base xl:text-lg',
-    },
-    {
-      word: 'lg:text-[2.75rem] xl:text-[3rem]',
-      definition: 'lg:text-xl xl:text-[1.35rem]',
-      example: 'lg:text-lg xl:text-xl',
-      fact: 'lg:text-[1.4rem] xl:text-[1.55rem]',
-      support: 'lg:text-lg xl:text-xl',
-      question: 'lg:text-[1.3rem] xl:text-[1.4rem]',
-      hint: 'lg:text-[0.95rem] xl:text-base',
-      topic: 'lg:text-[0.95rem] xl:text-base',
-    },
-    {
       word: 'lg:text-[2.5rem] xl:text-[2.75rem]',
-      definition: 'lg:text-lg xl:text-xl',
-      example: 'lg:text-base xl:text-lg',
-      fact: 'lg:text-[1.25rem] xl:text-[1.4rem]',
-      support: 'lg:text-base xl:text-lg',
-      question: 'lg:text-xl xl:text-[1.3rem]',
-      hint: 'lg:text-sm xl:text-[0.95rem]',
-      topic: 'lg:text-sm xl:text-[0.95rem]',
+      definition: 'lg:text-[1.15rem] xl:text-[1.3rem]',
+      example: 'lg:text-[1.05rem] xl:text-[1.15rem]',
+      fact: 'lg:text-[1.35rem] xl:text-[1.5rem]',
+      support: 'lg:text-[1.05rem] xl:text-[1.15rem]',
+      question: 'lg:text-[1.2rem] xl:text-[1.35rem]',
+      hint: 'lg:text-sm xl:text-base',
+      topic: 'lg:text-sm xl:text-base',
+    },
+    {
+      word: 'lg:text-[2.25rem] xl:text-[2.5rem]',
+      definition: 'lg:text-base xl:text-lg',
+      example: 'lg:text-sm xl:text-base',
+      fact: 'lg:text-[1.2rem] xl:text-[1.35rem]',
+      support: 'lg:text-sm xl:text-base',
+      question: 'lg:text-[1.1rem] xl:text-[1.2rem]',
+      hint: 'lg:text-xs xl:text-sm',
+      topic: 'lg:text-xs xl:text-sm',
+    },
+    {
+      word: 'lg:text-[2rem] xl:text-[2.25rem]',
+      definition: 'lg:text-sm xl:text-base',
+      example: 'lg:text-xs xl:text-sm',
+      fact: 'lg:text-[1.05rem] xl:text-[1.2rem]',
+      support: 'lg:text-xs xl:text-sm',
+      question: 'lg:text-base xl:text-lg',
+      hint: 'lg:text-[0.75rem] xl:text-xs',
+      topic: 'lg:text-[0.75rem] xl:text-xs',
     },
   ][density]
 
   const answerTypeScale = [
     {
-      panel: 'lg:gap-4 lg:p-6',
-      header: 'lg:min-h-16',
-      title: 'lg:text-4xl',
-      subtitle: 'lg:text-lg',
-      grid: 'lg:gap-4',
-      card: 'lg:gap-3 lg:p-5',
-      sectionTitle: 'lg:text-2xl',
-      topic: 'lg:text-base',
-      question: 'lg:text-[1.35rem] xl:text-[1.5rem]',
-      answerBox: 'lg:gap-2 lg:p-4',
-      label: 'lg:text-base',
-      answer: 'lg:text-[1.45rem] xl:text-[1.65rem]',
-      explanationWrap: 'lg:pt-3',
-      explanation: 'lg:text-[1.2rem] xl:text-[1.35rem]',
-    },
-    {
-      panel: 'lg:gap-3 lg:p-5',
+      panel: 'lg:gap-3.5 lg:p-5',
       header: 'lg:min-h-14',
-      title: 'lg:text-[2rem]',
+      title: 'lg:text-3xl',
       subtitle: 'lg:text-base',
-      grid: 'lg:gap-3',
+      grid: 'lg:gap-3.5',
       card: 'lg:gap-2.5 lg:p-4',
       sectionTitle: 'lg:text-xl',
       topic: 'lg:text-sm',
@@ -293,7 +277,7 @@ export default function MorningKidsBanner({
       explanation: 'lg:text-[0.95rem] xl:text-[1.05rem]',
     },
     {
-      panel: 'lg:gap-2 lg:p-3',
+      panel: 'lg:gap-2 lg:p-3.5',
       header: 'lg:min-h-11',
       title: 'lg:text-2xl',
       subtitle: 'lg:text-xs',
@@ -307,6 +291,22 @@ export default function MorningKidsBanner({
       answer: 'lg:text-base xl:text-[1.1rem]',
       explanationWrap: 'lg:pt-1.5',
       explanation: 'lg:text-[0.85rem] xl:text-[0.95rem]',
+    },
+    {
+      panel: 'lg:gap-1.5 lg:p-3',
+      header: 'lg:min-h-10',
+      title: 'lg:text-xl',
+      subtitle: 'lg:text-[0.7rem]',
+      grid: 'lg:gap-1.5',
+      card: 'lg:gap-1 lg:p-2.5',
+      sectionTitle: 'lg:text-sm',
+      topic: 'lg:text-[0.7rem]',
+      question: 'lg:text-sm xl:text-[0.95rem]',
+      answerBox: 'lg:gap-1 lg:p-2',
+      label: 'lg:text-[0.7rem]',
+      answer: 'lg:text-sm xl:text-base',
+      explanationWrap: 'lg:pt-1',
+      explanation: 'lg:text-xs xl:text-sm',
     },
   ][answerDensity]
 
@@ -337,7 +337,7 @@ export default function MorningKidsBanner({
                 <Icon name="wb_sunny" className="text-2xl" />
               </span>
               <div>
-                <h2 className="text-2xl font-extrabold leading-none tracking-tight text-ink sm:text-3xl lg:text-4xl">
+                <h2 className="text-xl font-extrabold leading-none tracking-tight text-ink sm:text-2xl lg:text-3xl">
                   Kids’ Brain Nuggets
                 </h2>
               </div>
@@ -347,9 +347,9 @@ export default function MorningKidsBanner({
               <button
                 onClick={() => setShowAnswersModal(true)}
                 title="View answers & explanations"
-                className="btn-primary px-4 sm:px-5 py-2 text-sm sm:text-base font-extrabold cursor-pointer"
+                className="btn-primary px-3.5 sm:px-4 py-1.5 text-xs sm:text-sm font-extrabold cursor-pointer"
               >
-                <Icon name="psychology" className="text-xl sm:text-2xl" />
+                <Icon name="psychology" className="text-lg sm:text-xl" />
                 <span>Answers</span>
               </button>
               <button
@@ -369,11 +369,11 @@ export default function MorningKidsBanner({
             <section data-testid="kids-word-card" data-fit-card className="flex min-h-0 flex-col justify-between rounded-2xl border border-amber-500/40 bg-[var(--sc)] p-3.5 shadow-sm sm:p-4 lg:p-5">
               <div className="flex flex-col justify-start">
                 <div className="flex items-center justify-between mb-2 shrink-0">
-                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/15 px-2.5 py-0.5 text-xs font-black uppercase tracking-wider text-amber-700 dark:text-amber-300 lg:text-base">
+                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-xs font-black uppercase tracking-wider text-amber-700 dark:text-amber-300 lg:text-sm">
                     <Icon name="menu_book" className="text-sm" /> Word of the Day
                   </span>
                   {data.word_of_the_day.part_of_speech && (
-                    <span className="text-xs font-semibold italic text-ink-soft sm:text-sm lg:text-lg">
+                    <span className="text-xs font-semibold italic text-ink-soft sm:text-xs lg:text-base">
                       {data.word_of_the_day.part_of_speech}
                     </span>
                   )}
@@ -383,23 +383,23 @@ export default function MorningKidsBanner({
                   <h3
                     style={{ fontFamily: 'var(--font-body)' }}
                     data-fit-content
-                    className={`break-words text-4xl font-black leading-tight tracking-normal text-ink drop-shadow [overflow-wrap:anywhere] sm:text-5xl ${typeScale.word}`}
+                    className={`break-words text-3xl font-black leading-tight tracking-normal text-ink drop-shadow [overflow-wrap:anywhere] sm:text-4xl ${typeScale.word}`}
                   >
                     {data.word_of_the_day.word}
                   </h3>
-                  <p className="mt-0.5 break-words font-mono text-sm font-bold text-amber-700 dark:text-amber-300 [overflow-wrap:anywhere] sm:text-base lg:text-xl">
+                  <p className="mt-0.5 break-words font-mono text-xs font-bold text-amber-700 dark:text-amber-300 [overflow-wrap:anywhere] sm:text-sm lg:text-lg">
                     [{data.word_of_the_day.pronunciation}]
                   </p>
                 </div>
 
                 <div className="mt-2.5">
-                  <p data-fit-content className={`break-words text-base font-medium leading-snug text-ink [overflow-wrap:anywhere] sm:text-lg ${typeScale.definition}`}>
+                  <p data-fit-content className={`break-words text-sm font-medium leading-snug text-ink [overflow-wrap:anywhere] sm:text-base ${typeScale.definition}`}>
                     {data.word_of_the_day.definition}
                   </p>
                 </div>
               </div>
 
-              <div data-fit-content className={`mt-2.5 shrink-0 break-words rounded-xl border border-amber-500/25 bg-[var(--sc-high)] p-2.5 text-base font-medium italic leading-snug text-ink-soft [overflow-wrap:anywhere] sm:p-3 sm:text-lg ${typeScale.example}`}>
+              <div data-fit-content className={`mt-2.5 shrink-0 break-words rounded-xl border border-amber-500/25 bg-[var(--sc-high)] p-2 text-sm font-medium italic leading-snug text-ink-soft [overflow-wrap:anywhere] sm:p-2.5 sm:text-base ${typeScale.example}`}>
                 “{data.word_of_the_day.example}”
               </div>
             </section>
@@ -408,28 +408,28 @@ export default function MorningKidsBanner({
             <section data-testid="kids-fact-card" data-fit-card className="flex min-h-0 flex-col justify-between rounded-2xl border border-emerald-500/40 bg-[var(--sc)] p-3.5 shadow-sm sm:p-4 lg:p-5">
               <div className="flex flex-col justify-start">
                 <div className="flex items-center justify-between mb-2 shrink-0">
-                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/15 px-2.5 py-0.5 text-xs font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300 lg:text-base">
+                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-xs font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300 lg:text-sm">
                     <Icon name="lightbulb" className="text-sm" /> Fun Fact
                   </span>
                   {data.fun_fact.category && (
-                    <span className="max-w-[55%] break-words rounded-md bg-emerald-500/15 px-2 py-0.5 text-right text-xs font-bold text-emerald-700 dark:text-emerald-200 [overflow-wrap:anywhere] sm:text-sm lg:text-lg">
+                    <span className="max-w-[55%] break-words rounded-md bg-emerald-500/15 px-2 py-0.5 text-right text-xs font-bold text-emerald-700 dark:text-emerald-200 [overflow-wrap:anywhere] sm:text-xs lg:text-base">
                       {data.fun_fact.category}
                     </span>
                   )}
                 </div>
 
                 <div className="mt-2 flex items-start gap-4">
-                  <span className="shrink-0 select-none text-4xl drop-shadow-md sm:text-5xl lg:text-6xl">
+                  <span className="shrink-0 select-none text-3xl drop-shadow-md sm:text-4xl lg:text-5xl">
                     {data.fun_fact.emoji || '💡'}
                   </span>
-                  <p data-fit-content className={`break-words text-lg font-semibold leading-snug text-ink drop-shadow [overflow-wrap:anywhere] sm:text-xl ${typeScale.fact}`}>
+                  <p data-fit-content className={`break-words text-base font-semibold leading-snug text-ink drop-shadow [overflow-wrap:anywhere] sm:text-lg ${typeScale.fact}`}>
                     {data.fun_fact.fact}
                   </p>
                 </div>
               </div>
 
               {data.fun_fact.did_you_know && (
-                <div data-fit-content className={`mt-2.5 shrink-0 break-words rounded-xl border border-emerald-500/25 bg-[var(--sc-high)] p-2.5 text-base font-medium leading-snug text-ink-soft [overflow-wrap:anywhere] sm:p-3 sm:text-lg ${typeScale.support}`}>
+                <div data-fit-content className={`mt-2.5 shrink-0 break-words rounded-xl border border-emerald-500/25 bg-[var(--sc-high)] p-2 text-sm font-medium leading-snug text-ink-soft [overflow-wrap:anywhere] sm:p-2.5 sm:text-base ${typeScale.support}`}>
                   <strong className="font-black text-emerald-700 dark:text-emerald-300">Did you know? </strong>
                   {data.fun_fact.did_you_know}
                 </div>
@@ -443,10 +443,10 @@ export default function MorningKidsBanner({
               <div>
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-purple-500/30 bg-purple-500/15 px-2.5 py-0.5 text-xs font-black uppercase tracking-wider text-purple-700 dark:text-purple-200 lg:text-sm xl:text-base">
-                      <Icon name="psychology" className="text-sm lg:text-lg" /> 🎈 Age 5 Challenge
+                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-purple-500/30 bg-purple-500/15 px-2 py-0.5 text-[0.7rem] sm:text-xs font-black uppercase tracking-wider text-purple-700 dark:text-purple-200 lg:text-xs xl:text-sm">
+                      <Icon name="psychology" className="text-xs lg:text-base" /> 🎈 Age 5 Challenge
                     </span>
-                    <p data-fit-content className={`mt-1.5 break-words text-sm font-bold text-purple-700/90 dark:text-purple-200/90 [overflow-wrap:anywhere] sm:text-base ${typeScale.topic}`}>
+                    <p data-fit-content className={`mt-1.5 break-words text-xs font-bold text-purple-700/90 dark:text-purple-200/90 [overflow-wrap:anywhere] sm:text-sm ${typeScale.topic}`}>
                       {data.stem_5yo.topic}
                     </p>
                   </div>
@@ -454,20 +454,20 @@ export default function MorningKidsBanner({
                     <button
                       onClick={() => setShowHint5(!showHint5)}
                       aria-expanded={showHint5}
-                      className="shrink-0 rounded-xl border border-purple-500/30 bg-purple-500/15 px-3 py-1.5 text-sm font-black text-purple-700 dark:text-purple-200 transition hover:bg-purple-500/25 active:scale-95 lg:text-base"
+                      className="shrink-0 rounded-xl border border-purple-500/30 bg-purple-500/15 px-2.5 py-1 text-xs font-black text-purple-700 dark:text-purple-200 transition hover:bg-purple-500/25 active:scale-95 lg:text-sm"
                     >
                       {showHint5 ? 'Hide Hint' : '💡 Hint'}
                     </button>
                   )}
                 </div>
-                <p data-fit-content className={`break-words text-xl font-bold leading-snug text-ink [overflow-wrap:anywhere] sm:text-2xl ${typeScale.question}`}>
+                <p data-fit-content className={`break-words text-lg font-bold leading-snug text-ink [overflow-wrap:anywhere] sm:text-xl ${typeScale.question}`}>
                   {data.stem_5yo.question}
                 </p>
               </div>
 
               {showHint5 && data.stem_5yo.hint && (
-                <div data-fit-content className="mt-2 shrink-0 rounded-xl border border-purple-500/25 bg-[var(--sc-high)] p-2.5 lg:p-3">
-                  <p className={`break-words text-base font-medium italic leading-snug text-ink-soft [overflow-wrap:anywhere] sm:text-lg ${typeScale.hint}`}>
+                <div data-fit-content className="mt-2 shrink-0 rounded-xl border border-purple-500/25 bg-[var(--sc-high)] p-2 lg:p-2.5">
+                  <p className={`break-words text-sm font-medium italic leading-snug text-ink-soft [overflow-wrap:anywhere] sm:text-base ${typeScale.hint}`}>
                     <strong className="font-black not-italic text-purple-700 dark:text-purple-300">Hint: </strong>{data.stem_5yo.hint}
                   </p>
                 </div>
@@ -479,10 +479,10 @@ export default function MorningKidsBanner({
               <div>
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-500/30 bg-indigo-500/15 px-2.5 py-0.5 text-xs font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-200 lg:text-sm xl:text-base">
-                      <Icon name="psychology" className="text-sm lg:text-lg" /> 🚀 Age 9 Challenge
+                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-500/30 bg-indigo-500/15 px-2 py-0.5 text-[0.7rem] sm:text-xs font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-200 lg:text-xs xl:text-sm">
+                      <Icon name="psychology" className="text-xs lg:text-base" /> 🚀 Age 9 Challenge
                     </span>
-                    <p data-fit-content className={`mt-1.5 break-words text-sm font-bold text-indigo-700/90 dark:text-indigo-200/90 [overflow-wrap:anywhere] sm:text-base ${typeScale.topic}`}>
+                    <p data-fit-content className={`mt-1.5 break-words text-xs font-bold text-indigo-700/90 dark:text-indigo-200/90 [overflow-wrap:anywhere] sm:text-sm ${typeScale.topic}`}>
                       {data.stem_9yo.topic}
                     </p>
                   </div>
@@ -490,20 +490,20 @@ export default function MorningKidsBanner({
                     <button
                       onClick={() => setShowHint9(!showHint9)}
                       aria-expanded={showHint9}
-                      className="shrink-0 rounded-xl border border-indigo-500/30 bg-indigo-500/15 px-3 py-1.5 text-sm font-black text-indigo-700 dark:text-indigo-200 transition hover:bg-indigo-500/25 active:scale-95 lg:text-base"
+                      className="shrink-0 rounded-xl border border-indigo-500/30 bg-indigo-500/15 px-2.5 py-1 text-xs font-black text-indigo-700 dark:text-indigo-200 transition hover:bg-indigo-500/25 active:scale-95 lg:text-sm"
                     >
                       {showHint9 ? 'Hide Hint' : '💡 Hint'}
                     </button>
                   )}
                 </div>
-                <p data-fit-content className={`break-words text-xl font-bold leading-snug text-ink [overflow-wrap:anywhere] sm:text-2xl ${typeScale.question}`}>
+                <p data-fit-content className={`break-words text-lg font-bold leading-snug text-ink [overflow-wrap:anywhere] sm:text-xl ${typeScale.question}`}>
                   {data.stem_9yo.question}
                 </p>
               </div>
 
               {showHint9 && data.stem_9yo.hint && (
-                <div data-fit-content className="mt-2 shrink-0 rounded-xl border border-indigo-500/25 bg-[var(--sc-high)] p-2.5 lg:p-3">
-                  <p className={`break-words text-base font-medium italic leading-snug text-ink-soft [overflow-wrap:anywhere] sm:text-lg ${typeScale.hint}`}>
+                <div data-fit-content className="mt-2 shrink-0 rounded-xl border border-indigo-500/25 bg-[var(--sc-high)] p-2 lg:p-2.5">
+                  <p className={`break-words text-sm font-medium italic leading-snug text-ink-soft [overflow-wrap:anywhere] sm:text-base ${typeScale.hint}`}>
                     <strong className="font-black not-italic text-indigo-700 dark:text-indigo-300">Hint: </strong>{data.stem_9yo.hint}
                   </p>
                 </div>
@@ -545,10 +545,10 @@ export default function MorningKidsBanner({
                         <Icon name="psychology" className="text-2xl" />
                       </span>
                       <div>
-                        <h3 className={`text-2xl font-extrabold text-ink sm:text-3xl ${answerTypeScale.title}`}>
+                        <h3 className={`text-xl font-extrabold text-ink sm:text-2xl ${answerTypeScale.title}`}>
                           Kids’ Brain Nuggets — Answers
                         </h3>
-                        <p className={`text-xs font-medium text-ink-soft sm:text-sm ${answerTypeScale.subtitle}`}>
+                        <p className={`text-[0.7rem] font-medium text-ink-soft sm:text-xs ${answerTypeScale.subtitle}`}>
                           Parent talking points & full explanations
                         </p>
                       </div>
@@ -566,25 +566,25 @@ export default function MorningKidsBanner({
                     {/* Age 5 Answer */}
                     <section data-testid="kids-age-5-answer" data-answer-fit-card className={`flex min-h-0 flex-col gap-3 rounded-2xl border border-purple-500/35 bg-[var(--sc)] p-4 ${answerTypeScale.card}`}>
                       <div className="flex items-center justify-between">
-                        <span data-answer-fit-content className={`flex min-w-0 flex-wrap items-center gap-2 text-base font-bold text-purple-700 dark:text-purple-300 sm:text-lg ${answerTypeScale.sectionTitle}`}>
+                        <span data-answer-fit-content className={`flex min-w-0 flex-wrap items-center gap-2 text-sm font-bold text-purple-700 dark:text-purple-300 sm:text-base ${answerTypeScale.sectionTitle}`}>
                           <span>🎈 Age 5 Challenge</span>
-                          <span className={`break-words rounded bg-purple-500/15 px-2 py-0.5 text-xs font-bold text-purple-700 dark:text-purple-200 [overflow-wrap:anywhere] ${answerTypeScale.topic}`}>
+                          <span className={`break-words rounded bg-purple-500/15 px-2 py-0.5 text-[0.7rem] font-bold text-purple-700 dark:text-purple-200 [overflow-wrap:anywhere] ${answerTypeScale.topic}`}>
                             {data.stem_5yo.topic}
                           </span>
                         </span>
                       </div>
-                      <p data-answer-fit-content className={`break-words text-base font-medium italic leading-snug text-ink-soft [overflow-wrap:anywhere] sm:text-lg ${answerTypeScale.question}`}>
+                      <p data-answer-fit-content className={`break-words text-sm font-medium italic leading-snug text-ink-soft [overflow-wrap:anywhere] sm:text-base ${answerTypeScale.question}`}>
                         “{data.stem_5yo.question}”
                       </p>
                       <div className={`flex min-h-0 flex-1 flex-col gap-2 rounded-xl border border-purple-500/25 bg-[var(--sc-high)] p-4 ${answerTypeScale.answerBox}`}>
-                        <p className={`text-xs font-black uppercase tracking-wider text-purple-700 dark:text-purple-300 ${answerTypeScale.label}`}>Answer</p>
-                        <p data-answer-fit-content className={`break-words text-base font-bold leading-snug text-ink [overflow-wrap:anywhere] sm:text-lg ${answerTypeScale.answer}`}>
+                        <p className={`text-[0.7rem] font-black uppercase tracking-wider text-purple-700 dark:text-purple-300 ${answerTypeScale.label}`}>Answer</p>
+                        <p data-answer-fit-content className={`break-words text-sm font-bold leading-snug text-ink [overflow-wrap:anywhere] sm:text-base ${answerTypeScale.answer}`}>
                           {data.stem_5yo.answer || 'Discuss together with hint'}
                         </p>
                         {data.stem_5yo.parent_explanation && (
                           <div data-answer-fit-content className={`mt-auto border-t border-purple-500/20 pt-3 ${answerTypeScale.explanationWrap}`}>
-                            <p className={`text-xs font-black uppercase tracking-wider text-purple-700/80 dark:text-purple-300/80 ${answerTypeScale.label}`}>Explanation for Parents</p>
-                            <p className={`mt-1 break-words text-sm leading-relaxed text-ink-soft [overflow-wrap:anywhere] sm:text-base ${answerTypeScale.explanation}`}>
+                            <p className={`text-[0.7rem] font-black uppercase tracking-wider text-purple-700/80 dark:text-purple-300/80 ${answerTypeScale.label}`}>Explanation for Parents</p>
+                            <p className={`mt-1 break-words text-xs leading-relaxed text-ink-soft [overflow-wrap:anywhere] sm:text-sm ${answerTypeScale.explanation}`}>
                               {data.stem_5yo.parent_explanation}
                             </p>
                           </div>
@@ -595,25 +595,25 @@ export default function MorningKidsBanner({
                     {/* Age 9 Answer */}
                     <section data-testid="kids-age-9-answer" data-answer-fit-card className={`flex min-h-0 flex-col gap-3 rounded-2xl border border-indigo-500/35 bg-[var(--sc)] p-4 ${answerTypeScale.card}`}>
                       <div className="flex items-center justify-between">
-                        <span data-answer-fit-content className={`flex min-w-0 flex-wrap items-center gap-2 text-base font-bold text-indigo-700 dark:text-indigo-300 sm:text-lg ${answerTypeScale.sectionTitle}`}>
+                        <span data-answer-fit-content className={`flex min-w-0 flex-wrap items-center gap-2 text-sm font-bold text-indigo-700 dark:text-indigo-300 sm:text-base ${answerTypeScale.sectionTitle}`}>
                           <span>🚀 Age 9 Challenge</span>
-                          <span className={`break-words rounded bg-indigo-500/15 px-2 py-0.5 text-xs font-bold text-indigo-700 dark:text-indigo-200 [overflow-wrap:anywhere] ${answerTypeScale.topic}`}>
+                          <span className={`break-words rounded bg-indigo-500/15 px-2 py-0.5 text-[0.7rem] font-bold text-indigo-700 dark:text-indigo-200 [overflow-wrap:anywhere] ${answerTypeScale.topic}`}>
                             {data.stem_9yo.topic}
                           </span>
                         </span>
                       </div>
-                      <p data-answer-fit-content className={`break-words text-base font-medium italic leading-snug text-ink-soft [overflow-wrap:anywhere] sm:text-lg ${answerTypeScale.question}`}>
+                      <p data-answer-fit-content className={`break-words text-sm font-medium italic leading-snug text-ink-soft [overflow-wrap:anywhere] sm:text-base ${answerTypeScale.question}`}>
                         “{data.stem_9yo.question}”
                       </p>
                       <div className={`flex min-h-0 flex-1 flex-col gap-2 rounded-xl border border-indigo-500/25 bg-[var(--sc-high)] p-4 ${answerTypeScale.answerBox}`}>
-                        <p className={`text-xs font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-300 ${answerTypeScale.label}`}>Answer</p>
-                        <p data-answer-fit-content className={`break-words text-base font-bold leading-snug text-ink [overflow-wrap:anywhere] sm:text-lg ${answerTypeScale.answer}`}>
+                        <p className={`text-[0.7rem] font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-300 ${answerTypeScale.label}`}>Answer</p>
+                        <p data-answer-fit-content className={`break-words text-sm font-bold leading-snug text-ink [overflow-wrap:anywhere] sm:text-base ${answerTypeScale.answer}`}>
                           {data.stem_9yo.answer || 'Discuss together with hint'}
                         </p>
                         {data.stem_9yo.parent_explanation && (
                           <div data-answer-fit-content className={`mt-auto border-t border-indigo-500/20 pt-3 ${answerTypeScale.explanationWrap}`}>
-                            <p className={`text-xs font-black uppercase tracking-wider text-indigo-700/80 dark:text-indigo-300/80 ${answerTypeScale.label}`}>Explanation for Parents</p>
-                            <p className={`mt-1 break-words text-sm leading-relaxed text-ink-soft [overflow-wrap:anywhere] sm:text-base ${answerTypeScale.explanation}`}>
+                            <p className={`text-[0.7rem] font-black uppercase tracking-wider text-indigo-700/80 dark:text-indigo-300/80 ${answerTypeScale.label}`}>Explanation for Parents</p>
+                            <p className={`mt-1 break-words text-xs leading-relaxed text-ink-soft [overflow-wrap:anywhere] sm:text-sm ${answerTypeScale.explanation}`}>
                               {data.stem_9yo.parent_explanation}
                             </p>
                           </div>

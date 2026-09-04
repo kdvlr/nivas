@@ -3,7 +3,7 @@ import logging
 import os
 from datetime import date, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 from ..config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -1045,20 +1045,81 @@ FALLBACK_CATALOG: List[Dict[str, Any]] = [
 ]
 
 KIDS_CATEGORIES = [
-    "Astronomy & Deep Space",
-    "Deep Ocean & Marine Biology",
-    "Volcanoes, Crystals & Earth Sciences",
-    "Physics, Flight & Aerodynamics",
-    "Botany, Photosynthesis & Ancient Forests",
-    "Chemistry, Molecules & Polymers",
-    "Robotics, Machines & Inventions",
-    "Paleontology, Fossils & Ancient Life",
-    "Acoustics, Sound Waves & Resonance",
-    "Animal Biomimicry & Survival Adaptations",
-    "Extreme Weather, Atmosphere & Climate",
-    "Microbiology, Cells & Genetics",
-    "Architecture, Bridges & Engineering",
-    "Optical Illusions, Light & Lasers",
+    "Astrophysics, Nebulae & Black Holes",
+    "Deep Ocean Trenches & Abyssal Creatures",
+    "Volcanoes, Magma Chambers & Geysers",
+    "Aerodynamics, Supersonic Flight & Gliders",
+    "Botany, Photosynthesis & Carnivorous Plants",
+    "Crystallography, Gems & Mineral Formations",
+    "Entomology, Insect Superpowers & Metamorphosis",
+    "Paleontology, Dinosaurs & Fossilized Footprints",
+    "Acoustics, Sound Waves, Echoes & Sonar",
+    "Animal Biomimicry & Nature's Inventions",
+    "Extreme Weather, Tornadoes, Hurricanes & Lightning",
+    "Microbiology, Extremophiles & Bacteria",
+    "Architecture, Suspension Bridges & Arches",
+    "Optics, Prisms, Lasers & Wave-Particle Duality",
+    "Glaciology, Icebergs & Ice Ages",
+    "Neurobiology, The Brain & Animal Senses",
+    "Rocketry, Orbital Mechanics & Mars Rovers",
+    "Bioluminescence & Glow-in-the-Dark Sea Life",
+    "Plate Tectonics, Earthquakes & Continental Drift",
+    "Ancient Civilizations & Engineering Marvels",
+    "Cryogenics, Liquid Nitrogen & Absolute Zero",
+    "Fluid Dynamics, Vortices & Ocean Currents",
+    "Quantum Oddities, Atoms & Subatomic Particles",
+    "Renewable Energy, Solar Cells & Wind Turbines",
+    "Arachnology, Spider Silk & Web Architecture",
+    "Marine Mammals, Whale Songs & Echolocation",
+    "Desert Ecology, Cacti & Camouflage Adaptations",
+    "Caves, Stalactites & Subterranean Rivers",
+    "Magnetism, Electromagnets & Earth's Magnetic Field",
+    "Mycology, Mushrooms & Forest Mycelium Networks",
+    "Planetary Moons, Rings & Asteroid Belts",
+    "Bird Migration, Navigation & Magnetic Senses",
+    "Robotics, Artificial Intelligence & Sensors",
+    "Rainforest Canopies & Symbiotic Biodiversity",
+    "The Solar Wind, Auroras & Northern Lights",
+    "Coral Reefs, Polyps & Atoll Formations",
+    "Kinetic Energy, Momentum & Rollercoasters",
+    "Amber Preservation & Prehistoric Insects",
+    "Atmospheric Layers, Stratosphere & Exosphere",
+    "Deep Sea Hydrothermal Vents & Chemosynthesis",
+    "Geothermal Energy, Hot Springs & Fumaroles",
+    "Bioluminescent Fungi & Glowing Forests",
+    "Materials Science, Graphene & Aerogels",
+    "Tides, Moon Gravity & Coastal Estuaries",
+    "Pollination, Honeybee Dances & Nectar Chemistry",
+    "Meteorites, Impact Craters & Comets",
+    "Biomechanics, Cheetah Speed & Muscle Levers",
+    "Bridges, Cantilevers & Structural Trusses",
+    "Hydraulics, Water Pressure & Submarines",
+    "Thermohaline Circulation & Gulf Stream",
+    "Seed Dispersal, Helicopter Samaras & Burrs",
+    "Optical Illusions, Mirages & Rainbow Physics",
+    "Radio Astronomy, Pulsars & Space Signals",
+    "Electric Animals, Torpedo Rays & Electric Eels",
+    "Ant Colonies, Superorganisms & Pheromone Trails",
+    "Superconductors & Magnetic Levitation Trains",
+    "Atmospheric Pressure, Barometers & Flight Lift",
+    "Dendrochronology, Tree Rings & Forest History",
+    "Venom, Toxins & Biochemical Defenses",
+    "Geodes, Agates & Underground Crystals",
+    "Seafloor Spreading, Mid-Atlantic Ridge & Trenches",
+    "Gravity Slingshots, Voyager Missions & Probes",
+    "Ecosystem Trophic Cascades & Apex Predators",
+    "Friction, Hovercrafts & Air Bearings",
+    "Plant Communication, Chemical Signals & Roots",
+    "Chromatography, Color Chemistry & Pigments",
+    "Bioluminescent Waves, Dinoflagellates & Red Tides",
+    "Solar Eclipses, Umbra, Penumbra & Coronas",
+    "Hibernation, Torpor & Freeze-Tolerant Frogs",
+    "Hovering Birds, Hummingbird Wings & Aerodynamics",
+    "Geological Time Scales, Strata & Sedimentary Layers",
+    "Thermodynamics, Heat Conduction & Insulation",
+    "Subsurface Oceans, Europa & Enceladus",
+    "Static Electricity, Van de Graaff & Lightning Rods",
+    "Cephalopod Camouflage, Chromatophores & Octopuses",
 ]
 
 class KidsDailyService:
@@ -1157,6 +1218,62 @@ class KidsDailyService:
             "content": content,
         }
 
+    def _get_recent_history(self, current_date_str: str, days_back: int = 60) -> Dict[str, Any]:
+        """Collect recent words, categories, facts, and stem topics from past cache to prevent repetition."""
+        used_words: Set[str] = set()
+        used_word_list: List[str] = []
+        recent_categories: Set[str] = set()
+        recent_fact_snippets: List[str] = []
+        recent_stem_topics: List[str] = []
+
+        try:
+            curr_d = date.fromisoformat(current_date_str)
+        except Exception:
+            curr_d = date.today()
+
+        for d_str, day_data in self._cache.items():
+            if d_str == current_date_str:
+                continue
+            try:
+                d = date.fromisoformat(d_str)
+                delta = (curr_d - d).days
+                if 0 <= delta <= days_back:
+                    # Word of the day
+                    word_obj = day_data.get("word_of_the_day", {})
+                    w = word_obj.get("word", "").strip()
+                    if w:
+                        used_words.add(w.lower())
+                        used_word_list.append(w)
+
+                    # Fun fact
+                    fact_obj = day_data.get("fun_fact", {})
+                    cat = fact_obj.get("category", "").strip()
+                    fact = fact_obj.get("fact", "").strip()
+                    if cat:
+                        recent_categories.add(cat.lower())
+                    if fact:
+                        recent_fact_snippets.append(fact[:60])
+
+                    # STEM topics
+                    s5 = day_data.get("stem_5yo", {})
+                    s9 = day_data.get("stem_9yo", {})
+                    top5 = s5.get("topic", "").strip()
+                    top9 = s9.get("topic", "").strip()
+                    if top5:
+                        recent_stem_topics.append(top5)
+                    if top9:
+                        recent_stem_topics.append(top9)
+            except Exception:
+                continue
+
+        return {
+            "used_words": used_words,
+            "used_word_list": sorted(list(set(used_word_list))),
+            "recent_categories": recent_categories,
+            "recent_fact_snippets": recent_fact_snippets[-20:],
+            "recent_stem_topics": list(set(recent_stem_topics))[-25:],
+        }
+
     def _generate_daily_content(self, date_str: str) -> Dict[str, Any]:
         s = get_settings()
         api_key = self._settings.get("gemini_api_key") or s.gemini_api_key
@@ -1188,18 +1305,39 @@ class KidsDailyService:
         import uuid
 
         client = genai.Client(api_key=api_key)
-        sample_cats = random.sample(KIDS_CATEGORIES, 4)
+        history = self._get_recent_history(date_str, days_back=60)
+        forbidden_words = history["used_words"]
+        forbidden_word_list = history["used_word_list"]
+        recent_cats = history["recent_categories"]
+        recent_stem_topics = history["recent_stem_topics"]
+
+        # Prioritize categories that have not been used recently
+        fresh_categories = [
+            c for c in KIDS_CATEGORIES
+            if not any(rc in c.lower() or c.lower().startswith(rc) for rc in recent_cats)
+        ]
+        if len(fresh_categories) < 4:
+            fresh_categories = KIDS_CATEGORIES.copy()
+        sample_cats = random.sample(fresh_categories, 4)
         nonce = uuid.uuid4().hex[:8]
 
+        forbidden_words_display = ", ".join(forbidden_word_list[-40:]) if forbidden_word_list else "None yet"
+        forbidden_topics_display = ", ".join(recent_stem_topics[-20:]) if recent_stem_topics else "None yet"
+
         prompt = (
-            f"Generate a completely fresh, creative, and inspiring daily morning educational kids bundle for {date_str} (Nonce: {nonce}).\n"
+            f"Generate a completely fresh, creative, and inspiring daily morning educational kids bundle for {date_str} (Nonce: {nonce}).\n\n"
+            f"STRICT DEDUPLICATION RULES (CRITICAL):\n"
+            f"The following words and topics have ALREADY been featured recently and are STRICTLY FORBIDDEN:\n"
+            f"- FORBIDDEN RECENT WORDS: {forbidden_words_display}\n"
+            f"- FORBIDDEN RECENT TOPICS: {forbidden_topics_display}\n"
+            f"DO NOT use any of the above forbidden words or any common variations/synonyms. You MUST select an entirely fresh, exciting vocabulary word and distinct STEM concepts.\n\n"
             f"Category inspiration themes for today:\n"
             f"- Word of the Day focus: {sample_cats[0]}\n"
             f"- Fun Fact focus: {sample_cats[1]}\n"
             f"- 5-Year-Old STEM challenge: {sample_cats[2]}\n"
             f"- 9-Year-Old STEM challenge: {sample_cats[3]}\n\n"
             "Requirements:\n"
-            "1. word_of_the_day: A rich, fascinating vocabulary word related to science, exploration, nature, physics, or discovery. Include phonetic pronunciation, part of speech, kid-friendly definition, and an engaging example sentence. Pick a unique and uncommon word (do NOT default to 'Curious', 'Resilient', or 'Bioluminescent').\n"
+            "1. word_of_the_day: A rich, fascinating vocabulary word related to science, exploration, nature, physics, or discovery. Include phonetic pronunciation, part of speech, kid-friendly definition, and an engaging example sentence. Pick a unique and uncommon word (do NOT default to 'Curious', 'Resilient', 'Bioluminescent', 'Barycenter', 'Keystone', or 'Resonance').\n"
             "2. fun_fact: An astonishing, true fact from science, animals, space, oceans, or planet Earth. Include a fitting emoji, specific category, and a short 1-sentence 'did_you_know' extension.\n"
             "3. stem_5yo: A curious, playful STEM question/riddle for a 5-year-old (kindergarten level) about physical observations in daily life. Include a helpful hint, a simple clear answer, and an engaging 'parent_explanation' for parents to discuss.\n"
             "4. stem_9yo: A thought-provoking STEM challenge for a 9-year-old (4th grade level) involving real physics, astronomy, engineering, chemistry, biology, or computing. Include a hint, a clear factual answer, and a deep conceptual 'parent_explanation'.\n\n"
@@ -1208,38 +1346,47 @@ class KidsDailyService:
         )
 
         candidate_models = [model_name, "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-flash-latest"]
-        # Remove duplicates while preserving order
         unique_models = list(dict.fromkeys(candidate_models))
 
-        for m in unique_models:
-            try:
-                gen_config = types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_json_schema=KIDS_DAILY_SCHEMA,
-                    temperature=1.0,
-                )
-                if "3.7" in m:
-                    gen_config.thinking_config = types.ThinkingConfig(thinking_budget=512)
+        # Up to 2 attempts across models to ensure non-repeating content
+        for attempt in range(2):
+            for m in unique_models:
+                try:
+                    gen_config = types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        response_json_schema=KIDS_DAILY_SCHEMA,
+                        temperature=1.0 if attempt == 0 else 1.2,
+                    )
+                    if "3.7" in m:
+                        gen_config.thinking_config = types.ThinkingConfig(thinking_budget=512)
 
-                resp = client.models.generate_content(
-                    model=m,
-                    contents=prompt,
-                    config=gen_config,
-                )
-                data = json.loads(resp.text)
-                if (
-                    data.get("word_of_the_day")
-                    and data.get("fun_fact")
-                    and data.get("stem_5yo")
-                    and data.get("stem_9yo")
-                    and content_fits_display_limits(data)
-                ):
+                    resp = client.models.generate_content(
+                        model=m,
+                        contents=prompt,
+                        config=gen_config,
+                    )
+                    data = json.loads(resp.text)
+                    if not (
+                        data.get("word_of_the_day")
+                        and data.get("fun_fact")
+                        and data.get("stem_5yo")
+                        and data.get("stem_9yo")
+                        and content_fits_display_limits(data)
+                    ):
+                        logger.warning("Generated kids daily content exceeded the wall-display limits")
+                        continue
+
+                    # Strict deduplication verification
+                    generated_word = str(data["word_of_the_day"].get("word", "")).strip().lower()
+                    if generated_word in forbidden_words:
+                        logger.warning(f"Candidate word '{generated_word}' rejected because it was used recently. Retrying...")
+                        continue
+
                     data["generated_by"] = f"gemini_ai ({m})"
                     return data
-                logger.warning("Generated kids daily content exceeded the wall-display limits")
-            except Exception as e:
-                logger.warning(f"Failed generation with model {m}: {e}")
-                continue
+                except Exception as e:
+                    logger.warning(f"Failed generation with model {m} (attempt {attempt + 1}): {e}")
+                    continue
 
         return None
 
