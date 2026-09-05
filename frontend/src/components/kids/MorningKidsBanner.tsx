@@ -346,7 +346,7 @@ export default function MorningKidsBanner({
             <div className="flex items-center gap-2.5 shrink-0">
               <button
                 onClick={() => setShowAnswersModal(true)}
-                title="View answers & explanations"
+                aria-label="View answers & explanations"
                 className="btn-primary px-3.5 sm:px-4 py-1.5 text-xs sm:text-sm font-extrabold cursor-pointer"
               >
                 <Icon name="psychology" className="text-lg sm:text-xl" />
@@ -354,7 +354,6 @@ export default function MorningKidsBanner({
               </button>
               <button
                 onClick={handleDismiss}
-                title="Dismiss for today"
                 aria-label="Dismiss for today"
                 className="btn-glass flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center transition active:scale-90 cursor-pointer"
               >
@@ -411,11 +410,6 @@ export default function MorningKidsBanner({
                   <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-xs font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300 lg:text-sm">
                     <Icon name="lightbulb" className="text-sm" /> Fun Fact
                   </span>
-                  {data.fun_fact.category && (
-                    <span className="max-w-[55%] break-words rounded-md bg-emerald-500/15 px-2 py-0.5 text-right text-xs font-bold text-emerald-700 dark:text-emerald-200 [overflow-wrap:anywhere] sm:text-xs lg:text-base">
-                      {data.fun_fact.category}
-                    </span>
-                  )}
                 </div>
 
                 <div className="mt-2 flex items-start gap-4">
@@ -446,9 +440,6 @@ export default function MorningKidsBanner({
                     <span className="inline-flex items-center gap-1.5 rounded-lg border border-purple-500/30 bg-purple-500/15 px-2 py-0.5 text-[0.7rem] sm:text-xs font-black uppercase tracking-wider text-purple-700 dark:text-purple-200 lg:text-xs xl:text-sm">
                       <Icon name="psychology" className="text-xs lg:text-base" /> 🎈 Age 5 Challenge
                     </span>
-                    <p data-fit-content className={`mt-1.5 break-words text-xs font-bold text-purple-700/90 dark:text-purple-200/90 [overflow-wrap:anywhere] sm:text-sm ${typeScale.topic}`}>
-                      {data.stem_5yo.topic}
-                    </p>
                   </div>
                   {data.stem_5yo.hint && (
                     <button
@@ -482,9 +473,6 @@ export default function MorningKidsBanner({
                     <span className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-500/30 bg-indigo-500/15 px-2 py-0.5 text-[0.7rem] sm:text-xs font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-200 lg:text-xs xl:text-sm">
                       <Icon name="psychology" className="text-xs lg:text-base" /> 🚀 Age 9 Challenge
                     </span>
-                    <p data-fit-content className={`mt-1.5 break-words text-xs font-bold text-indigo-700/90 dark:text-indigo-200/90 [overflow-wrap:anywhere] sm:text-sm ${typeScale.topic}`}>
-                      {data.stem_9yo.topic}
-                    </p>
                   </div>
                   {data.stem_9yo.hint && (
                     <button
@@ -568,9 +556,6 @@ export default function MorningKidsBanner({
                       <div className="flex items-center justify-between">
                         <span data-answer-fit-content className={`flex min-w-0 flex-wrap items-center gap-2 text-sm font-bold text-purple-700 dark:text-purple-300 sm:text-base ${answerTypeScale.sectionTitle}`}>
                           <span>🎈 Age 5 Challenge</span>
-                          <span className={`break-words rounded bg-purple-500/15 px-2 py-0.5 text-[0.7rem] font-bold text-purple-700 dark:text-purple-200 [overflow-wrap:anywhere] ${answerTypeScale.topic}`}>
-                            {data.stem_5yo.topic}
-                          </span>
                         </span>
                       </div>
                       <p data-answer-fit-content className={`break-words text-sm font-medium italic leading-snug text-ink-soft [overflow-wrap:anywhere] sm:text-base ${answerTypeScale.question}`}>
@@ -597,9 +582,6 @@ export default function MorningKidsBanner({
                       <div className="flex items-center justify-between">
                         <span data-answer-fit-content className={`flex min-w-0 flex-wrap items-center gap-2 text-sm font-bold text-indigo-700 dark:text-indigo-300 sm:text-base ${answerTypeScale.sectionTitle}`}>
                           <span>🚀 Age 9 Challenge</span>
-                          <span className={`break-words rounded bg-indigo-500/15 px-2 py-0.5 text-[0.7rem] font-bold text-indigo-700 dark:text-indigo-200 [overflow-wrap:anywhere] ${answerTypeScale.topic}`}>
-                            {data.stem_9yo.topic}
-                          </span>
                         </span>
                       </div>
                       <p data-answer-fit-content className={`break-words text-sm font-medium italic leading-snug text-ink-soft [overflow-wrap:anywhere] sm:text-base ${answerTypeScale.question}`}>

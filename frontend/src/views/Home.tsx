@@ -407,8 +407,8 @@ export default function Home() {
         <div>
           <button
             onClick={() => setKidsHubOpen((prev) => !prev)}
+            aria-label="Toggle Kids Brain Nuggets"
             className="text-left group/date cursor-pointer transition-transform active:scale-95 focus:outline-none flex flex-col justify-center"
-            title="Click to view Kid's Brain Nuggets"
           >
             {/* Mobile / Tablet compact single line */}
             <h1 className="text-sm font-medium tracking-tight text-ink leading-none truncate group-hover/date:text-[var(--primary)] transition-colors lg:hidden">
