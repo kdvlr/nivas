@@ -21,7 +21,7 @@ import {
   type Appearance,
   type ThemeStyle,
 } from './lib/theme'
-import { onWsConnection, onWsMessage, startWs } from './lib/ws'
+import { onWsMessage, startWs } from './lib/ws'
 import Home from './views/Home'
 const Calendar = lazy(() => import('./views/Calendar'))
 const Chores = lazy(() => import('./views/Chores'))
@@ -184,7 +184,6 @@ export default function App() {
     }
   }, [slideshowActive])
   const [photosList, setPhotosList] = useState<any[]>([])
-  const [connected, setConnected] = useState(false)
   
   // YouTube Music Pure Server-Side Synchronized Player State
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null)
@@ -221,7 +220,6 @@ export default function App() {
     })
   }, [])
 
-  useEffect(() => onWsConnection(setConnected), [])
 
   const handlePlayTrack = (track: Track, queue?: Track[]) => {
     api.post<any>('/api/ytmusic/player/play', {
@@ -293,6 +291,7 @@ export default function App() {
   const handleMute = () => {
     api.post('/api/ytmusic/airplay/volume/master', { volume: 0 }).catch(() => {})
   }
+
 
   const handleQueueTrack = (track: Track, playNext: boolean) => {
     api.post<any>(playNext ? '/api/ytmusic/player/queue/next' : '/api/ytmusic/player/queue', track)
@@ -819,9 +818,6 @@ function isWithinQuietHours(now: Date, startStr = '22:00', endStr = '06:00'): bo
               route !== 'ytmusic' && currentTrack ? 'pb-32 sm:pb-36 lg:pb-0' : 'pb-16 lg:pb-0'
             }`}
           >
-            <div aria-live="polite" className={`fixed bottom-3 left-3 z-[90] rounded-full px-3 py-1 text-xs shadow-sm ${connected ? 'bg-emerald-700/80 text-white' : 'bg-amber-700/80 text-white'}`}>
-              {connected ? 'Synced' : 'Reconnecting…'}
-            </div>
             {pullY > 0 && (
               <div 
                 className="absolute left-0 right-0 flex justify-center z-50 pointer-events-none transition-transform duration-100"

@@ -97,6 +97,21 @@ export default function VolumeCapsuleScrubber({
     }
   }
 
+  const setFromRange = (nextValue: number) => {
+    isDraggingRef.current = true
+    dragValueRef.current = nextValue
+    setDragValue(nextValue)
+    setIsDragging(true)
+    onChange(nextValue)
+  }
+
+  const commitRange = () => {
+    if (!isDraggingRef.current) return
+    isDraggingRef.current = false
+    setIsDragging(false)
+    onChangeEnd?.(dragValueRef.current)
+  }
+
   const volumeIcon = displayValue === 0 ? 'volume_off' : displayValue < 50 ? 'volume_down' : icon
 
   return (
@@ -119,13 +134,28 @@ export default function VolumeCapsuleScrubber({
         style={{ width: `${displayValue}%` }}
       />
 
+      {/* Native range input makes drag, touch, keyboard, and assistive
+          technology interaction reliable; the custom layer remains visual. */}
+      <input
+        type="range"
+        min="0"
+        max="100"
+        value={displayValue}
+        aria-label={`${label} volume`}
+        onPointerDown={(event) => event.stopPropagation()}
+        onChange={(event) => setFromRange(Number(event.target.value))}
+        onPointerUp={(event) => { event.stopPropagation(); commitRange() }}
+        onKeyUp={commitRange}
+        className="absolute inset-y-0 left-10 right-8 z-20 w-auto cursor-ew-resize opacity-0"
+      />
+
       {/* Label and Controls */}
-      <div className="relative z-10 flex w-full items-center justify-between gap-2 px-3 text-ink">
+      <div className="relative z-10 flex w-full items-center justify-between gap-2 px-3 text-ink pointer-events-none">
         <div className="flex min-w-0 items-center gap-2">
           <button
             type="button"
             onClick={toggleMute}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-ink-soft transition hover:bg-[var(--sc-high)] hover:text-ink cursor-pointer"
+            className="pointer-events-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-ink-soft transition hover:bg-[var(--sc-high)] hover:text-ink cursor-pointer"
             title={displayValue === 0 ? 'Unmute' : 'Mute'}
           >
             <Icon name={volumeIcon} className="text-base" />
