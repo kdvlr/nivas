@@ -174,7 +174,7 @@ function SongRow({
         </span>
       ) : null}
       {onQueue && (
-        <div className="flex shrink-0 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 gap-1">
+        <div className="flex shrink-0 items-center gap-1">
           <button
             onClick={() => onQueue(true)}
             title="Play next"
@@ -758,7 +758,7 @@ export default function YTMusicView({
                     </span>
                   )}
 
-                  <div className="flex shrink-0 items-center gap-1 opacity-0 transition group-hover:opacity-100">
+                  <div className="flex shrink-0 items-center gap-1">
                     <button
                       onClick={() => onQueueTrack(track, true)}
                       title="Play next"
@@ -952,8 +952,8 @@ export default function YTMusicView({
                     <Icon name="progress_activity" className="animate-spin text-3xl text-white" />
                   </span>
                 )}
-                {/* Top-right quick queue buttons on hover */}
-                <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition z-10">
+                {/* Top-right quick queue buttons */}
+                <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
                   <button
                     onClick={(e) => queuePlaylist(pl, true, e)}
                     title="Play playlist next"
@@ -1321,8 +1321,8 @@ export default function YTMusicView({
                                 </span>
                               </div>
 
-                              {/* Top-Right Quick Queue Action Pills on Hover */}
-                              <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition z-10">
+                              {/* Top-Right Quick Queue Action Pills */}
+                              <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
                                 <button
                                   onClick={(e) => queueAlbum(album, true, e)}
                                   title="Play album next"
@@ -1572,7 +1572,7 @@ export default function YTMusicView({
                               </span>
                             </div>
 
-                            <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition z-10">
+                            <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
                               <button
                                 onClick={(e) => queueAlbum(album, true, e)}
                                 title="Play album next"
@@ -1769,7 +1769,7 @@ export default function YTMusicView({
                             </span>
                           </div>
 
-                          <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition z-10">
+                          <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
                             <button
                               onClick={(e) => queueAlbum(album, true, e)}
                               title="Play album next"
