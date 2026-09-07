@@ -2,6 +2,7 @@ type Listener = (scope: string) => void
 type MessageListener = (message: any) => void
 
 const listeners = new Set<Listener>()
+const connectionListeners = new Set<(connected: boolean) => void>()
 const messageListeners = new Set<MessageListener>()
 let socket: WebSocket | null = null
 let pingTimer: ReturnType<typeof setInterval> | null = null
@@ -10,6 +11,7 @@ function connect() {
   if (socket) return
   const proto = location.protocol === 'https:' ? 'wss' : 'ws'
   socket = new WebSocket(`${proto}://${location.host}/ws`)
+  socket.onopen = () => connectionListeners.forEach((fn) => fn(true))
   socket.onmessage = (ev) => {
     try {
       const msg = JSON.parse(ev.data)
@@ -30,6 +32,7 @@ function connect() {
     }
   }
   socket.onclose = () => {
+    connectionListeners.forEach((fn) => fn(false))
     socket = null
     setTimeout(connect, 3000)
   }
@@ -53,8 +56,13 @@ export function onRefresh(scope: string | string[], fn: () => void): () => void 
   return () => listeners.delete(listener)
 }
 
-/** Subscribe to typed server messages such as player_state. */
 export function onWsMessage(fn: MessageListener): () => void {
   messageListeners.add(fn)
   return () => messageListeners.delete(fn)
+}
+
+export function onWsConnection(fn: (connected: boolean) => void): () => void {
+  connectionListeners.add(fn)
+  fn(socket?.readyState === WebSocket.OPEN)
+  return () => connectionListeners.delete(fn)
 }

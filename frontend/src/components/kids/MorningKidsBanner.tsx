@@ -17,6 +17,8 @@ export default function MorningKidsBanner({
   forceOpen = false,
   onClose,
 }: MorningKidsBannerProps) {
+  // The server owns the active-window decision so every client sees the same state.
+  void now
   const [data, setData] = useState<KidsDailyPublicResponse | null>(null)
   const [dismissedDate, setDismissedDate] = useState<string | null>(null)
   const [manuallyDismissed, setManuallyDismissed] = useState(false)
@@ -60,24 +62,16 @@ export default function MorningKidsBanner({
   const isForceActive = Boolean(data?.force_active)
   const isDismissedToday = dismissedDate === data?.date
 
-  // Active time window check:
-  // Weekday (0-4): 6am - 8am
-  // Weekend (5-6): 9am - 11am
-  const currentDay = now.getDay()
-  const isWeekend = currentDay === 0 || currentDay === 6
-  const currentHour = now.getHours()
-  const currentMinute = now.getMinutes()
-  const minuteOfDay = currentHour * 60 + currentMinute
-
-  const isScheduleActive = isWeekend
-    ? minuteOfDay >= 9 * 60 && minuteOfDay < 11 * 60
-    : minuteOfDay >= 6 * 60 && minuteOfDay < 8 * 60
-
   const shouldDisplay = Boolean(
     data &&
       (forceOpen ||
-        (!manuallyDismissed && !isDismissedToday && (isForceActive || isScheduleActive)))
+        (!manuallyDismissed && !isDismissedToday && (isForceActive || data.is_active_window)))
   )
+
+  const sendFeedback = (section: string, rating: string) => {
+    if (!data?.date) return
+    api.post('/api/kids-daily/feedback', { date: data.date, section, rating }).catch(() => {})
+  }
 
   const handleDismiss = () => {
     setManuallyDismissed(true)
@@ -428,6 +422,11 @@ export default function MorningKidsBanner({
                   {data.fun_fact.did_you_know}
                 </div>
               )}
+              <div className="mt-2 flex gap-1 text-[10px] text-ink-soft" aria-label="Rate this fun fact">
+                {['too_easy', 'right_level', 'too_hard', 'loved_it'].map((rating) => (
+                  <button key={rating} onClick={() => sendFeedback('fun_fact', rating)} className="rounded px-1.5 py-0.5 hover:bg-emerald-500/15" aria-label={`Fun fact: ${rating.replace('_', ' ')}`}>{rating === 'loved_it' ? '♥' : rating.replace('_', ' ')}</button>
+                ))}
+              </div>
             </section>
 
             {/* Card 3: both challenges share one full-height column. */}

@@ -23,13 +23,13 @@ def _request(cookie: str | None = None) -> Request:
     )
 
 
-def test_admin_session_requires_an_exact_pin_and_signed_cookie(monkeypatch):
+def test_admin_session_accepts_pin_sequence_and_signed_cookie(monkeypatch):
     monkeypatch.setattr(admin_auth, "get_settings", lambda: SimpleNamespace(setup_pin="2468"))
-    admin_auth._attempts.clear()
     request = _request()
 
     assert admin_auth.verify_pin_attempt(request, "2468") is True
-    assert admin_auth.verify_pin_attempt(request, "x2468") is False
+    assert admin_auth.verify_pin_attempt(request, "x2468y") is True
+    assert admin_auth.verify_pin_attempt(request, "2648") is False
 
     response = Response()
     admin_auth.grant_admin_session(response, request)

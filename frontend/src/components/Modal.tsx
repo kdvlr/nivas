@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { motion } from 'framer-motion'
+import { useEffect, useId, useRef } from 'react'
 import { EFFECTS_DEFAULT, EXPRESSIVE_ENTER, PRESS_SPRING } from '../lib/motion'
 
 export default function Modal({
@@ -13,6 +14,23 @@ export default function Modal({
   children: ReactNode
   wide?: boolean
 }) {
+  const titleId = useId()
+  const panelRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null
+    panelRef.current?.focus()
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+      if (event.key !== 'Tab' || !panelRef.current) return
+      const nodes = panelRef.current.querySelectorAll<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
+      if (!nodes.length) return
+      const first = nodes[0], last = nodes[nodes.length - 1]
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
+      if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('keydown', onKey); previous?.focus() }
+  }, [onClose])
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -22,6 +40,11 @@ export default function Modal({
       onClick={onClose}
     >
       <motion.div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
         initial={{ opacity: 0, scale: 0.85, y: 24 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={EXPRESSIVE_ENTER}
@@ -29,12 +52,13 @@ export default function Modal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-2xl font-medium tracking-tight text-ink">{title}</h2>
+          <h2 id={titleId} className="text-2xl font-medium tracking-tight text-ink">{title}</h2>
           <motion.button
             whileHover={{ scale: 1.08 }}
             whileTap={{ scale: 0.92 }}
             transition={PRESS_SPRING}
             onClick={onClose}
+            aria-label={`Close ${title}`}
             className="btn-glass flex h-11 w-11 items-center justify-center text-xl !text-ink-soft"
           >
             ✕

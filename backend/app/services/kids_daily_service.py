@@ -1,12 +1,29 @@
 import json
 import logging
 import os
+import re
+import threading
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 from ..config import get_settings
 
 logger = logging.getLogger(__name__)
+
+DOMAINS = ("science", "engineering", "math", "geography", "inventions", "language", "art_music", "global_cultures", "practical_skills", "computing", "media_literacy")
+
+
+def _tokens(value: str) -> set[str]:
+    return {token for token in re.findall(r"[a-z0-9]+", value.lower()) if len(token) > 2}
+
+
+def _similarity(left: str, right: str) -> float:
+    a, b = _tokens(left), _tokens(right)
+    return len(a & b) / len(a | b) if a and b else 0.0
+
+
+def _fingerprint(value: str) -> str:
+    return " ".join(sorted(_tokens(value)))
 
 def _get_kids_daily_file() -> Path:
     return Path(get_settings().data_dir) / "kids_daily.json"
@@ -1129,7 +1146,10 @@ class KidsDailyService:
             "force_banner_active": False,
             "gemini_api_key": "",
             "gemini_model": "gemini-3.7-flash",
+            "age_groups": [5, 9],
+            "interests": [],
         }
+        self._lock = threading.RLock()
         self._load_cache()
 
     def _load_cache(self):
@@ -1147,7 +1167,8 @@ class KidsDailyService:
         try:
             target_file = _get_kids_daily_file()
             target_file.parent.mkdir(parents=True, exist_ok=True)
-            with open(target_file, "w", encoding="utf-8") as f:
+            temporary_file = target_file.with_suffix(".tmp")
+            with open(temporary_file, "w", encoding="utf-8") as f:
                 json.dump(
                     {
                         "days": self._cache,
@@ -1157,6 +1178,9 @@ class KidsDailyService:
                     indent=2,
                     ensure_ascii=False,
                 )
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(temporary_file, target_file)
         except Exception as e:
             logger.error(f"Failed to save kids daily cache: {e}")
 
@@ -1186,6 +1210,8 @@ class KidsDailyService:
             "has_gemini_api_key": bool(effective_key),
             "gemini_api_key_masked": f"{effective_key[:6]}...{effective_key[-4:]}" if effective_key and len(effective_key) > 10 else "",
             "gemini_model": self._settings.get("gemini_model") or s.gemini_model or "gemini-3.7-flash",
+            "age_groups": self._settings.get("age_groups", [5, 9]),
+            "interests": self._settings.get("interests", []),
         }
 
     def update_settings(self, new_settings: Dict[str, Any]) -> Dict[str, Any]:
@@ -1195,20 +1221,26 @@ class KidsDailyService:
             self._settings["gemini_api_key"] = str(new_settings["gemini_api_key"]).strip()
         if "gemini_model" in new_settings and new_settings["gemini_model"]:
             self._settings["gemini_model"] = str(new_settings["gemini_model"]).strip()
+        if "age_groups" in new_settings and isinstance(new_settings["age_groups"], list):
+            self._settings["age_groups"] = sorted({max(3, min(18, int(age))) for age in new_settings["age_groups"]})
+        if "interests" in new_settings and isinstance(new_settings["interests"], list):
+            self._settings["interests"] = [str(item).strip()[:40] for item in new_settings["interests"] if str(item).strip()][:12]
         self._save_cache()
         return self.get_settings()
 
     def get_today_payload(self, date_str: Optional[str] = None, force_regenerate: bool = False) -> Dict[str, Any]:
-        today_key = date_str or date.today().isoformat()
-        cached_content = self._cache.get(today_key)
-        if not force_regenerate and cached_content and content_fits_display_limits(cached_content):
-            content = self._cache[today_key]
-        else:
-            if cached_content and not content_fits_display_limits(cached_content):
-                logger.info("Regenerating kids daily content that exceeds the wall-display limits")
-            content = self._generate_daily_content(today_key)
-            self._cache[today_key] = content
-            self._save_cache()
+        try:
+            today_key = (date.fromisoformat(date_str) if date_str else date.today()).isoformat()
+        except (TypeError, ValueError):
+            raise ValueError("date must be ISO-8601 (YYYY-MM-DD)")
+        with self._lock:
+            cached_content = self._cache.get(today_key)
+            if not force_regenerate and cached_content and content_fits_display_limits(cached_content):
+                content = cached_content
+            else:
+                content = self._generate_daily_content(today_key)
+                self._cache[today_key] = content
+                self._save_cache()
 
         is_active = self.is_active_morning_window()
         return {
@@ -1217,6 +1249,61 @@ class KidsDailyService:
             "force_active": bool(self._settings.get("force_banner_active", False)),
             "content": content,
         }
+
+    def record_feedback(self, date_str: str, section: str, rating: str) -> None:
+        if section not in {"word_of_the_day", "fun_fact", "stem_5yo", "stem_9yo"} or rating not in {"too_easy", "right_level", "too_hard", "loved_it"}:
+            raise ValueError("invalid feedback")
+        with self._lock:
+            day = self._cache.get(date_str)
+            if not day:
+                raise ValueError("unknown date")
+            feedback = day.setdefault("feedback", {})
+            feedback.setdefault(section, []).append({"rating": rating, "at": datetime.now().isoformat()})
+            self._save_cache()
+
+    def _validate_candidate(self, candidate: Dict[str, Any], current_date_str: str) -> tuple[bool, list[str]]:
+        """Deterministic local duplicate/overlap checks; no model judgement required."""
+        if not content_fits_display_limits(candidate):
+            return False, ["display limits"]
+        try:
+            today = date.fromisoformat(current_date_str)
+        except ValueError:
+            return False, ["invalid date"]
+        word = str(candidate.get("word_of_the_day", {}).get("word", "")).strip().lower()
+        sections = {
+            "word": " ".join(str(candidate.get("word_of_the_day", {}).get(k, "")) for k in ("word", "definition", "example")),
+            "fact": " ".join(str(candidate.get("fun_fact", {}).get(k, "")) for k in ("category", "fact")),
+            "stem5": " ".join(str(candidate.get("stem_5yo", {}).get(k, "")) for k in ("topic", "question", "answer")),
+            "stem9": " ".join(str(candidate.get("stem_9yo", {}).get(k, "")) for k in ("topic", "question", "answer")),
+        }
+        rejected: list[str] = []
+        if not word:
+            rejected.append("missing vocabulary word")
+        for prior_date, prior in sorted(self._cache.items()):
+            try:
+                age = (today - date.fromisoformat(prior_date)).days
+            except ValueError:
+                continue
+            if age <= 0:
+                continue
+            prior_word = str(prior.get("word_of_the_day", {}).get("word", "")).strip().lower()
+            if age <= 180 and word and word == prior_word:
+                rejected.append(f"vocabulary word {word}")
+            if age <= 60:
+                prior_sections = {
+                    "fact": " ".join(str(prior.get("fun_fact", {}).get(k, "")) for k in ("category", "fact")),
+                    "stem5": " ".join(str(prior.get("stem_5yo", {}).get(k, "")) for k in ("topic", "question", "answer")),
+                    "stem9": " ".join(str(prior.get("stem_9yo", {}).get(k, "")) for k in ("topic", "question", "answer")),
+                }
+                for name in ("fact", "stem5", "stem9"):
+                    if _similarity(sections[name], prior_sections[name]) >= 0.45:
+                        rejected.append(f"recent {name} concept")
+        names = list(sections)
+        for i, name in enumerate(names):
+            for other in names[i + 1:]:
+                if _similarity(sections[name], sections[other]) >= 0.55:
+                    rejected.append(f"same-day overlap: {name}/{other}")
+        return not rejected, rejected
 
     def _get_recent_history(self, current_date_str: str, days_back: int = 60) -> Dict[str, Any]:
         """Collect recent words, categories, facts, and stem topics from past cache to prevent repetition."""
@@ -1348,10 +1435,15 @@ class KidsDailyService:
         candidate_models = [model_name, "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-flash-latest"]
         unique_models = list(dict.fromkeys(candidate_models))
 
-        # Up to 2 attempts across models to ensure non-repeating content
-        for attempt in range(2):
+        # Validation feedback is supplied verbatim to the next attempt, so the
+        # model learns from concrete rejected concepts rather than vague prompts.
+        rejected_concepts: list[str] = []
+        for attempt in range(3):
             for m in unique_models:
                 try:
+                    attempt_prompt = prompt
+                    if rejected_concepts:
+                        attempt_prompt += "\nRejected candidate concepts to avoid: " + "; ".join(rejected_concepts[-16:])
                     gen_config = types.GenerateContentConfig(
                         response_mime_type="application/json",
                         response_json_schema=KIDS_DAILY_SCHEMA,
@@ -1362,7 +1454,7 @@ class KidsDailyService:
 
                     resp = client.models.generate_content(
                         model=m,
-                        contents=prompt,
+                        contents=attempt_prompt,
                         config=gen_config,
                     )
                     data = json.loads(resp.text)
@@ -1376,10 +1468,10 @@ class KidsDailyService:
                         logger.warning("Generated kids daily content exceeded the wall-display limits")
                         continue
 
-                    # Strict deduplication verification
-                    generated_word = str(data["word_of_the_day"].get("word", "")).strip().lower()
-                    if generated_word in forbidden_words:
-                        logger.warning(f"Candidate word '{generated_word}' rejected because it was used recently. Retrying...")
+                    valid, reasons = self._validate_candidate(data, date_str)
+                    if not valid:
+                        rejected_concepts.extend(reasons)
+                        logger.warning("Candidate rejected by deterministic kids-content validation: %s", reasons)
                         continue
 
                     data["generated_by"] = f"gemini_ai ({m})"

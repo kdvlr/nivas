@@ -145,3 +145,13 @@ def test_kids_daily_category_pool_and_recent_history():
     assert "astronomy" in history["recent_categories"]
     assert "architecture" in history["recent_categories"]
 
+
+def test_candidate_validation_rejects_recent_word_and_concept():
+    service = kids_daily_service
+    candidate = FALLBACK_CATALOG[0].copy()
+    service._cache["2026-01-01"] = FALLBACK_CATALOG[0]
+
+    valid, reasons = service._validate_candidate(candidate, "2026-01-02")
+
+    assert valid is False
+    assert any("vocabulary word" in reason for reason in reasons)

@@ -10,6 +10,13 @@ class SettingsUpdateRequest(BaseModel):
     force_banner_active: Optional[bool] = None
     gemini_api_key: Optional[str] = None
     gemini_model: Optional[str] = None
+    age_groups: Optional[list[int]] = None
+    interests: Optional[list[str]] = None
+
+class FeedbackRequest(BaseModel):
+    date: str
+    section: str
+    rating: str
 
 @router.get("/today")
 def get_today_content(date: Optional[str] = None):
@@ -82,4 +89,16 @@ def update_settings(body: SettingsUpdateRequest, _: None = Depends(require_admin
         updates["gemini_api_key"] = body.gemini_api_key
     if body.gemini_model is not None:
         updates["gemini_model"] = body.gemini_model
+    if body.age_groups is not None:
+        updates["age_groups"] = body.age_groups
+    if body.interests is not None:
+        updates["interests"] = body.interests
     return kids_daily_service.update_settings(updates)
+
+@router.post("/feedback")
+def feedback(body: FeedbackRequest):
+    try:
+        kids_daily_service.record_feedback(body.date, body.section, body.rating)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    return {"ok": True}
