@@ -34,6 +34,9 @@ async def lifespan(app: FastAPI):
     manager.set_loop(asyncio.get_running_loop())
     scheduler.start()
     player_engine.start()
+    # Initial indexing is controlled and coalesced; normal photo API requests
+    # remain read-only.
+    asyncio.get_running_loop().run_in_executor(None, photos.sync_photos_dir_background, photos.SessionLocal)
     local_music_service.start_background_scan(only_if_empty=True)
     yield
     player_engine.stop()

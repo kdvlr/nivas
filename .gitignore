@@ -16,3 +16,6 @@ credentials/*.json
 
 # macOS
 .DS_Store
+
+# Tooling
+.claude/

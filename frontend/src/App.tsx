@@ -21,7 +21,7 @@ import {
   type Appearance,
   type ThemeStyle,
 } from './lib/theme'
-import { startWs } from './lib/ws'
+import { onWsMessage, startWs } from './lib/ws'
 import Home from './views/Home'
 const Calendar = lazy(() => import('./views/Calendar'))
 const Chores = lazy(() => import('./views/Chores'))
@@ -209,8 +209,15 @@ export default function App() {
 
   useEffect(() => {
     syncPlayerState()
-    const interval = setInterval(syncPlayerState, 1000)
-    return () => clearInterval(interval)
+    return onWsMessage((message) => {
+      if (message.type !== 'player_state' || !message.payload) return
+      const state = message.payload
+      setIsPlaying(Boolean(state.isPlaying))
+      setCurrentTrack(state.currentTrack ?? null)
+      setElapsedSeconds(state.elapsedSeconds || 0)
+      setDurationSeconds(state.durationSeconds || 0)
+      setPlayQueue(Array.isArray(state.queue) ? state.queue : [])
+    })
   }, [])
 
   const handlePlayTrack = (track: Track, queue?: Track[]) => {
@@ -345,17 +352,13 @@ function isWithinQuietHours(now: Date, startStr = '22:00', endStr = '06:00'): bo
     }
   }, [config?.appearance])
 
-  // Poll server config and refresh on visibility change so wall tablets stay in sync
+  // WebSocket refreshes keep config current; reconcile once when returning to a visible tab.
   useEffect(() => {
-    const timer = setInterval(() => {
-      reloadConfig()
-    }, 30000)
     const onVis = () => {
       if (document.visibilityState === 'visible') reloadConfig()
     }
     document.addEventListener('visibilitychange', onVis)
     return () => {
-      clearInterval(timer)
       document.removeEventListener('visibilitychange', onVis)
     }
   }, [reloadConfig])
@@ -433,10 +436,17 @@ function isWithinQuietHours(now: Date, startStr = '22:00', endStr = '06:00'): bo
     const checkReminders = async () => {
       try {
         const today = new Date()
-        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-        const endStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate() + 1).padStart(2, '0')}`
+        const localDateKey = (date: Date) =>
+          `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+        const todayStr = localDateKey(today)
+        // Include tomorrow too: a reminder one hour before a just-after-midnight
+        // event must still fire late on the preceding day. Date#setDate handles
+        // month/year boundaries, unlike manually adding one to getDate().
+        const rangeEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+        rangeEnd.setDate(rangeEnd.getDate() + 2)
+        const endStr = localDateKey(rangeEnd)
 
-        const events = await api.get<any[]>(`/api/calendar/events?start=${todayStr}T00:00:00&end=${endStr}T23:59:59`).catch(() => [])
+        const events = await api.get<any[]>(`/api/calendar/events?start=${todayStr}T00:00:00&end=${endStr}T00:00:00`).catch(() => [])
         const nowMs = Date.now()
 
         for (const ev of events || []) {
@@ -860,8 +870,8 @@ function isWithinQuietHours(now: Date, startStr = '22:00', endStr = '06:00'): bo
             </AnimatePresence>
           </main>
 
-          {/* Floating Dock: MiniPlayerBar (left on desktop, top on mobile) + Themed FAB (constant position) */}
-          <div className="fixed bottom-[calc(4.25rem+env(safe-area-inset-bottom,0px)+8px)] right-4 sm:bottom-6 sm:right-6 z-40 flex flex-col items-end sm:flex-row sm:items-end gap-3 pointer-events-none">
+          {/* Floating Dock: MiniPlayerBar (left of FAB on both mobile & desktop) + Themed FAB */}
+          <div className="fixed bottom-[calc(4.25rem+env(safe-area-inset-bottom,0px)+8px)] right-4 sm:bottom-6 sm:right-6 z-40 flex flex-row items-end gap-3 pointer-events-none">
             {route !== 'ytmusic' && currentTrack && (
               <MiniPlayerBar
                 docked

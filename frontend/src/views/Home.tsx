@@ -379,53 +379,10 @@ export default function Home() {
     reloadShopping()
   }
 
-  const getTzDateString = (date: Date, timeZone: string) => {
-    try {
-      const formatter = new Intl.DateTimeFormat('en-US', {
-        timeZone,
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-      })
-      const parts = formatter.formatToParts(date)
-      const year = parts.find((p) => p.type === 'year')?.value
-      const month = parts.find((p) => p.type === 'month')?.value
-      const day = parts.find((p) => p.type === 'day')?.value
-      return `${year}-${month}-${day}`
-    } catch (e) {
-      return ''
-    }
-  }
-
   const renderHeader = () => {
-    const hr = now.getHours()
-    const greeting = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening'
-
     return (
     <header className="glass flex items-center justify-between gap-x-2 px-4 py-1.5 lg:px-6 lg:py-2.5 flex-nowrap">
       <div className="flex items-center gap-x-3 lg:gap-x-4 min-w-0">
-        <div>
-          <button
-            onClick={() => setKidsHubOpen((prev) => !prev)}
-            aria-label="Toggle Kids Brain Nuggets"
-            className="text-left group/date cursor-pointer transition-transform active:scale-95 focus:outline-none flex flex-col justify-center"
-          >
-            {/* Mobile / Tablet compact single line */}
-            <h1 className="text-sm font-medium tracking-tight text-ink leading-none truncate group-hover/date:text-[var(--primary)] transition-colors lg:hidden">
-              {now.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
-            </h1>
-
-            {/* 1080p / Desktop 2-line display: Day and Date */}
-            <div className="hidden lg:flex flex-col items-start leading-tight">
-              <span className="text-2xl font-semibold tracking-tight text-ink group-hover/date:text-[var(--primary)] transition-colors">
-                {now.toLocaleDateString(undefined, { weekday: 'long' })}
-              </span>
-              <span className="text-sm font-medium tracking-tight text-ink-soft group-hover/date:text-[var(--primary)] transition-colors">
-                {now.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}
-              </span>
-            </div>
-          </button>
-        </div>
         {weather?.current && (
           <button
             onClick={() => setWeatherOpen(true)}
@@ -452,13 +409,15 @@ export default function Home() {
       </div>
 
       <button
-        onClick={() => {
+        onClick={() => setKidsHubOpen((prev) => !prev)}
+        onContextMenu={(e) => {
+          e.preventDefault()
           const next = (fontIdx + 1) % TITLE_FONTS.length
           setFontIdx(next)
           localStorage.setItem('davuluri_title_font', TITLE_FONTS[next].name)
         }}
-        className="flex-1 text-center px-2 min-w-0 truncate cursor-pointer transition-transform active:scale-95 group/title"
-        title={`Font: ${TITLE_FONTS[fontIdx].name} (click to change)`}
+        aria-label="Toggle Kids Brain Nuggets"
+        className="flex-1 text-center px-2 min-w-0 truncate cursor-pointer transition-transform active:scale-95 group/title focus:outline-none"
       >
         <span
           style={{ fontFamily: TITLE_FONTS[fontIdx].family }}

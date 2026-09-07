@@ -234,7 +234,6 @@ export default function YTMusicView({
   const [searchVideos, setSearchVideos] = useState<Track[]>([])
   const [searchCategory, setSearchCategory] = useState<'all' | 'songs' | 'albums' | 'local' | 'videos'>('all')
   const [openingAlbumId, setOpeningAlbumId] = useState<string | null>(null)
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const [loading, setLoading] = useState(false)
 
   // Album Detail View State
@@ -989,105 +988,85 @@ export default function YTMusicView({
     <div className={`text-ink flex flex-col px-4 lg:px-8 pb-4 lg:pb-6 ${browseIsOpen ? 'min-h-full' : 'h-full flex-1 min-h-0 overflow-hidden'}`}>
       {/* Top Header */}
       <header className="flex shrink-0 items-center justify-between gap-3 mb-3 lg:mb-4">
-        {mobileSearchOpen ? (
-          <div className="flex md:hidden flex-1 items-center gap-2 py-1">
+        <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
+          <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink mr-1 shrink-0">Music</h1>
+          <div className="flex shrink-0 rounded-full bg-[var(--sc)] border border-[var(--outline-var)] p-1">
+            <button
+              onClick={() => syncUrlSubView('browse', '')}
+              className={`flex h-9 md:h-11 items-center gap-1.5 md:gap-2 rounded-full px-3 md:px-4 text-xs md:text-sm font-semibold transition cursor-pointer ${
+                activeView === 'browse' && !searchIsOpen ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-sm' : 'text-ink-soft hover:text-ink'
+              }`}
+            >
+              <Icon name="explore" className="text-lg md:text-xl" />
+              Browse
+            </button>
+            <button
+              onClick={() => syncUrlSubView('local', '')}
+              className={`flex h-9 md:h-11 items-center gap-1.5 md:gap-2 rounded-full px-3 md:px-4 text-xs md:text-sm font-semibold transition cursor-pointer ${
+                activeView === 'local' && !searchIsOpen ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-sm' : 'text-ink-soft hover:text-ink'
+              }`}
+            >
+              <MusicSourceIcon source="local" size={15} />
+              <span className="whitespace-nowrap">Local Library</span>
+            </button>
+            <button
+              disabled={!currentTrack}
+              onClick={() => syncUrlSubView('now-playing', '')}
+              className={`flex h-9 md:h-11 items-center gap-1.5 md:gap-2 rounded-full px-3 md:px-4 text-xs md:text-sm font-semibold disabled:opacity-30 transition cursor-pointer ${
+                activeView === 'now-playing' && !searchIsOpen ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-sm' : 'text-ink-soft hover:text-ink'
+              }`}
+            >
+              <Icon name="graphic_eq" className="text-lg md:text-xl" /> <span className="whitespace-nowrap">Now Playing</span>
+            </button>
+          </div>
+
+          {/* Desktop Search Bar */}
+          <div className="hidden md:relative md:flex md:flex-1 max-w-[36rem] items-center gap-2.5">
             <div className="relative flex-1">
-              <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-xl text-ink-soft" />
+              <Icon name="search" className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-ink-soft" />
               <input
-                autoFocus
                 value={searchQuery}
                 onChange={(e) => syncUrlSubView('browse', e.target.value, true)}
-                placeholder="Search songs, albums..."
-                className="h-10 w-full rounded-xl border border-[var(--outline-var)] bg-[var(--sc)] pl-10 pr-9 text-sm text-ink outline-none placeholder:text-ink-soft/60 focus:border-[var(--primary)]"
+                placeholder="Search songs, albums, videos..."
+                className="h-11 md:h-12 w-full rounded-2xl border border-[var(--outline-var)] bg-[var(--sc)] pl-12 pr-11 text-base text-ink outline-none placeholder:text-ink-soft/60 focus:border-[var(--primary)] shadow-inner"
               />
               {searchQuery && (
                 <button
                   onClick={() => syncUrlSubView('browse', '')}
-                  className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center text-ink-soft hover:text-ink cursor-pointer"
+                  className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-ink-soft hover:text-ink cursor-pointer"
                 >
-                  <Icon name="close" className="text-lg" />
+                  <Icon name="close" />
                 </button>
               )}
             </div>
-            <button
-              onClick={() => {
-                syncUrlSubView('browse', '')
-                setMobileSearchOpen(false)
-              }}
-              className="px-2 text-sm font-semibold text-ink-soft hover:text-ink shrink-0 cursor-pointer"
-            >
-              Cancel
-            </button>
           </div>
-        ) : (
-          <>
-            <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
-              <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink mr-1 shrink-0">Music</h1>
-              <div className="flex shrink-0 rounded-full bg-[var(--sc)] border border-[var(--outline-var)] p-1">
-                <button
-                  onClick={() => syncUrlSubView('browse', '')}
-                  className={`flex h-9 md:h-11 items-center gap-1.5 md:gap-2 rounded-full px-3 md:px-4 text-xs md:text-sm font-semibold transition cursor-pointer ${
-                    activeView === 'browse' && !searchIsOpen ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-sm' : 'text-ink-soft hover:text-ink'
-                  }`}
-                >
-                  <Icon name="explore" className="text-lg md:text-xl" />
-                  Browse
-                </button>
-                <button
-                  onClick={() => syncUrlSubView('local', '')}
-                  className={`flex h-9 md:h-11 items-center gap-1.5 md:gap-2 rounded-full px-3 md:px-4 text-xs md:text-sm font-semibold transition cursor-pointer ${
-                    activeView === 'local' && !searchIsOpen ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-sm' : 'text-ink-soft hover:text-ink'
-                  }`}
-                >
-                  <MusicSourceIcon source="local" size={15} />
-                  <span className="whitespace-nowrap">Local Library</span>
-                </button>
-                <button
-                  disabled={!currentTrack}
-                  onClick={() => syncUrlSubView('now-playing', '')}
-                  className={`flex h-9 md:h-11 items-center gap-1.5 md:gap-2 rounded-full px-3 md:px-4 text-xs md:text-sm font-semibold disabled:opacity-30 transition cursor-pointer ${
-                    activeView === 'now-playing' && !searchIsOpen ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-sm' : 'text-ink-soft hover:text-ink'
-                  }`}
-                >
-                  <Icon name="graphic_eq" className="text-lg md:text-xl" /> <span className="whitespace-nowrap">Now Playing</span>
-                </button>
-              </div>
+        </div>
 
-              {/* Desktop Search Bar */}
-              <div className="hidden md:relative md:flex md:flex-1 max-w-[36rem] items-center gap-2.5">
-                <div className="relative flex-1">
-                  <Icon name="search" className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-ink-soft" />
-                  <input
-                    value={searchQuery}
-                    onChange={(e) => syncUrlSubView('browse', e.target.value, true)}
-                    placeholder="Search songs, albums, videos..."
-                    className="h-11 md:h-12 w-full rounded-2xl border border-[var(--outline-var)] bg-[var(--sc)] pl-12 pr-11 text-base text-ink outline-none placeholder:text-ink-soft/60 focus:border-[var(--primary)] shadow-inner"
-                  />
-                  {searchQuery && (
-                    <button
-                      onClick={() => syncUrlSubView('browse', '')}
-                      className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-ink-soft hover:text-ink cursor-pointer"
-                    >
-                      <Icon name="close" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="ml-auto flex shrink-0 items-center gap-2 md:gap-3">
-              <TopClockHeader now={now} config={config} className="hidden sm:flex" />
-              <button
-                onClick={() => setMobileSearchOpen(true)}
-                title="Search music"
-                className="flex md:hidden h-10 w-10 items-center justify-center rounded-full text-ink-soft hover:bg-[var(--sc-high)] hover:text-ink cursor-pointer"
-              >
-                <Icon name="search" className="text-2xl" />
-              </button>
-            </div>
-          </>
-        )}
+        <div className="ml-auto flex shrink-0 items-center gap-2 md:gap-3">
+          <TopClockHeader now={now} config={config} className="hidden sm:flex" />
+        </div>
       </header>
+
+      {/* Mobile Search Bar (next line below header, only in mobile view) */}
+      <div className="flex md:hidden w-full items-center gap-2 mb-3 shrink-0">
+        <div className="relative flex-1">
+          <Icon name="search" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xl text-ink-soft" />
+          <input
+            value={searchQuery}
+            onChange={(e) => syncUrlSubView('browse', e.target.value, true)}
+            placeholder="Search songs, albums, videos..."
+            className="h-11 w-full rounded-2xl border border-[var(--outline-var)] bg-[var(--sc)] pl-11 pr-10 text-sm text-ink outline-none placeholder:text-ink-soft/60 focus:border-[var(--primary)] shadow-inner"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => syncUrlSubView('browse', '')}
+              className="absolute right-2.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center text-ink-soft hover:text-ink cursor-pointer"
+            >
+              <Icon name="close" className="text-lg" />
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* Main Content Area */}
       {browseIsOpen ? (

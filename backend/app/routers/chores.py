@@ -1,10 +1,12 @@
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from ..db import get_db
+from ..config import get_settings
 from ..models import Chore, CoinTransaction
 from ..ws import manager
 
@@ -44,6 +46,13 @@ def _chore_dict(c: Chore) -> dict:
         "last_reset_date": c.last_reset_date,
         "created_at": c.created_at.isoformat() if c.created_at else None,
     }
+
+
+def _occurrence_date(chore: Chore) -> str:
+    """Return the current local day for recurring chores, or a one-off key."""
+    if not chore.recurrence:
+        return "one-off"
+    return datetime.now(ZoneInfo(get_settings().tz)).date().isoformat()
 
 
 @router.get("")
@@ -102,20 +111,36 @@ async def patch_chore(chore_id: int, body: ChorePatch, db: Session = Depends(get
             row.completed_at = datetime.now(timezone.utc)
             # Record coin earning
             if row.assigned_to:
-                txn = CoinTransaction(
-                    person_name=row.assigned_to,
-                    amount=row.coins,
-                    reason="chore_completed",
-                    reference_id=row.id,
+                occurrence_date = _occurrence_date(row)
+                existing = (
+                    db.query(CoinTransaction.id)
+                    .filter(
+                        CoinTransaction.person_name == row.assigned_to,
+                        CoinTransaction.reason == "chore_completed",
+                        CoinTransaction.reference_id == row.id,
+                        CoinTransaction.occurrence_date == occurrence_date,
+                    )
+                    .first()
                 )
-                db.add(txn)
+                if existing is None:
+                    db.add(
+                        CoinTransaction(
+                            person_name=row.assigned_to,
+                            amount=row.coins,
+                            reason="chore_completed",
+                            reference_id=row.id,
+                            occurrence_date=occurrence_date,
+                        )
+                    )
         else:
             row.completed_at = None
             if row.assigned_to:
+                occurrence_date = _occurrence_date(row)
                 db.query(CoinTransaction).filter(
                     CoinTransaction.person_name == row.assigned_to,
                     CoinTransaction.reason == "chore_completed",
                     CoinTransaction.reference_id == row.id,
+                    CoinTransaction.occurrence_date == occurrence_date,
                 ).delete()
     db.commit()
     await manager.broadcast("chores")

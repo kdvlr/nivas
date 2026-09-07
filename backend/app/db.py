@@ -66,6 +66,33 @@ def init_db() -> None:
             )
         except Exception:
             pass
+        try:
+            conn.execute(
+                text("ALTER TABLE coin_transactions ADD COLUMN occurrence_date VARCHAR DEFAULT ''")
+            )
+        except Exception:
+            pass
+        # Preserve historical rows while giving old chore entries a stable
+        # occurrence key. New recurring completions are keyed by their local
+        # scheduled day instead of by chore ID alone.
+        conn.execute(
+            text(
+                "UPDATE coin_transactions SET occurrence_date = substr(created_at, 1, 10) "
+                "WHERE occurrence_date = '' AND reason IN ('chore_completed', 'chore_missed') "
+                "AND reference_id IS NOT NULL"
+            )
+        )
+        try:
+            conn.execute(text("ALTER TABLE photo_metadata ADD COLUMN metadata_version VARCHAR DEFAULT ''"))
+        except Exception:
+            pass
+        conn.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS ux_coin_chore_occurrence "
+                "ON coin_transactions (reason, reference_id, occurrence_date) "
+                "WHERE occurrence_date != '' AND reference_id IS NOT NULL"
+            )
+        )
 
 
 def get_db() -> Generator[Session, None, None]:

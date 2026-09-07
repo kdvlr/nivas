@@ -192,6 +192,9 @@ class CoinTransaction(Base):
     amount: Mapped[int] = mapped_column(Integer)  # positive = earned, negative = spent/penalty
     reason: Mapped[str] = mapped_column(String)  # "chore_completed", "chore_missed", "reward_redeemed"
     reference_id: Mapped[int | None] = mapped_column(Integer, nullable=True)  # chore_id or reward_item_id
+    # ISO local date for a recurring chore occurrence.  This makes one ledger
+    # entry per completion/penalty possible without erasing earlier weeks.
+    occurrence_date: Mapped[str] = mapped_column(String, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
@@ -211,4 +214,4 @@ class PhotoMetadata(Base):
     location_name: Mapped[str | None] = mapped_column(String, nullable=True)  # e.g., "San Francisco, CA"
     file_size: Mapped[int] = mapped_column(Integer, default=0)
     last_modified: Mapped[float] = mapped_column(JSON, default=0.0)
-
+    metadata_version: Mapped[str] = mapped_column(String, default="")

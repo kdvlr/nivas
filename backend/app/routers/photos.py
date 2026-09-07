@@ -82,6 +82,7 @@ def get_video_gps_location(file_path):
     return None, None
 
 from ..config import get_settings
+from ..admin_auth import require_admin
 from ..db import get_db, SessionLocal
 from ..models import PhotoMetadata
 from ..services import derivatives
@@ -216,7 +217,6 @@ def get_video_dimensions(file_path):
         print(f"Error parsing video dimensions for {file_path}: {e}")
     return None, None
 
-GOOGLE_MAPS_API_KEY = "AIzaSyBGepb_4wwoBKznHyPf0dvChUtvAs6Xrko"
 GOOGLE_MAPS_MAX_MONTHLY_CALLS = 5000  # Cap at 5,000 requests/month (well within Google's 40,000 free tier limit)
 _google_maps_usage = {"month": None, "count": 0}
 _google_maps_lock = threading.Lock()
@@ -241,9 +241,10 @@ def fetch_location_name(lat: float, lon: float) -> str | None:
         return None
         
     # 1. Try Google Maps Reverse Geocoding API first (if under monthly safety cap)
-    if GOOGLE_MAPS_API_KEY and _check_and_increment_google_usage():
+    google_maps_api_key = get_settings().google_maps_api_key
+    if google_maps_api_key and _check_and_increment_google_usage():
         try:
-            url = f"https://maps.googleapis.com/maps/api/geocode/json?latlng={lat},{lon}&key={GOOGLE_MAPS_API_KEY}"
+            url = f"https://maps.googleapis.com/maps/api/geocode/json?latlng={lat},{lon}&key={google_maps_api_key}"
             headers = {"User-Agent": "NivasFamilyDashboard/1.0"}
             with httpx.Client(timeout=4.0) as client:
                 r = client.get(url, headers=headers)
@@ -348,6 +349,9 @@ def geocode_worker(db_session_factory, file_paths):
 # Bump when metadata extraction changes in a way that requires re-reading
 # every file (e.g. the EXIF orientation fix) — wipes the cache table once.
 PHOTO_META_VERSION = "2"
+_scan_lock = threading.Lock()
+_scan_running = False
+_scan_pending = False
 
 
 def sync_photos_dir(db: Session):
@@ -398,7 +402,7 @@ def sync_photos_dir(db: Session):
     for path in disk_paths:
         p_obj, file_type, size, mtime = all_files_on_disk[path]
         cached = cache_dict.get(path)
-        if not cached or cached.file_size != size or cached.last_modified != mtime or cached.latitude is None:
+        if not cached or cached.file_size != size or cached.last_modified != mtime or cached.metadata_version != PHOTO_META_VERSION:
             changed_or_new_paths.append((path, p_obj, file_type, size, mtime))
 
     # 4. Delete removed records from database
@@ -417,6 +421,7 @@ def sync_photos_dir(db: Session):
         cached.file_type = file_type
         cached.file_size = size
         cached.last_modified = mtime
+        cached.metadata_version = PHOTO_META_VERSION
         
         if file_type == "image":
             # Extract dimensions & EXIF (fast - only reads headers)
@@ -484,6 +489,12 @@ def sync_photos_dir_background(db_session_factory):
     """
     Fast thread entrypoint to perform a delta scan.
     """
+    global _scan_running, _scan_pending
+    with _scan_lock:
+        if _scan_running:
+            _scan_pending = True
+            return
+        _scan_running = True
     db = db_session_factory()
     try:
         sync_photos_dir(db)
@@ -491,6 +502,12 @@ def sync_photos_dir_background(db_session_factory):
         print(f"Background photos synchronization failed: {e}")
     finally:
         db.close()
+        with _scan_lock:
+            rerun = _scan_pending
+            _scan_pending = False
+            _scan_running = False
+        if rerun:
+            threading.Thread(target=sync_photos_dir_background, args=(db_session_factory,), daemon=True).start()
 
 THUMBNAILS_DIR = Path(get_settings().data_dir) / "thumbnails"
 THUMBNAILS_DIR.mkdir(parents=True, exist_ok=True)
@@ -584,21 +601,15 @@ def derivatives_status():
 
 
 @router.post("/derivatives/backfill")
-def derivatives_backfill():
+def derivatives_backfill(_: None = Depends(require_admin)):
     started = derivatives.start_backfill(PHOTOS_DIR, VIDEO_EXTENSIONS)
     return {"started": started, **derivatives.STATE.snapshot()}
 
 
 @router.get("")
-def get_photos(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    # Check if the database has any records
-    db_count = db.query(PhotoMetadata).count()
-    if db_count == 0:
-        # First-time scan: run synchronously so the user doesn't see a blank screen
-        sync_photos_dir(db)
-    else:
-        # Subsequent scans: run delta check in background, return cached records instantly
-        background_tasks.add_task(sync_photos_dir_background, SessionLocal)
+def get_photos(db: Session = Depends(get_db)):
+    # Requests are read-only and never start a directory walk. A controlled
+    # startup/scheduled scan owns indexing, avoiding slideshow-triggered scans.
     
     # Query all cached photo metadata directly from the SQLite database
     cached_records = db.query(PhotoMetadata).all()
@@ -709,5 +720,12 @@ def get_photos(background_tasks: BackgroundTasks, db: Session = Depends(get_db))
                 "location_name": img_data["location_name"]
             })
             
-    random.shuffle(media_items)
-    return media_items
+    return sorted(media_items, key=lambda item: (item.get("date_taken") or "", item["name"]), reverse=True)
+
+
+@router.get("/deck")
+def slideshow_deck(db: Session = Depends(get_db)):
+    """Compact, stable slideshow index with a version suitable for conditional refreshes."""
+    items = get_photos(db)
+    version = hashlib.sha256("|".join(f"{item['name']}:{item.get('date_taken')}" for item in items).encode()).hexdigest()[:16]
+    return {"version": version, "items": items}

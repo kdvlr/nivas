@@ -19,6 +19,7 @@ from ..ws import manager
 from .ytmusic import ytmusic_service
 from .sonos_listener import SonosEventListener
 from .media_remote import MediaRemotePublisher
+from .media_cache import media_cache
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +69,18 @@ class PlayerEngine:
         self.played_history: Dict[str, float] = {}
         self.history: List[Dict[str, Any]] = []
         self._preferences_path = Path(get_settings().data_dir) / "airplay_preferences.json"
+        self._media_cache = media_cache
+        self._audio_prefetch_semaphore = asyncio.Semaphore(1)
+        self._render_delay_ms = max(0, min(1000, get_settings().airplay_render_delay_ms))
+        self._airplay_diagnostics: Dict[str, Any] = {
+            "renderDelayMs": self._render_delay_ms,
+            "packetsSent": 0,
+            "retransmitRequested": 0,
+            "retransmitFulfilled": 0,
+            "unrecoveredRetransmits": 0,
+            "underruns": 0,
+            "lastUpdated": None,
+        }
         self._hidden_device_ids, self._selected_device_ids, self._selected_device_names, self._device_volumes = self._load_preferences()
 
         self._scanner_task: Optional[asyncio.Task] = None
@@ -80,6 +93,7 @@ class PlayerEngine:
         self._paused_stream_expired = False
         self._event_loop: Optional[asyncio.AbstractEventLoop] = None
         self._advancing = False
+        self._has_advanced_current: bool = False
         self._play_generation_id: int = 0
         self._stream_start_offset: float = 0.0
         self._prefetching_video_ids: set[str] = set()
@@ -214,6 +228,7 @@ class PlayerEngine:
         self.media_remote.on_next = lambda: asyncio.run_coroutine_threadsafe(self.next_track(), loop)
         self.media_remote.on_prev = lambda: asyncio.run_coroutine_threadsafe(self.prev_track(), loop)
         self.media_remote.start(loop)
+        self._media_cache.cleanup()
 
     def stop(self):
         if self._scanner_task and not self._scanner_task.done():
@@ -423,7 +438,7 @@ class PlayerEngine:
                             self.elapsed_seconds,
                             self.duration_seconds,
                         )
-                        await self.next_track()
+                        await self.next_track(auto=True, from_generation=self._play_generation_id)
                     else:
                         self._broadcast_state()
                 elif (
@@ -487,6 +502,7 @@ class PlayerEngine:
             "activeTargets": self.active_targets,
             "airplaySessionActive": bool(self._stream_procs),
             "pausedSessionExpiresIn": paused_expires_in,
+            "airplayDiagnostics": self._airplay_diagnostics.copy(),
             "devices": [dev.to_dict() for dev in sorted(self.devices.values(), key=lambda d: d.name)]
         }
 
@@ -551,6 +567,7 @@ class PlayerEngine:
         self.elapsed_seconds = 0
         self.duration_seconds = float(parsed_duration or 180)
         self.is_playing = True
+        self._has_advanced_current = False
         self._last_audio_at = time.monotonic()
 
         self.queue = [
@@ -661,16 +678,19 @@ class PlayerEngine:
                     return
                 self._prefetching_video_ids.add(vid)
                 try:
-                    wpath = f"/tmp/ytmusic_{vid}.wav"
-                    apath = f"/tmp/ytmusic_{vid}_artwork.jpg"
+                    wpath = self._media_cache.wav_path(str(vid))
+                    apath = self._media_cache.artwork_path(str(vid))
                     subtasks = []
 
-                    if not os.path.exists(wpath) or os.path.getsize(wpath) <= 44:
+                    if not wpath.exists() or wpath.stat().st_size <= 44:
                         logger.info("Pre-fetching track in background: %s (%s)", track_item.get("title"), vid)
-                        subtasks.append(loop.run_in_executor(None, self._transcode_to_wav, vid, wpath))
+                        async def transcode():
+                            async with self._audio_prefetch_semaphore:
+                                await loop.run_in_executor(None, self._transcode_to_wav, str(vid), str(wpath))
+                        subtasks.append(transcode())
 
-                    if not os.path.exists(apath) and track_item.get("thumbnail"):
-                        subtasks.append(loop.run_in_executor(None, self._download_artwork, track_item["thumbnail"], apath))
+                    if not apath.exists() and track_item.get("thumbnail"):
+                        subtasks.append(loop.run_in_executor(None, self._download_artwork, track_item["thumbnail"], str(apath)))
 
                     if subtasks:
                         await asyncio.gather(*subtasks, return_exceptions=True)
@@ -685,6 +705,8 @@ class PlayerEngine:
 
             if prefetch_tasks:
                 await asyncio.gather(*prefetch_tasks, return_exceptions=True)
+            self._media_cache.pin([str(t.get("videoId")) for t in tracks_to_prefetch])
+            self._media_cache.cleanup()
         except Exception as e:
             logger.debug(f"Next track prefetch background task error: {e}")
 
@@ -715,18 +737,18 @@ class PlayerEngine:
                             self.duration_seconds = float(resolved["duration"])
                         self._broadcast_state()
 
-            wav_path = f"/tmp/ytmusic_{video_id}.wav"
-            artwork_path = f"/tmp/ytmusic_{video_id}_artwork.jpg"
+            wav_path = self._media_cache.wav_path(video_id)
+            artwork_path = self._media_cache.artwork_path(video_id)
 
             # Concurrently transcode audio and download artwork in parallel
             fetch_tasks = []
-            if not os.path.exists(wav_path) or os.path.getsize(wav_path) <= 44:
+            if not wav_path.exists() or wav_path.stat().st_size <= 44:
                 logger.info(f"Downloading and converting track '{track_info['title']}' to 44.1kHz PCM WAV...")
-                fetch_tasks.append(loop.run_in_executor(None, self._transcode_to_wav, video_id, wav_path))
+                fetch_tasks.append(loop.run_in_executor(None, self._transcode_to_wav, video_id, str(wav_path)))
 
             thumbnail_url = track_info.get("thumbnail")
-            if thumbnail_url and (not os.path.exists(artwork_path) or os.path.getsize(artwork_path) == 0):
-                fetch_tasks.append(loop.run_in_executor(None, self._download_artwork, thumbnail_url, artwork_path))
+            if thumbnail_url and (not artwork_path.exists() or artwork_path.stat().st_size == 0):
+                fetch_tasks.append(loop.run_in_executor(None, self._download_artwork, thumbnail_url, str(artwork_path)))
 
             if fetch_tasks:
                 await asyncio.gather(*fetch_tasks, return_exceptions=True)
@@ -735,27 +757,29 @@ class PlayerEngine:
                 logger.info("Aborting stale playback orchestration (generation %s superseded by %s)", generation_id, self._play_generation_id)
                 return
 
-            if not os.path.exists(wav_path) or os.path.getsize(wav_path) <= 44:
+            if not wav_path.exists() or wav_path.stat().st_size <= 44:
                 logger.warning(
                     "Transcoding produced unplayable file for %s (%s); advancing to next track",
                     track_info.get("title"),
                     video_id,
                 )
-                await self.next_track()
+                await self.next_track(auto=True, from_generation=generation_id)
                 return
 
-            file_size = os.path.getsize(wav_path)
+            self._media_cache.pin([video_id, *[str(track.get("videoId")) for track in self.queue[:2]]])
+            self._media_cache.touch(wav_path)
+            file_size = wav_path.stat().st_size
             if file_size > 44:
                 calc_duration = int((file_size - 44) / 176400)
                 if calc_duration > 0:
                     self.duration_seconds = calc_duration
 
-            artwork_arg = artwork_path if os.path.exists(artwork_path) and os.path.getsize(artwork_path) > 0 else None
+            artwork_arg = str(artwork_path) if artwork_path.exists() and artwork_path.stat().st_size > 0 else None
 
             self._stop_current_stream()
             logger.info(f"Transcode complete. Streaming '{track_info['title']}' via airplay2-rs to {len(self.active_targets)} selected AirPlay speakers")
             started = self._start_airplay_streams(
-                wav_path,
+                str(wav_path),
                 track_info,
                 artwork_arg,
             )
@@ -771,6 +795,7 @@ class PlayerEngine:
                 # Spawn background non-blocking tasks for autoplay recommendations & next-track prefetch
                 loop.create_task(self._fetch_autoplay_recommendations(video_id))
                 loop.create_task(self._prefetch_next_track())
+                self._media_cache.cleanup()
         except Exception as e:
             logger.error(f"Error orchestrating playback: {e}")
             self.is_playing = False
@@ -892,7 +917,9 @@ class PlayerEngine:
         proc: subprocess.Popen,
         device_ids: List[str],
         log_handle: Optional[Any] = None,
+        generation_id: Optional[int] = None,
     ):
+        stream_eof_handled = False
         if proc.stdout:
             try:
                 for line in iter(proc.stdout.readline, ""):
@@ -905,7 +932,28 @@ class PlayerEngine:
                         except Exception:
                             pass
                     line_clean = line.strip()
-                    if "REMOTE_EVENT: Pause" in line_clean:
+                    if line_clean.startswith("STREAM_STATS "):
+                        try:
+                            fields = {
+                                key: int(value)
+                                for part in line_clean.split()[1:]
+                                if "=" in part
+                                for key, value in [part.split("=", 1)]
+                            }
+                            requested = fields.get("retransmit_requested", 0)
+                            fulfilled = fields.get("retransmit_fulfilled", 0)
+                            self._airplay_diagnostics = {
+                                "renderDelayMs": self._render_delay_ms,
+                                "packetsSent": fields.get("packets_sent", 0),
+                                "retransmitRequested": requested,
+                                "retransmitFulfilled": fulfilled,
+                                "unrecoveredRetransmits": max(0, requested - fulfilled),
+                                "underruns": fields.get("underruns", 0),
+                                "lastUpdated": time.time(),
+                            }
+                        except (TypeError, ValueError):
+                            logger.debug("Ignoring malformed AirPlay stream metrics: %s", line_clean)
+                    elif "REMOTE_EVENT: Pause" in line_clean:
                         logger.info("Received AirPlay remote event: Pause")
                         if self._event_loop and self._event_loop.is_running():
                             def _apply_pause():
@@ -924,15 +972,28 @@ class PlayerEngine:
                     elif "REMOTE_EVENT: Next" in line_clean:
                         logger.info("Received AirPlay remote event: Next")
                         if self._event_loop and self._event_loop.is_running():
-                            asyncio.run_coroutine_threadsafe(self.next_track(), self._event_loop)
+                            asyncio.run_coroutine_threadsafe(self.next_track(auto=False), self._event_loop)
                     elif "REMOTE_EVENT: Prev" in line_clean:
                         logger.info("Received AirPlay remote event: Prev")
                         if self._event_loop and self._event_loop.is_running():
                             asyncio.run_coroutine_threadsafe(self.prev_track(), self._event_loop)
                     elif "Reached end of audio" in line_clean or "Decoder EOF and buffer empty" in line_clean:
-                        logger.info("AirPlay stream reached EOF; advancing to next track")
-                        if self._event_loop and self._event_loop.is_running():
-                            asyncio.run_coroutine_threadsafe(self.next_track(), self._event_loop)
+                        if generation_id is not None and generation_id != self._play_generation_id:
+                            logger.info(
+                                "Ignoring EOF from stale stream generation %s (current is %s)",
+                                generation_id,
+                                self._play_generation_id,
+                            )
+                        elif not stream_eof_handled:
+                            stream_eof_handled = True
+                            logger.info("AirPlay stream reached EOF; advancing to next track")
+                            if self._event_loop and self._event_loop.is_running():
+                                asyncio.run_coroutine_threadsafe(
+                                    self.next_track(auto=True, from_generation=generation_id),
+                                    self._event_loop,
+                                )
+                        else:
+                            logger.debug("Ignoring secondary EOF line from stream %s: %s", stream_id, line_clean)
                     elif line_clean.startswith("Position:") and "s," in line_clean:
                         try:
                             pos_str = line_clean.split("Position:")[1].split("s,")[0].strip()
@@ -962,8 +1023,20 @@ class PlayerEngine:
             if device_id in self.devices:
                 self.devices[device_id].is_connected = False
         if self.is_playing and exit_code == 0 and self._event_loop:
-            logger.info("AirPlay track finished; advancing to next track")
-            asyncio.run_coroutine_threadsafe(self.next_track(), self._event_loop)
+            if generation_id is not None and generation_id != self._play_generation_id:
+                logger.info(
+                    "Ignoring process exit from stale stream generation %s (current is %s)",
+                    generation_id,
+                    self._play_generation_id,
+                )
+                return
+            if not stream_eof_handled:
+                stream_eof_handled = True
+                logger.info("AirPlay track finished; advancing to next track")
+                asyncio.run_coroutine_threadsafe(
+                    self.next_track(auto=True, from_generation=generation_id),
+                    self._event_loop,
+                )
             return
         if self.is_playing:
             logger.warning("AirPlay stream %s exited with code %s", stream_id, exit_code)
@@ -976,10 +1049,11 @@ class PlayerEngine:
         proc: subprocess.Popen,
         device_ids: List[str],
         log_handle: Optional[Any] = None,
+        generation_id: Optional[int] = None,
     ):
         threading.Thread(
             target=self._watch_stream_process,
-            args=(stream_id, proc, device_ids, log_handle),
+            args=(stream_id, proc, device_ids, log_handle, generation_id),
             daemon=True,
             name=f"airplay-monitor-{stream_id}",
         ).start()
@@ -1014,6 +1088,8 @@ class PlayerEngine:
             "--remote-control-events",
             "--volume",
             f"{volume:.4f}",
+            "--render-delay",
+            str(self._render_delay_ms),
         ]
 
         ptp_ips = [device.address for device in devices if self._device_uses_ptp(device)]
@@ -1068,7 +1144,13 @@ class PlayerEngine:
                 self._stream_log_handles[GROUP_STREAM_ID] = log_handle
             for device in devices:
                 device.is_connected = True
-            self._monitor_stream_process(GROUP_STREAM_ID, proc, [device.id for device in devices], log_handle)
+            self._monitor_stream_process(
+                GROUP_STREAM_ID,
+                proc,
+                [device.id for device in devices],
+                log_handle,
+                generation_id=self._play_generation_id,
+            )
             # Preserve per-room state without embedding a Sonos or test volume.
             for device in devices:
                 value = max(0.0, min(1.0, device.volume / 100.0))
@@ -1133,12 +1215,12 @@ class PlayerEngine:
                 self._paused_at = None
             else:
                 video_id = self.current_track.get("videoId")
-                wav_path = f"/tmp/ytmusic_{video_id}.wav"
+                wav_path = str(self._media_cache.wav_path(video_id))
                 if os.path.exists(wav_path):
                     # A deliberately expired session cannot retain its RTP
                     # timeline. Recreate it cleanly and restart the local file.
                     self.elapsed_seconds = 0
-                    artwork_path = f"/tmp/ytmusic_{video_id}_artwork.jpg"
+                    artwork_path = str(self._media_cache.artwork_path(video_id))
                     self.is_playing = self._start_airplay_streams(
                         wav_path,
                         self.current_track,
@@ -1157,7 +1239,7 @@ class PlayerEngine:
         self._stream_start_offset = target_seconds
 
         video_id = self.current_track.get("videoId")
-        wav_path = f"/tmp/ytmusic_{video_id}.wav"
+        wav_path = str(self._media_cache.wav_path(video_id))
 
         if os.path.exists(wav_path) and os.path.getsize(wav_path) > 44:
             was_paused = not self.is_playing
@@ -1178,7 +1260,7 @@ class PlayerEngine:
                 except Exception as e:
                     logger.warning(f"Could not create seeked audio file: {e}")
 
-            artwork_path = f"/tmp/ytmusic_{video_id}_artwork.jpg"
+            artwork_path = str(self._media_cache.artwork_path(video_id))
             artwork_arg = artwork_path if os.path.exists(artwork_path) and os.path.getsize(artwork_path) > 0 else None
             started = self._start_airplay_streams(audio_target, self.current_track, artwork_arg)
             if started:
@@ -1193,10 +1275,25 @@ class PlayerEngine:
         self._broadcast_state()
         return self.get_state()
 
-    async def next_track(self):
+    async def next_track(self, auto: bool = False, from_generation: Optional[int] = None):
+        if auto:
+            if from_generation is not None and from_generation != self._play_generation_id:
+                logger.info(
+                    "Dropping stale auto-advancement from generation %s (current is %s)",
+                    from_generation,
+                    self._play_generation_id,
+                )
+                return self.get_state()
+            if self._has_advanced_current:
+                logger.info(
+                    "Dropping duplicate auto-advancement trigger for track %s",
+                    (self.current_track or {}).get("title"),
+                )
+                return self.get_state()
         if self._advancing:
             return self.get_state()
         self._advancing = True
+        self._has_advanced_current = True
         try:
             if self.queue:
                 next_t = self.queue.pop(0)
@@ -1293,8 +1390,8 @@ class PlayerEngine:
             self._play_generation_id += 1
             generation_id = self._play_generation_id
             video_id = self.current_track.get("videoId")
-            wav_path = f"/tmp/ytmusic_{video_id}.wav"
-            artwork_path = f"/tmp/ytmusic_{video_id}_artwork.jpg"
+            wav_path = str(self._media_cache.wav_path(video_id))
+            artwork_path = str(self._media_cache.artwork_path(video_id))
             artwork_arg = artwork_path if os.path.exists(artwork_path) and os.path.getsize(artwork_path) > 0 else None
             if os.path.exists(wav_path) and os.path.getsize(wav_path) > 44:
                 self._stop_current_stream()
@@ -1321,8 +1418,8 @@ class PlayerEngine:
             self.elapsed_seconds = 0
             self._stream_start_offset = 0.0
             video_id = self.current_track.get("videoId")
-            wav_path = f"/tmp/ytmusic_{video_id}.wav"
-            artwork_path = f"/tmp/ytmusic_{video_id}_artwork.jpg"
+            wav_path = str(self._media_cache.wav_path(video_id))
+            artwork_path = str(self._media_cache.artwork_path(video_id))
             artwork_arg = artwork_path if os.path.exists(artwork_path) and os.path.getsize(artwork_path) > 0 else None
             if os.path.exists(wav_path) and os.path.getsize(wav_path) > 44:
                 self._stop_current_stream()
@@ -1355,7 +1452,7 @@ class PlayerEngine:
             # playing from the prior group session.
             if (self.is_playing or self._stream_procs) and self.current_track:
                 video_id = self.current_track.get("videoId")
-                wav_path = f"/tmp/ytmusic_{video_id}.wav"
+                wav_path = str(self._media_cache.wav_path(video_id))
                 if os.path.exists(wav_path):
                     was_paused = not self.is_playing
                     current_offset = max(0.0, self.elapsed_seconds)
@@ -1377,7 +1474,7 @@ class PlayerEngine:
                         except Exception as e:
                             logger.warning(f"Could not create seeked audio file for room toggle: {e}")
 
-                    artwork_path = f"/tmp/ytmusic_{video_id}_artwork.jpg"
+                    artwork_path = str(self._media_cache.artwork_path(video_id))
                     started = self._start_airplay_streams(
                         audio_target,
                         self.current_track,

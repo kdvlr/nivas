@@ -1,10 +1,11 @@
 import asyncio
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from .. import sync_status
+from ..admin_auth import grant_admin_session, require_admin, verify_pin_attempt
 from ..config import get_settings
 from ..db import get_db
 from ..integrations.alexa_lists import alexa
@@ -69,7 +70,11 @@ def get_config(db: Session = Depends(get_db)):
 
 
 @router.post("/kiosk-schedule")
-async def update_kiosk_schedule(body: KioskSchedulePut, db: Session = Depends(get_db)):
+async def update_kiosk_schedule(
+    body: KioskSchedulePut,
+    db: Session = Depends(get_db),
+    _: None = Depends(require_admin),
+):
     sync.set_setting(db, "kiosk_sleep_enabled", body.kiosk_sleep_enabled)
     sync.set_setting(db, "kiosk_sleep_start", body.kiosk_sleep_start)
     sync.set_setting(db, "kiosk_sleep_end", body.kiosk_sleep_end)
@@ -90,7 +95,11 @@ async def update_kiosk_schedule(body: KioskSchedulePut, db: Session = Depends(ge
 
 @router.post("/theme")
 @router.post("/reload")
-async def update_theme(body: ThemePut | None = None, db: Session = Depends(get_db)):
+async def update_theme(
+    body: ThemePut | None = None,
+    db: Session = Depends(get_db),
+    _: None = Depends(require_admin),
+):
     appearance = body.appearance.lower().strip() if (body and body.appearance) else None
     should_reload = body.reload if body else True
 
@@ -128,9 +137,11 @@ def pin_required():
 
 
 @router.post("/pin/verify")
-def pin_verify(body: PinVerify):
-    expected = get_settings().setup_pin
-    return {"ok": not expected or expected in body.pin}
+def pin_verify(body: PinVerify, request: Request, response: Response):
+    if not verify_pin_attempt(request, body.pin):
+        return {"ok": False}
+    grant_admin_session(response, request)
+    return {"ok": True}
 
 
 @router.get("/status")
@@ -157,12 +168,12 @@ async def status(db: Session = Depends(get_db)):
 
 
 @router.post("/icloud/login")
-async def icloud_login(body: ICloudLogin):
+async def icloud_login(body: ICloudLogin, _: None = Depends(require_admin)):
     return await asyncio.to_thread(icloud.connect, body.username, body.password)
 
 
 @router.post("/icloud/2fa")
-async def icloud_2fa(body: TwoFACode):
+async def icloud_2fa(body: TwoFACode, _: None = Depends(require_admin)):
     result = await asyncio.to_thread(icloud.submit_2fa, body.code)
     if result.get("connected"):
         await sync.job_icloud()
@@ -170,7 +181,7 @@ async def icloud_2fa(body: TwoFACode):
 
 
 @router.get("/icloud/lists")
-async def icloud_lists():
+async def icloud_lists(_: None = Depends(require_admin)):
     try:
         names = await asyncio.to_thread(icloud.list_names)
         return {"lists": names, "error": ""}
@@ -179,8 +190,7 @@ async def icloud_lists():
 
 
 @router.post("/alexa/login")
-async def alexa_login(body: AmazonLogin):
-    print(f"DEBUG: alexa_login received email='{body.email}'")
+async def alexa_login(body: AmazonLogin, _: None = Depends(require_admin)):
     result = await alexa.connect(
         email=body.email or None,
         password=body.password or None,
@@ -192,7 +202,11 @@ async def alexa_login(body: AmazonLogin):
 
 
 @router.put("/settings")
-async def put_settings(body: SettingsPut, db: Session = Depends(get_db)):
+async def put_settings(
+    body: SettingsPut,
+    db: Session = Depends(get_db),
+    _: None = Depends(require_admin),
+):
     if body.icloud_shopping_list is not None:
         sync.set_setting(db, "icloud_shopping_list", body.icloud_shopping_list)
     if body.icloud_task_lists is not None:
@@ -228,7 +242,11 @@ def get_people(db: Session = Depends(get_db)):
 
 
 @router.put("/people")
-async def put_people(people: list[PersonPut], db: Session = Depends(get_db)):
+async def put_people(
+    people: list[PersonPut],
+    db: Session = Depends(get_db),
+    _: None = Depends(require_admin),
+):
     db.query(Person).delete()
     for p in people:
         if p.name.strip():
@@ -248,7 +266,7 @@ async def put_people(people: list[PersonPut], db: Session = Depends(get_db)):
 
 
 @router.post("/sync")
-async def trigger_sync(scope: str = "all"):
+async def trigger_sync(scope: str = "all", _: None = Depends(require_admin)):
     if scope in ("all", "calendar"):
         await sync.job_calendar()
     if scope in ("all", "icloud"):

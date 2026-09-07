@@ -1,6 +1,8 @@
 type Listener = (scope: string) => void
+type MessageListener = (message: any) => void
 
 const listeners = new Set<Listener>()
+const messageListeners = new Set<MessageListener>()
 let socket: WebSocket | null = null
 let pingTimer: ReturnType<typeof setInterval> | null = null
 
@@ -11,6 +13,7 @@ function connect() {
   socket.onmessage = (ev) => {
     try {
       const msg = JSON.parse(ev.data)
+      messageListeners.forEach((fn) => fn(msg))
       if (msg.type === 'refresh') listeners.forEach((fn) => fn(msg.scope))
       if (msg.type === 'theme_changed') {
         if (msg.appearance) {
@@ -48,4 +51,10 @@ export function onRefresh(scope: string | string[], fn: () => void): () => void 
   }
   listeners.add(listener)
   return () => listeners.delete(listener)
+}
+
+/** Subscribe to typed server messages such as player_state. */
+export function onWsMessage(fn: MessageListener): () => void {
+  messageListeners.add(fn)
+  return () => messageListeners.delete(fn)
 }

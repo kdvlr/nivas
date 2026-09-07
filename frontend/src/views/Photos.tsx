@@ -4,6 +4,8 @@ import { useData } from '../lib/hooks'
 import Icon from '../components/Icon'
 import TopClockHeader from '../components/TopClockHeader'
 
+let activeGalleryLiveVideo: HTMLVideoElement | null = null
+
 interface MediaItem {
   url: string
   displayUrl?: string
@@ -46,10 +48,15 @@ const MediaTile = ({ item, onClick }: { item: MediaItem; onClick: () => void }) 
       ([entry]) => {
         if (entry.isIntersecting) {
           setIsPlaying(true)
+          if (activeGalleryLiveVideo && activeGalleryLiveVideo !== videoRef.current) {
+            activeGalleryLiveVideo.pause()
+          }
+          activeGalleryLiveVideo = videoRef.current
           videoRef.current?.play().catch((err) => console.log('Live Photo autoplay blocked:', err))
         } else {
           setIsPlaying(false)
           videoRef.current?.pause()
+          if (activeGalleryLiveVideo === videoRef.current) activeGalleryLiveVideo = null
         }
       },
       { threshold: 0.6 } // Play when 60% of the tile is visible in the viewport
@@ -60,6 +67,7 @@ const MediaTile = ({ item, onClick }: { item: MediaItem; onClick: () => void }) 
 
     return () => {
       if (currentRef) observer.unobserve(currentRef)
+      if (activeGalleryLiveVideo === videoRef.current) activeGalleryLiveVideo = null
     }
   }, [item.type, item.videoUrl])
 

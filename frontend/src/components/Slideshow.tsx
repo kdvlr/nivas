@@ -310,6 +310,7 @@ interface RigProps {
 }
 
 function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVideo }: RigProps) {
+  const [mediaFailed, setMediaFailed] = useState(false)
   // On the lowest tier the perpetual sway is dropped: the entrance drift still
   // reads as floating, but nothing animates once a photo has settled.
   const sway = quality !== 'low'
@@ -333,7 +334,9 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVide
         ? '0 0 44px 6px rgba(150,185,255,0.22), '
         : ''
   const matShadow = `${ambient}0 4px 10px rgba(0,0,0,0.35), 0 30px 70px rgba(0,0,0,0.5)`
-  const autoplayable = quality !== 'low' || !!item.playbackUrl
+  // Original camera clips are never autoplayed. A verified playback derivative
+  // is the only video source eligible for unattended slideshow playback.
+  const autoplayable = quality !== 'low' && !!item.playbackUrl
   const tilt = ((seed % 44) / 10 - 2.2) * (pairIdx === 1 ? -1 : 1)
 
   const media = (
@@ -345,19 +348,21 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVide
         maxWidth: pair ? '44vw' : '84vw',
       }}
     >
-      {item.type === 'image' && (
-        <img src={item.displayUrl || item.url} decoding="async" className="w-full h-full object-contain pointer-events-none" />
+      {mediaFailed ? (
+        <div className="w-full h-full flex items-center justify-center text-slate-400"><Icon name="broken_image" className="text-5xl" /></div>
+      ) : item.type === 'image' && (
+        <img src={item.displayUrl || item.url} decoding="async" onError={() => setMediaFailed(true)} className="w-full h-full object-contain pointer-events-none" />
       )}
       {item.type === 'live_photo' && item.videoUrl && (
         autoplayable ? (
-          <CleanVideo key={item.videoUrl} src={item.playbackUrl || item.videoUrl} autoPlay muted playsInline loop className="w-full h-full object-contain pointer-events-none" />
+          <CleanVideo key={item.videoUrl} src={item.playbackUrl!} onError={() => setMediaFailed(true)} autoPlay muted playsInline loop className="w-full h-full object-contain pointer-events-none" />
         ) : (
           <VideoStill item={item} />
         )
       )}
       {item.type === 'video' && (
         autoplayable ? (
-          <CleanVideo key={item.url} src={item.playbackUrl || item.url} autoPlay muted playsInline loop className="w-full h-full object-contain pointer-events-none" />
+          <CleanVideo key={item.url} src={item.playbackUrl!} onError={() => setMediaFailed(true)} autoPlay muted playsInline loop className="w-full h-full object-contain pointer-events-none" />
         ) : (
           <VideoStill item={item} />
         )
@@ -483,6 +488,8 @@ export default function Slideshow({
   onOpenFullPlayer,
 }: SlideshowProps) {
   const [currentIdx, setCurrentIdx] = useState(0)
+  const [paused, setPaused] = useState(false)
+  const swipeStart = useRef<number | null>(null)
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null)
   const [playerReady, setPlayerReady] = useState(false)
   const [isPortraitViewport, setIsPortraitViewport] = useState(() => window.innerHeight > window.innerWidth)
@@ -604,7 +611,7 @@ export default function Slideshow({
       const item = list[i]
       if (used.has(item.url)) continue
 
-      if (item.orientation === 'portrait') {
+      if (item.orientation === 'portrait' && !isPortraitViewport) {
         let partner: MediaItem | null = null
         for (let j = i + 1; j < list.length; j++) {
           const nextItem = list[j]
@@ -624,7 +631,11 @@ export default function Slideshow({
       used.add(item.url)
     }
     return result
-  }, [photos, shuffleSeed])
+  }, [photos, shuffleSeed, isPortraitViewport])
+
+  useEffect(() => {
+    setCurrentIdx((index) => Math.max(0, Math.min(index, Math.max(0, slides.length - 1))))
+  }, [slides.length])
 
   // Readiness is probed from the element rather than trusted to events. The
   // poster clip has usually already buffered this URL, so `canplay` can fire
@@ -703,7 +714,7 @@ export default function Slideshow({
   // When wrapping around at the end of the deck, re-shuffle so the next loop
   // plays in a completely new random order.
   useEffect(() => {
-    if (slides.length <= 1 || selectedVideo !== null) return
+    if (slides.length <= 1 || selectedVideo !== null || paused) return
     const timer = setInterval(() => {
       setCurrentIdx((prev) => {
         const next = prev + 1
@@ -715,14 +726,14 @@ export default function Slideshow({
       })
     }, 9000)
     return () => clearInterval(timer)
-  }, [slides.length, selectedVideo])
+  }, [slides.length, selectedVideo, paused])
 
   if (slides.length === 0) return null
 
   const activeSlide = slides[currentIdx]
   const overcast = kind !== 'clear'
   const gradient = SKY_GRADIENTS[phase][overcast ? 'overcast' : 'clear']
-  const items = isPortraitViewport ? activeSlide.items.slice(0, 1) : activeSlide.items
+  const items = activeSlide.items
   const pair = items.length > 1
 
   // Secondary timezone formatting for the clock overlay
@@ -748,6 +759,15 @@ export default function Slideshow({
       ref={rootRef}
       className="fixed inset-0 z-[100] overflow-hidden cursor-none select-none"
       onClick={onDismiss}
+      onTouchStart={(event) => { swipeStart.current = event.changedTouches[0]?.clientX ?? null }}
+      onTouchEnd={(event) => {
+        const start = swipeStart.current
+        const end = event.changedTouches[0]?.clientX
+        swipeStart.current = null
+        if (start === null || end === undefined || Math.abs(end - start) < 48) return
+        event.stopPropagation()
+        setCurrentIdx((index) => end < start ? (index + 1) % slides.length : (index - 1 + slides.length) % slides.length)
+      }}
     >
       <style>{'@keyframes sky-cloud { from { transform: translateX(-60vmin); } to { transform: translateX(110vw); } }'}</style>
 
@@ -883,6 +903,12 @@ export default function Slideshow({
           slideshowMode
         />
       )}
+
+      <div className="absolute bottom-6 right-6 z-40 flex gap-2 pointer-events-auto">
+        <button aria-label="Previous slide" onClick={(e) => { e.stopPropagation(); setCurrentIdx((i) => (i - 1 + slides.length) % slides.length) }} className="p-3 rounded-full bg-black/45 text-white"><Icon name="skip_previous" /></button>
+        <button aria-label={paused ? 'Play slideshow' : 'Pause slideshow'} onClick={(e) => { e.stopPropagation(); setPaused((value) => !value) }} className="p-3 rounded-full bg-black/45 text-white"><Icon name={paused ? 'play_arrow' : 'pause'} /></button>
+        <button aria-label="Next slide" onClick={(e) => { e.stopPropagation(); setCurrentIdx((i) => (i + 1) % slides.length) }} className="p-3 rounded-full bg-black/45 text-white"><Icon name="skip_next" /></button>
+      </div>
 
       {selectedVideo && (
         <div

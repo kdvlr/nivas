@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from ..services.kids_daily_service import kids_daily_service
+from ..admin_auth import require_admin
 
 router = APIRouter(prefix="/api/kids-daily", tags=["kids-daily"])
 
@@ -45,7 +46,7 @@ def get_today_content(date: Optional[str] = None):
     }
 
 @router.get("/admin")
-def get_admin_content(date: Optional[str] = None):
+def get_admin_content(date: Optional[str] = None, _: None = Depends(require_admin)):
     """
     Admin endpoint for Setup view (protected behind PIN on frontend).
     Returns full content including answers and parent explanations.
@@ -58,7 +59,7 @@ def get_admin_content(date: Optional[str] = None):
 
 @router.post("/regenerate")
 @router.post("/admin/regenerate")
-def regenerate_content(date: Optional[str] = None):
+def regenerate_content(date: Optional[str] = None, _: None = Depends(require_admin)):
     """
     Force re-generation of today's content with Gemini AI.
     """
@@ -69,11 +70,11 @@ def regenerate_content(date: Optional[str] = None):
     }
 
 @router.get("/settings")
-def get_settings():
+def get_settings(_: None = Depends(require_admin)):
     return kids_daily_service.get_settings()
 
 @router.post("/settings")
-def update_settings(body: SettingsUpdateRequest):
+def update_settings(body: SettingsUpdateRequest, _: None = Depends(require_admin)):
     updates = {}
     if body.force_banner_active is not None:
         updates["force_banner_active"] = body.force_banner_active

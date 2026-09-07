@@ -22,6 +22,14 @@ def _check_missed_chores() -> None:
 
     check_missed_chores()
 
+
+def _scan_photos() -> None:
+    """Controlled, coalesced library scan; photo requests never walk disk."""
+    from .routers.photos import sync_photos_dir_background
+    from .db import SessionLocal
+
+    sync_photos_dir_background(SessionLocal)
+
 scheduler = AsyncIOScheduler()
 
 
@@ -38,12 +46,14 @@ def start() -> None:
     # Re-scan hourly so clips icloudpd adds later get converted too. The worker
     # skips anything already cached, so a repeat pass is cheap.
     scheduler.add_job(_kick_derivatives, "interval", hours=1, id="derivatives", coalesce=True)
+    scheduler.add_job(_scan_photos, "interval", minutes=30, id="photo_index", coalesce=True)
     scheduler.start()
     # kick off an initial pull shortly after boot (staggered)
     for i, job_id in enumerate(("calendar", "icloud", "alexa")):
         scheduler.modify_job(job_id, next_run_time=datetime.now() + timedelta(seconds=5 + i * 10))
     # Start the transcode backfill after the syncs, so first paint isn't slowed.
     scheduler.modify_job("derivatives", next_run_time=datetime.now() + timedelta(seconds=45))
+    scheduler.modify_job("photo_index", next_run_time=datetime.now() + timedelta(seconds=20))
     log.info("scheduler started")
 
 

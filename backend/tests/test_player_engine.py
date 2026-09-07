@@ -54,6 +54,7 @@ def test_build_command_uses_mixed_timing_and_runtime_volume():
     ]
     assert "--control-stdin" in command
     assert command[command.index("--volume") + 1] == "0.4200"
+    assert command[command.index("--render-delay") + 1] == "200"
     assert command[command.index("--ptp-targets") + 1] == "192.168.120.111"
 
 
@@ -81,6 +82,25 @@ def test_single_sonos_uses_verified_ptp_master_and_track_metadata():
     assert command[command.index("--album") + 1] == "Test Album"
     assert command[command.index("--duration") + 1] == "245.0"
     assert command[command.index("--artwork") + 1] == "/tmp/artwork.jpg"
+
+
+def test_airplay_diagnostics_are_exposed_with_render_delay():
+    engine, _, _ = configured_engine()
+    engine._airplay_diagnostics.update(
+        {
+            "packetsSent": 1000,
+            "retransmitRequested": 8,
+            "retransmitFulfilled": 6,
+            "unrecoveredRetransmits": 2,
+            "underruns": 1,
+        }
+    )
+
+    diagnostics = engine.get_state()["airplayDiagnostics"]
+
+    assert diagnostics["renderDelayMs"] == 200
+    assert diagnostics["packetsSent"] == 1000
+    assert diagnostics["unrecoveredRetransmits"] == 2
 
 
 @pytest.mark.asyncio
@@ -394,7 +414,7 @@ async def test_playback_ticker_advances_after_grace_period():
     engine.queue = [{"videoId": "test2", "title": "Track 2"}]
 
     advanced = False
-    async def mock_next_track():
+    async def mock_next_track(*args, **kwargs):
         nonlocal advanced
         advanced = True
 
@@ -411,5 +431,154 @@ async def test_playback_ticker_advances_after_grace_period():
 
     assert advanced is True
 
+
+@pytest.mark.asyncio
+async def test_duplicate_auto_advance_dropped():
+    engine = PlayerEngine()
+    engine.is_playing = True
+    engine.current_track = {"videoId": "test1", "title": "Track 1"}
+    engine.queue = [
+        {"videoId": "test2", "title": "Track 2"},
+        {"videoId": "test3", "title": "Track 3"},
+    ]
+
+    with patch.object(engine, "_orchestrate_playback", AsyncMock()):
+        # First auto-advancement advances to test2
+        await engine.next_track(auto=True)
+        assert engine.current_track["videoId"] == "test2"
+        assert len(engine.queue) == 1
+        assert engine.queue[0]["videoId"] == "test3"
+
+        # Simulate setting _has_advanced_current to True (as would happen during an in-flight auto-advancement)
+        engine._has_advanced_current = True
+        # Second auto-advancement while flag is set is dropped
+        await engine.next_track(auto=True)
+        assert engine.current_track["videoId"] == "test2"
+        assert len(engine.queue) == 1
+        assert engine.queue[0]["videoId"] == "test3"
+
+
+@pytest.mark.asyncio
+async def test_stale_generation_auto_advance_dropped():
+    engine = PlayerEngine()
+    engine.is_playing = True
+    engine._play_generation_id = 5
+    engine.current_track = {"videoId": "test5", "title": "Track 5"}
+    engine.queue = [{"videoId": "test6", "title": "Track 6"}]
+
+    with patch.object(engine, "_orchestrate_playback", AsyncMock()):
+        # Stale trigger from generation 4 must be dropped
+        await engine.next_track(auto=True, from_generation=4)
+        assert engine.current_track["videoId"] == "test5"
+        assert len(engine.queue) == 1
+
+        # Current generation trigger advances
+        await engine.next_track(auto=True, from_generation=5)
+        assert engine.current_track["videoId"] == "test6"
+        assert len(engine.queue) == 0
+
+
+@pytest.mark.asyncio
+async def test_manual_next_track_advances_even_if_auto_flag_set():
+    engine = PlayerEngine()
+    engine.is_playing = True
+    engine.current_track = {"videoId": "test1", "title": "Track 1"}
+    engine.queue = [
+        {"videoId": "test2", "title": "Track 2"},
+        {"videoId": "test3", "title": "Track 3"},
+    ]
+    engine._has_advanced_current = True
+
+    with patch.object(engine, "_orchestrate_playback", AsyncMock()):
+        # Manual skip (auto=False) should not be blocked by _has_advanced_current
+        await engine.next_track(auto=False)
+        assert engine.current_track["videoId"] == "test2"
+        assert len(engine.queue) == 1
+
+
+def test_watch_stream_process_deduplicates_eof_and_exit():
+    import threading
+    engine = PlayerEngine()
+    engine.is_playing = True
+    engine._play_generation_id = 1
+    loop = asyncio.new_event_loop()
+    engine._event_loop = loop
+    t = threading.Thread(target=loop.run_forever, daemon=True)
+    t.start()
+
+    advance_calls = []
+
+    async def mock_next_track(auto=False, from_generation=None):
+        advance_calls.append((auto, from_generation))
+
+    engine.next_track = mock_next_track
+
+    lines = [
+        "Decoder EOF and buffer empty - stopping\n",
+        "Reached end of audio, stopping...\n",
+        "",
+    ]
+    line_iter = iter(lines)
+
+    mock_stdout = SimpleNamespace(readline=lambda: next(line_iter, ""))
+    mock_proc = SimpleNamespace(
+        stdout=mock_stdout,
+        wait=lambda: 0,
+        pid=999,
+    )
+
+    try:
+        engine._watch_stream_process("stream_test", mock_proc, [], None, generation_id=1)
+        time.sleep(0.1)
+    finally:
+        loop.call_soon_threadsafe(loop.stop)
+        t.join(timeout=1)
+        loop.close()
+
+    # Should only advance once despite 2 EOF lines and proc.wait() == 0
+    assert len(advance_calls) == 1
+    assert advance_calls[0] == (True, 1)
+
+
+def test_watch_stream_process_ignores_stale_generation():
+    import threading
+    engine = PlayerEngine()
+    engine.is_playing = True
+    engine._play_generation_id = 2  # Already moved to next generation
+    loop = asyncio.new_event_loop()
+    engine._event_loop = loop
+    t = threading.Thread(target=loop.run_forever, daemon=True)
+    t.start()
+
+    advance_calls = []
+
+    async def mock_next_track(auto=False, from_generation=None):
+        advance_calls.append((auto, from_generation))
+
+    engine.next_track = mock_next_track
+
+    lines = [
+        "Decoder EOF and buffer empty - stopping\n",
+        "",
+    ]
+    line_iter = iter(lines)
+
+    mock_stdout = SimpleNamespace(readline=lambda: next(line_iter, ""))
+    mock_proc = SimpleNamespace(
+        stdout=mock_stdout,
+        wait=lambda: 0,
+        pid=999,
+    )
+
+    try:
+        # Generation 1 is stale compared to engine._play_generation_id == 2
+        engine._watch_stream_process("stream_test", mock_proc, [], None, generation_id=1)
+        time.sleep(0.1)
+    finally:
+        loop.call_soon_threadsafe(loop.stop)
+        t.join(timeout=1)
+        loop.close()
+
+    assert len(advance_calls) == 0
 
 

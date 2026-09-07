@@ -11,6 +11,7 @@ class Settings(BaseSettings):
 
     gemini_api_key: str = ""
     gemini_model: str = "gemini-3.7-flash"
+    google_maps_api_key: str = ""
 
     icloud_username: str = ""
     icloud_password: str = ""
@@ -26,6 +27,11 @@ class Settings(BaseSettings):
 
     # PIN required to open the Setup screen ("" = no PIN). Reset by editing .env.
     setup_pin: str = ""
+
+    # Render timestamps ahead of send time so receivers can repair occasional
+    # UDP loss before audio becomes audible. The Rust client uses the same
+    # 200ms reliability-oriented default.
+    airplay_render_delay_ms: int = 200
 
     @property
     def photos_dir(self) -> Path:

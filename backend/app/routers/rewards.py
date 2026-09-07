@@ -7,6 +7,7 @@ from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
 from ..db import SessionLocal, get_db
+from ..admin_auth import require_admin
 from ..models import CalendarAccount, CalendarSelection, Chore, CoinTransaction, Person, RewardItem, utcnow
 from ..utils import is_due_on
 from ..ws import manager
@@ -144,7 +145,7 @@ def list_store(db: Session = Depends(get_db)):
 
 
 @router.post("/store")
-async def create_store_item(body: StoreItemCreate, db: Session = Depends(get_db)):
+async def create_store_item(body: StoreItemCreate, _: None = Depends(require_admin), db: Session = Depends(get_db)):
     if not body.title.strip():
         raise HTTPException(400, "title required")
     row = RewardItem(
@@ -159,7 +160,7 @@ async def create_store_item(body: StoreItemCreate, db: Session = Depends(get_db)
 
 
 @router.patch("/store/{item_id}")
-async def patch_store_item(item_id: int, body: StoreItemPatch, db: Session = Depends(get_db)):
+async def patch_store_item(item_id: int, body: StoreItemPatch, _: None = Depends(require_admin), db: Session = Depends(get_db)):
     row = db.get(RewardItem, item_id)
     if row is None:
         raise HTTPException(404)
@@ -175,7 +176,7 @@ async def patch_store_item(item_id: int, body: StoreItemPatch, db: Session = Dep
 
 
 @router.delete("/store/{item_id}", status_code=204)
-async def delete_store_item(item_id: int, db: Session = Depends(get_db)):
+async def delete_store_item(item_id: int, _: None = Depends(require_admin), db: Session = Depends(get_db)):
     row = db.get(RewardItem, item_id)
     if row is None:
         raise HTTPException(404)
@@ -225,7 +226,7 @@ async def redeem_reward(body: RedeemRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/adjust")
-async def adjust_balance(body: AdjustRequest, db: Session = Depends(get_db)):
+async def adjust_balance(body: AdjustRequest, _: None = Depends(require_admin), db: Session = Depends(get_db)):
     """Grant or remove coins by hand, recorded in the ledger like any other change."""
     if body.amount == 0:
         raise HTTPException(400, "amount must not be zero")
@@ -247,7 +248,7 @@ async def adjust_balance(body: AdjustRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/reset")
-async def reset_balance(body: ResetRequest, db: Session = Depends(get_db)):
+async def reset_balance(body: ResetRequest, _: None = Depends(require_admin), db: Session = Depends(get_db)):
     """Zero one child's coins, or everyone's when no name is given."""
     if body.person_name:
         person = db.query(Person).filter(Person.name == body.person_name).first()
@@ -363,16 +364,28 @@ def check_missed_chores() -> None:
                 continue
             # Not completed → penalty
             if not chore.completed and chore.assigned_to:
-                txn = CoinTransaction(
-                    person_name=chore.assigned_to,
-                    amount=-chore.coins,
-                    reason="chore_missed",
-                    reference_id=chore.id,
-                    created_at=utcnow(),
+                already_recorded = (
+                    db.query(CoinTransaction.id)
+                    .filter(
+                        CoinTransaction.reason == "chore_missed",
+                        CoinTransaction.reference_id == chore.id,
+                        CoinTransaction.occurrence_date == today_iso,
+                    )
+                    .first()
                 )
-                db.add(txn)
-                penalised = True
-                log.info("Missed chore penalty: %s owes %d coin(s) for '%s'", chore.assigned_to, chore.coins, chore.title)
+                if already_recorded is None:
+                    db.add(
+                        CoinTransaction(
+                            person_name=chore.assigned_to,
+                            amount=-chore.coins,
+                            reason="chore_missed",
+                            reference_id=chore.id,
+                            occurrence_date=today_iso,
+                            created_at=utcnow(),
+                        )
+                    )
+                    penalised = True
+                    log.info("Missed chore penalty: %s owes %d coin(s) for '%s'", chore.assigned_to, chore.coins, chore.title)
 
             # Reset recurring chore for next occurrence
             chore.completed = False

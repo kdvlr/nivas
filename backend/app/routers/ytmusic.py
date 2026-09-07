@@ -1,7 +1,7 @@
 import os
 import logging
 from typing import Optional, List, Any, Dict
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import RedirectResponse, StreamingResponse, FileResponse
 from pydantic import BaseModel
 import httpx
@@ -9,6 +9,7 @@ import httpx
 from ..services.ytmusic import ytmusic_service
 from ..services.player_engine import player_engine
 from ..services.local_music import local_music_service
+from ..admin_auth import require_admin
 
 logger = logging.getLogger(__name__)
 
@@ -65,18 +66,18 @@ class BatchQueueRequest(BaseModel):
     tracks: List[Dict[str, Any]]
 
 @router.get("/auth")
-def get_auth_status():
+def get_auth_status(_: None = Depends(require_admin)):
     return ytmusic_service.get_auth_status()
 
 @router.post("/auth")
-def save_auth(req: AuthRequest):
+def save_auth(req: AuthRequest, _: None = Depends(require_admin)):
     success, error_msg = ytmusic_service.save_auth_headers(req.headers)
     if not success:
         raise HTTPException(status_code=400, detail=error_msg or "Invalid headers or cookie format")
     return ytmusic_service.get_auth_status()
 
 @router.delete("/auth")
-def clear_auth():
+def clear_auth(_: None = Depends(require_admin)):
     ytmusic_service.clear_auth()
     return ytmusic_service.get_auth_status()
 

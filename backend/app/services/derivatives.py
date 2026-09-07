@@ -63,6 +63,13 @@ class BackfillState:
 STATE = BackfillState()
 _worker: threading.Thread | None = None
 _worker_lock = threading.Lock()
+_source_locks: dict[str, threading.Lock] = {}
+_source_locks_guard = threading.Lock()
+
+
+def _source_lock(src: Path) -> threading.Lock:
+    with _source_locks_guard:
+        return _source_locks.setdefault(str(src.resolve()), threading.Lock())
 
 
 def ffmpeg_path() -> str | None:
@@ -100,6 +107,9 @@ def playback_path(src: Path) -> Path:
 
 def _run(cmd: list[str], timeout: int) -> bool:
     try:
+        # Backfill is deliberately a low-priority single-threaded workload so
+        # audio conversion and interactive playback keep CPU and disk headroom.
+        cmd = ["nice", "-n", "10", *cmd[:1], "-threads", "1", *cmd[1:]]
         proc = subprocess.run(
             cmd,
             stdout=subprocess.DEVNULL,
@@ -125,10 +135,11 @@ def make_poster(src: Path) -> Path | None:
     if ff is None:
         return None
     out = poster_path(src)
-    if out.exists():
-        return out
-    tmp = out.with_suffix(".tmp.jpg")
-    ok = _run(
+    with _source_lock(src):
+        if out.exists():
+            return out
+        tmp = out.with_suffix(".tmp.jpg")
+        ok = _run(
         [
             ff, "-y", "-loglevel", "error",
             # a little way in, so we skip black opening frames
@@ -140,9 +151,9 @@ def make_poster(src: Path) -> Path | None:
         ],
         timeout=60,
     )
-    if not ok or not tmp.exists():
+        if not ok or not tmp.exists():
         # Very short clips may have nothing at 0.5s — retry from the first frame.
-        ok = _run(
+            ok = _run(
             [
                 ff, "-y", "-loglevel", "error", "-i", str(src),
                 "-frames:v", "1",
@@ -152,11 +163,11 @@ def make_poster(src: Path) -> Path | None:
             ],
             timeout=60,
         )
-    if ok and tmp.exists():
-        tmp.replace(out)
-        return out
-    tmp.unlink(missing_ok=True)
-    return None
+        if ok and tmp.exists():
+            tmp.replace(out)
+            return out
+        tmp.unlink(missing_ok=True)
+        return None
 
 
 def make_playback(src: Path) -> Path | None:
@@ -165,10 +176,11 @@ def make_playback(src: Path) -> Path | None:
     if ff is None:
         return None
     out = playback_path(src)
-    if out.exists():
-        return out
-    tmp = out.with_suffix(".tmp.mp4")
-    ok = _run(
+    with _source_lock(src):
+        if out.exists():
+            return out
+        tmp = out.with_suffix(".tmp.mp4")
+        ok = _run(
         [
             ff, "-y", "-loglevel", "error",
             "-i", str(src),
@@ -184,11 +196,11 @@ def make_playback(src: Path) -> Path | None:
         ],
         timeout=45 * 60,
     )
-    if ok and tmp.exists() and tmp.stat().st_size > 0:
-        tmp.replace(out)
-        return out
-    tmp.unlink(missing_ok=True)
-    return None
+        if ok and tmp.exists() and tmp.stat().st_size > 0:
+            tmp.replace(out)
+            return out
+        tmp.unlink(missing_ok=True)
+        return None
 
 
 def ensure(src: Path) -> None:
@@ -232,6 +244,12 @@ def _backfill(photos_dir: Path, exts: set[str]) -> None:
             STATE.failed = 0
         log.info("derivative backfill: %d videos", len(videos))
         for src in videos:
+            # Don't compete with active AirPlay. Resume on the next controlled
+            # backfill invocation instead of forcing media work through it.
+            from .player_engine import player_engine
+            if player_engine.is_playing:
+                log.info("derivative backfill deferred while AirPlay is active")
+                break
             with STATE.lock:
                 STATE.current = src.name
             try:

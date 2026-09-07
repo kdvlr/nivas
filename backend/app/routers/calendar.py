@@ -1,17 +1,19 @@
 import os
 import asyncio
+import hmac
 import json
 import logging
 
 os.environ["OAUTHLIB_RELAX_TOKEN_SCOPE"] = "1"
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Response
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from googleapiclient.discovery import build
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 
 from .. import sync_status
+from ..admin_auth import require_admin
 from ..db import get_db
 from ..integrations import google_calendar as gcal
 from ..models import CalendarAccount, CalendarEvent, CalendarSelection, Person
@@ -94,11 +96,12 @@ def status(db: Session = Depends(get_db)):
 
 
 @router.get("/auth/start")
-def auth_start(response: Response):
+def auth_start(request: Request, _: None = Depends(require_admin)):
     if not gcal.client_config_available():
         raise HTTPException(400, "Google client secret not installed — see Setup instructions")
     flow = gcal.make_flow()
     url, state = flow.authorization_url(access_type="offline", prompt="consent")
+    response = RedirectResponse(url)
     response.set_cookie(
         key="oauth_state",
         value=state,
@@ -106,13 +109,18 @@ def auth_start(response: Response):
         max_age=300,
         samesite="lax",
     )
-    return RedirectResponse(url)
+    return response
 
 
 @router.get("/auth/callback")
-def auth_callback(code: str, state: str, oauth_state: str | None = Cookie(default=None), db: Session = Depends(get_db)):
-    # Relax CSRF check if state cookie is missing (e.g. due to HTTPS proxy/Safari Lax cookie stripping), but enforce if present
-    if oauth_state and state != oauth_state:
+def auth_callback(
+    code: str,
+    state: str,
+    oauth_state: str | None = Cookie(default=None),
+    _: None = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    if not oauth_state or not hmac.compare_digest(state, oauth_state):
         raise HTTPException(400, "Invalid OAuth state. Potential CSRF protection trigger.")
     flow = gcal.make_flow(state=state)
     flow.fetch_token(code=code)
@@ -172,7 +180,7 @@ def auth_callback(code: str, state: str, oauth_state: str | None = Cookie(defaul
 
 
 @router.delete("/accounts/{account_id}")
-def delete_account(account_id: int, db: Session = Depends(get_db)):
+def delete_account(account_id: int, _: None = Depends(require_admin), db: Session = Depends(get_db)):
     account = db.get(CalendarAccount, account_id)
     if account is None:
         raise HTTPException(404)
@@ -182,7 +190,7 @@ def delete_account(account_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/selections")
-async def update_selections(updates: list[SelectionUpdate], db: Session = Depends(get_db)):
+async def update_selections(updates: list[SelectionUpdate], _: None = Depends(require_admin), db: Session = Depends(get_db)):
     for u in updates:
         sel = db.get(CalendarSelection, u.id)
         if sel is None:
@@ -228,7 +236,7 @@ def events(start: str, end: str, db: Session = Depends(get_db)):
 
 
 @router.post("/events")
-async def create_event(body: EventCreate, db: Session = Depends(get_db)):
+async def create_event(body: EventCreate, _: None = Depends(require_admin), db: Session = Depends(get_db)):
     sel = db.get(CalendarSelection, body.selection_id)
     if sel is None:
         raise HTTPException(404, "calendar not found")
@@ -251,7 +259,7 @@ async def create_event(body: EventCreate, db: Session = Depends(get_db)):
 
 
 @router.patch("/events/{event_id}")
-async def update_event(event_id: int, body: EventUpdate, db: Session = Depends(get_db)):
+async def update_event(event_id: int, body: EventUpdate, _: None = Depends(require_admin), db: Session = Depends(get_db)):
     row = db.get(CalendarEvent, event_id)
     if row is None:
         raise HTTPException(404)
@@ -274,7 +282,7 @@ async def update_event(event_id: int, body: EventUpdate, db: Session = Depends(g
 
 
 @router.delete("/events/{event_id}")
-async def delete_event(event_id: int, db: Session = Depends(get_db)):
+async def delete_event(event_id: int, _: None = Depends(require_admin), db: Session = Depends(get_db)):
     row = db.get(CalendarEvent, event_id)
     if row is None:
         raise HTTPException(404)
@@ -288,6 +296,6 @@ async def delete_event(event_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/sync")
-async def manual_sync():
+async def manual_sync(_: None = Depends(require_admin)):
     await sync.job_calendar()
     return {"ok": True}
