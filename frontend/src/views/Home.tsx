@@ -137,42 +137,12 @@ function computeAxis(timed: PlacedEvent[]): { start: number; end: number } {
   return { start, end }
 }
 
-const TITLE_FONTS = [
-  { name: 'Mrs Saint Delafield (Ultra Wide)', family: "'Mrs Saint Delafield', cursive" },
-  { name: 'Italianno (Wide Script)', family: "'Italianno', cursive" },
-  { name: 'MonteCarlo (Wide Calligraphy)', family: "'MonteCarlo', cursive" },
-  { name: 'Marck Script (Expansive Script)', family: "'Marck Script', cursive" },
-  { name: 'Bodoni Moda (Luxury Vogue)', family: "'Bodoni Moda', serif" },
-  { name: 'Cormorant Garamond (Regal Renaissance)', family: "'Cormorant Garamond', serif" },
-  { name: 'Poiret One (Sleek Art Deco)', family: "'Poiret One', cursive" },
-  { name: 'Yeseva One (Curvaceous Editorial)', family: "'Yeseva One', serif" },
-  { name: 'Syne (Avant-Garde Nordic)', family: "'Syne', sans-serif" },
-  { name: 'Righteous (Retro Modern Geometric)', family: "'Righteous', cursive" },
-  { name: 'Abril Fatface (Dramatic Display)', family: "'Abril Fatface', serif" },
-  { name: 'Berkshire Swash (Charming Swash)', family: "'Berkshire Swash', cursive" },
-  { name: 'Allura (Flowing Signature)', family: "'Allura', cursive" },
-  { name: 'Tangerine (Graceful Tall Script)', family: "'Tangerine', cursive" },
-  { name: 'Yellowtail (Wide Brush)', family: "'Yellowtail', cursive" },
-  { name: 'Great Vibes', family: "'Great Vibes', cursive" },
-  { name: 'Alex Brush', family: "'Alex Brush', cursive" },
-  { name: 'Pinyon Script', family: "'Pinyon Script', cursive" },
-  { name: 'Sacramento', family: "'Sacramento', cursive" },
-  { name: 'Pacifico', family: "'Pacifico', cursive" },
-  { name: 'Dancing Script', family: "'Dancing Script', cursive" },
-  { name: 'Satisfy', family: "'Satisfy', cursive" },
-  { name: 'Cinzel Decorative', family: "'Cinzel Decorative', serif" },
-  { name: 'Playfair Display', family: "'Playfair Display', serif" },
-  { name: 'Caveat', family: "'Caveat', cursive" },
-]
+const FAMILY_TITLE_FONT = "'Petit Formal Script', cursive"
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'all' | 'schedule' | 'tasks' | 'chores' | 'shopping'>('all')
   const [completingIds, setCompletingIds] = useState<string[]>([])
   const [removedIds, setRemovedIds] = useState<string[]>([])
-  const [fontIdx, setFontIdx] = useState(() => {
-    const saved = localStorage.getItem('davuluri_title_font')
-    return saved ? Math.max(0, TITLE_FONTS.findIndex(f => f.name === saved)) : 0
-  })
   const [selectedEvent, setSelectedEvent] = useState<CalEvent | null>(null)
   const [weatherOpen, setWeatherOpen] = useState(false)
   const [kidsHubOpen, setKidsHubOpen] = useState(false)
@@ -414,17 +384,11 @@ export default function Home() {
 
       <button
         onClick={() => setKidsHubOpen((prev) => !prev)}
-        onContextMenu={(e) => {
-          e.preventDefault()
-          const next = (fontIdx + 1) % TITLE_FONTS.length
-          setFontIdx(next)
-          localStorage.setItem('davuluri_title_font', TITLE_FONTS[next].name)
-        }}
         aria-label="Toggle Kids Brain Nuggets"
         className="flex-1 text-center px-2 min-w-0 truncate cursor-pointer transition-transform active:scale-95 group/title focus:outline-none"
       >
         <span
-          style={{ fontFamily: TITLE_FONTS[fontIdx].family }}
+          style={{ fontFamily: FAMILY_TITLE_FONT }}
           className="text-2xl sm:text-3xl lg:text-5xl font-normal text-[var(--primary)] tracking-wide select-none drop-shadow-sm inline-block leading-tight group-hover/title:text-ink transition-colors"
         >
           The Davuluri Family
