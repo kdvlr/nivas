@@ -14,12 +14,13 @@ interface Props {
   onPrevious: () => void
   onMute: () => void
   onDismiss: () => void
+  onPlayNext?: (index: number) => void
 }
 
 const formatTime = (seconds = 0) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`
 const artwork = (url?: string) => url?.replace(/=w\d+-h\d+[^?&]*/, '=w1200-h1200-l90-rj').replace(/=s\d+[^?&]*/, '=s1200')
 
-export default function MusicNowPlayingScreen({ currentTrack, queue, isPlaying, elapsedSeconds, durationSeconds, onTogglePlay, onNext, onPrevious, onMute, onDismiss }: Props) {
+export default function MusicNowPlayingScreen({ currentTrack, queue, isPlaying, elapsedSeconds, durationSeconds, onTogglePlay, onNext, onPrevious, onMute, onDismiss, onPlayNext }: Props) {
   const duration = durationSeconds || currentTrack.duration || 0
   return (
     <div className="fixed inset-0 z-[120] grid bg-[var(--surface)] text-ink xl:grid-cols-[1.12fr_0.88fr]" onPointerDown={onDismiss}>
@@ -49,7 +50,7 @@ export default function MusicNowPlayingScreen({ currentTrack, queue, isPlaying, 
         <div className="mt-10 min-h-0 flex-1 overflow-hidden border-t border-[var(--outline-var)] pt-5">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-soft">Up next</h2>
           <div className="max-h-full overflow-y-auto">
-            {queue.slice(0, 8).map((track) => (
+            {queue.slice(0, 8).map((track, index) => (
               <div key={track.videoId} className="flex items-center gap-3 border-b border-[var(--outline-var)]/30 py-3">
                 {track.thumbnail && <img src={track.thumbnail} alt="" className="h-12 w-12 rounded-xl object-cover shrink-0" />}
                 <div className="min-w-0 flex-1">
@@ -59,6 +60,17 @@ export default function MusicNowPlayingScreen({ currentTrack, queue, isPlaying, 
                   </div>
                   <p className="truncate text-sm text-ink-soft">{track.artist}</p>
                 </div>
+                {onPlayNext && (
+                  <button
+                    disabled={index === 0}
+                    onClick={() => onPlayNext(index)}
+                    aria-label={`Play ${track.title} next`}
+                    title={index === 0 ? 'Already playing next' : 'Play next (move to top of queue)'}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-soft hover:text-[var(--primary)] hover:bg-[var(--sc-high)] disabled:opacity-20 disabled:pointer-events-none cursor-pointer transition"
+                  >
+                    <Icon name="arrow_upward" className="text-xl" />
+                  </button>
+                )}
               </div>
             ))}
           </div>

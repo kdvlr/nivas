@@ -362,6 +362,16 @@ export default function YTMusicView({
     onQueueChange(nextQueue)
   }
 
+  const moveQueueTrackToTop = (index: number) => {
+    if (index <= 0 || index >= editableQueue.length) return
+    const nextQueue = [...editableQueue]
+    const [movedTrack] = nextQueue.splice(index, 1)
+    nextQueue.unshift(movedTrack)
+    editableQueueRef.current = nextQueue
+    setEditableQueue(nextQueue)
+    onQueueChange(nextQueue)
+  }
+
   // Load Local Library (/Media/Music)
   const loadLocalLibrary = useCallback(async (artistFilter?: string | null, genreFilter?: string | null) => {
     try {
@@ -2151,6 +2161,18 @@ export default function YTMusicView({
                             onPlay={() => onPlayTrack(track, editableQueue.slice(index + 1))}
                           />
                         </div>
+                        <button
+                          disabled={index === 0}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            moveQueueTrackToTop(index)
+                          }}
+                          aria-label={`Play ${track.title} next`}
+                          title={index === 0 ? 'Already playing next' : 'Play next (move to top of queue)'}
+                          className="flex h-[4.5rem] w-10 shrink-0 items-center justify-center text-ink-soft hover:text-[var(--primary)] disabled:opacity-20 disabled:pointer-events-none cursor-pointer transition"
+                        >
+                          <Icon name="arrow_upward" className="text-xl" />
+                        </button>
                         <button
                           onClick={() => removeQueueTrack(index)}
                           aria-label={`Remove ${track.title} from queue`}
