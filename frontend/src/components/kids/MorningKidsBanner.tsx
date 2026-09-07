@@ -68,11 +68,6 @@ export default function MorningKidsBanner({
         (!manuallyDismissed && !isDismissedToday && (isForceActive || data.is_active_window)))
   )
 
-  const sendFeedback = (section: string, rating: string) => {
-    if (!data?.date) return
-    api.post('/api/kids-daily/feedback', { date: data.date, section, rating }).catch(() => {})
-  }
-
   const handleDismiss = () => {
     setManuallyDismissed(true)
     if (data?.date) {
@@ -422,11 +417,6 @@ export default function MorningKidsBanner({
                   {data.fun_fact.did_you_know}
                 </div>
               )}
-              <div className="mt-2 flex gap-1 text-[10px] text-ink-soft" aria-label="Rate this fun fact">
-                {['too_easy', 'right_level', 'too_hard', 'loved_it'].map((rating) => (
-                  <button key={rating} onClick={() => sendFeedback('fun_fact', rating)} className="rounded px-1.5 py-0.5 hover:bg-emerald-500/15" aria-label={`Fun fact: ${rating.replace('_', ' ')}`}>{rating === 'loved_it' ? '♥' : rating.replace('_', ' ')}</button>
-                ))}
-              </div>
             </section>
 
             {/* Card 3: both challenges share one full-height column. */}

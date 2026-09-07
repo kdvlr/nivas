@@ -1061,18 +1061,30 @@ function SetupInner() {
 
 function PinFailPreviewCard() {
   const [fail, setFail] = useState<PinFailAnimation | null>(null)
+  const groups = [
+    { label: 'Original favorites', animations: PIN_FAIL_ANIMATIONS.filter((animation) => !animation.collection) },
+    { label: 'Adventure themes', animations: PIN_FAIL_ANIMATIONS.filter((animation) => animation.collection === 'adventure') },
+    { label: 'Sparkle themes', animations: PIN_FAIL_ANIMATIONS.filter((animation) => animation.collection === 'sparkle') },
+  ]
 
   return (
     <Card title={<><Icon name="gpp_bad" /> Wrong-PIN preview</>}>
       <p className="mb-2 text-sm text-ink-soft">
         One of these {PIN_FAIL_ANIMATIONS.length} plays when someone enters the wrong Setup PIN.
-        Tap to try.
+        Every animation is available to every child. Tap to try.
       </p>
-      <div className="flex flex-wrap gap-2">
-        {PIN_FAIL_ANIMATIONS.map((a) => (
-          <button key={a.name} onClick={() => setFail(a)} className="btn-glass px-4 py-2 text-sm">
-            {a.emoji} {a.label}
-          </button>
+      <div className="space-y-3">
+        {groups.map((group) => (
+          <section key={group.label}>
+            <h3 className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-soft">{group.label}</h3>
+            <div className="flex flex-wrap gap-2">
+              {group.animations.map((a) => (
+                <button key={a.name} onClick={() => setFail(a)} className="btn-glass px-4 py-2 text-sm">
+                  {a.emoji} {a.label}
+                </button>
+              ))}
+            </div>
+          </section>
         ))}
         <button
           onClick={() => setFail(PIN_FAIL_ANIMATIONS[Math.floor(Math.random() * PIN_FAIL_ANIMATIONS.length)])}
@@ -2058,4 +2070,3 @@ function KioskScheduleCard() {
     </Card>
   )
 }
-

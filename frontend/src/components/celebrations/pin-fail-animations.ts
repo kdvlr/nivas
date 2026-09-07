@@ -11,12 +11,34 @@ export type PinFailName =
   | 'wall'
   | 'ninjas'
   | 'vault'
+  | 'rocket'
+  | 'trex'
+  | 'race'
+  | 'pirates'
+  | 'soccer'
+  | 'dragon'
+  | 'arcade'
+  | 'builder'
+  | 'heroes'
+  | 'submarine'
+  | 'unicorn'
+  | 'mermaid'
+  | 'butterflies'
+  | 'rainbow'
+  | 'castle'
+  | 'dance'
+  | 'skates'
+  | 'garden'
+  | 'kittens'
+  | 'bakery'
 
 export interface PinFailAnimation {
   name: PinFailName
   /** emoji + short label for the Setup preview picker */
   emoji: string
   label: string
+  /** Preview grouping only; every animation remains available to every child. */
+  collection?: 'adventure' | 'sparkle'
   backdrop: string
   taunts: string[]
   run: (canvas: HTMLCanvasElement) => () => void
@@ -602,6 +624,109 @@ const vaultRun = (canvas: HTMLCanvasElement) => {
   })
 }
 
+/* -------------------------------- themed extras ------------------------- */
+
+type ThemeMotion = 'launch' | 'stomp' | 'dash' | 'sail' | 'orbit' | 'swim' | 'float' | 'rain' | 'dance'
+
+interface ThemeRunOptions {
+  main: string
+  accents: string[]
+  motion: ThemeMotion
+  colors: [string, string]
+  stamp: string
+}
+
+/**
+ * A lightweight scene maker for the extra wrong-PIN moments. Keeping these
+ * emoji-based means they work offline and do not add images or download work
+ * to the PIN screen.
+ */
+const themedRun = ({ main, accents, motion, colors, stamp }: ThemeRunOptions) => (canvas: HTMLCanvasElement) => {
+  const ctx = fit(canvas)
+  const W = canvas.width
+  const H = canvas.height
+  const motes = Array.from({ length: 20 }, (_, index) => ({
+    x: rand(0, W), y: rand(0, H), size: rand(20, 52), phase: index * 0.71,
+  }))
+
+  return loop((_dt, t) => {
+    const gradient = ctx.createLinearGradient(0, 0, W, H)
+    gradient.addColorStop(0, colors[0])
+    gradient.addColorStop(1, colors[1])
+    ctx.fillStyle = gradient
+    ctx.fillRect(0, 0, W, H)
+
+    // Floating background pieces give every scene depth and motion.
+    motes.forEach((m, index) => {
+      const drift = Math.sin(t * 1.5 + m.phase) * 28
+      const y = motion === 'rain'
+        ? ((m.y + t * (80 + index * 8)) % (H + 80)) - 40
+        : m.y + Math.cos(t * 1.2 + m.phase) * 18
+      ctx.globalAlpha = 0.3 + (index % 3) * 0.15
+      emoji(ctx, accents[index % accents.length], m.x + drift, y, m.size, t * 0.45 + m.phase)
+    })
+    ctx.globalAlpha = 1
+
+    let x = W / 2
+    let y = H * 0.58
+    let rotation = 0
+    let scale = 1
+    if (motion === 'launch') {
+      y = H * 1.08 - ((t * H * 0.52) % (H * 1.3))
+      rotation = -0.42
+    } else if (motion === 'stomp') {
+      y = H * 0.65 + Math.abs(Math.sin(t * 3.8)) * 26
+      scale = 1 + Math.abs(Math.sin(t * 3.8)) * 0.16
+    } else if (motion === 'dash') {
+      x = ((t * W * 0.55) % (W + 260)) - 130
+      y = H * 0.66 + Math.sin(t * 7) * 15
+    } else if (motion === 'sail') {
+      x = W * 0.5 + Math.sin(t * 1.25) * W * 0.27
+      y = H * 0.64 + Math.sin(t * 3) * 24
+      rotation = Math.sin(t * 2.8) * 0.1
+    } else if (motion === 'orbit') {
+      x = W / 2 + Math.cos(t * 2.1) * W * 0.18
+      y = H * 0.54 + Math.sin(t * 2.1) * H * 0.16
+      rotation = t * 0.6
+    } else if (motion === 'swim' || motion === 'float') {
+      x = W / 2 + Math.sin(t * 1.55) * W * 0.28
+      y = H * 0.56 + Math.cos(t * 3.1) * 30
+      rotation = Math.sin(t * 2.2) * 0.12
+    } else if (motion === 'dance') {
+      x = W / 2 + Math.sin(t * 5.5) * W * 0.16
+      y = H * 0.56 + Math.abs(Math.sin(t * 5.5)) * 28
+      rotation = Math.sin(t * 5.5) * 0.18
+      scale = 0.95 + Math.abs(Math.sin(t * 5.5)) * 0.12
+    }
+
+    ctx.save()
+    ctx.translate(x, y)
+    ctx.scale(scale, scale)
+    emoji(ctx, main, 0, 0, Math.min(W * 0.32, 190), rotation)
+    ctx.restore()
+
+    // A quick, tactile "blocked" stamp makes the result clear without
+    // relying on the spoken taunt alone.
+    const pulse = 1 + Math.sin(t * 5) * 0.04
+    ctx.save()
+    ctx.translate(W / 2, H * 0.84)
+    ctx.scale(pulse, pulse)
+    ctx.fillStyle = 'rgba(255,255,255,0.9)'
+    ctx.strokeStyle = 'rgba(15,23,42,0.72)'
+    ctx.lineWidth = 3
+    ctx.beginPath()
+    ctx.roundRect(-92, -27, 184, 54, 22)
+    ctx.fill()
+    ctx.stroke()
+    ctx.fillStyle = '#172033'
+    ctx.font = '900 21px system-ui, sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(stamp, 0, 1)
+    ctx.restore()
+  })
+}
+
 /* ------------------------------------------------ registry --------------- */
 
 export const PIN_FAIL_ANIMATIONS: PinFailAnimation[] = [
@@ -684,5 +809,105 @@ export const PIN_FAIL_ANIMATIONS: PinFailAnimation[] = [
     backdrop: 'rgba(18, 16, 10, 0.88)',
     taunts: ['Vault sealed tight!', 'This safe stays shut!'],
     run: vaultRun,
+  },
+  {
+    name: 'rocket', emoji: '🚀', label: 'Rocket launch', collection: 'adventure', backdrop: '#071a38',
+    taunts: ['Wrong launch code!', 'Mission control says try again!'],
+    run: themedRun({ main: '🚀', accents: ['⭐', '🌙', '🪐'], motion: 'launch', colors: ['#071a38', '#4c1d95'], stamp: 'CODE BLOCKED' }),
+  },
+  {
+    name: 'trex', emoji: '🦖', label: 'Dino stomp', collection: 'adventure', backdrop: '#183620',
+    taunts: ['RAWR! That PIN is extinct!', 'The dino needs a different number!'],
+    run: themedRun({ main: '🦖', accents: ['🌿', '🦕', '🍃'], motion: 'stomp', colors: ['#183620', '#496b1f'], stamp: 'DINO SAYS NO' }),
+  },
+  {
+    name: 'race', emoji: '🏎️', label: 'Race car', collection: 'adventure', backdrop: '#321016',
+    taunts: ['Red flag! Wrong number!', 'Pit stop — try that again!'],
+    run: themedRun({ main: '🏎️', accents: ['🏁', '💨', '🛞'], motion: 'dash', colors: ['#321016', '#9f1d28'], stamp: 'RED FLAG!' }),
+  },
+  {
+    name: 'pirates', emoji: '🏴‍☠️', label: 'Pirate ship', collection: 'adventure', backdrop: '#092e45',
+    taunts: ['Arrr, that is not the treasure code!', 'The captain says try again!'],
+    run: themedRun({ main: '🏴‍☠️', accents: ['🌊', '⚓', '🪙'], motion: 'sail', colors: ['#092e45', '#0e7490'], stamp: 'TREASURE LOCKED' }),
+  },
+  {
+    name: 'soccer', emoji: '⚽', label: 'Goalie save', collection: 'adventure', backdrop: '#12351e',
+    taunts: ['Saved by the goalie!', 'No goal — give it another try!'],
+    run: themedRun({ main: '🧤', accents: ['⚽', '🥅', '💨'], motion: 'dash', colors: ['#12351e', '#28783b'], stamp: 'SAVED!' }),
+  },
+  {
+    name: 'dragon', emoji: '🐉', label: 'Dragon guard', collection: 'adventure', backdrop: '#2d123f',
+    taunts: ['The dragon guards this PIN!', 'Nope — dragon fire says no!'],
+    run: themedRun({ main: '🐉', accents: ['🔥', '✨', '🏰'], motion: 'orbit', colors: ['#2d123f', '#8a2335'], stamp: 'DRAGON GUARD' }),
+  },
+  {
+    name: 'arcade', emoji: '🕹️', label: 'Arcade game', collection: 'adventure', backdrop: '#150b34',
+    taunts: ['Game over — wrong combo!', 'Level locked. Try again!'],
+    run: themedRun({ main: '👾', accents: ['🕹️', '🔷', '⚡'], motion: 'orbit', colors: ['#150b34', '#312e81'], stamp: 'GAME OVER' }),
+  },
+  {
+    name: 'builder', emoji: '🚜', label: 'Construction zone', collection: 'adventure', backdrop: '#3d2807',
+    taunts: ['Road closed!', 'This code needs rebuilding!'],
+    run: themedRun({ main: '🚜', accents: ['🚧', '🧱', '🔩'], motion: 'dash', colors: ['#3d2807', '#a16207'], stamp: 'ROAD CLOSED' }),
+  },
+  {
+    name: 'heroes', emoji: '🦸', label: 'Hero shield', collection: 'adventure', backdrop: '#172554',
+    taunts: ['Shield up! Wrong PIN blocked!', 'Hero headquarters stays safe!'],
+    run: themedRun({ main: '🦸', accents: ['🛡️', '💥', '⭐'], motion: 'launch', colors: ['#172554', '#1d4ed8'], stamp: 'SHIELD UP!' }),
+  },
+  {
+    name: 'submarine', emoji: '🚤', label: 'Sea patrol', collection: 'adventure', backdrop: '#042f4b',
+    taunts: ['The sea patrol spotted a wrong PIN!', 'Dive back and try again!'],
+    run: themedRun({ main: '🚤', accents: ['🐟', '🫧', '🐙'], motion: 'swim', colors: ['#042f4b', '#0369a1'], stamp: 'PATROL SAYS NO' }),
+  },
+  {
+    name: 'unicorn', emoji: '🦄', label: 'Unicorn sparkle', collection: 'sparkle', backdrop: '#491557',
+    taunts: ['That number is not magical yet!', 'Sparkles say: try again!'],
+    run: themedRun({ main: '🦄', accents: ['✨', '⭐', '💖'], motion: 'float', colors: ['#491557', '#be185d'], stamp: 'MAGIC MISSED' }),
+  },
+  {
+    name: 'mermaid', emoji: '🧜‍♀️', label: 'Mermaid splash', collection: 'sparkle', backdrop: '#083344',
+    taunts: ['Splash! That PIN sank!', 'The mermaid says try again!'],
+    run: themedRun({ main: '🧜‍♀️', accents: ['🫧', '🐚', '🐠'], motion: 'swim', colors: ['#083344', '#0f766e'], stamp: 'SPLASH! NOPE' }),
+  },
+  {
+    name: 'butterflies', emoji: '🦋', label: 'Butterfly flutter', collection: 'sparkle', backdrop: '#312e81',
+    taunts: ['Flutter back and try again!', 'Those numbers flew away!'],
+    run: themedRun({ main: '🦋', accents: ['🌸', '🌼', '✨'], motion: 'float', colors: ['#312e81', '#7e22ce'], stamp: 'FLUTTER AGAIN' }),
+  },
+  {
+    name: 'rainbow', emoji: '🌈', label: 'Rainbow bounce', collection: 'sparkle', backdrop: '#4a1648',
+    taunts: ['Not quite over the rainbow!', 'Try another colorful combo!'],
+    run: themedRun({ main: '🌈', accents: ['☁️', '💖', '✨'], motion: 'dance', colors: ['#4a1648', '#9d174d'], stamp: 'TRY AGAIN!' }),
+  },
+  {
+    name: 'castle', emoji: '🏰', label: 'Castle gate', collection: 'sparkle', backdrop: '#25144f',
+    taunts: ['The castle gate stays shut!', 'A different PIN opens this kingdom!'],
+    run: themedRun({ main: '🏰', accents: ['👑', '✨', '🦋'], motion: 'float', colors: ['#25144f', '#6d28d9'], stamp: 'GATE CLOSED' }),
+  },
+  {
+    name: 'dance', emoji: '💃', label: 'Dance party', collection: 'sparkle', backdrop: '#4a1148',
+    taunts: ['Oops! Dance break — try again!', 'That PIN missed the beat!'],
+    run: themedRun({ main: '💃', accents: ['🎵', '🪩', '✨'], motion: 'dance', colors: ['#4a1148', '#be185d'], stamp: 'MISSED THE BEAT' }),
+  },
+  {
+    name: 'skates', emoji: '🛼', label: 'Roller skate', collection: 'sparkle', backdrop: '#4c1d3d',
+    taunts: ['Whoops, wrong number — roll back!', 'That PIN slipped away!'],
+    run: themedRun({ main: '🛼', accents: ['💖', '⭐', '🌈'], motion: 'dash', colors: ['#4c1d3d', '#db2777'], stamp: 'ROLL AGAIN' }),
+  },
+  {
+    name: 'garden', emoji: '🌻', label: 'Garden bloom', collection: 'sparkle', backdrop: '#24451f',
+    taunts: ['That PIN has not bloomed!', 'Water it with another try!'],
+    run: themedRun({ main: '🌻', accents: ['🌷', '🐝', '🌸'], motion: 'rain', colors: ['#24451f', '#4d7c0f'], stamp: 'NOT BLOOMING' }),
+  },
+  {
+    name: 'kittens', emoji: '🐱', label: 'Kitten pounce', collection: 'sparkle', backdrop: '#4a2b24',
+    taunts: ['Meow! That was not it!', 'The kitten wants another try!'],
+    run: themedRun({ main: '🐱', accents: ['🐾', '💗', '🧶'], motion: 'stomp', colors: ['#4a2b24', '#9f4b3a'], stamp: 'MEOW! NOPE' }),
+  },
+  {
+    name: 'bakery', emoji: '🧁', label: 'Cupcake sprinkle', collection: 'sparkle', backdrop: '#55263a',
+    taunts: ['That recipe needs a different PIN!', 'Sprinkle in another try!'],
+    run: themedRun({ main: '🧁', accents: ['🍓', '✨', '🍬'], motion: 'rain', colors: ['#55263a', '#be456e'], stamp: 'RECIPE RETRY' }),
   },
 ]
