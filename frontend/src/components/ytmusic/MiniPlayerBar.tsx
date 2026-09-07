@@ -161,13 +161,13 @@ export default function MiniPlayerBar({
           {/* AirPlay Button */}
           <button
             ref={airPlayButtonRef}
-            onClick={() => setShowAirPlayModal(true)}
+            onClick={() => setShowAirPlayModal((open) => !open)}
             className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition border shadow-sm active:scale-95 cursor-pointer ${
               activeAirPlayCount > 0
                 ? 'bg-[var(--primary-container)] text-[var(--on-primary-container)] border-[var(--primary)]/40'
                 : 'bg-[var(--sc)] hover:bg-[var(--sc-high)] text-ink border-[var(--outline-var)]'
             }`}
-            title="AirPlay audio output"
+            title={showAirPlayModal ? 'Close AirPlay speakers' : 'AirPlay audio output'}
           >
             <Icon name="airplay" className="text-sm shrink-0" />
             <span className="text-xs font-semibold">AirPlay</span>

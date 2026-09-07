@@ -316,14 +316,34 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
                 : 'w-[23rem]'
             }`}
           >
+            {showHidden && (
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close AirPlay speakers"
+                title="Close"
+                className="absolute right-2 top-2 z-10 flex h-9 w-9 items-center justify-center rounded-xl text-ink-soft transition hover:bg-[var(--sc-high)] hover:text-ink"
+              >
+                <Icon name="close" className="text-xl" />
+              </button>
+            )}
             {!showHidden && (
-              <div className="mb-2 border-b border-[var(--outline-var)] px-1 pb-2">
+              <div className="mb-2 flex items-center gap-2 border-b border-[var(--outline-var)] px-1 pb-2">
                 <VolumeCapsuleScrubber
                   value={masterVolume}
                   onChange={handleGroupVolumeChange}
                   onChangeEnd={handleGroupVolumeCommit}
                   label="All Speakers"
                 />
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label="Close AirPlay speakers"
+                  title="Close"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-ink-soft transition hover:bg-[var(--sc-high)] hover:text-ink"
+                >
+                  <Icon name="close" className="text-xl" />
+                </button>
               </div>
             )}
             <div className="flex max-h-[min(31rem,calc(100vh-7rem))] flex-col gap-1.5 overflow-y-auto overscroll-contain">

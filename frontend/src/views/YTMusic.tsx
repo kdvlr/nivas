@@ -985,38 +985,38 @@ export default function YTMusicView({
   }
 
   return (
-    <div className={`text-ink flex flex-col px-4 lg:px-8 pb-4 lg:pb-6 ${browseIsOpen ? 'min-h-full' : 'h-full flex-1 min-h-0 overflow-hidden'}`}>
+    <div className={`text-ink flex min-w-0 max-w-full flex-col overflow-x-hidden px-3 sm:px-4 lg:px-8 pb-4 lg:pb-6 ${browseIsOpen ? 'min-h-full' : 'h-full flex-1 min-h-0 overflow-hidden'}`}>
       {/* Top Header */}
-      <header className="flex shrink-0 items-center justify-between gap-3 mb-3 lg:mb-4">
-        <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
-          <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink mr-1 shrink-0">Music</h1>
-          <div className="flex shrink-0 rounded-full bg-[var(--sc)] border border-[var(--outline-var)] p-1">
+      <header className="flex shrink-0 items-center justify-between gap-2 mb-3 lg:mb-4">
+        <div className="flex min-w-0 flex-1 items-center gap-2 md:gap-4">
+          <h1 className="hidden text-2xl font-semibold tracking-tight text-ink sm:block lg:text-3xl mr-1 shrink-0">Music</h1>
+          <div className="flex min-w-0 max-w-full flex-1 overflow-x-auto rounded-full bg-[var(--sc)] border border-[var(--outline-var)] p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <button
               onClick={() => syncUrlSubView('browse', '')}
-              className={`flex h-9 md:h-11 items-center gap-1.5 md:gap-2 rounded-full px-3 md:px-4 text-xs md:text-sm font-semibold transition cursor-pointer ${
+              className={`flex h-9 shrink-0 items-center gap-1 md:h-11 md:gap-2 rounded-full px-2.5 sm:px-3 md:px-4 text-xs md:text-sm font-semibold transition cursor-pointer ${
                 activeView === 'browse' && !searchIsOpen ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-sm' : 'text-ink-soft hover:text-ink'
               }`}
             >
               <Icon name="explore" className="text-lg md:text-xl" />
-              Browse
+              <span>Browse</span>
             </button>
             <button
               onClick={() => syncUrlSubView('local', '')}
-              className={`flex h-9 md:h-11 items-center gap-1.5 md:gap-2 rounded-full px-3 md:px-4 text-xs md:text-sm font-semibold transition cursor-pointer ${
+              className={`flex h-9 shrink-0 items-center gap-1 md:h-11 md:gap-2 rounded-full px-2.5 sm:px-3 md:px-4 text-xs md:text-sm font-semibold transition cursor-pointer ${
                 activeView === 'local' && !searchIsOpen ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-sm' : 'text-ink-soft hover:text-ink'
               }`}
             >
               <MusicSourceIcon source="local" size={15} />
-              <span className="whitespace-nowrap">Local Library</span>
+              <span className="whitespace-nowrap"><span className="hidden sm:inline">Local </span>Library</span>
             </button>
             <button
               disabled={!currentTrack}
               onClick={() => syncUrlSubView('now-playing', '')}
-              className={`flex h-9 md:h-11 items-center gap-1.5 md:gap-2 rounded-full px-3 md:px-4 text-xs md:text-sm font-semibold disabled:opacity-30 transition cursor-pointer ${
+              className={`flex h-9 shrink-0 items-center gap-1 md:h-11 md:gap-2 rounded-full px-2.5 sm:px-3 md:px-4 text-xs md:text-sm font-semibold disabled:opacity-30 transition cursor-pointer ${
                 activeView === 'now-playing' && !searchIsOpen ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-sm' : 'text-ink-soft hover:text-ink'
               }`}
             >
-              <Icon name="graphic_eq" className="text-lg md:text-xl" /> <span className="whitespace-nowrap">Now Playing</span>
+              <Icon name="graphic_eq" className="text-lg md:text-xl" /> <span className="whitespace-nowrap"><span className="hidden sm:inline">Now </span>Playing</span>
             </button>
           </div>
 
