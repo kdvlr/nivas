@@ -328,6 +328,10 @@ export default function Home() {
 
     for (const s of (calStatus?.accounts ?? []).flatMap((a) => a.selections)) {
       if (!s.enabled) continue
+      const isHoliday =
+        s.calendar_id?.toLowerCase().includes('holiday') ||
+        (s.name || '').toLowerCase().includes('holiday')
+      if (isHoliday) continue
       const family = isFamilyName(s.person_name)
       const raw = (s.person_name || s.name || '').trim()
       if (!raw) continue

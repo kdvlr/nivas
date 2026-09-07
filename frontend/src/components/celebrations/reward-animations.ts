@@ -11,12 +11,16 @@ export type RewardAnimationName =
   | 'dragon'
   | 'robot'
   | 'pirate'
+  | 'spaceprize' | 'mapquest' | 'gameunlock' | 'dinoparade' | 'surfsup'
+  | 'mermaidcastle' | 'unicornprize' | 'discoparty' | 'butterflywish' | 'bakersdelight'
 
 export interface RewardAnimation {
   name: RewardAnimationName
   /** emoji + short label for the Setup preview picker */
   emoji: string
   label: string
+  /** Preview grouping only; every reward animation is available to every child. */
+  collection?: 'adventure' | 'sparkle'
   backdrop: string
   praise: string[]
   run: (canvas: HTMLCanvasElement) => () => void
@@ -43,6 +47,17 @@ function fit(canvas: HTMLCanvasElement) {
   canvas.width = canvas.clientWidth
   canvas.height = canvas.clientHeight
   return canvas.getContext('2d')!
+}
+
+const drawEmoji = (ctx: CanvasRenderingContext2D, glyph: string, x: number, y: number, size: number, rotation = 0) => {
+  ctx.save()
+  ctx.translate(x, y)
+  ctx.rotate(rotation)
+  ctx.font = `${size}px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(glyph, 0, 0)
+  ctx.restore()
 }
 
 /* ================================================ jewelry box fairy ======= */
@@ -1466,6 +1481,38 @@ const pirateRun = (canvas: HTMLCanvasElement) => {
   })
 }
 
+/* ============================================== compact theme run ========= */
+
+type ThemeMotion = 'arrive' | 'bounce' | 'race' | 'float' | 'dance'
+
+const themedRewardRun = (
+  main: string,
+  accents: string[],
+  colors: [string, string],
+  motion: ThemeMotion,
+) => (canvas: HTMLCanvasElement) => {
+  const ctx = fit(canvas)
+  const W = canvas.width
+  const H = canvas.height
+  const pieces = Array.from({ length: 26 }, (_, i) => ({ x: rand(0, W), y: rand(0, H), phase: i * 0.61, size: rand(20, 54) }))
+  return loop((_dt, t) => {
+    const bg = ctx.createRadialGradient(W / 2, H / 2, 20, W / 2, H / 2, Math.max(W, H) * 0.7)
+    bg.addColorStop(0, colors[1]); bg.addColorStop(1, colors[0])
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H)
+    pieces.forEach((piece, i) => {
+      const y = motion === 'race' ? ((piece.y + t * (90 + i * 6)) % (H + 90)) - 45 : piece.y + Math.cos(t * 2 + piece.phase) * 24
+      drawEmoji(ctx, accents[i % accents.length], piece.x + Math.sin(t * 1.4 + piece.phase) * 30, y, piece.size, t * 0.5 + piece.phase)
+    })
+    let x = W / 2; let y = H * 0.56; let rotation = 0; let scale = 1
+    if (motion === 'arrive') { y = -120 + Math.min(t / 0.75, 1) * (H * 0.55 + 120); scale = 1 + Math.sin(Math.min(t / 0.75, 1) * Math.PI) * 0.2 }
+    if (motion === 'bounce') { y += Math.abs(Math.sin(t * 4.5)) * 32; scale = 1 + Math.abs(Math.sin(t * 4.5)) * 0.13 }
+    if (motion === 'race') { x = ((t * W * 0.58) % (W + 260)) - 130; y = H * 0.65 + Math.sin(t * 7) * 14 }
+    if (motion === 'float') { x += Math.sin(t * 1.55) * W * 0.26; y += Math.cos(t * 3) * 30; rotation = Math.sin(t * 2) * 0.12 }
+    if (motion === 'dance') { x += Math.sin(t * 5.2) * W * 0.16; y += Math.abs(Math.sin(t * 5.2)) * 28; rotation = Math.sin(t * 5.2) * 0.2 }
+    ctx.save(); ctx.translate(x, y); ctx.scale(scale, scale); drawEmoji(ctx, main, 0, 0, Math.min(190, W * 0.31), rotation); ctx.restore()
+  })
+}
+
 /* ============================================== registry ================= */
 
 export const REWARD_ANIMATIONS: RewardAnimation[] = [
@@ -1549,4 +1596,14 @@ export const REWARD_ANIMATIONS: RewardAnimation[] = [
     praise: ['Ahoy, treasure earned!', 'Shiver me timbers!', 'X marks YOUR spot!'],
     run: pirateRun,
   },
+  { name: 'spaceprize', emoji: '🛸', label: 'Space prize', collection: 'adventure', backdrop: '#071a3b', praise: ['Interstellar reward!', 'You earned a space prize!', 'Cosmic win!'], run: themedRewardRun('🛸', ['⭐', '🪐', '🌙'], ['#071a3b', '#4338ca'], 'arrive') },
+  { name: 'mapquest', emoji: '🗺️', label: 'Map quest', collection: 'adventure', backdrop: '#3b280b', praise: ['Quest complete!', 'You found the reward!', 'Explorer approved!'], run: themedRewardRun('🗺️', ['🧭', '🪙', '⭐'], ['#3b280b', '#a16207'], 'float') },
+  { name: 'gameunlock', emoji: '🎮', label: 'Game unlock', collection: 'adventure', backdrop: '#160b36', praise: ['Level unlocked!', 'Achievement earned!', 'Player one wins!'], run: themedRewardRun('🎮', ['👾', '🔷', '⚡'], ['#160b36', '#312e81'], 'bounce') },
+  { name: 'dinoparade', emoji: '🦖', label: 'Dino parade', collection: 'adventure', backdrop: '#183720', praise: ['Dino reward!', 'RAWR-some!', 'A prehistoric prize!'], run: themedRewardRun('🦖', ['🦕', '🌿', '🍃'], ['#183720', '#4d7c0f'], 'bounce') },
+  { name: 'surfsup', emoji: '🏄', label: 'Surf reward', collection: 'adventure', backdrop: '#06354d', praise: ['Surf’s up!', 'You rode that wave!', 'Totally rad reward!'], run: themedRewardRun('🏄', ['🌊', '🐬', '☀️'], ['#06354d', '#0284c7'], 'race') },
+  { name: 'mermaidcastle', emoji: '🧜‍♀️', label: 'Mermaid castle', collection: 'sparkle', backdrop: '#083344', praise: ['A sea-sational reward!', 'Mermaid magic!', 'Treasure from the sea!'], run: themedRewardRun('🧜‍♀️', ['🫧', '🐚', '🪸'], ['#083344', '#0f766e'], 'float') },
+  { name: 'unicornprize', emoji: '🦄', label: 'Unicorn prize', collection: 'sparkle', backdrop: '#4c1455', praise: ['Magical reward!', 'Unicorn-approved!', 'Rainbow wishes granted!'], run: themedRewardRun('🦄', ['✨', '🌈', '💖'], ['#4c1455', '#be185d'], 'arrive') },
+  { name: 'discoparty', emoji: '🪩', label: 'Disco party', collection: 'sparkle', backdrop: '#481048', praise: ['Dance reward!', 'You shine bright!', 'Party time!'], run: themedRewardRun('🪩', ['🎵', '💃', '✨'], ['#481048', '#be185d'], 'dance') },
+  { name: 'butterflywish', emoji: '🦋', label: 'Butterfly wish', collection: 'sparkle', backdrop: '#3a286f', praise: ['Wish granted!', 'Beautiful work!', 'Fluttering fantastic!'], run: themedRewardRun('🦋', ['🌸', '🌼', '✨'], ['#3a286f', '#7e22ce'], 'float') },
+  { name: 'bakersdelight', emoji: '🍪', label: 'Baker’s delight', collection: 'sparkle', backdrop: '#593027', praise: ['Freshly earned!', 'A sweet reward!', 'Cookie cheers!'], run: themedRewardRun('🍪', ['🧁', '🍓', '✨'], ['#593027', '#b4536a'], 'bounce') },
 ]

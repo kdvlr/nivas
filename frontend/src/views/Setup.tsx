@@ -245,6 +245,16 @@ function SetupInner() {
   const { data: people, reload: reloadPeople } = useData<Person[]>('/api/setup/people', [])
   const { celebrate } = useCelebration()
   const { celebrateReward } = useRewardCelebration()
+  const choreAnimationGroups = [
+    { label: 'Original favorites', animations: CELEBRATIONS.filter((animation) => !animation.collection) },
+    { label: 'Adventure themes', animations: CELEBRATIONS.filter((animation) => animation.collection === 'adventure') },
+    { label: 'Sparkle themes', animations: CELEBRATIONS.filter((animation) => animation.collection === 'sparkle') },
+  ]
+  const rewardAnimationGroups = [
+    { label: 'Original favorites', animations: REWARD_ANIMATIONS.filter((animation) => !animation.collection) },
+    { label: 'Adventure themes', animations: REWARD_ANIMATIONS.filter((animation) => animation.collection === 'adventure') },
+    { label: 'Sparkle themes', animations: REWARD_ANIMATIONS.filter((animation) => animation.collection === 'sparkle') },
+  ]
 
   const [icUser, setIcUser] = useState('')
   const [icPass, setIcPass] = useState('')
@@ -981,13 +991,20 @@ function SetupInner() {
         {section === 'looks' && (
         <Card title={<><Icon name="celebration" /> Celebration preview</>}>
           <p className="mb-2 text-sm text-ink-soft">
-            One of these {CELEBRATIONS.length} plays whenever a chore or to-do is completed. Tap to try.
+            One of these {CELEBRATIONS.length} plays whenever a chore or to-do is completed. Every theme is available to every child. Tap to try.
           </p>
-          <div className="flex flex-wrap gap-2">
-            {CELEBRATIONS.map((c) => (
-              <button key={c.name} onClick={() => celebrate(c.name)} className="btn-glass px-4 py-2 text-sm">
-                {c.emoji} {c.label}
-              </button>
+          <div className="space-y-3">
+            {choreAnimationGroups.map((group) => (
+              <section key={group.label}>
+                <h3 className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-soft">{group.label}</h3>
+                <div className="flex flex-wrap gap-2">
+                  {group.animations.map((c) => (
+                    <button key={c.name} onClick={() => celebrate(c.name)} className="btn-glass px-4 py-2 text-sm">
+                      {c.emoji} {c.label}
+                    </button>
+                  ))}
+                </div>
+              </section>
             ))}
             <button onClick={() => celebrate()} className="btn-primary px-5 py-2 text-sm">
               Surprise me!
@@ -999,13 +1016,20 @@ function SetupInner() {
         {section === 'looks' && (
         <Card title={<><Icon name="redeem" /> Reward animation preview</>}>
           <p className="mb-2 text-sm text-ink-soft">
-            One of these {REWARD_ANIMATIONS.length} plays when someone redeems a reward. Tap to try.
+            One of these {REWARD_ANIMATIONS.length} plays when someone redeems a reward. Every theme is available to every child. Tap to try.
           </p>
-          <div className="flex flex-wrap gap-2">
-            {REWARD_ANIMATIONS.map((a) => (
-              <button key={a.name} onClick={() => celebrateReward(a.name)} className="btn-glass px-4 py-2 text-sm">
-                {a.emoji} {a.label}
-              </button>
+          <div className="space-y-3">
+            {rewardAnimationGroups.map((group) => (
+              <section key={group.label}>
+                <h3 className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-soft">{group.label}</h3>
+                <div className="flex flex-wrap gap-2">
+                  {group.animations.map((a) => (
+                    <button key={a.name} onClick={() => celebrateReward(a.name)} className="btn-glass px-4 py-2 text-sm">
+                      {a.emoji} {a.label}
+                    </button>
+                  ))}
+                </div>
+              </section>
             ))}
             <button
               onClick={() => celebrateReward()}

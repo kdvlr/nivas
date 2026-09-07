@@ -13,12 +13,16 @@ export type CelebrationName =
   | 'bubbles'
   | 'dino'
   | 'hyperspace'
+  | 'galaxycrew' | 'skatepark' | 'junglebeat' | 'goalburst' | 'monstertruck'
+  | 'rainbowparty' | 'balloonballet' | 'gardenparty' | 'kittyconfetti' | 'cupcakecloud'
 
 export interface Celebration {
   name: CelebrationName
   /** emoji + short label for the Setup preview picker */
   emoji: string
   label: string
+  /** Preview grouping only; all celebrations can play for every child. */
+  collection?: 'adventure' | 'sparkle'
   /** backdrop css for the overlay while it plays */
   backdrop: string
   praise: string[]
@@ -46,6 +50,17 @@ function fit(canvas: HTMLCanvasElement) {
   canvas.width = canvas.clientWidth
   canvas.height = canvas.clientHeight
   return canvas.getContext('2d')!
+}
+
+const drawEmoji = (ctx: CanvasRenderingContext2D, glyph: string, x: number, y: number, size: number, rotation = 0) => {
+  ctx.save()
+  ctx.translate(x, y)
+  ctx.rotate(rotation)
+  ctx.font = `${size}px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(glyph, 0, 0)
+  ctx.restore()
 }
 
 /* ---------------------------------------------------------------- confetti */
@@ -980,6 +995,38 @@ const hyperspaceRun = (canvas: HTMLCanvasElement) => {
   })
 }
 
+/* ------------------------------------------------------- compact theme run */
+
+type ThemeMotion = 'zoom' | 'bounce' | 'race' | 'float' | 'dance'
+
+const themedCelebrationRun = (
+  main: string,
+  accents: string[],
+  colors: [string, string],
+  motion: ThemeMotion,
+) => (canvas: HTMLCanvasElement) => {
+  const ctx = fit(canvas)
+  const W = canvas.width
+  const H = canvas.height
+  const pieces = Array.from({ length: 24 }, (_, i) => ({ x: rand(0, W), y: rand(0, H), phase: i * 0.57, size: rand(22, 52) }))
+  return loop((_dt, t) => {
+    const bg = ctx.createLinearGradient(0, 0, W, H)
+    bg.addColorStop(0, colors[0]); bg.addColorStop(1, colors[1])
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H)
+    pieces.forEach((piece, i) => {
+      const y = motion === 'race' ? ((piece.y + t * (95 + i * 5)) % (H + 80)) - 40 : piece.y + Math.sin(t * 2 + piece.phase) * 22
+      drawEmoji(ctx, accents[i % accents.length], piece.x + Math.cos(t + piece.phase) * 25, y, piece.size, t * 0.45 + piece.phase)
+    })
+    let x = W / 2; let y = H * 0.58; let rotation = 0; let scale = 1
+    if (motion === 'zoom') { y = H * 1.1 - ((t * H * 0.55) % (H * 1.25)); rotation = -0.35 }
+    if (motion === 'bounce') { y += Math.abs(Math.sin(t * 4.4)) * 34; scale = 1 + Math.abs(Math.sin(t * 4.4)) * 0.12 }
+    if (motion === 'race') { x = ((t * W * 0.6) % (W + 260)) - 130; y = H * 0.65 + Math.sin(t * 7) * 13 }
+    if (motion === 'float') { x += Math.sin(t * 1.5) * W * 0.24; y += Math.cos(t * 3) * 30; rotation = Math.sin(t * 2) * 0.12 }
+    if (motion === 'dance') { x += Math.sin(t * 5) * W * 0.16; y += Math.abs(Math.sin(t * 5)) * 28; rotation = Math.sin(t * 5) * 0.18 }
+    ctx.save(); ctx.translate(x, y); ctx.scale(scale, scale); drawEmoji(ctx, main, 0, 0, Math.min(190, W * 0.31), rotation); ctx.restore()
+  })
+}
+
 /* ---------------------------------------------------------------- registry */
 
 export const CELEBRATIONS: Celebration[] = [
@@ -1063,4 +1110,14 @@ export const CELEBRATIONS: Celebration[] = [
     praise: ['Warp speed ahead!', 'Light-speed legend!', 'To infinity… and DONE!'],
     run: hyperspaceRun,
   },
+  { name: 'galaxycrew', emoji: '🧑‍🚀', label: 'Galaxy crew', collection: 'adventure', backdrop: '#081b3e', praise: ['Cosmic job!', 'Star crew approved!', 'Mission complete!'], run: themedCelebrationRun('🧑‍🚀', ['⭐', '🪐', '🌙'], ['#081b3e', '#4c1d95'], 'zoom') },
+  { name: 'skatepark', emoji: '🛹', label: 'Skate park', collection: 'adventure', backdrop: '#172033', praise: ['Sick move!', 'You landed it!', 'Kickflip complete!'], run: themedCelebrationRun('🛹', ['⚡', '⭐', '🎵'], ['#172033', '#075985'], 'race') },
+  { name: 'junglebeat', emoji: '🦁', label: 'Jungle beat', collection: 'adventure', backdrop: '#173a20', praise: ['Wildly awesome!', 'King of the jungle!', 'Roar for you!'], run: themedCelebrationRun('🦁', ['🌿', '🦜', '🍃'], ['#173a20', '#4d7c0f'], 'bounce') },
+  { name: 'goalburst', emoji: '⚽', label: 'Goal burst', collection: 'adventure', backdrop: '#12351e', praise: ['GOOOAL!', 'Top corner!', 'What a finish!'], run: themedCelebrationRun('⚽', ['🥅', '💨', '🏆'], ['#12351e', '#15803d'], 'race') },
+  { name: 'monstertruck', emoji: '🛻', label: 'Monster truck', collection: 'adventure', backdrop: '#422006', praise: ['Crushed it!', 'Big-time win!', 'Monster job!'], run: themedCelebrationRun('🛻', ['💥', '🛞', '🏁'], ['#422006', '#b45309'], 'bounce') },
+  { name: 'rainbowparty', emoji: '🌈', label: 'Rainbow party', collection: 'sparkle', backdrop: '#4a1648', praise: ['Colorful win!', 'Bright job!', 'Rainbow power!'], run: themedCelebrationRun('🌈', ['☁️', '✨', '💖'], ['#4a1648', '#be185d'], 'dance') },
+  { name: 'balloonballet', emoji: '🩰', label: 'Balloon ballet', collection: 'sparkle', backdrop: '#512144', praise: ['Beautifully done!', 'Brava!', 'Graceful work!'], run: themedCelebrationRun('🩰', ['🎈', '✨', '🌸'], ['#512144', '#be456e'], 'dance') },
+  { name: 'gardenparty', emoji: '🌻', label: 'Garden party', collection: 'sparkle', backdrop: '#24451f', praise: ['You made it bloom!', 'Growing great!', 'Flower power!'], run: themedCelebrationRun('🌻', ['🌷', '🐝', '🌼'], ['#24451f', '#4d7c0f'], 'float') },
+  { name: 'kittyconfetti', emoji: '🐱', label: 'Kitty confetti', collection: 'sparkle', backdrop: '#4a2b24', praise: ['Purr-fect!', 'Meow-velous!', 'Cat-tastic job!'], run: themedCelebrationRun('🐱', ['🐾', '🎊', '💖'], ['#4a2b24', '#b4536a'], 'bounce') },
+  { name: 'cupcakecloud', emoji: '🧁', label: 'Cupcake cloud', collection: 'sparkle', backdrop: '#5b263f', praise: ['Sweet success!', 'Sprinkles for you!', 'Deliciously done!'], run: themedCelebrationRun('🧁', ['🍓', '🍬', '✨'], ['#5b263f', '#be456e'], 'float') },
 ]
