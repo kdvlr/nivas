@@ -24,6 +24,7 @@ use airplay_timing::{
     PtpMaster, PTP_EVENT_PORT,
 };
 use std::net::{IpAddr, SocketAddr, UdpSocket};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
@@ -234,6 +235,7 @@ pub struct Connection {
     timing_offset: Option<ClockOffset>,
     timing_tx: Option<watch::Sender<ClockOffset>>,
     control_task: Option<tokio::task::JoinHandle<()>>,
+    control_shutdown: Option<Arc<AtomicBool>>,
     timing_task: Option<JoinHandle<()>>,
     timing_server: Option<NtpTimingServer>,
     /// PTP master instance (sender IS the timing master)
@@ -383,6 +385,7 @@ impl Connection {
             ptp_master_clock_id: None,
             control_receiver: None,
             control_task: None,
+            control_shutdown: None,
             event_encrypt_key,
             event_decrypt_key,
             event_task: None,
@@ -578,6 +581,7 @@ impl Connection {
             ptp_master_clock_id: None,
             control_receiver: None,
             control_task: None,
+            control_shutdown: None,
             event_encrypt_key,
             event_decrypt_key,
             event_task: None,
@@ -812,6 +816,7 @@ impl Connection {
             ptp_master_clock_id: None,
             control_receiver: None,
             control_task: None,
+            control_shutdown: None,
             event_encrypt_key,
             event_decrypt_key,
             event_task: None,
@@ -1200,6 +1205,8 @@ impl Connection {
 
     /// Disconnect and clean up.
     pub async fn disconnect(&mut self) -> Result<()> {
+        self.stop_control_task();
+
         // Stop streaming if active
         if let Some(ref mut streamer) = self.streamer {
             streamer.stop().await?;
@@ -1372,6 +1379,181 @@ impl Connection {
         }));
     }
 
+    /// Spawn a background task to poll the control receiver for retransmit requests (PT=85).
+    /// Runs until `shutdown` is set to true or the task is aborted.
+    fn spawn_control_listener(
+        control_rx: Arc<RtpReceiver>,
+        streamer: AudioStreamer,
+        target_index: usize,
+        stats: Arc<crate::stats::StreamStats>,
+        device_name: String,
+        shutdown: Arc<AtomicBool>,
+    ) -> tokio::task::JoinHandle<()> {
+        use airplay_audio::RetransmitRequest;
+        let rt_handle = tokio::runtime::Handle::current();
+
+        tokio::task::spawn_blocking(move || {
+            tracing::debug!(
+                "Control channel thread started for target {} ({}) (5ms poll)",
+                target_index,
+                device_name
+            );
+            while !shutdown.load(Ordering::Relaxed) {
+                match control_rx.recv_raw_timeout(std::time::Duration::from_millis(5)) {
+                    Ok(Some((data, _addr))) => {
+                        if data.len() < 4 {
+                            tracing::debug!(
+                                "Control channel (target {}): ignoring tiny packet ({} bytes)",
+                                target_index,
+                                data.len()
+                            );
+                            continue;
+                        }
+
+                        let payload_type = data[1] & 0x7F;
+
+                        if payload_type == 85 {
+                            let request = if data.len() == 8 {
+                                let first_sequence = u16::from_be_bytes([data[4], data[5]]);
+                                let count = u16::from_be_bytes([data[6], data[7]]);
+                                Some(RetransmitRequest {
+                                    first_sequence,
+                                    count,
+                                })
+                            } else if data.len() >= 12 {
+                                RetransmitRequest::parse(&data).ok()
+                            } else {
+                                let hex: String = data
+                                    .iter()
+                                    .map(|b| format!("{:02x}", b))
+                                    .collect::<Vec<_>>()
+                                    .join(" ");
+                                tracing::debug!(
+                                    "Control channel (target {}): PT=85 unexpected len={}, hex=[{}]",
+                                    target_index,
+                                    data.len(),
+                                    hex
+                                );
+                                None
+                            };
+
+                            if let Some(request) = request {
+                                stats.rtx_requested.fetch_add(
+                                    request.count as u64,
+                                    Ordering::Relaxed,
+                                );
+                                tracing::debug!(
+                                    "Target {} ({}) retransmit request: seq={}, count={}",
+                                    target_index,
+                                    device_name,
+                                    request.first_sequence,
+                                    request.count
+                                );
+                                match rt_handle
+                                    .block_on(streamer.handle_retransmit_for_target(target_index, &request))
+                                {
+                                    Ok(retransmitted) => {
+                                        if retransmitted > 0 {
+                                            stats.rtx_fulfilled.fetch_add(
+                                                retransmitted as u64,
+                                                Ordering::Relaxed,
+                                            );
+                                            tracing::info!(
+                                                "Target {} ({}): retransmitted {}/{} packets starting from seq {}",
+                                                target_index,
+                                                device_name,
+                                                retransmitted,
+                                                request.count,
+                                                request.first_sequence
+                                            );
+                                        }
+                                    }
+                                    Err(e) => {
+                                        tracing::warn!(
+                                            "Target {} ({}) retransmit failed: {}",
+                                            target_index,
+                                            device_name,
+                                            e
+                                        );
+                                    }
+                                }
+                            }
+                        } else if payload_type == 84 {
+                            tracing::trace!(
+                                "Control channel (target {}): sync packet (PT=84, {} bytes)",
+                                target_index,
+                                data.len()
+                            );
+                        } else {
+                            let hex: String = data
+                                .iter()
+                                .take(16)
+                                .map(|b| format!("{:02x}", b))
+                                .collect::<Vec<_>>()
+                                .join(" ");
+                            tracing::debug!(
+                                "Control channel (target {}): unknown PT={}, len={}, hex=[{}]",
+                                target_index,
+                                payload_type,
+                                data.len(),
+                                hex
+                            );
+                        }
+                    }
+                    Ok(None) => {
+                        // Timeout, continue polling
+                    }
+                    Err(e) => {
+                        tracing::debug!(
+                            "Control channel (target {}) recv error: {}, continuing",
+                            target_index,
+                            e
+                        );
+                    }
+                }
+            }
+            tracing::debug!(
+                "Control channel thread stopped for target {} ({})",
+                target_index,
+                device_name
+            );
+        })
+    }
+
+    /// Spawn a background listener for retransmit requests (PT=85) on this connection's control receiver.
+    /// Polling is performed on a dedicated blocking thread with 5ms timeout for prompt retransmission.
+    fn start_control_listener(&mut self, streamer: &AudioStreamer, target_index: usize) {
+        self.stop_control_task();
+        if let Some(ref control_rx) = self.control_receiver {
+            let shutdown = Arc::new(AtomicBool::new(false));
+            let task = Self::spawn_control_listener(
+                Arc::clone(control_rx),
+                streamer.clone(),
+                target_index,
+                Arc::clone(&self.stream_stats),
+                self.device.name.clone(),
+                Arc::clone(&shutdown),
+            );
+            self.control_task = Some(task);
+            self.control_shutdown = Some(shutdown);
+            tracing::info!(
+                "Started control channel polling for retransmit requests (target {}, {})",
+                target_index,
+                self.device.name
+            );
+        }
+    }
+
+    /// Stop the background control listener task if active.
+    fn stop_control_task(&mut self) {
+        if let Some(shutdown) = self.control_shutdown.take() {
+            shutdown.store(true, Ordering::Relaxed);
+        }
+        if let Some(task) = self.control_task.take() {
+            task.abort();
+        }
+    }
+
     /// Start audio streaming from a decoder source.
     pub async fn start_streaming(&mut self, decoder: AudioDecoder) -> Result<()> {
         // Ensure setup is complete
@@ -1431,143 +1613,11 @@ impl Connection {
             tracing::warn!("Failed to set initial volume: {}", e);
         }
 
-        // Spawn control channel on a dedicated blocking thread for low-latency
-        // retransmit handling. Uses 5ms recv timeout (well under HomePod's 70ms buffer)
-        // so retransmit requests are handled promptly.
-        let control_task = if let Some(ref control_rx) = self.control_receiver {
-            use airplay_audio::RetransmitRequest;
-            let control_rx_clone = Arc::clone(control_rx);
-            let streamer_clone = streamer.clone();
-            let rt_handle = tokio::runtime::Handle::current();
-            let stats = Arc::clone(&self.stream_stats);
-
-            Some(tokio::task::spawn_blocking(move || {
-                tracing::debug!("Control channel thread started (5ms poll)");
-                loop {
-                    // Use raw receive to handle all packet formats (including
-                    // retransmit requests which have 8-byte headers without SSRC).
-                    // 5ms timeout keeps retransmit latency low.
-                    match control_rx_clone.recv_raw_timeout(std::time::Duration::from_millis(5)) {
-                        Ok(Some((data, _addr))) => {
-                            if data.len() < 4 {
-                                tracing::debug!(
-                                    "Control channel: ignoring tiny packet ({} bytes)",
-                                    data.len()
-                                );
-                                continue;
-                            }
-
-                            let payload_type = data[1] & 0x7F;
-
-                            if payload_type == 85 {
-                                // Retransmit request (PT=85):
-                                // Apple uses an 8-byte compact format:
-                                //   [0-1] RTP header (V=2, PT=85)
-                                //   [2-3] Sequence number of request
-                                //   [4-5] First lost sequence number
-                                //   [6-7] Number of lost packets
-                                // Or a 12-byte format:
-                                //   [0-7] 8-byte RTP header (no SSRC)
-                                //   [8-9] First lost sequence number
-                                //   [10-11] Number of lost packets
-                                let request = if data.len() == 8 {
-                                    // 8-byte compact format
-                                    let first_sequence = u16::from_be_bytes([data[4], data[5]]);
-                                    let count = u16::from_be_bytes([data[6], data[7]]);
-                                    Some(RetransmitRequest {
-                                        first_sequence,
-                                        count,
-                                    })
-                                } else if data.len() >= 12 {
-                                    RetransmitRequest::parse(&data).ok()
-                                } else {
-                                    let hex: String = data
-                                        .iter()
-                                        .map(|b| format!("{:02x}", b))
-                                        .collect::<Vec<_>>()
-                                        .join(" ");
-                                    tracing::debug!(
-                                        "Control channel: PT=85 unexpected len={}, hex=[{}]",
-                                        data.len(),
-                                        hex
-                                    );
-                                    None
-                                };
-
-                                if let Some(request) = request {
-                                    stats.rtx_requested.fetch_add(
-                                        request.count as u64,
-                                        std::sync::atomic::Ordering::Relaxed,
-                                    );
-                                    tracing::debug!(
-                                        "Retransmit request: seq={}, count={}",
-                                        request.first_sequence,
-                                        request.count
-                                    );
-                                    // Use block_on to call async handle_retransmit from blocking thread
-                                    match rt_handle
-                                        .block_on(streamer_clone.handle_retransmit(&request))
-                                    {
-                                        Ok(retransmitted) => {
-                                            if retransmitted > 0 {
-                                                stats.rtx_fulfilled.fetch_add(
-                                                    retransmitted as u64,
-                                                    std::sync::atomic::Ordering::Relaxed,
-                                                );
-                                                tracing::info!(
-                                                    "Retransmitted {} packets starting from seq {}",
-                                                    retransmitted,
-                                                    request.first_sequence
-                                                );
-                                            }
-                                        }
-                                        Err(e) => {
-                                            tracing::warn!("Retransmit failed: {}", e);
-                                        }
-                                    }
-                                }
-                            } else if payload_type == 84 {
-                                // Sync/timing packet (PT=84) — can ignore
-                                tracing::trace!(
-                                    "Control channel: sync packet (PT=84, {} bytes)",
-                                    data.len()
-                                );
-                            } else {
-                                // Log unknown packet types with hex dump for debugging
-                                let hex: String = data
-                                    .iter()
-                                    .take(16)
-                                    .map(|b| format!("{:02x}", b))
-                                    .collect::<Vec<_>>()
-                                    .join(" ");
-                                tracing::debug!(
-                                    "Control channel: unknown PT={}, len={}, hex=[{}]",
-                                    payload_type,
-                                    data.len(),
-                                    hex
-                                );
-                            }
-                        }
-                        Ok(None) => {
-                            // Timeout, continue polling
-                        }
-                        Err(e) => {
-                            tracing::debug!("Control channel recv error: {}, continuing", e);
-                        }
-                    }
-                }
-            }))
-        } else {
-            None
-        };
+        // Spawn control channel listener for retransmit handling (Target 0)
+        self.start_control_listener(&streamer, 0);
 
         self.streamer = Some(streamer);
-        self.control_task = control_task;
         self.playback_state = PlaybackState::Playing;
-
-        if self.control_task.is_some() {
-            tracing::info!("Started control channel polling for retransmit requests");
-        }
 
         Ok(())
     }
@@ -1638,6 +1688,15 @@ impl Connection {
 
         streamer.start(decoder).await?;
 
+        // Spawn control channel listeners for retransmit recovery:
+        // Primary speaker is Target 0
+        self.start_control_listener(&streamer, 0);
+
+        // Peer speakers are Targets 1..N
+        for (i, peer) in peers.iter_mut().enumerate() {
+            peer.start_control_listener(&streamer, i + 1);
+        }
+
         self.session.start_playing()?;
         self.playback_state = PlaybackState::Playing;
         self.streamer = Some(streamer.clone());
@@ -1700,6 +1759,7 @@ impl Connection {
         }
 
         streamer.start(decoder).await?;
+        self.start_control_listener(&streamer, 0);
         self.streamer = Some(streamer);
         self.playback_state = PlaybackState::Playing;
 
@@ -1764,80 +1824,10 @@ impl Connection {
             tracing::warn!("Failed to set volume: {}", e);
         }
 
-        // Spawn control channel for retransmit handling
-        let control_task = if let Some(ref control_rx) = self.control_receiver {
-            use airplay_audio::RetransmitRequest;
-            let control_rx_clone = Arc::clone(control_rx);
-            let streamer_clone = streamer.clone();
-            let rt_handle = tokio::runtime::Handle::current();
-            let stats = Arc::clone(&self.stream_stats);
-
-            Some(tokio::task::spawn_blocking(move || {
-                tracing::debug!("Control channel thread started for live streaming (5ms poll)");
-                loop {
-                    match control_rx_clone.recv_raw_timeout(std::time::Duration::from_millis(5)) {
-                        Ok(Some((data, _addr))) => {
-                            if data.len() < 4 {
-                                continue;
-                            }
-
-                            let payload_type = data[1] & 0x7F;
-
-                            if payload_type == 85 {
-                                let request = if data.len() == 8 {
-                                    let first_sequence = u16::from_be_bytes([data[4], data[5]]);
-                                    let count = u16::from_be_bytes([data[6], data[7]]);
-                                    Some(RetransmitRequest {
-                                        first_sequence,
-                                        count,
-                                    })
-                                } else if data.len() >= 12 {
-                                    RetransmitRequest::parse(&data).ok()
-                                } else {
-                                    None
-                                };
-
-                                if let Some(request) = request {
-                                    stats.rtx_requested.fetch_add(
-                                        request.count as u64,
-                                        std::sync::atomic::Ordering::Relaxed,
-                                    );
-                                    match rt_handle
-                                        .block_on(streamer_clone.handle_retransmit(&request))
-                                    {
-                                        Ok(retransmitted) => {
-                                            if retransmitted > 0 {
-                                                stats.rtx_fulfilled.fetch_add(
-                                                    retransmitted as u64,
-                                                    std::sync::atomic::Ordering::Relaxed,
-                                                );
-                                                tracing::debug!(
-                                                    "Retransmitted {} packets starting from seq {}",
-                                                    retransmitted,
-                                                    request.first_sequence
-                                                );
-                                            }
-                                        }
-                                        Err(e) => {
-                                            tracing::warn!("Retransmit failed: {}", e);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        Ok(None) => {}
-                        Err(e) => {
-                            tracing::trace!("Control channel recv error: {}", e);
-                        }
-                    }
-                }
-            }))
-        } else {
-            None
-        };
+        // Spawn control channel for retransmit handling (Target 0)
+        self.start_control_listener(&streamer, 0);
 
         self.streamer = Some(streamer);
-        self.control_task = control_task;
         self.playback_state = PlaybackState::Playing;
 
         tracing::info!("Live audio streaming started");
@@ -1949,6 +1939,8 @@ impl Connection {
 
     /// Stop streaming.
     pub async fn stop(&mut self) -> Result<()> {
+        self.stop_control_task();
+
         if let Some(ref mut streamer) = self.streamer {
             streamer.stop().await?;
         }

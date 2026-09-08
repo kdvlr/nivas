@@ -786,6 +786,37 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
 
+            if feedback_counter % 13 == 0 {
+                // Every ~1s: report aggregate stream stats for Python engine telemetry
+                let packets_sent = conns[0].streamer_packets_sent();
+                let underruns = conns[0].streamer_underruns();
+                let mut total_req = 0u64;
+                let mut total_ful = 0u64;
+                for conn in &conns {
+                    let s = conn.stream_stats();
+                    total_req += s.rtx_requested.load(std::sync::atomic::Ordering::Relaxed);
+                    total_ful += s.rtx_fulfilled.load(std::sync::atomic::Ordering::Relaxed);
+                }
+                println!(
+                    "STREAM_STATS packets_sent={} retransmit_requested={} retransmit_fulfilled={} underruns={}",
+                    packets_sent, total_req, total_ful, underruns
+                );
+                let _ = std::io::Write::flush(&mut std::io::stdout());
+            }
+
+            if feedback_counter % 67 == 0 {
+                // Every ~5s: log per-speaker breakdown
+                for (idx, conn) in conns.iter().enumerate() {
+                    let s = conn.stream_stats();
+                    let req = s.rtx_requested.load(std::sync::atomic::Ordering::Relaxed);
+                    let ful = s.rtx_fulfilled.load(std::sync::atomic::Ordering::Relaxed);
+                    tracing::info!(
+                        "Speaker {} ({}) stream stats: rtx_requested={}, rtx_fulfilled={}",
+                        idx + 1, ips[idx], req, ful
+                    );
+                }
+            }
+
             while let Ok(command) = source_commands.try_recv() {
                 tracing::info!("Applying source command: {:?}", command);
                 match command {
