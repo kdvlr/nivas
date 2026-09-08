@@ -29,9 +29,9 @@ class Settings(BaseSettings):
     setup_pin: str = ""
 
     # Render timestamps ahead of send time so receivers can repair occasional
-    # UDP loss before audio becomes audible. The Rust client uses the same
-    # 200ms reliability-oriented default.
-    airplay_render_delay_ms: int = 200
+    # UDP loss before audio becomes audible. Standard AirPlay 2 targets 1000ms
+    # buffer depth for stable WiFi streaming with packet recovery.
+    airplay_render_delay_ms: int = 1000
 
     @property
     def photos_dir(self) -> Path:

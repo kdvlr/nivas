@@ -71,7 +71,7 @@ class PlayerEngine:
         self._preferences_path = Path(get_settings().data_dir) / "airplay_preferences.json"
         self._media_cache = media_cache
         self._audio_prefetch_semaphore = asyncio.Semaphore(1)
-        self._render_delay_ms = max(0, min(1000, get_settings().airplay_render_delay_ms))
+        self._render_delay_ms = max(0, min(2000, get_settings().airplay_render_delay_ms))
         self._airplay_diagnostics: Dict[str, Any] = {
             "renderDelayMs": self._render_delay_ms,
             "packetsSent": 0,

@@ -585,8 +585,8 @@ export default function YTMusicView({
 
     return (
       <div className="space-y-6 animate-fadeIn">
-        {/* Top Header with Back Navigation and Clock */}
-        <div className="flex shrink-0 items-center justify-between gap-4 mb-4">
+        {/* Top Header with Back Navigation */}
+        <div className="flex shrink-0 items-center gap-4 mb-4">
           <button
             onClick={() => {
               setSelectedAlbum(null)
@@ -597,8 +597,6 @@ export default function YTMusicView({
             <Icon name="arrow_back" className="text-lg md:text-xl" />
             <span>Back</span>
           </button>
-
-          <TopClockHeader now={now} config={config} className="hidden sm:flex" />
         </div>
 
         {/* Hero Album Card */}
@@ -1000,7 +998,7 @@ export default function YTMusicView({
       <header className="flex shrink-0 items-center justify-between gap-2 mb-3 lg:mb-4">
         <div className="flex min-w-0 flex-1 items-center gap-2 md:gap-4">
           <h1 className="hidden text-2xl font-semibold tracking-tight text-ink sm:block lg:text-3xl mr-1 shrink-0">Music</h1>
-          <div className="flex min-w-0 max-w-full flex-1 overflow-x-auto rounded-full bg-[var(--sc)] border border-[var(--outline-var)] p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="inline-flex shrink-0 items-center overflow-x-auto rounded-full bg-[var(--sc)] border border-[var(--outline-var)] p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <button
               onClick={() => syncUrlSubView('browse', '')}
               className={`flex h-9 shrink-0 items-center gap-1 md:h-11 md:gap-2 rounded-full px-2.5 sm:px-3 md:px-4 text-xs md:text-sm font-semibold transition cursor-pointer ${

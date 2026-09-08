@@ -54,7 +54,7 @@ def test_build_command_uses_mixed_timing_and_runtime_volume():
     ]
     assert "--control-stdin" in command
     assert command[command.index("--volume") + 1] == "0.4200"
-    assert command[command.index("--render-delay") + 1] == "200"
+    assert command[command.index("--render-delay") + 1] == "1000"
     assert command[command.index("--ptp-targets") + 1] == "192.168.120.111"
 
 
@@ -98,7 +98,7 @@ def test_airplay_diagnostics_are_exposed_with_render_delay():
 
     diagnostics = engine.get_state()["airplayDiagnostics"]
 
-    assert diagnostics["renderDelayMs"] == 200
+    assert diagnostics["renderDelayMs"] == 1000
     assert diagnostics["packetsSent"] == 1000
     assert diagnostics["unrecoveredRetransmits"] == 2
 
