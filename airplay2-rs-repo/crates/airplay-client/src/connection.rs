@@ -2287,17 +2287,27 @@ impl Connection {
             }
         }));
 
-        // Wait for BMCA to complete and get our clock identity
-        match tokio::time::timeout(std::time::Duration::from_secs(8), clock_id_rx).await {
+        // The timing task publishes its identity only after every PTP peer has
+        // completed BMCA and an initial delay exchange. Never start playback
+        // after a closed channel or timeout: that creates an unsynchronized group.
+        match tokio::time::timeout(std::time::Duration::from_secs(15), clock_id_rx).await {
             Ok(Ok(clock_id)) => {
                 self.ptp_master_clock_id = Some(clock_id);
                 tracing::info!("PTP master: our clock ID = {:02x?}", clock_id);
             }
             Ok(Err(_)) => {
-                tracing::warn!("PTP master: clock ID channel closed unexpectedly");
+                if let Some(task) = self.ptp_master_sync_task.take() {
+                    task.abort();
+                }
+                return Err(RtspError::SetupFailed(
+                    "PTP peer negotiation failed; refusing to start an unsynchronized group".into(),
+                ).into());
             }
             Err(_) => {
-                tracing::warn!("PTP master: timeout waiting for clock ID (8s)");
+                if let Some(task) = self.ptp_master_sync_task.take() {
+                    task.abort();
+                }
+                return Err(CoreError::Timeout);
             }
         }
 

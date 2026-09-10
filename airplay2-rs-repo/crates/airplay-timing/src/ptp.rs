@@ -3,8 +3,9 @@
 //! Uses UDP ports 319 (event) and 320 (general).
 //! Provides sub-millisecond synchronization for multi-room audio.
 
-use airplay_core::error::{Error, Result};
+use airplay_core::error::{Error, Result, StreamingError};
 use async_trait::async_trait;
+use std::collections::HashSet;
 use std::net::{SocketAddr, UdpSocket};
 use std::time::Duration;
 use crate::{Clock, ClockOffset, TimingProtocol};
@@ -1684,6 +1685,48 @@ pub async fn run_bmca_yield_flow(
 /// 4. Reports our own clock identity (offset is 0 since we ARE the clock)
 ///
 /// All HomePods sync to our clock, putting them in the same clock domain.
+const GROUP_MASTER_NEGOTIATION_ATTEMPTS: usize = 3;
+const GROUP_MASTER_NEGOTIATION_TIMEOUT: Duration = Duration::from_secs(3);
+
+fn group_peers_ready(
+    expected: &HashSet<std::net::IpAddr>,
+    announced: &HashSet<std::net::IpAddr>,
+    delay_exchanged: &HashSet<std::net::IpAddr>,
+) -> bool {
+    expected.is_subset(announced) && expected.is_subset(delay_exchanged)
+}
+
+fn build_group_delay_response(
+    request: &PtpHeader,
+    receive_time: PtpTimestamp,
+    clock_identity: &[u8; 8],
+) -> [u8; 54] {
+    let mut source_port_identity = [0u8; 10];
+    source_port_identity[..8].copy_from_slice(clock_identity);
+    source_port_identity[8..10].copy_from_slice(&1u16.to_be_bytes());
+
+    let mut header = PtpHeader::new(PtpMessageType::DelayResp, request.sequence_id);
+    header.source_port_identity = source_port_identity;
+    header.message_length = 54;
+
+    let mut response = [0u8; 54];
+    response[..34].copy_from_slice(&header.serialize());
+    response[34..44].copy_from_slice(&receive_time.serialize());
+    response[44..54].copy_from_slice(&request.source_port_identity);
+    response
+}
+
+async fn respond_to_group_delay_request(
+    socket: &tokio::net::UdpSocket,
+    src: SocketAddr,
+    request: &PtpHeader,
+    clock_identity: &[u8; 8],
+) -> Result<()> {
+    let response = build_group_delay_response(request, PtpTimestamp::now(), clock_identity);
+    socket.send_to(&response, src).await?;
+    Ok(())
+}
+
 pub async fn run_ptp_group_master_flow(
     peer_ips: Vec<std::net::IpAddr>,
     priority1: u8,
@@ -1738,69 +1781,109 @@ pub async fn run_ptp_group_master_flow(
     tracing::info!("PTP master: Starting group master flow with {} peers (pri1={})",
         peer_ips.len(), priority1);
 
-    // Phase 1: Send initial BMCA messages to all peers
-    // 3 Syncs + 2 Announces + Mac-style Signaling to each peer
-    for peer_idx in 0..peer_ips.len() {
-        let event_dest = event_dests[peer_idx];
-        let general_dest = general_dests[peer_idx];
-
-        for i in 0..3 {
-            send_ptp_sync(&event_socket, &general_socket, event_dest, &clock_identity, &mut sync_seq).await?;
-            if i < 2 {
-                send_ptp_announce(&general_socket, general_dest, &clock_identity, &mut announce_seq, 248, priority1).await?;
-            }
-            tokio::time::sleep(std::time::Duration::from_millis(125)).await;
-        }
-        send_mac_style_signaling(&general_socket, general_dest, &clock_identity, &mut signaling_seq).await?;
-        tracing::info!("PTP master: Initial messages sent to peer {}", peer_ips[peer_idx]);
-    }
-
-    // Phase 2: Wait for Announces from peers, then verify we win BMCA
     let mut event_buf = [0u8; 256];
     let mut general_buf = [0u8; 256];
-    let bmca_deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(3);
-    let mut peers_heard = 0usize;
+    let expected_peers: HashSet<std::net::IpAddr> = peer_ips.iter().copied().collect();
+    let mut announced_peers = HashSet::new();
+    let mut delay_peers = HashSet::new();
 
-    loop {
-        if peers_heard >= peer_ips.len() {
-            break;
+    // Delay_Req can arrive while BMCA is still in progress. It must be answered
+    // immediately or the receiver cannot calculate its path delay and lock.
+    for attempt in 1..=GROUP_MASTER_NEGOTIATION_ATTEMPTS {
+        // Send 3 Syncs + 2 Announces + Mac-style Signaling to each peer.
+        for peer_idx in 0..peer_ips.len() {
+            let event_dest = event_dests[peer_idx];
+            let general_dest = general_dests[peer_idx];
+
+            for i in 0..3 {
+                send_ptp_sync(&event_socket, &general_socket, event_dest, &clock_identity, &mut sync_seq).await?;
+                if i < 2 {
+                    send_ptp_announce(&general_socket, general_dest, &clock_identity, &mut announce_seq, 248, priority1).await?;
+                }
+                tokio::time::sleep(Duration::from_millis(125)).await;
+            }
+            send_mac_style_signaling(&general_socket, general_dest, &clock_identity, &mut signaling_seq).await?;
+            tracing::info!(
+                "PTP master: Negotiation attempt {}/{} sent to peer {}",
+                attempt,
+                GROUP_MASTER_NEGOTIATION_ATTEMPTS,
+                peer_ips[peer_idx]
+            );
         }
-        tokio::select! {
-            _ = tokio::time::sleep_until(bmca_deadline) => {
-                tracing::warn!("PTP master: Timeout waiting for all peer Announces ({}/{})",
-                    peers_heard, peer_ips.len());
+
+        let deadline = tokio::time::Instant::now() + GROUP_MASTER_NEGOTIATION_TIMEOUT;
+        loop {
+            if group_peers_ready(&expected_peers, &announced_peers, &delay_peers) {
                 break;
             }
-            result = general_socket.recv_from(&mut general_buf) => {
-                if let Ok((len, src)) = result {
-                    if let Ok(header) = PtpHeader::parse(&general_buf[..len]) {
-                        if header.message_type == PtpMessageType::Announce && len >= 61 {
-                            let remote_priority1 = general_buf[47];
-                            tracing::info!("PTP master: Peer {} Announce pri1={} (ours={})",
-                                src.ip(), remote_priority1, priority1);
-                            if priority1 < remote_priority1 {
-                                tracing::info!("PTP master: We win BMCA against {}", src.ip());
-                            } else {
-                                tracing::warn!("PTP master: Peer {} has equal/better priority ({}), continuing as master anyway",
-                                    src.ip(), remote_priority1);
+
+            tokio::select! {
+                _ = tokio::time::sleep_until(deadline) => break,
+                result = general_socket.recv_from(&mut general_buf) => {
+                    if let Ok((len, src)) = result {
+                        if let Ok(header) = PtpHeader::parse(&general_buf[..len]) {
+                            if header.message_type == PtpMessageType::Announce
+                                && len >= 61
+                                && expected_peers.contains(&src.ip())
+                            {
+                                let remote_priority1 = general_buf[47];
+                                tracing::info!("PTP master: Peer {} Announce pri1={} (ours={})",
+                                    src.ip(), remote_priority1, priority1);
+                                if priority1 < remote_priority1 {
+                                    tracing::info!("PTP master: We win BMCA against {}", src.ip());
+                                    announced_peers.insert(src.ip());
+                                } else {
+                                    tracing::error!("PTP master: Peer {} has equal/better priority {}",
+                                        src.ip(), remote_priority1);
+                                    return Err(Error::Streaming(StreamingError::TimingSyncLost));
+                                }
                             }
-                            peers_heard += 1;
+                        }
+                    }
+                }
+                result = event_socket.recv_from(&mut event_buf) => {
+                    if let Ok((len, src)) = result {
+                        if let Ok(header) = PtpHeader::parse(&event_buf[..len]) {
+                            if header.message_type == PtpMessageType::DelayReq
+                                && expected_peers.contains(&src.ip())
+                            {
+                                respond_to_group_delay_request(&event_socket, src, &header, &clock_identity).await?;
+                                if delay_peers.insert(src.ip()) {
+                                    tracing::info!("PTP master: Completed initial delay exchange with {}", src.ip());
+                                }
+                            } else {
+                                tracing::debug!("PTP master: Received {:?} on event port during BMCA", header.message_type);
+                            }
                         }
                     }
                 }
             }
-            result = event_socket.recv_from(&mut event_buf) => {
-                if let Ok((len, _src)) = result {
-                    if let Ok(header) = PtpHeader::parse(&event_buf[..len]) {
-                        tracing::debug!("PTP master: Received {:?} on event port during BMCA", header.message_type);
-                    }
-                }
-            }
         }
+
+        if group_peers_ready(&expected_peers, &announced_peers, &delay_peers) {
+            break;
+        }
+
+        tracing::warn!(
+            "PTP master: Negotiation attempt {}/{} incomplete (announces={}/{}, delay_exchanges={}/{})",
+            attempt,
+            GROUP_MASTER_NEGOTIATION_ATTEMPTS,
+            announced_peers.len(),
+            expected_peers.len(),
+            delay_peers.len(),
+            expected_peers.len()
+        );
     }
 
-    // Report our own clock identity
-    let _ = clock_id_tx.send(clock_identity);
+    if !group_peers_ready(&expected_peers, &announced_peers, &delay_peers) {
+        tracing::error!("PTP master: Unable to synchronize all peers after {} attempts",
+            GROUP_MASTER_NEGOTIATION_ATTEMPTS);
+        return Err(Error::Streaming(StreamingError::TimingSyncLost));
+    }
+
+    // Only report readiness after every peer completes the initial exchange.
+    clock_id_tx.send(clock_identity)
+        .map_err(|_| Error::Streaming(StreamingError::Interrupted))?;
 
     tracing::info!("PTP master: Entering master loop — sending Syncs to {} peers", peer_ips.len());
 
@@ -1839,24 +1922,10 @@ pub async fn run_ptp_group_master_flow(
                     if let Ok((len, src)) = result {
                         if let Ok(header) = PtpHeader::parse(&event_buf[..len]) {
                             if header.message_type == PtpMessageType::DelayReq {
-                                let recv_time = PtpTimestamp::now();
                                 tracing::trace!("PTP master: Delay_Req from {} (seq={})", src, header.sequence_id);
-
-                                // Send Delay_Resp back
-                                let mut source_port_identity = [0u8; 10];
-                                source_port_identity[..8].copy_from_slice(&clock_identity);
-                                source_port_identity[8..10].copy_from_slice(&1u16.to_be_bytes());
-
-                                let mut resp_header = PtpHeader::new(PtpMessageType::DelayResp, header.sequence_id);
-                                resp_header.source_port_identity = source_port_identity;
-                                resp_header.message_length = 54;
-
-                                let mut resp_packet = [0u8; 54];
-                                resp_packet[..34].copy_from_slice(&resp_header.serialize());
-                                resp_packet[34..44].copy_from_slice(&recv_time.serialize());
-                                resp_packet[44..54].copy_from_slice(&header.source_port_identity);
-
-                                if let Err(e) = event_socket.send_to(&resp_packet, src).await {
+                                if let Err(e) = respond_to_group_delay_request(
+                                    &event_socket, src, &header, &clock_identity
+                                ).await {
                                     tracing::warn!("PTP master: Failed to send Delay_Resp to {}: {}", src, e);
                                 }
                             }
@@ -2132,6 +2201,47 @@ pub async fn run_ptp_slave(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    mod group_master_negotiation {
+        use super::*;
+
+        #[test]
+        fn readiness_requires_both_exchanges_from_every_peer() {
+            let peer_one = "192.168.1.10".parse().unwrap();
+            let peer_two = "192.168.1.11".parse().unwrap();
+            let expected = HashSet::from([peer_one, peer_two]);
+            let mut announced = HashSet::new();
+            let mut delayed = HashSet::new();
+
+            announced.insert(peer_one);
+            delayed.insert(peer_one);
+            assert!(!group_peers_ready(&expected, &announced, &delayed));
+
+            announced.insert(peer_two);
+            assert!(!group_peers_ready(&expected, &announced, &delayed));
+
+            delayed.insert(peer_two);
+            assert!(group_peers_ready(&expected, &announced, &delayed));
+        }
+
+        #[test]
+        fn delay_response_preserves_request_identity_and_sequence() {
+            let clock_identity = [0x11; 8];
+            let requester_identity = [0x22; 10];
+            let receive_time = PtpTimestamp { seconds: 123, nanoseconds: 456 };
+            let mut request = PtpHeader::new(PtpMessageType::DelayReq, 42);
+            request.source_port_identity = requester_identity;
+
+            let response = build_group_delay_response(&request, receive_time, &clock_identity);
+            let parsed = PtpHeader::parse(&response).unwrap();
+
+            assert_eq!(parsed.message_type, PtpMessageType::DelayResp);
+            assert_eq!(parsed.sequence_id, 42);
+            assert_eq!(&parsed.source_port_identity[..8], &clock_identity);
+            assert_eq!(PtpTimestamp::parse(&response[34..44]).unwrap(), receive_time);
+            assert_eq!(&response[44..54], &requester_identity);
+        }
+    }
 
     mod ptp_timestamp {
         use super::*;
