@@ -54,7 +54,7 @@ def test_build_command_uses_mixed_timing_and_runtime_volume():
     ]
     assert "--control-stdin" in command
     assert command[command.index("--volume") + 1] == "0.4200"
-    assert command[command.index("--render-delay") + 1] == "1000"
+    assert command[command.index("--render-delay") + 1] == "2000"
     assert command[command.index("--ptp-targets") + 1] == "192.168.120.111"
 
 
@@ -84,6 +84,20 @@ def test_single_sonos_uses_verified_ptp_master_and_track_metadata():
     assert command[command.index("--artwork") + 1] == "/tmp/artwork.jpg"
 
 
+def test_command_passes_seek_and_per_device_sync_offsets():
+    engine, kitchen, family = configured_engine()
+    engine._stream_start_offset = 42.125
+    kitchen.sync_offset_ms = 35
+    family.sync_offset_ms = -20
+
+    command = engine._build_airplay_command([kitchen, family], "/tmp/song.wav")
+
+    assert command[command.index("--start-offset") + 1] == "42.125000"
+    assert command[command.index("--sync-offsets") + 1] == (
+        "192.168.120.111=35,192.168.100.157=-20"
+    )
+
+
 def test_airplay_diagnostics_are_exposed_with_render_delay():
     engine, _, _ = configured_engine()
     engine._airplay_diagnostics.update(
@@ -98,7 +112,7 @@ def test_airplay_diagnostics_are_exposed_with_render_delay():
 
     diagnostics = engine.get_state()["airplayDiagnostics"]
 
-    assert diagnostics["renderDelayMs"] == 1000
+    assert diagnostics["renderDelayMs"] == 2000
     assert diagnostics["packetsSent"] == 1000
     assert diagnostics["unrecoveredRetransmits"] == 2
 
@@ -273,8 +287,22 @@ def test_speaker_volume_persists_in_preferences(tmp_path):
     # Create new engine instance and verify restored volume
     new_engine = PlayerEngine()
     new_engine._preferences_path = engine._preferences_path
-    hidden, selected_ids, selected_names, volumes = new_engine._load_preferences()
+    hidden, selected_ids, selected_names, volumes, sync_offsets = new_engine._load_preferences()
     assert volumes[kitchen.id] == 45
+    assert sync_offsets == {}
+
+
+def test_speaker_sync_offset_persists_in_preferences(tmp_path):
+    engine = PlayerEngine()
+    engine._preferences_path = tmp_path / "airplay_preferences.json"
+    kitchen = AirPlayDevice("kitchen", "Kitchen", "192.168.120.111")
+    engine.devices[kitchen.id] = kitchen
+
+    engine.set_device_sync_offset(kitchen.id, 45)
+
+    data = json.loads(engine._preferences_path.read_text(encoding="utf-8"))
+    assert data["deviceSyncOffsetsMs"][kitchen.id] == 45
+    assert engine.devices[kitchen.id].to_dict()["syncOffsetMs"] == 45
 
 
 def test_selected_speaker_persists_and_restores(tmp_path):
@@ -292,7 +320,13 @@ def test_selected_speaker_persists_and_restores(tmp_path):
     # Re-instantiate engine and verify preferences
     new_engine = PlayerEngine()
     new_engine._preferences_path = engine._preferences_path
-    new_engine._hidden_device_ids, new_engine._selected_device_ids, new_engine._selected_device_names, new_engine._device_volumes = new_engine._load_preferences()
+    (
+        new_engine._hidden_device_ids,
+        new_engine._selected_device_ids,
+        new_engine._selected_device_names,
+        new_engine._device_volumes,
+        new_engine._device_sync_offsets,
+    ) = new_engine._load_preferences()
     assert "192.168.1.50" in new_engine._selected_device_ids
     assert "Master Bedroom" in new_engine._selected_device_names
 
@@ -580,5 +614,3 @@ def test_watch_stream_process_ignores_stale_generation():
         loop.close()
 
     assert len(advance_calls) == 0
-
-

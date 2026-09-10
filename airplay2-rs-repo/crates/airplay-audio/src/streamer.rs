@@ -111,6 +111,62 @@ enum SenderMessage {
     Stop,
 }
 
+/// Stable mapping between the sender's wall clock and the logical RTP sample
+/// that should be leaving a receiver's renderer at that instant.
+///
+/// The outgoing encoder head deliberately runs ahead of this position by the
+/// configured render delay. Keeping this mapping frozen prevents periodic sync
+/// packets from moving the receiver's presentation anchor as queue depth varies.
+#[derive(Debug, Clone, Copy)]
+struct PresentationTimeline {
+    local_wall_0_ns: u64,
+    play_rtp_0: u32,
+    sample_rate: u32,
+}
+
+impl PresentationTimeline {
+    fn new(
+        local_wall_0_ns: u64,
+        outgoing_rtp: u32,
+        render_delay_ns: u64,
+        sample_rate: u32,
+    ) -> Self {
+        let delay_frames = ((render_delay_ns as u128 * sample_rate as u128)
+            / 1_000_000_000u128) as u32;
+        Self {
+            local_wall_0_ns,
+            play_rtp_0: outgoing_rtp.wrapping_sub(delay_frames),
+            sample_rate,
+        }
+    }
+
+    fn play_rtp_at(&self, local_wall_ns: u64) -> u32 {
+        if local_wall_ns >= self.local_wall_0_ns {
+            let elapsed_frames = (((local_wall_ns - self.local_wall_0_ns) as u128
+                * self.sample_rate as u128)
+                / 1_000_000_000u128) as u32;
+            self.play_rtp_0.wrapping_add(elapsed_frames)
+        } else {
+            let elapsed_frames = (((self.local_wall_0_ns - local_wall_ns) as u128
+                * self.sample_rate as u128)
+                / 1_000_000_000u128) as u32;
+            self.play_rtp_0.wrapping_sub(elapsed_frames)
+        }
+    }
+}
+
+fn ptp_anchor_positions(play_rtp: u32, buffered_rtp: u32, sample_rate: u32) -> (u32, u32) {
+    // The first PT=87 RTP field is the position rendering at the PTP instant.
+    // The second is the outgoing RTP head minus AirPlay's fixed 250 ms
+    // allowance. With the canonical two-second sender lead, their separation
+    // is 77175 frames at 44.1 kHz (and 84000 frames at 48 kHz).
+    let fixed_render_frames = sample_rate / 4;
+    (
+        play_rtp,
+        buffered_rtp.wrapping_sub(fixed_render_frames),
+    )
+}
+
 /// Sleep until an absolute deadline using the best available method.
 ///
 /// On Linux with SCHED_FIFO, `clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME)`
@@ -455,9 +511,11 @@ struct StreamerInner {
     /// Track whether first audio packet has been sent (requires marker bit)
     first_packet_sent: bool,
     /// Render delay in nanoseconds added to NTP timestamps in sync packets.
-    /// Tells the receiver to render audio this far in the future, giving more
-    /// time for retransmit recovery of lost packets.
+    /// Encoded as distance between the outgoing RTP head and the logical RTP
+    /// position that should be rendering on the shared presentation timeline.
     render_delay_ns: u64,
+    /// Frozen wall-clock/RTP mapping shared by NTP and PTP packet encodings.
+    presentation_timeline: Option<PresentationTimeline>,
     /// Whether to use PTP-mode sync packets (PT=87) instead of NTP (PT=84).
     use_ptp_sync: bool,
     /// PTP master clock identity (from BMCA, used in PT=87 packets).
@@ -516,6 +574,7 @@ impl AudioStreamer {
                 equalizer: None,
                 first_packet_sent: false,
                 render_delay_ns: 0,
+                presentation_timeline: None,
                 use_ptp_sync: false,
                 ptp_master_clock_id: [0u8; 8],
             })),
@@ -555,9 +614,8 @@ impl AudioStreamer {
 
     /// Set render delay in milliseconds.
     ///
-    /// This shifts NTP timestamps in sync packets into the future, telling
-    /// the receiver to buffer audio longer before rendering. This gives more
-    /// time for retransmit recovery of lost packets.
+    /// This places the outgoing RTP head ahead of the logical render position
+    /// while leaving sync timestamps on the current wall-clock instant.
     pub async fn set_render_delay_ms(&mut self, delay_ms: u32) {
         let delay_ns = delay_ms as u64 * 1_000_000;
         self.inner.lock().await.render_delay_ns = delay_ns;
@@ -907,6 +965,12 @@ impl AudioStreamer {
                 let _ = tx.try_send(SenderMessage::Resume);
             }
             inner.state = StreamerState::Streaming;
+            inner.presentation_timeline = None;
+            inner.first_packet_sent = false;
+            inner.last_sync_rtp = 0;
+            for sender in &mut inner.rtp_senders {
+                sender.reset_sync_state();
+            }
             self.state_cache
                 .store(StreamerState::Streaming as u8, Ordering::Relaxed);
         }
@@ -918,6 +982,8 @@ impl AudioStreamer {
     pub async fn reset_after_flush(&mut self) {
         let mut inner = self.inner.lock().await;
         inner.first_packet_sent = false;
+        inner.last_sync_rtp = 0;
+        inner.presentation_timeline = None;
         for sender in &mut inner.rtp_senders {
             sender.reset_sync_state();
         }
@@ -972,6 +1038,12 @@ impl AudioStreamer {
             eq.reset();
         }
         inner.current_timestamp = position_samples;
+        inner.last_sync_rtp = 0;
+        inner.first_packet_sent = false;
+        inner.presentation_timeline = None;
+        for sender in &mut inner.rtp_senders {
+            sender.reset_sync_state();
+        }
         self.timestamp_cache
             .store(position_samples, Ordering::Relaxed);
         Ok(())
@@ -1232,14 +1304,6 @@ async fn run_streamer(
                     local_wall
                 };
 
-                // PTP render adjusted timestamp (for PTP receivers like Sonos)
-                let ptp_render_adjusted = ptp_adjusted + guard.render_delay_ns;
-
-                // Unix NTP render adjusted timestamp (for NTP receivers like WiiM)
-                // WiiM synchronizes against our NtpTimingServer which uses local Unix wall clock time.
-                let ntp_render_adjusted = local_wall + guard.render_delay_ns;
-                let ntp = unix_to_ntp(ntp_render_adjusted);
-
                 // Apple sends realtime audio with PT=96 and the marker bit clear,
                 // including the first packet (RTP byte 1 is 0x60, not 0xe0).
                 let first_packet = !guard.first_packet_sent;
@@ -1252,6 +1316,32 @@ async fn run_streamer(
                     || last_sync_rtp == 0
                     || rtp_ts.wrapping_sub(last_sync_rtp) >= sample_rate;
 
+                let sync_positions = if need_sync {
+                    if guard.presentation_timeline.is_none() {
+                        guard.presentation_timeline = Some(PresentationTimeline::new(
+                            local_wall,
+                            rtp_ts,
+                            guard.render_delay_ns,
+                            sample_rate,
+                        ));
+                    }
+                    let timeline = guard
+                        .presentation_timeline
+                        .expect("presentation timeline initialized above");
+                    let play_rtp = timeline.play_rtp_at(local_wall);
+                    let (ptp_play_anchor, ptp_buffered_anchor) =
+                        ptp_anchor_positions(play_rtp, rtp_ts, sample_rate);
+                    Some((
+                        play_rtp,
+                        rtp_ts,
+                        unix_to_ntp(local_wall),
+                        ptp_play_anchor,
+                        ptp_buffered_anchor,
+                    ))
+                } else {
+                    None
+                };
+
                 // Extract PTP sync mode state before borrowing rtp_sender
                 let use_ptp_sync = guard.use_ptp_sync;
                 let ptp_clock_id = guard.ptp_master_clock_id;
@@ -1260,7 +1350,14 @@ async fn run_streamer(
                     if let Some(ref tx) = sender_tx {
                         // Sender thread path: prepare per-target sync for ALL senders,
                         // then prepare audio from ALL senders (per-device encryption).
-                        let sync_packets = if need_sync {
+                        let sync_packets = if let Some((
+                            play_rtp,
+                            buffered_rtp,
+                            ntp,
+                            ptp_play_anchor,
+                            ptp_buffered_anchor,
+                        )) = sync_positions
+                        {
                             let mut syncs = Vec::with_capacity(guard.rtp_senders.len());
                             for sender in &mut guard.rtp_senders {
                                 let ptp_id = sender.ptp_master_clock_id().or(if use_ptp_sync {
@@ -1269,15 +1366,14 @@ async fn run_streamer(
                                     None
                                 });
                                 let sync_pkt = if let Some(clock_id) = ptp_id {
-                                    let next_rtp_ts = rtp_ts.wrapping_add(sample_rate / 44100 * 352);
                                     sender.prepare_ptp_sync(
-                                        rtp_ts,
-                                        ptp_render_adjusted,
-                                        next_rtp_ts,
+                                        ptp_play_anchor,
+                                        ptp_adjusted,
+                                        ptp_buffered_anchor,
                                         &clock_id,
                                     )?
                                 } else {
-                                    sender.prepare_sync(rtp_ts, ntp)?
+                                    sender.prepare_sync(play_rtp, ntp, buffered_rtp)?
                                 };
                                 syncs.push(sync_pkt);
                             }
@@ -1337,7 +1433,14 @@ async fn run_streamer(
                     } else {
                         // Fallback: direct send (no sender thread)
                         // Send per-target sync and audio to all senders
-                        if need_sync {
+                        if let Some((
+                            play_rtp,
+                            buffered_rtp,
+                            ntp,
+                            ptp_play_anchor,
+                            ptp_buffered_anchor,
+                        )) = sync_positions
+                        {
                             for sender in &mut guard.rtp_senders {
                                 let ptp_id = sender.ptp_master_clock_id().or(if use_ptp_sync {
                                     Some(ptp_clock_id)
@@ -1345,15 +1448,14 @@ async fn run_streamer(
                                     None
                                 });
                                 if let Some(clock_id) = ptp_id {
-                                    let next_rtp_ts = rtp_ts.wrapping_add(sample_rate / 44100 * 352);
                                     sender.send_ptp_sync(
-                                        rtp_ts,
-                                        ptp_render_adjusted,
-                                        next_rtp_ts,
+                                        ptp_play_anchor,
+                                        ptp_adjusted,
+                                        ptp_buffered_anchor,
                                         &clock_id,
                                     )?;
                                 } else {
-                                    sender.send_sync(rtp_ts, ntp)?;
+                                    sender.send_sync(play_rtp, ntp, buffered_rtp)?;
                                 }
                             }
                         }
@@ -1561,6 +1663,36 @@ mod tests {
 
     mod timing {
         use super::*;
+
+        #[test]
+        fn presentation_timeline_encodes_render_lead_as_rtp_distance() {
+            let timeline = PresentationTimeline::new(
+                1_000_000_000,
+                100_000,
+                1_000_000_000,
+                44_100,
+            );
+            assert_eq!(timeline.play_rtp_at(1_000_000_000), 55_900);
+            assert_eq!(timeline.play_rtp_at(2_000_000_000), 100_000);
+        }
+
+        #[test]
+        fn presentation_timeline_extrapolates_without_reanchoring() {
+            let timeline = PresentationTimeline::new(10_000_000_000, 500_000, 500_000_000, 48_000);
+            assert_eq!(timeline.play_rtp_at(10_250_000_000), 488_000);
+            assert_eq!(timeline.play_rtp_at(11_000_000_000), 524_000);
+        }
+
+        #[test]
+        fn ptp_anchor_uses_scaled_two_second_window() {
+            let (first, second) = ptp_anchor_positions(10_000, 98_200, 44_100);
+            assert_eq!(first, 10_000);
+            assert_eq!(second.wrapping_sub(first), 77_175);
+
+            let (first_48k, second_48k) = ptp_anchor_positions(10_000, 106_000, 48_000);
+            assert_eq!(first_48k, 10_000);
+            assert_eq!(second_48k.wrapping_sub(first_48k), 84_000);
+        }
 
         #[tokio::test]
         async fn timestamps_increment_correctly() {

@@ -12,6 +12,7 @@ export interface AirPlayDevice {
   model: string
   isSelected: boolean
   volume: number
+  syncOffsetMs: number
   isConnected: boolean
   isHidden: boolean
 }
@@ -35,6 +36,7 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
   const [masterVolume, setMasterVolume] = useState(70)
   const [loading, setLoading] = useState(false)
   const [showHidden, setShowHidden] = useState(false)
+  const [calibratingDeviceId, setCalibratingDeviceId] = useState<string | null>(null)
   const [position, setPosition] = useState<PanelPosition>({ top: 84, right: 20, isMobile: false, origin: 'top right' })
 
   const isInteractingRef = useRef(false)
@@ -291,6 +293,22 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
     }
   }
 
+  const updateDeviceSyncOffset = (deviceId: string, offsetMs: number) => {
+    setDevices((previous) => previous.map((device) =>
+      device.id === deviceId ? { ...device, syncOffsetMs: offsetMs } : device
+    ))
+  }
+
+  const commitDeviceSyncOffset = async (deviceId: string, offsetMs: number) => {
+    updateDeviceSyncOffset(deviceId, offsetMs)
+    try {
+      await api.post<any>('/api/ytmusic/airplay/sync-offset/device', { deviceId, offsetMs })
+    } catch (error) {
+      console.error('Failed to update speaker sync offset', error)
+      fetchDevices()
+    }
+  }
+
   const hiddenDevices = devices.filter((device) => device.isHidden)
   const displayedDevices = devices.filter((device) => showHidden ? device.isHidden : !device.isHidden)
 
@@ -351,7 +369,8 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
             )}
             <div className="flex max-h-[min(31rem,calc(100vh-7rem))] flex-col gap-1.5 overflow-y-auto overscroll-contain">
               {displayedDevices.length ? displayedDevices.map((device) => (
-                <div key={device.id} className="flex h-12 items-center gap-2 rounded-2xl px-1">
+                <div key={device.id} className="flex flex-col rounded-2xl px-1">
+                  <div className="flex h-12 items-center gap-2">
                   <button
                     type="button"
                     onClick={() => device.isHidden ? setDeviceHidden(device.id, false) : toggleDevice(device)}
@@ -389,16 +408,60 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
                     )}
                   </div>
 
-                  {!showHidden && (
-                    <button
-                      type="button"
-                      onClick={() => setDeviceHidden(device.id, true)}
-                      aria-label={`Hide ${device.name}`}
-                      title="Hide speaker"
-                      className="flex h-9 w-8 shrink-0 items-center justify-center rounded-full text-ink-soft transition hover:bg-[var(--sc-high)] hover:text-ink cursor-pointer"
-                    >
-                      <Icon name="visibility_off" className="text-lg" />
-                    </button>
+                    {!showHidden && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setCalibratingDeviceId((current) => current === device.id ? null : device.id)}
+                          aria-label={`Adjust sync for ${device.name}`}
+                          title="Adjust speaker sync"
+                          className={`flex h-9 w-8 shrink-0 items-center justify-center rounded-full transition cursor-pointer ${
+                            calibratingDeviceId === device.id ? 'bg-[var(--sc-high)] text-[var(--primary)]' : 'text-ink-soft hover:bg-[var(--sc-high)] hover:text-ink'
+                          }`}
+                        >
+                          <Icon name="tune" className="text-lg" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeviceHidden(device.id, true)}
+                          aria-label={`Hide ${device.name}`}
+                          title="Hide speaker"
+                          className="flex h-9 w-8 shrink-0 items-center justify-center rounded-full text-ink-soft transition hover:bg-[var(--sc-high)] hover:text-ink cursor-pointer"
+                        >
+                          <Icon name="visibility_off" className="text-lg" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                  {calibratingDeviceId === device.id && !showHidden && (
+                    <div className="mb-2 ml-9 rounded-xl border border-[var(--outline-var)] bg-[var(--sc)] px-3 py-2">
+                      <div className="mb-1 flex items-center justify-between text-[0.7rem] text-ink-soft">
+                        <span>Speaker sync</span>
+                        <span>{device.syncOffsetMs > 0 ? `Delay ${device.syncOffsetMs} ms` : device.syncOffsetMs < 0 ? `Advance ${Math.abs(device.syncOffsetMs)} ms` : 'Matched'}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="range"
+                          min="-500"
+                          max="500"
+                          step="5"
+                          value={device.syncOffsetMs ?? 0}
+                          onChange={(event) => updateDeviceSyncOffset(device.id, Number(event.target.value))}
+                          onPointerUp={(event) => commitDeviceSyncOffset(device.id, Number(event.currentTarget.value))}
+                          onKeyUp={(event) => commitDeviceSyncOffset(device.id, Number(event.currentTarget.value))}
+                          aria-label={`Sync offset for ${device.name}`}
+                          className="min-w-0 flex-1 accent-[var(--primary)]"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => commitDeviceSyncOffset(device.id, 0)}
+                          className="rounded-lg px-2 py-1 text-[0.7rem] font-medium text-ink-soft hover:bg-[var(--sc-high)] hover:text-ink"
+                        >
+                          Reset
+                        </button>
+                      </div>
+                      <p className="mt-1 text-[0.65rem] text-ink-soft">Used the next time the speaker connects.</p>
+                    </div>
                   )}
                 </div>
               )) : (

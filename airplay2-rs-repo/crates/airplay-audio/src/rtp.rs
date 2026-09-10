@@ -401,6 +401,10 @@ pub struct RtpSender {
     sequence: u16,
     /// Per-session RTP timestamp origin advertised in RECORD/FLUSH.
     timestamp_offset: u32,
+    /// Per-device playout correction. Positive values delay this receiver by
+    /// moving only the wall-clock RTP anchor backwards; audio RTP timestamps
+    /// remain on the shared group timeline.
+    sync_offset_frames: i32,
     ssrc: u32,
     cipher: Option<Box<dyn PacketCipher>>,
     /// Sync packet sequence counter (increments each sync)
@@ -440,6 +444,7 @@ impl RtpSender {
             tcp_stream: None,
             sequence,
             timestamp_offset,
+            sync_offset_frames: 0,
             ssrc,
             cipher: None,
             sync_sequence: 0,
@@ -452,6 +457,21 @@ impl RtpSender {
     /// Set PTP master clock identity for this sender.
     pub fn set_ptp_master_clock_id(&mut self, clock_id: [u8; 8]) {
         self.ptp_master_clock_id = Some(clock_id);
+    }
+
+    /// Apply a static receiver/DSP latency correction to sync packets.
+    /// Positive values make this receiver render later.
+    pub fn set_sync_offset_frames(&mut self, offset_frames: i32) {
+        self.sync_offset_frames = offset_frames;
+    }
+
+    fn sync_play_timestamp(&self, timestamp: u32) -> u32 {
+        let wire_timestamp = timestamp.wrapping_add(self.timestamp_offset);
+        if self.sync_offset_frames >= 0 {
+            wire_timestamp.wrapping_sub(self.sync_offset_frames as u32)
+        } else {
+            wire_timestamp.wrapping_add(self.sync_offset_frames.unsigned_abs())
+        }
     }
 
     /// Get PTP master clock identity if configured.
@@ -655,9 +675,15 @@ impl RtpSender {
     /// - Bytes 2-3: Incrementing sync sequence number (BE)
     /// - Bytes 4-7: Current RTP timestamp (BE)
     /// - Bytes 8-15: NTP timestamp (8 bytes BE - seconds + fraction)
-    /// - Bytes 16-19: Next RTP timestamp (BE)
-    pub fn send_sync(&mut self, rtp_timestamp: u32, ntp_timestamp: u64) -> Result<()> {
-        let rtp_timestamp = rtp_timestamp.wrapping_add(self.timestamp_offset);
+    /// - Bytes 16-19: Current outgoing/buffered RTP timestamp (BE)
+    pub fn send_sync(
+        &mut self,
+        play_rtp_timestamp: u32,
+        ntp_timestamp: u64,
+        buffered_rtp_timestamp: u32,
+    ) -> Result<()> {
+        let play_rtp_timestamp = self.sync_play_timestamp(play_rtp_timestamp);
+        let buffered_rtp_timestamp = buffered_rtp_timestamp.wrapping_add(self.timestamp_offset);
         // Get the destination - control port if set, otherwise data port
         let dest = self.control_dest.unwrap_or(self.dest);
 
@@ -696,15 +722,15 @@ impl RtpSender {
             // - Bytes 12..15: Render RTP timestamp (BE, timestamp + latency offset)
             // - Bytes 16..39: PTP clock identity & padding (24 bytes)
             let mut sync_payload = [0u8; 40];
-            sync_payload[0..4].copy_from_slice(&rtp_timestamp.to_be_bytes());
+            sync_payload[0..4].copy_from_slice(&play_rtp_timestamp.to_be_bytes());
             sync_payload[4..12].copy_from_slice(&ntp_timestamp.to_be_bytes());
-            let render_ts = rtp_timestamp.wrapping_add(11025);
+            let render_ts = buffered_rtp_timestamp;
             sync_payload[12..16].copy_from_slice(&render_ts.to_be_bytes());
 
             // Build encrypted RTP packet with PT 96 and current sync sequence
-            let header = RtpHeader::new(96, sync_sequence, rtp_timestamp, self.ssrc);
+            let header = RtpHeader::new(96, sync_sequence, play_rtp_timestamp, self.ssrc);
             let encrypted =
-                cipher.encrypt_payload(&sync_payload, rtp_timestamp, self.ssrc, sync_sequence)?;
+                cipher.encrypt_payload(&sync_payload, play_rtp_timestamp, self.ssrc, sync_sequence)?;
 
             let mut wire_pkt = Vec::with_capacity(12 + encrypted.data.len() + 16);
             wire_pkt.extend_from_slice(&header.serialize());
@@ -724,9 +750,9 @@ impl RtpSender {
             };
             packet[1] = 0xd4; // PT 84 with marker bit
             packet[2..4].copy_from_slice(&sync_sequence.to_be_bytes());
-            packet[4..8].copy_from_slice(&rtp_timestamp.to_be_bytes());
+            packet[4..8].copy_from_slice(&play_rtp_timestamp.to_be_bytes());
             packet[8..16].copy_from_slice(&ntp_timestamp.to_be_bytes());
-            packet[16..20].copy_from_slice(&rtp_timestamp.to_be_bytes());
+            packet[16..20].copy_from_slice(&buffered_rtp_timestamp.to_be_bytes());
             packet.to_vec()
         };
 
@@ -736,14 +762,14 @@ impl RtpSender {
                 "DIAG AirPlay 2 Sync #{}: dest={}, rtp_ts={}, len={}",
                 sync_sequence,
                 dest,
-                rtp_timestamp,
+                buffered_rtp_timestamp,
                 packet_data.len()
             );
         }
         tracing::debug!(
             "Sync packet sent to {}: rtp_ts={}, ntp_ts={}",
             dest,
-            rtp_timestamp,
+            buffered_rtp_timestamp,
             ntp_timestamp
         );
 
@@ -754,10 +780,12 @@ impl RtpSender {
     /// or None if the control port is 0 (buffered mode skips sync).
     pub fn prepare_sync(
         &mut self,
-        rtp_timestamp: u32,
+        play_rtp_timestamp: u32,
         ntp_timestamp: u64,
+        buffered_rtp_timestamp: u32,
     ) -> Result<Option<Vec<u8>>> {
-        let rtp_timestamp = rtp_timestamp.wrapping_add(self.timestamp_offset);
+        let play_rtp_timestamp = self.sync_play_timestamp(play_rtp_timestamp);
+        let buffered_rtp_timestamp = buffered_rtp_timestamp.wrapping_add(self.timestamp_offset);
         let dest = self.control_dest.unwrap_or(self.dest);
 
         if dest.port() == 0 {
@@ -775,14 +803,14 @@ impl RtpSender {
                 .as_ref()
                 .expect("unreachable encrypted NTP sync");
             let mut sync_payload = [0u8; 40];
-            sync_payload[0..4].copy_from_slice(&rtp_timestamp.to_be_bytes());
+            sync_payload[0..4].copy_from_slice(&play_rtp_timestamp.to_be_bytes());
             sync_payload[4..12].copy_from_slice(&ntp_timestamp.to_be_bytes());
-            let render_ts = rtp_timestamp.wrapping_add(11025);
+            let render_ts = buffered_rtp_timestamp;
             sync_payload[12..16].copy_from_slice(&render_ts.to_be_bytes());
 
-            let header = RtpHeader::new(96, sync_sequence, rtp_timestamp, self.ssrc);
+            let header = RtpHeader::new(96, sync_sequence, play_rtp_timestamp, self.ssrc);
             let encrypted =
-                cipher.encrypt_payload(&sync_payload, rtp_timestamp, self.ssrc, sync_sequence)?;
+                cipher.encrypt_payload(&sync_payload, play_rtp_timestamp, self.ssrc, sync_sequence)?;
 
             let mut wire_pkt = Vec::with_capacity(12 + encrypted.data.len() + 16);
             wire_pkt.extend_from_slice(&header.serialize());
@@ -801,9 +829,9 @@ impl RtpSender {
             };
             packet[1] = 0xd4;
             packet[2..4].copy_from_slice(&sync_sequence.to_be_bytes());
-            packet[4..8].copy_from_slice(&rtp_timestamp.to_be_bytes());
+            packet[4..8].copy_from_slice(&play_rtp_timestamp.to_be_bytes());
             packet[8..16].copy_from_slice(&ntp_timestamp.to_be_bytes());
-            packet[16..20].copy_from_slice(&rtp_timestamp.to_be_bytes());
+            packet[16..20].copy_from_slice(&buffered_rtp_timestamp.to_be_bytes());
             packet.to_vec()
         };
 
@@ -822,19 +850,18 @@ impl RtpSender {
     /// - Byte 1: 0xD7 (marker | PT=87)
     /// - Bytes 2-3: sequence number (BE u16)
     /// - Bytes 4-7: current RTP timestamp (BE u32)
-    /// - Bytes 8-11: PTP seconds (BE u32)
-    /// - Bytes 12-15: PTP fractional seconds (BE u32, fixed-point)
-    /// - Bytes 16-19: next RTP timestamp (BE u32)
+    /// - Bytes 8-15: PTP wall-clock time in nanoseconds (BE u64)
+    /// - Bytes 16-19: buffered RTP anchor timestamp (BE u32)
     /// - Bytes 20-27: master clock ID (8 bytes)
     pub fn prepare_ptp_sync(
         &mut self,
-        current_rtp_ts: u32,
+        play_anchor_rtp_ts: u32,
         ptp_clock_ns: u64,
-        next_rtp_ts: u32,
+        buffered_anchor_rtp_ts: u32,
         master_clock_id: &[u8; 8],
     ) -> Result<Option<Vec<u8>>> {
-        let current_rtp_ts = current_rtp_ts.wrapping_add(self.timestamp_offset);
-        let next_rtp_ts = next_rtp_ts.wrapping_add(self.timestamp_offset);
+        let play_anchor_rtp_ts = self.sync_play_timestamp(play_anchor_rtp_ts);
+        let buffered_anchor_rtp_ts = buffered_anchor_rtp_ts.wrapping_add(self.timestamp_offset);
         let dest = self.control_dest.unwrap_or(self.dest);
 
         if dest.port() == 0 {
@@ -858,30 +885,28 @@ impl RtpSender {
         packet[2..4].copy_from_slice(&self.sync_sequence.to_be_bytes());
         self.sync_sequence = self.sync_sequence.wrapping_add(1);
 
-        // Current RTP timestamp
-        packet[4..8].copy_from_slice(&current_rtp_ts.to_be_bytes());
+        // RTP position tied to this PTP instant.
+        packet[4..8].copy_from_slice(&play_anchor_rtp_ts.to_be_bytes());
 
-        // PTP time: seconds(32) + fraction(32)
-        let ptp_secs = (ptp_clock_ns / 1_000_000_000) as u32;
-        let ptp_nanos = ptp_clock_ns % 1_000_000_000;
-        let ptp_frac = ((ptp_nanos << 32) / 1_000_000_000) as u32;
-        packet[8..12].copy_from_slice(&ptp_secs.to_be_bytes());
-        packet[12..16].copy_from_slice(&ptp_frac.to_be_bytes());
+        // PT=87 uses one big-endian 64-bit count of nanoseconds on the PTP
+        // master timeline. It is not the seconds/fraction representation used
+        // by the legacy PT=84 NTP packet.
+        packet[8..16].copy_from_slice(&ptp_clock_ns.to_be_bytes());
 
-        // Next RTP timestamp
-        packet[16..20].copy_from_slice(&next_rtp_ts.to_be_bytes());
+        // Buffered anchor used by the receiver to derive the playout window.
+        packet[16..20].copy_from_slice(&buffered_anchor_rtp_ts.to_be_bytes());
 
         // Master clock ID
         packet[20..28].copy_from_slice(master_clock_id);
 
         if self.sync_sequence <= 2 {
             tracing::info!(
-                "DIAG PTP sync #{}: dest={}, rtp_ts={}, ptp_secs={}, ptp_frac={}, clock_id={:02x?}",
+                "DIAG PTP sync #{}: dest={}, play_rtp={}, buffered_rtp={}, ptp_ns={}, clock_id={:02x?}",
                 self.sync_sequence - 1,
                 dest,
-                current_rtp_ts,
-                ptp_secs,
-                ptp_frac,
+                play_anchor_rtp_ts,
+                buffered_anchor_rtp_ts,
+                ptp_clock_ns,
                 master_clock_id
             );
         }
@@ -1351,7 +1376,7 @@ mod tests {
             sender.set_control_socket(control_socket);
 
             // Send a sync packet
-            sender.send_sync(0, 0).unwrap();
+            sender.send_sync(0, 0, 0).unwrap();
 
             // Receive it and check the source port
             let mut buf = [0u8; 64];
@@ -1386,7 +1411,7 @@ mod tests {
             let data_port = sender.bind(0).unwrap();
             // No set_control_socket call
 
-            sender.send_sync(0, 0).unwrap();
+            sender.send_sync(0, 0, 0).unwrap();
 
             let mut buf = [0u8; 64];
             let (_len, src_addr) = listener.recv_from(&mut buf).unwrap();
@@ -1407,9 +1432,12 @@ mod tests {
             sender.set_control_dest(listener_addr);
             sender.bind(0).unwrap();
 
-            let rtp_ts: u32 = 44100;
+            let play_rtp_ts: u32 = 22050;
+            let buffered_rtp_ts: u32 = 44100;
             let ntp_ts: u64 = 0xAAAABBBBCCCCDDDD;
-            sender.send_sync(rtp_ts, ntp_ts).unwrap();
+            sender
+                .send_sync(play_rtp_ts, ntp_ts, buffered_rtp_ts)
+                .unwrap();
 
             let mut buf = [0u8; 64];
             let (len, _) = listener.recv_from(&mut buf).unwrap();
@@ -1422,12 +1450,31 @@ mod tests {
             assert_eq!(buf[1], 0xD4);
             // Bytes 2-3: first monotonically increasing sync sequence number
             assert_eq!(&buf[2..4], &0u16.to_be_bytes());
-            // Bytes 4-7: current RTP timestamp (big-endian)
-            assert_eq!(&buf[4..8], &rtp_ts.to_be_bytes());
+            // Bytes 4-7: RTP position rendering at the stated wall time.
+            assert_eq!(&buf[4..8], &play_rtp_ts.to_be_bytes());
             // Bytes 8-15: NTP timestamp (big-endian)
             assert_eq!(&buf[8..16], &ntp_ts.to_be_bytes());
-            // Bytes 16-19: next RTP timestamp at the transmit leading edge
-            assert_eq!(&buf[16..20], &rtp_ts.to_be_bytes());
+            // Bytes 16-19: current outgoing/buffered RTP position.
+            assert_eq!(&buf[16..20], &buffered_rtp_ts.to_be_bytes());
+            assert_eq!(
+                buffered_rtp_ts.wrapping_sub(play_rtp_ts),
+                22050,
+                "PT=84 must preserve the negotiated playout latency"
+            );
+        }
+
+        #[test]
+        fn positive_sync_offset_delays_only_the_play_anchor() {
+            let destination = "127.0.0.1:7000".parse().unwrap();
+            let mut sender = RtpSender::new_with_origin(destination, 0, 0, 1_000);
+            sender.set_sync_offset_frames(441);
+
+            let packet = sender.prepare_sync(10_000, 0, 20_000).unwrap().unwrap();
+            let play = u32::from_be_bytes(packet[4..8].try_into().unwrap());
+            let buffered = u32::from_be_bytes(packet[16..20].try_into().unwrap());
+
+            assert_eq!(play, 10_559);
+            assert_eq!(buffered, 21_000);
         }
 
         #[test]
@@ -1443,13 +1490,13 @@ mod tests {
             sender.bind(0).unwrap();
 
             // First sync
-            sender.send_sync(0, 0).unwrap();
+            sender.send_sync(0, 0, 0).unwrap();
             let mut buf = [0u8; 64];
             listener.recv_from(&mut buf).unwrap();
             assert_eq!(buf[0], 0x90, "first sync should have extension bit");
 
             // Second sync
-            sender.send_sync(352, 1000).unwrap();
+            sender.send_sync(0, 1000, 352).unwrap();
             listener.recv_from(&mut buf).unwrap();
             assert_eq!(
                 buf[0], 0x80,
@@ -1523,7 +1570,7 @@ mod tests {
             sender.set_control_socket(control_socket);
 
             // Send sync
-            sender.send_sync(0, 0).unwrap();
+            sender.send_sync(0, 0, 0).unwrap();
 
             // Verify it arrived from the control port
             let mut buf = [0u8; 64];
@@ -1753,15 +1800,10 @@ mod tests {
             let mut buf = [0u8; 64];
             listener.recv_from(&mut buf).unwrap();
 
-            // Bytes 8-11: PTP seconds
-            let secs = u32::from_be_bytes([buf[8], buf[9], buf[10], buf[11]]);
-            assert_eq!(secs, 188748, "PTP seconds should be device uptime");
-
-            // Bytes 12-15: PTP fraction (0.5s = 0x80000000)
-            let frac = u32::from_be_bytes([buf[12], buf[13], buf[14], buf[15]]);
             assert_eq!(
-                frac, 0x80000000,
-                "PTP fraction for 0.5s should be 0x80000000"
+                &buf[8..16],
+                &ptp_ns.to_be_bytes(),
+                "PT=87 time must be one BE64 nanosecond value"
             );
         }
 

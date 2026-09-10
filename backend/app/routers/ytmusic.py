@@ -30,6 +30,10 @@ class DeviceVolumeRequest(BaseModel):
     deviceId: str
     volume: int
 
+class DeviceSyncOffsetRequest(BaseModel):
+    deviceId: str
+    offsetMs: int
+
 class MasterVolumeRequest(BaseModel):
     volume: int
 
@@ -338,6 +342,10 @@ def hide_airplay_device(req: HideDeviceRequest):
 @router.post("/airplay/volume/device")
 def set_device_volume(req: DeviceVolumeRequest):
     return player_engine.set_device_volume(req.deviceId, req.volume)
+
+@router.post("/airplay/sync-offset/device")
+def set_device_sync_offset(req: DeviceSyncOffsetRequest):
+    return player_engine.set_device_sync_offset(req.deviceId, req.offsetMs)
 
 @router.post("/airplay/volume/master")
 def set_master_volume(req: MasterVolumeRequest):

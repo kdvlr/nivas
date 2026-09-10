@@ -9,7 +9,9 @@ use airplay_core::device::{Device, DeviceId};
 use airplay_core::features::Features;
 use airplay_core::stream::{PtpMode, StreamType, TimingProtocol};
 use airplay_core::{AudioCodec, AudioFormat, StreamConfig};
+use futures::future::{join_all, try_join_all};
 use mdns_sd::{ServiceDaemon, ServiceInfo};
+use std::collections::HashMap;
 use std::net::IpAddr;
 use std::time::{Duration, Instant};
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
@@ -350,7 +352,7 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
             "  --ptp-master     PTP: Act as timing master (for 3rd-party receivers) (default)"
         );
         eprintln!("  --ptp-slave      PTP: Act as timing slave (for HomePod multi-room)");
-        eprintln!("  --render-delay N Render delay in ms (shifts NTP timestamps forward for retransmit headroom)");
+        eprintln!("  --render-delay N Sender lead in ms encoded as RTP anchor distance");
         eprintln!("  --device-id ID   Device ID for pair-verify (e.g., 4E:44:4C:1E:C3:B5)");
         eprintln!("  --force-transient Force transient pairing (skip pair-verify even if identity exists)");
         eprintln!("  --control-stdin Read pause/resume/volume/stop commands from stdin");
@@ -359,6 +361,8 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
         eprintln!("  --album TEXT     Now-playing album");
         eprintln!("  --artwork PATH   JPEG artwork to show on receivers");
         eprintln!("  --duration SEC   Track duration for receiver progress display");
+        eprintln!("  --start-offset SEC Start decoding at this position without rewriting the audio file");
+        eprintln!("  --sync-offsets IP=MS,... Per-speaker DSP latency correction (+ delays)");
         std::process::exit(1);
     }
 
@@ -379,6 +383,10 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     let artwork_path = option_value("--artwork");
     let metadata_duration = option_value("--duration")
         .and_then(|value| value.parse::<f64>().ok());
+    let requested_start_offset_secs = option_value("--start-offset")
+        .and_then(|value| value.parse::<f64>().ok())
+        .unwrap_or(0.0)
+        .max(0.0);
 
     let dacp_state = std::sync::Arc::new(tokio::sync::RwLock::new(DacpState {
         title: metadata_title.clone(),
@@ -429,23 +437,34 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
         .and_then(|i| args.get(i + 1))
         .and_then(|v| v.parse().ok())
         .unwrap_or(0);
+    let sync_offsets_ms: HashMap<IpAddr, i32> = args
+        .iter()
+        .position(|a| a == "--sync-offsets")
+        .and_then(|i| args.get(i + 1))
+        .map(|value| {
+            value
+                .split(',')
+                .map(|entry| {
+                    let (ip, milliseconds) = entry
+                        .split_once('=')
+                        .expect("Sync offset must be IP=MILLISECONDS");
+                    (
+                        ip.trim().parse().expect("Invalid --sync-offsets IP"),
+                        milliseconds
+                            .trim()
+                            .parse::<i32>()
+                            .expect("Invalid --sync-offsets milliseconds")
+                            .clamp(-1000, 1000),
+                    )
+                })
+                .collect()
+        })
+        .unwrap_or_default();
     let initial_volume: Option<f32> = args
         .iter()
         .position(|a| a == "--volume")
         .and_then(|i| args.get(i + 1))
         .and_then(|v| v.parse().ok());
-    let option_value = |name: &str| {
-        args.iter()
-            .position(|argument| argument == name)
-            .and_then(|index| args.get(index + 1))
-            .cloned()
-    };
-    let metadata_title = option_value("--title").unwrap_or_else(|| "YouTube Music".to_string());
-    let metadata_artist = option_value("--artist").unwrap_or_else(|| "Nivas AirPlay".to_string());
-    let metadata_album = option_value("--album").unwrap_or_else(|| "Nivas".to_string());
-    let artwork_path = option_value("--artwork");
-    let metadata_duration = option_value("--duration")
-        .and_then(|value| value.parse::<f64>().ok());
     let volume_steps: Vec<(f64, f32)> = args
         .iter()
         .position(|a| a == "--volume-steps")
@@ -548,11 +567,21 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Audio file: {}", audio_path);
 
     // Open audio file first to validate it
-    let decoder = AudioDecoder::open(audio_path)?;
+    let mut decoder = AudioDecoder::open(audio_path)?;
     let duration_secs = decoder
         .duration_samples()
         .map(|s| s as f64 / decoder.sample_rate() as f64)
         .unwrap_or(0.0);
+    let start_offset_secs = if duration_secs > 0.0 {
+        requested_start_offset_secs.min(duration_secs)
+    } else {
+        requested_start_offset_secs
+    };
+    if start_offset_secs > 0.0 {
+        let start_sample = (start_offset_secs * decoder.sample_rate() as f64).round() as u64;
+        decoder.seek(start_sample)?;
+        println!("Start offset: {:.3}s", start_offset_secs);
+    }
     println!(
         "Audio: {}Hz, {} channels, duration: {:.1}s",
         decoder.sample_rate(),
@@ -602,7 +631,7 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
 
     if use_airplay2 || pin_arg.is_some() {
         println!("\n--- Connecting (AirPlay 2 to {} devices) ---", ips.len());
-        let mut conns = Vec::new();
+        let mut connection_specs = Vec::new();
         for (idx, target_ip) in ips.iter().enumerate() {
             // A stable target ID is required to reuse the saved pairing identity.
             // Keep an explicitly supplied ID for the normal one-target CLI path,
@@ -680,12 +709,28 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
                 target_config.ptp_mode = PtpMode::Master;
                 println!("Using PTP timing for {}", target_ip);
             }
-            let mut conn = Connection::connect_auto(dev, target_config, "3939").await?;
-            if render_delay_ms > 0 {
-                conn.set_render_delay_ms(render_delay_ms);
-            }
-            conns.push(conn);
+            let sync_offset_ms = sync_offsets_ms.get(target_ip).copied().unwrap_or(0);
+            connection_specs.push((dev, target_config, sync_offset_ms));
         }
+
+        // Pair-verify and RTSP connection establishment are independent per
+        // receiver. Doing them together avoids making every added room pay the
+        // sum of all connection handshakes.
+        let mut conns = try_join_all(
+            connection_specs
+                .into_iter()
+                .map(|(dev, target_config, sync_offset_ms)| async move {
+                    let mut conn = Connection::connect_auto(dev, target_config, "3939").await?;
+                    if render_delay_ms > 0 {
+                        conn.set_render_delay_ms(render_delay_ms);
+                    }
+                    if sync_offset_ms != 0 {
+                        conn.set_sync_offset_ms(sync_offset_ms);
+                    }
+                    Ok::<Connection, airplay_core::Error>(conn)
+                }),
+        )
+        .await?;
 
         // Complete RTSP and Timing Setup for all connections
         let ptp_indices: Vec<usize> = conns
@@ -716,33 +761,38 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
             let timing_rx = conns[primary_ptp_idx].timing_rx();
             println!("Primary PTP setup done, clock ID: {:02x?}", ptp_clock_id);
 
-            for (i, conn) in conns.iter_mut().enumerate() {
-                if i == primary_ptp_idx {
-                    continue;
-                }
-                println!("Setting up speaker {} (IP: {})...", i + 1, ips[i]);
-                if conn.stream_config().timing_protocol == TimingProtocol::Ptp {
-                    if let Some(ref rx) = timing_rx {
-                        conn.setup_for_group(ptp_clock_id, timing_offset, rx.clone()).await?;
-                    } else {
-                        conn.setup().await?;
-                    }
-                } else {
-                    conn.setup().await?;
-                }
-            }
+            try_join_all(
+                conns
+                    .iter_mut()
+                    .enumerate()
+                    .filter(|(i, _)| *i != primary_ptp_idx)
+                    .map(|(i, conn)| {
+                        let timing_rx = timing_rx.clone();
+                        let target_ip = ips[i];
+                        async move {
+                            println!("Setting up speaker {} (IP: {})...", i + 1, target_ip);
+                            if conn.stream_config().timing_protocol == TimingProtocol::Ptp {
+                                if let Some(rx) = timing_rx {
+                                    conn.setup_for_group(ptp_clock_id, timing_offset, rx).await
+                                } else {
+                                    conn.setup().await
+                                }
+                            } else {
+                                conn.setup().await
+                            }
+                        }
+                    }),
+            )
+            .await?;
         } else {
-            for conn in conns.iter_mut() {
-                conn.setup().await?;
-            }
+            try_join_all(conns.iter_mut().map(|conn| conn.setup())).await?;
         }
         println!("\n--- Starting playback on all speakers ---");
-        let dec = AudioDecoder::open(audio_path)?;
         if conns.len() == 1 {
-            conns[0].start_streaming(dec).await?;
+            conns[0].start_streaming(decoder).await?;
         } else {
             let (first, rest) = conns.split_at_mut(1);
-            first[0].start_group_streaming(rest, dec).await?;
+            first[0].start_group_streaming(rest, decoder).await?;
         }
 
         let artwork_bytes = if let Some(path) = artwork_path.as_ref() {
@@ -769,6 +819,7 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
         let mut feedback_counter = 0u32;
         let mut next_volume_step = 0usize;
         let mut current_duration_secs = metadata_duration.unwrap_or(duration_secs);
+        let mut reporting_origin_secs = start_offset_secs;
         let source_test_started = Instant::now();
         let mut source_test_paused = false;
         let mut source_test_resumed = false;
@@ -776,7 +827,8 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
         loop {
             tokio::time::sleep(Duration::from_millis(75)).await;
             feedback_counter += 1;
-            let pos = conns[0].playback_position();
+            let absolute_pos = conns[0].playback_position();
+            let pos = (absolute_pos - reporting_origin_secs).max(0.0);
             let state = conns[0].playback_state();
             if feedback_counter % 27 == 0 {
                 println!("Position: {:.1}s, State: {:?}", pos, state);
@@ -864,6 +916,7 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
                             }
                         }
                         current_duration_secs = payload.duration;
+                        reporting_origin_secs = 0.0;
 
                         // Update DACP state
                         {
@@ -1011,17 +1064,20 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
 
-            if current_duration_secs > 0.0 && pos >= current_duration_secs - 0.5 {
+            if current_duration_secs > 0.0 && absolute_pos >= current_duration_secs - 0.5 {
                 println!("\nReached end of audio, stopping...");
                 break;
             }
         }
 
         println!("\n--- Stopping all speakers ---");
-        for mut conn in conns {
+        join_all(conns.into_iter().map(|mut conn| async move {
             let _ = conn.stop().await;
             let _ = conn.disconnect().await;
-        }
+        }))
+        .await;
+        println!("TEARDOWN_COMPLETE");
+        let _ = std::io::Write::flush(&mut std::io::stdout());
         drop(dacp_daemon);
         std::process::exit(0);
     } else {
@@ -1084,7 +1140,8 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
         let mut feedback_counter = 0u32;
         loop {
             tokio::time::sleep(Duration::from_secs(1)).await;
-            let pos = conn.playback_position();
+            let absolute_pos = conn.playback_position();
+            let pos = (absolute_pos - start_offset_secs).max(0.0);
             let state = conn.playback_state();
             println!("Position: {:.1}s, State: {:?}", pos, state);
 
@@ -1095,7 +1152,7 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
 
-            if duration_secs > 0.0 && pos >= duration_secs - 0.5 {
+            if duration_secs > 0.0 && absolute_pos >= duration_secs - 0.5 {
                 println!("\nReached end of audio, stopping...");
                 break;
             }

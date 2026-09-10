@@ -28,7 +28,7 @@ DEFAULT_PAUSED_SESSION_TIMEOUT_SECONDS = 15 * 60
 MUSIC_UI_IDLE_TIMEOUT_SECONDS = 30 * 60
 
 class AirPlayDevice:
-    def __init__(self, identifier: str, name: str, address: str, port: int = 7000, model: str = "AirPlay Speaker", volume: int = 70):
+    def __init__(self, identifier: str, name: str, address: str, port: int = 7000, model: str = "AirPlay Speaker", volume: int = 70, sync_offset_ms: int = 0):
         self.id = str(identifier)
         self.name = name
         self.address = str(address)
@@ -36,6 +36,7 @@ class AirPlayDevice:
         self.model = model
         self.is_selected = False
         self.volume = volume
+        self.sync_offset_ms = max(-1000, min(1000, int(sync_offset_ms)))
         self.is_connected = False
         self.is_hidden = False
         self.last_seen = time.time()
@@ -49,6 +50,7 @@ class AirPlayDevice:
             "model": self.model,
             "isSelected": self.is_selected,
             "volume": self.volume,
+            "syncOffsetMs": self.sync_offset_ms,
             "isConnected": self.is_connected,
             "isHidden": self.is_hidden,
             "lastSeen": self.last_seen
@@ -81,7 +83,7 @@ class PlayerEngine:
             "underruns": 0,
             "lastUpdated": None,
         }
-        self._hidden_device_ids, self._selected_device_ids, self._selected_device_names, self._device_volumes = self._load_preferences()
+        self._hidden_device_ids, self._selected_device_ids, self._selected_device_names, self._device_volumes, self._device_sync_offsets = self._load_preferences()
 
         self._scanner_task: Optional[asyncio.Task] = None
         self._ticker_task: Optional[asyncio.Task] = None
@@ -148,7 +150,7 @@ class PlayerEngine:
             int(os.getenv("AIRPLAY_PAUSE_TIMEOUT_SECONDS", DEFAULT_PAUSED_SESSION_TIMEOUT_SECONDS)),
         )
 
-    def _load_preferences(self) -> tuple[set[str], set[str], set[str], dict[str, int]]:
+    def _load_preferences(self) -> tuple[set[str], set[str], set[str], dict[str, int], dict[str, int]]:
         try:
             data = json.loads(self._preferences_path.read_text(encoding="utf-8"))
             hidden = {str(device_id) for device_id in data.get("hiddenDeviceIds", [])}
@@ -156,12 +158,18 @@ class PlayerEngine:
             selected_names = {str(name) for name in data.get("selectedDeviceNames", [])}
             raw_volumes = data.get("deviceVolumes", {})
             volumes = {str(k): int(v) for k, v in raw_volumes.items() if isinstance(v, (int, float))}
-            return hidden, selected_ids, selected_names, volumes
+            raw_sync_offsets = data.get("deviceSyncOffsetsMs", {})
+            sync_offsets = {
+                str(k): max(-1000, min(1000, int(v)))
+                for k, v in raw_sync_offsets.items()
+                if isinstance(v, (int, float))
+            }
+            return hidden, selected_ids, selected_names, volumes, sync_offsets
         except (FileNotFoundError, json.JSONDecodeError, OSError, AttributeError):
-            return set(), set(), set(), {}
+            return set(), set(), set(), {}, {}
 
     def _load_hidden_device_ids(self) -> set[str]:
-        hidden, _, _, _ = self._load_preferences()
+        hidden, _, _, _, _ = self._load_preferences()
         return hidden
 
     def _schedule_save_preferences(self, delay: float = 0.5) -> None:
@@ -185,6 +193,7 @@ class PlayerEngine:
                 "selectedDeviceIds": sorted(self._selected_device_ids),
                 "selectedDeviceNames": sorted(self._selected_device_names),
                 "deviceVolumes": self._device_volumes,
+                "deviceSyncOffsetsMs": self._device_sync_offsets,
             }
             temporary_path.write_text(
                 json.dumps(payload, indent=2),
@@ -283,7 +292,10 @@ class PlayerEngine:
             if proc.stdin is not None:
                 proc.stdin.write("stop\n")
                 proc.stdin.flush()
-            proc.wait(timeout=0.3)
+            # Multi-room senders tear down each RTSP session concurrently, but
+            # receivers can still need a little time to acknowledge TEARDOWN.
+            # wait() returns immediately on the normal fast path.
+            proc.wait(timeout=1.5)
             return
         except (BrokenPipeError, OSError, ValueError, subprocess.TimeoutExpired):
             pass
@@ -399,13 +411,15 @@ class PlayerEngine:
                             self.active_targets.append(dev_id)
                 else:
                     saved_vol = self._device_volumes.get(dev_id, 70)
+                    saved_sync_offset = self._device_sync_offsets.get(dev_id, 0)
                     dev = AirPlayDevice(
                         identifier=dev_id,
                         name=name,
                         address=addr,
                         port=port,
                         model=model,
-                        volume=saved_vol
+                        volume=saved_vol,
+                        sync_offset_ms=saved_sync_offset,
                     )
                     dev.is_hidden = dev_id in self._hidden_device_ids
                     if is_prev_selected:
@@ -1091,6 +1105,15 @@ class PlayerEngine:
             "--render-delay",
             str(self._render_delay_ms),
         ]
+        if self._stream_start_offset > 0.0:
+            cmd.extend(["--start-offset", f"{self._stream_start_offset:.6f}"])
+        sync_offsets = [
+            f"{device.address}={device.sync_offset_ms}"
+            for device in devices
+            if device.sync_offset_ms != 0
+        ]
+        if sync_offsets:
+            cmd.extend(["--sync-offsets", ",".join(sync_offsets)])
 
         ptp_ips = [device.address for device in devices if self._device_uses_ptp(device)]
         if ptp_ips:
@@ -1245,24 +1268,9 @@ class PlayerEngine:
             was_paused = not self.is_playing
             self._stop_current_stream()
 
-            audio_target = wav_path
-            if target_seconds > 0.5:
-                offset_wav = f"/tmp/ytmusic_{video_id}_offset.wav"
-                try:
-                    cmd = [
-                        "ffmpeg", "-y", "-ss", str(target_seconds),
-                        "-i", wav_path, "-vn", "-ar", "44100",
-                        "-ac", "2", "-acodec", "pcm_s16le", offset_wav
-                    ]
-                    subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                    if os.path.exists(offset_wav) and os.path.getsize(offset_wav) > 0:
-                        audio_target = offset_wav
-                except Exception as e:
-                    logger.warning(f"Could not create seeked audio file: {e}")
-
             artwork_path = str(self._media_cache.artwork_path(video_id))
             artwork_arg = artwork_path if os.path.exists(artwork_path) and os.path.getsize(artwork_path) > 0 else None
-            started = self._start_airplay_streams(audio_target, self.current_track, artwork_arg)
+            started = self._start_airplay_streams(wav_path, self.current_track, artwork_arg)
             if started:
                 self.elapsed_seconds = target_seconds
                 if was_paused:
@@ -1459,24 +1467,9 @@ class PlayerEngine:
                     self._stop_current_stream()
                     self._stream_start_offset = current_offset
 
-                    audio_target = wav_path
-                    if current_offset > 1:
-                        offset_wav = f"/tmp/ytmusic_{video_id}_offset.wav"
-                        try:
-                            cmd = [
-                                "ffmpeg", "-y", "-ss", str(current_offset),
-                                "-i", wav_path, "-vn", "-ar", "44100",
-                                "-ac", "2", "-acodec", "pcm_s16le", offset_wav
-                            ]
-                            subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                            if os.path.exists(offset_wav) and os.path.getsize(offset_wav) > 0:
-                                audio_target = offset_wav
-                        except Exception as e:
-                            logger.warning(f"Could not create seeked audio file for room toggle: {e}")
-
                     artwork_path = str(self._media_cache.artwork_path(video_id))
                     started = self._start_airplay_streams(
-                        audio_target,
+                        wav_path,
                         self.current_track,
                         artwork_path if os.path.exists(artwork_path) else None,
                     )
@@ -1517,6 +1510,17 @@ class PlayerEngine:
                     f"volume {device.address} {device.volume / 100.0:.4f}"
                 )
         self._update_master_volume_from_devices()
+        self._save_preferences()
+        self._broadcast_state()
+        return self.get_state()
+
+    def set_device_sync_offset(self, device_id: str, offset_ms: int) -> Dict[str, Any]:
+        """Persist a static receiver/DSP latency correction for the next stream."""
+        device_id = str(device_id)
+        offset = max(-1000, min(1000, int(offset_ms)))
+        self._device_sync_offsets[device_id] = offset
+        if device_id in self.devices:
+            self.devices[device_id].sync_offset_ms = offset
         self._save_preferences()
         self._broadcast_state()
         return self.get_state()

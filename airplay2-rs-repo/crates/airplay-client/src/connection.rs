@@ -252,8 +252,9 @@ pub struct Connection {
     event_rx: mpsc::UnboundedReceiver<Vec<u8>>,
     /// Remote PTP master clock identity (from BMCA yield flow)
     ptp_master_clock_id: Option<[u8; 8]>,
-    /// Render delay in ms added to NTP timestamps for extra retransmit headroom.
+    /// Sender lead encoded as RTP distance from the current presentation anchor.
     render_delay_ms: u32,
+    sync_offset_ms: i32,
     /// Equalizer configuration (set before streaming).
     eq_config: Option<EqConfig>,
     /// Shared equalizer parameters for real-time control.
@@ -392,6 +393,7 @@ impl Connection {
             event_tx,
             event_rx,
             render_delay_ms: 0,
+            sync_offset_ms: 0,
             eq_config: None,
             eq_params: None,
             stream_stats: crate::stats::StreamStats::new(),
@@ -588,6 +590,7 @@ impl Connection {
             event_tx,
             event_rx,
             render_delay_ms: 0,
+            sync_offset_ms: 0,
             eq_config: None,
             eq_params: None,
             stream_stats: crate::stats::StreamStats::new(),
@@ -823,6 +826,7 @@ impl Connection {
             event_tx,
             event_rx,
             render_delay_ms: 0,
+            sync_offset_ms: 0,
             eq_config: None,
             eq_params: None,
             stream_stats: crate::stats::StreamStats::new(),
@@ -1637,6 +1641,29 @@ impl Connection {
             }
         }
 
+        // The first command-line target is not necessarily the PTP target. In
+        // mixed groups (for example Yamaha/NTP first and Sonos/PTP second),
+        // source the shared clock explicitly from the PTP connection instead
+        // of accidentally inheriting timing from target ordering.
+        let group_timing_offset = if self.stream_config.timing_protocol == TimingProtocol::Ptp {
+            self.timing_offset
+        } else {
+            peers
+                .iter()
+                .find(|peer| peer.stream_config.timing_protocol == TimingProtocol::Ptp)
+                .and_then(|peer| peer.timing_offset)
+                .or(self.timing_offset)
+        };
+        let group_timing_rx = if self.stream_config.timing_protocol == TimingProtocol::Ptp {
+            self.timing_rx()
+        } else {
+            peers
+                .iter()
+                .find(|peer| peer.stream_config.timing_protocol == TimingProtocol::Ptp)
+                .and_then(|peer| peer.timing_rx())
+                .or_else(|| self.timing_rx())
+        };
+
         let mut senders = Vec::with_capacity(1 + peers.len());
         let mut self_sender = self.build_rtp_sender()?;
         if self.stream_config.timing_protocol == TimingProtocol::Ptp {
@@ -1661,11 +1688,11 @@ impl Connection {
         if self.render_delay_ms > 0 {
             streamer.set_render_delay_ms(self.render_delay_ms).await;
         }
-        if let Some(offset) = self.timing_offset {
+        if let Some(offset) = group_timing_offset {
             streamer.set_timing_offset(offset).await;
         }
-        if let Some(ref tx) = self.timing_tx {
-            streamer.set_timing_updates(tx.subscribe()).await;
+        if let Some(rx) = group_timing_rx {
+            streamer.set_timing_updates(rx).await;
         }
         if let (Some(config), Some(params)) = (self.eq_config.take(), self.eq_params.clone()) {
             streamer.set_eq_params(config, params).await;
@@ -1972,13 +1999,19 @@ impl Connection {
 
     /// Set render delay in milliseconds.
     ///
-    /// Shifts NTP timestamps in sync packets into the future, telling the
-    /// receiver to buffer audio longer before rendering. This gives more
-    /// headroom for retransmit recovery of lost packets over lossy WiFi.
+    /// Sets the RTP distance between the outgoing packet head and the sample
+    /// position anchored to the current NTP/PTP wall time. This gives more
+    /// headroom for retransmit recovery without falsifying the clock itself.
     ///
-    /// Must be called before `start_streaming()`. Typical values: 100-500ms.
+    /// Must be called before `start_streaming()`. Classic AirPlay uses 2000ms.
     pub fn set_render_delay_ms(&mut self, delay_ms: u32) {
         self.render_delay_ms = delay_ms;
+    }
+
+    /// Set a static per-receiver playout correction for amplifier/DSP latency.
+    /// Positive values delay this receiver. Must be set before streaming.
+    pub fn set_sync_offset_ms(&mut self, offset_ms: i32) {
+        self.sync_offset_ms = offset_ms.clamp(-1000, 1000);
     }
 
     /// Set up the equalizer with shared parameters.
@@ -2532,6 +2565,9 @@ impl Connection {
             self.initial_rtp_sequence,
             self.initial_rtp_timestamp,
         );
+        let sample_rate = self.stream_config.audio_format.sample_rate.as_hz() as i64;
+        let sync_offset_frames = (self.sync_offset_ms as i64 * sample_rate / 1000) as i32;
+        sender.set_sync_offset_frames(sync_offset_frames);
         sender.set_control_dest(control_dest);
 
         // Always bind UDP socket for audio streaming

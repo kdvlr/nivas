@@ -29,9 +29,9 @@ class Settings(BaseSettings):
     setup_pin: str = ""
 
     # Render timestamps ahead of send time so receivers can repair occasional
-    # UDP loss before audio becomes audible. Standard AirPlay 2 targets 1000ms
-    # buffer depth for stable WiFi streaming with packet recovery.
-    airplay_render_delay_ms: int = 1000
+    # UDP loss before audio becomes audible. Two seconds matches the classic
+    # AirPlay sender lead and yields the canonical 77175-frame PT=87 anchor gap.
+    airplay_render_delay_ms: int = 2000
 
     @property
     def photos_dir(self) -> Path:
