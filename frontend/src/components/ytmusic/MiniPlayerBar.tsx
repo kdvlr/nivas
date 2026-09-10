@@ -100,7 +100,7 @@ export default function MiniPlayerBar({
             }}
             aria-label="Close player"
             title="Close player"
-            className="absolute -top-2 -right-2 z-30 flex h-6 w-6 items-center justify-center rounded-full border border-[var(--outline-var)] bg-[var(--surface)] text-ink-soft shadow-lg backdrop-blur-md transition hover:bg-[var(--sc-high)] hover:text-ink hover:scale-110 active:scale-95 cursor-pointer"
+            className="absolute top-2.5 right-2.5 z-30 flex h-6 w-6 items-center justify-center rounded-full border border-[var(--outline-var)] bg-[var(--surface)] text-ink-soft shadow-md backdrop-blur-md transition hover:bg-[var(--sc-high)] hover:text-ink hover:scale-110 active:scale-95 cursor-pointer"
           >
             <Icon name="close" className="text-sm" />
           </button>
@@ -109,7 +109,7 @@ export default function MiniPlayerBar({
         {/* Track Thumbnail & Metadata */}
         <div
           onClick={onOpenFullPlayer}
-          className="flex items-center gap-3 cursor-pointer group"
+          className={`flex items-center gap-3 cursor-pointer group ${!isPlaying && onClose ? 'pr-6' : ''}`}
           title="Open Now Playing"
         >
           <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-[var(--sc-high)] border border-[var(--outline-var)] shadow-md">
