@@ -44,6 +44,7 @@ interface SlideshowProps {
   onPrevTrack?: () => void
   onSeek?: (seconds: number) => void
   onOpenFullPlayer?: () => void
+  onClose?: () => void
 }
 
 interface WeatherDay {
@@ -377,8 +378,8 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVide
 
   const caption = (item.location_name || item.date_taken) && (
     <div
-      style={{ fontFamily: "'Caveat', cursive" }}
-      className={`mt-3 mb-0.5 w-full text-center ${pair ? 'text-[1.6rem]' : 'text-[1.8rem]'} font-bold tracking-wide text-slate-700/85 select-none pointer-events-none flex flex-wrap items-center justify-center gap-x-2 leading-tight px-1.5`}
+      style={{ fontFamily: "'Homemade Apple', cursive" }}
+      className={`mt-3 mb-0.5 w-full text-center ${pair ? 'text-[1.5rem]' : 'text-[1.7rem]'} font-normal tracking-wide text-slate-800/85 select-none pointer-events-none flex flex-wrap items-center justify-center gap-x-2 leading-relaxed px-1.5`}
     >
       {item.location_name && <span>{item.location_name}</span>}
       {item.location_name && item.date_taken && <span className="text-slate-400/70">-</span>}
@@ -486,6 +487,7 @@ export default function Slideshow({
   onPrevTrack,
   onSeek,
   onOpenFullPlayer,
+  onClose,
 }: SlideshowProps) {
   const [currentIdx, setCurrentIdx] = useState(0)
   const [paused, setPaused] = useState(false)
@@ -889,25 +891,63 @@ export default function Slideshow({
       {/* Weather + delights (rain, snow, fireflies, birds — in front of photos) */}
       <canvas ref={fxRef} className="absolute inset-0 w-full h-full pointer-events-none z-20" />
 
-      {currentTrack && (
-        <MiniPlayerBar
-          currentTrack={currentTrack}
-          isPlaying={Boolean(isPlaying)}
-          elapsedSeconds={elapsedSeconds ?? 0}
-          durationSeconds={durationSeconds ?? 0}
-          onTogglePlay={onTogglePlay ?? (() => {})}
-          onNextTrack={onNextTrack ?? (() => {})}
-          onPrevTrack={onPrevTrack ?? (() => {})}
-          onSeek={onSeek ?? (() => {})}
-          onOpenFullPlayer={onOpenFullPlayer ?? onDismiss}
-          slideshowMode
-        />
-      )}
+      {/* Bottom right controls & Now Playing dock */}
+      <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 z-[110] flex flex-col items-end gap-3 pointer-events-none">
+        {/* Slideshow Controls (positioned above Now Playing when active) */}
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="flex gap-2 pointer-events-auto"
+        >
+          <button
+            aria-label="Previous slide"
+            onClick={(e) => {
+              e.stopPropagation()
+              setCurrentIdx((i) => (i - 1 + slides.length) % slides.length)
+            }}
+            className="p-3 rounded-full bg-black/45 hover:bg-black/60 active:scale-95 text-white transition backdrop-blur-md cursor-pointer"
+          >
+            <Icon name="skip_previous" />
+          </button>
+          <button
+            aria-label={paused ? 'Play slideshow' : 'Pause slideshow'}
+            onClick={(e) => {
+              e.stopPropagation()
+              setPaused((value) => !value)
+            }}
+            className="p-3 rounded-full bg-black/45 hover:bg-black/60 active:scale-95 text-white transition backdrop-blur-md cursor-pointer"
+          >
+            <Icon name={paused ? 'play_arrow' : 'pause'} />
+          </button>
+          <button
+            aria-label="Next slide"
+            onClick={(e) => {
+              e.stopPropagation()
+              setCurrentIdx((i) => (i + 1) % slides.length)
+            }}
+            className="p-3 rounded-full bg-black/45 hover:bg-black/60 active:scale-95 text-white transition backdrop-blur-md cursor-pointer"
+          >
+            <Icon name="skip_next" />
+          </button>
+        </div>
 
-      <div className="absolute bottom-6 right-6 z-40 flex gap-2 pointer-events-auto">
-        <button aria-label="Previous slide" onClick={(e) => { e.stopPropagation(); setCurrentIdx((i) => (i - 1 + slides.length) % slides.length) }} className="p-3 rounded-full bg-black/45 text-white"><Icon name="skip_previous" /></button>
-        <button aria-label={paused ? 'Play slideshow' : 'Pause slideshow'} onClick={(e) => { e.stopPropagation(); setPaused((value) => !value) }} className="p-3 rounded-full bg-black/45 text-white"><Icon name={paused ? 'play_arrow' : 'pause'} /></button>
-        <button aria-label="Next slide" onClick={(e) => { e.stopPropagation(); setCurrentIdx((i) => (i + 1) % slides.length) }} className="p-3 rounded-full bg-black/45 text-white"><Icon name="skip_next" /></button>
+        {/* Now Playing MiniPlayerBar */}
+        {currentTrack && (
+          <MiniPlayerBar
+            docked
+            currentTrack={currentTrack}
+            isPlaying={Boolean(isPlaying)}
+            elapsedSeconds={elapsedSeconds ?? 0}
+            durationSeconds={durationSeconds ?? 0}
+            onTogglePlay={onTogglePlay ?? (() => {})}
+            onNextTrack={onNextTrack ?? (() => {})}
+            onPrevTrack={onPrevTrack ?? (() => {})}
+            onSeek={onSeek ?? (() => {})}
+            onOpenFullPlayer={onOpenFullPlayer ?? onDismiss}
+            onClose={onClose}
+            slideshowMode
+            className="pointer-events-auto shrink-0"
+          />
+        )}
       </div>
 
       {selectedVideo && (

@@ -39,6 +39,13 @@
   font-display: swap;
   src: url('/fonts/quicksand.woff2') format('woff2');
 }
+@font-face {
+  font-family: 'Homemade Apple';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/homemade-apple.woff2') format('woff2');
+}
 
 /* font choice via html[data-font] */
 :root {

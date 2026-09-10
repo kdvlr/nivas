@@ -45,3 +45,27 @@ def test_invalid_session_token_is_rejected(monkeypatch):
 
     with pytest.raises(HTTPException, match="Setup PIN required"):
         admin_auth.require_admin(_request("nivas_setup_session=not-a-valid-token"))
+
+
+def test_calendar_endpoints_admin_requirements():
+    from app.routers import calendar
+
+    route_admin_map = {}
+    for route in calendar.router.routes:
+        deps = [d.call for d in route.dependant.dependencies]
+        for method in route.methods:
+            route_admin_map[(method, route.path)] = admin_auth.require_admin in deps
+
+    # Daily calendar events should NOT require admin PIN
+    assert route_admin_map[("GET", "/api/calendar/events")] is False
+    assert route_admin_map[("POST", "/api/calendar/events")] is False
+    assert route_admin_map[("PATCH", "/api/calendar/events/{event_id}")] is False
+    assert route_admin_map[("DELETE", "/api/calendar/events/{event_id}")] is False
+
+    # Administrative and account setup calendar routes DO require admin PIN
+    assert route_admin_map[("GET", "/api/calendar/auth/start")] is True
+    assert route_admin_map[("GET", "/api/calendar/auth/callback")] is True
+    assert route_admin_map[("DELETE", "/api/calendar/accounts/{account_id}")] is True
+    assert route_admin_map[("PUT", "/api/calendar/selections")] is True
+    assert route_admin_map[("POST", "/api/calendar/sync")] is True
+

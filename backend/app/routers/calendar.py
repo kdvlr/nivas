@@ -236,7 +236,7 @@ def events(start: str, end: str, db: Session = Depends(get_db)):
 
 
 @router.post("/events")
-async def create_event(body: EventCreate, _: None = Depends(require_admin), db: Session = Depends(get_db)):
+async def create_event(body: EventCreate, db: Session = Depends(get_db)):
     sel = db.get(CalendarSelection, body.selection_id)
     if sel is None:
         raise HTTPException(404, "calendar not found")
@@ -259,7 +259,7 @@ async def create_event(body: EventCreate, _: None = Depends(require_admin), db: 
 
 
 @router.patch("/events/{event_id}")
-async def update_event(event_id: int, body: EventUpdate, _: None = Depends(require_admin), db: Session = Depends(get_db)):
+async def update_event(event_id: int, body: EventUpdate, db: Session = Depends(get_db)):
     row = db.get(CalendarEvent, event_id)
     if row is None:
         raise HTTPException(404)
@@ -282,7 +282,7 @@ async def update_event(event_id: int, body: EventUpdate, _: None = Depends(requi
 
 
 @router.delete("/events/{event_id}")
-async def delete_event(event_id: int, _: None = Depends(require_admin), db: Session = Depends(get_db)):
+async def delete_event(event_id: int, db: Session = Depends(get_db)):
     row = db.get(CalendarEvent, event_id)
     if row is None:
         raise HTTPException(404)

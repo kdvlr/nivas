@@ -991,6 +991,7 @@ function isWithinQuietHours(now: Date, startStr = '22:00', endStr = '06:00'): bo
               setSlideshowActive(false)
               window.location.hash = '#/ytmusic'
             }}
+            onClose={handleStopPlayer}
           />
         )}
       </RewardCelebrationProvider>
