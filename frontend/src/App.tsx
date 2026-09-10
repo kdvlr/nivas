@@ -35,7 +35,6 @@ const YTMusic = lazy(() => import('./views/YTMusic'))
 import MiniPlayerBar, { Track } from './components/ytmusic/MiniPlayerBar'
 import FloatingActionButton from './components/FloatingActionButton'
 import Slideshow, { hasSkyOverride } from './components/Slideshow'
-import { GlobalTooltip } from './components/GlobalTooltip'
 
 const NAV = [
   { id: 'home', label: 'Home', icon: 'home', view: Home, active: 'bg-sky-200 text-sky-950 dark:bg-sky-900 dark:text-sky-100', activeText: 'text-sky-600 dark:text-sky-400' },
@@ -814,9 +813,7 @@ function isWithinQuietHours(now: Date, startStr = '22:00', endStr = '06:00'): bo
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
-            className={`flex min-w-0 flex-1 flex-col overflow-y-auto relative py-1 lg:py-0 ${
-              route !== 'ytmusic' && currentTrack ? 'pb-32 sm:pb-36 lg:pb-0' : 'pb-16 lg:pb-0'
-            }`}
+            className="flex min-w-0 flex-1 flex-col overflow-y-auto relative py-1 lg:py-0"
           >
             {pullY > 0 && (
               <div 
@@ -996,7 +993,6 @@ function isWithinQuietHours(now: Date, startStr = '22:00', endStr = '06:00'): bo
             }}
           />
         )}
-        <GlobalTooltip />
       </RewardCelebrationProvider>
     </CelebrationProvider>
   )

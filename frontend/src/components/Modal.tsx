@@ -16,28 +16,51 @@ export default function Modal({
 }) {
   const titleId = useId()
   const panelRef = useRef<HTMLDivElement>(null)
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null
-    panelRef.current?.focus()
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
-      if (event.key !== 'Tab' || !panelRef.current) return
-      const nodes = panelRef.current.querySelectorAll<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
-      if (!nodes.length) return
-      const first = nodes[0], last = nodes[nodes.length - 1]
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
-      if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
+    // Only focus the dialog container if nothing inside it already took focus (e.g. via autoFocus)
+    if (panelRef.current && !panelRef.current.contains(document.activeElement)) {
+      panelRef.current.focus()
     }
+
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onCloseRef.current()
+      if (event.key !== 'Tab' || !panelRef.current) return
+      const nodes = panelRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )
+      if (!nodes.length) return
+      const first = nodes[0]
+      const last = nodes[nodes.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      }
+      if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
     document.addEventListener('keydown', onKey)
-    return () => { document.removeEventListener('keydown', onKey); previous?.focus() }
-  }, [onClose])
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      previous?.focus()
+    }
+  }, [])
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={EFFECTS_DEFAULT}
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm lg:p-8"
-      onClick={onClose}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
     >
       <motion.div
         ref={panelRef}

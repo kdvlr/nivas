@@ -10,21 +10,21 @@ export function useData<T>(path: string, scopes: string[], pollMs = 0) {
   const pathRef = useRef(path)
   pathRef.current = path
   const requestRef = useRef<AbortController | null>(null)
-  const inFlightRef = useRef(false)
   const dataRef = useRef<T | null>(data)
   dataRef.current = data
 
   const fetchLatest = useCallback(async (isSilent = false) => {
-    if (inFlightRef.current) return
-    requestRef.current?.abort()
+    if (requestRef.current) {
+      requestRef.current.abort()
+    }
     const controller = new AbortController()
     requestRef.current = controller
-    inFlightRef.current = true
     if (!isSilent && dataRef.current === null) {
       setLoading(true)
     }
     try {
       const result = await api.get<T>(pathRef.current, controller.signal)
+      if (controller.signal.aborted) return
       const currentJson = JSON.stringify(dataRef.current)
       const newJson = JSON.stringify(result)
       if (currentJson !== newJson) {
@@ -32,10 +32,14 @@ export function useData<T>(path: string, scopes: string[], pollMs = 0) {
       }
       setError('')
     } catch (e) {
-      if ((e as DOMException)?.name !== 'AbortError') setError(e instanceof Error ? e.message : String(e))
+      if ((e as DOMException)?.name !== 'AbortError' && !controller.signal.aborted) {
+        setError(e instanceof Error ? e.message : String(e))
+      }
     } finally {
-      inFlightRef.current = false
-      setLoading(false)
+      if (requestRef.current === controller) {
+        requestRef.current = null
+        setLoading(false)
+      }
     }
   }, [])
 
@@ -43,6 +47,9 @@ export function useData<T>(path: string, scopes: string[], pollMs = 0) {
 
   useEffect(() => {
     fetchLatest(false)
+    return () => {
+      requestRef.current?.abort()
+    }
   }, [fetchLatest, path])
 
   const scopeKey = [...scopes].sort().join(',')
@@ -51,7 +58,6 @@ export function useData<T>(path: string, scopes: string[], pollMs = 0) {
     const timer = pollMs > 0 ? setInterval(() => fetchLatest(true), pollMs) : null
     return () => {
       un()
-      requestRef.current?.abort()
       if (timer) clearInterval(timer)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -106,12 +106,13 @@ export default function Calendar() {
     return list
   }, [mobileStartDate])
 
-  const getDayLabel = (isoDateStr: string, index: number) => {
+  const getDayLabel = (isoDateStr: string, _index: number) => {
     const todayStr = isoDate(new Date())
     const tomorrowStr = isoDate(addDays(new Date(), 1))
-    if (isoDateStr === todayStr) return 'Today'
-    if (isoDateStr === tomorrowStr) return 'Tomorrow'
     const d = new Date(isoDateStr + 'T12:00:00')
+    const weekday = d.toLocaleDateString(undefined, { weekday: 'short' })
+    if (isoDateStr === todayStr) return `Today (${weekday})`
+    if (isoDateStr === tomorrowStr) return `Tomorrow (${weekday})`
     return d.toLocaleDateString(undefined, { weekday: 'long' })
   }
 
@@ -232,6 +233,8 @@ export default function Calendar() {
       description: '',
     })
   }, [selections])
+
+  const handleCloseDraft = useCallback(() => setDraft(null), [])
 
   useEffect(() => {
     const handleCreateItem = (e: Event) => {
@@ -795,7 +798,7 @@ export default function Calendar() {
       )}
 
       {draft && (
-        <Modal title={draft.id ? 'Edit event' : 'New event'} onClose={() => setDraft(null)}>
+        <Modal title={draft.id ? 'Edit event' : 'New event'} onClose={handleCloseDraft}>
           <div className="flex flex-col gap-5">
             <input
               autoFocus
@@ -832,12 +835,24 @@ export default function Calendar() {
                 ))}
               </div>
             )}
-            <label className="flex items-center gap-3 text-xl">
+            <label className="flex items-center gap-3 text-xl cursor-pointer">
               <input
                 type="checkbox"
                 checked={draft.all_day}
-                onChange={(e) => setDraft({ ...draft, all_day: e.target.checked })}
-                className="h-7 w-7 accent-teal-500"
+                onChange={(e) => {
+                  const isAllDay = e.target.checked
+                  let start = draft.start
+                  let end = draft.end
+                  if (isAllDay) {
+                    start = start.slice(0, 10)
+                    end = end.slice(0, 10)
+                  } else {
+                    if (!start.includes('T')) start = `${start.slice(0, 10)}T09:00`
+                    if (!end.includes('T')) end = `${end.slice(0, 10)}T10:00`
+                  }
+                  setDraft({ ...draft, all_day: isAllDay, start, end })
+                }}
+                className="h-7 w-7 accent-teal-500 cursor-pointer"
               />
               All day
             </label>
@@ -846,7 +861,7 @@ export default function Calendar() {
                 Starts
                 <input
                   type={draft.all_day ? 'date' : 'datetime-local'}
-                  value={draft.all_day ? draft.start.slice(0, 10) : draft.start}
+                  value={draft.all_day ? draft.start.slice(0, 10) : (draft.start.includes('T') ? draft.start : `${draft.start.slice(0, 10)}T09:00`)}
                   onChange={(e) => setDraft({ ...draft, start: e.target.value })}
                   className="input-glass px-4 py-3 text-lg font-normal"
                 />
@@ -855,7 +870,7 @@ export default function Calendar() {
                 Ends
                 <input
                   type={draft.all_day ? 'date' : 'datetime-local'}
-                  value={draft.all_day ? draft.end.slice(0, 10) : draft.end}
+                  value={draft.all_day ? draft.end.slice(0, 10) : (draft.end.includes('T') ? draft.end : `${draft.end.slice(0, 10)}T10:00`)}
                   onChange={(e) => setDraft({ ...draft, end: e.target.value })}
                   className="input-glass px-4 py-3 text-lg font-normal"
                 />

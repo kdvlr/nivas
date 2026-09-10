@@ -27,9 +27,10 @@ const getLocalDateString = (iso: string) => {
 }
 
 const getDayLabel = (isoDate: string, index: number) => {
-  if (index === 0) return 'Today'
-  if (index === 1) return 'Tomorrow'
   const d = new Date(isoDate + 'T12:00:00')
+  const weekday = d.toLocaleDateString(undefined, { weekday: 'short' })
+  if (index === 0) return `Today (${weekday})`
+  if (index === 1) return `Tomorrow (${weekday})`
   return d.toLocaleDateString(undefined, { weekday: 'long' })
 }
 
@@ -138,6 +139,7 @@ function computeAxis(timed: PlacedEvent[]): { start: number; end: number } {
 }
 
 const FAMILY_TITLE_FONT = "'Petit Formal Script', cursive"
+const WEATHER_SCOPES = ['weather']
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'all' | 'schedule' | 'tasks' | 'chores' | 'shopping'>('all')
@@ -160,7 +162,7 @@ export default function Home() {
   const { data: balances, loading: loadingBalances } = useData<CoinBalance[]>('/api/rewards/balances', ['chores', 'rewards'])
   const sortedBalances = useMemo(() => [...(balances ?? [])].sort((a, b) => b.balance - a.balance), [balances])
   const { data: shopping, loading: loadingShopping, reload: reloadShopping } = useData<ShoppingItem[]>('/api/shopping', ['shopping'])
-  const { data: weather } = useData<WeatherData>('/api/weather', [], 15 * 60 * 1000)
+  const { data: weather } = useData<WeatherData>('/api/weather', WEATHER_SCOPES, 15 * 60 * 1000)
   const { data: calStatus } = useData<CalendarStatus>('/api/calendar/status', ['calendar'])
   const { data: config } = useData<{ family_name: string; secondary_tz: string; secondary_tz_emoji: string }>(
     '/api/setup/config',
@@ -355,24 +357,26 @@ export default function Home() {
 
   const renderHeader = () => {
     return (
-    <header className="glass flex items-center justify-between gap-x-2 px-4 py-1.5 lg:px-6 lg:py-2.5 flex-nowrap">
+    <header className="glass flex items-center justify-between gap-x-2 px-3 py-1.5 lg:px-6 lg:py-2.5 flex-nowrap">
       <div className="flex items-center gap-x-3 lg:gap-x-4 min-w-0">
         {weather?.current && (
           <button
             onClick={() => setWeatherOpen(true)}
-            className="flex items-center gap-1 lg:gap-2 rounded-xl px-1.5 py-0.5 transition-transform active:scale-95 lg:px-3 shrink-0"
+            className="flex items-center gap-1.5 lg:gap-2 rounded-xl px-1.5 py-0.5 transition-transform active:scale-95 lg:px-3 shrink-0"
             title="Weather details"
           >
-            <span className="text-2xl lg:text-4xl leading-none">{weather.current.icon}</span>
+            <span className="text-2xl sm:text-3xl lg:text-4xl leading-none">{weather.current.icon}</span>
             <div className="text-left">
-              <div className="text-xs lg:text-xl font-normal text-ink leading-none">
-                {weather.current.temp}°
-              </div>
-              <div className="hidden sm:block text-[10px] lg:text-base font-medium text-ink-soft mt-0.5 leading-none">
-                {weather.current.label}
+              <div className="flex items-baseline gap-1 lg:gap-1.5">
+                <span className="text-sm sm:text-base lg:text-xl font-semibold text-ink leading-none">
+                  {weather.current.temp}°
+                </span>
+                <span className="text-[11px] sm:text-xs lg:text-base font-medium text-ink-soft leading-none">
+                  {weather.current.label}
+                </span>
               </div>
               {todayWeather && (
-                <div className="hidden sm:block text-[9px] lg:text-xs text-ink-faint mt-0.5 leading-none">
+                <div className="text-[10px] sm:text-[11px] lg:text-xs text-ink-faint mt-0.5 leading-none">
                   H {todayWeather.tmax}° L {todayWeather.tmin}°
                 </div>
               )}
@@ -385,7 +389,7 @@ export default function Home() {
       <button
         onClick={() => setKidsHubOpen((prev) => !prev)}
         aria-label="Toggle Kids Brain Nuggets"
-        className="flex-1 text-center px-2 min-w-0 truncate cursor-pointer transition-transform active:scale-95 group/title focus:outline-none"
+        className="hidden lg:flex flex-1 justify-center text-center px-2 min-w-0 truncate cursor-pointer transition-transform active:scale-95 group/title focus:outline-none"
       >
         <span
           style={{ fontFamily: FAMILY_TITLE_FONT }}
@@ -559,7 +563,7 @@ export default function Home() {
         </div>
       ) : (
         /* Mobile stacked list view */
-        <div className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-4">
+        <div className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-4 pb-16">
           {daysList.map((dayIso, idx) => {
             const dayEvents = eventsByDay.get(dayIso) ?? []
             const dayWeather = weather?.daily?.find((d) => d.date === dayIso)
@@ -824,13 +828,13 @@ export default function Home() {
   const renderMobileSlide = (id: string, isEmpty: boolean, content: React.ReactNode) => {
     if (isEmpty) {
       return (
-        <div key={id} className="w-full h-auto p-4 flex flex-col">
+        <div key={id} className="w-full h-auto p-2 sm:p-4 flex flex-col">
           {content}
         </div>
       )
     }
     return (
-      <div key={id} className="min-h-[100dvh] w-full flex flex-col p-4 overflow-hidden">
+      <div key={id} className="min-h-[calc(100dvh-5.25rem)] w-full flex flex-col p-2 sm:p-4 overflow-hidden">
         {content}
       </div>
     )
@@ -859,9 +863,9 @@ export default function Home() {
       </div>
 
       {/* Mobile view */}
-      <div className="flex lg:hidden h-full w-full flex-col overflow-y-auto pb-16">
+      <div className="flex lg:hidden h-full w-full flex-col overflow-y-auto">
         {/* Slide 1: Header + Schedule */}
-        <div className="min-h-[100dvh] w-full flex flex-col p-4 gap-3 overflow-hidden">
+        <div className="min-h-[calc(100dvh-5.25rem)] w-full flex flex-col p-2 sm:p-4 gap-2 sm:gap-3 overflow-hidden">
           {renderHeader()}
           <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
             {renderSchedule(false)}
