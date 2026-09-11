@@ -196,6 +196,118 @@ export default function Calendar() {
     disabled: Boolean(draft),
   })
 
+  // Press-and-hold state for touch event creation:
+  // Requires stationary hold (<= 8px jitter) for 450ms before allowing selection.
+  // Scrolling or swiping before 450ms cancels the hold so calendars can scroll smoothly without creating events.
+  const isTouchInteractionRef = useRef(false)
+  const isPressAndHoldActiveRef = useRef(false)
+  const holdTimerRef = useRef<number | null>(null)
+  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (holdTimerRef.current) {
+        window.clearTimeout(holdTimerRef.current)
+        holdTimerRef.current = null
+      }
+    }
+  }, [])
+
+  const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'mouse') {
+      isTouchInteractionRef.current = false
+      isPressAndHoldActiveRef.current = true
+      return
+    }
+
+    isTouchInteractionRef.current = true
+    isPressAndHoldActiveRef.current = false
+    touchStartPosRef.current = { x: e.clientX, y: e.clientY }
+
+    if (holdTimerRef.current) {
+      window.clearTimeout(holdTimerRef.current)
+      holdTimerRef.current = null
+    }
+
+    const target = e.target as HTMLElement | null
+    if (target?.closest('a, button, input, textarea, select, [role="button"], [data-swipe-ignore="true"], .fc-event, .fc-col-header-cell')) {
+      return
+    }
+
+    holdTimerRef.current = window.setTimeout(() => {
+      isPressAndHoldActiveRef.current = true
+      holdTimerRef.current = null
+      try {
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          navigator.vibrate(40)
+        }
+      } catch {}
+    }, 450)
+  }, [])
+
+  const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isTouchInteractionRef.current) return
+
+    // If hold is active, user is dragging to select a time/date range
+    if (isPressAndHoldActiveRef.current) return
+
+    // If moved beyond jitter tolerance (> 8px) before hold timer fired, user is scrolling or swiping!
+    if (touchStartPosRef.current) {
+      const dx = e.clientX - touchStartPosRef.current.x
+      const dy = e.clientY - touchStartPosRef.current.y
+      if (dx * dx + dy * dy > 64) {
+        if (holdTimerRef.current) {
+          window.clearTimeout(holdTimerRef.current)
+          holdTimerRef.current = null
+        }
+        isPressAndHoldActiveRef.current = false
+        calRef.current?.getApi().unselect()
+      }
+    }
+  }, [])
+
+  const handlePointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (holdTimerRef.current) {
+      window.clearTimeout(holdTimerRef.current)
+      holdTimerRef.current = null
+    }
+
+    if (isTouchInteractionRef.current) {
+      if (!isPressAndHoldActiveRef.current) {
+        // Touch ended without holding -> unselect to prevent event creation, and pass to swipe handler
+        calRef.current?.getApi().unselect()
+        calendarSwipe.onPointerUp(e)
+      } else {
+        // Hold was completed -> selection is finalized by FullCalendar, suppress period swipe
+        calendarSwipe.onPointerCancel(e)
+        window.setTimeout(() => {
+          isPressAndHoldActiveRef.current = false
+        }, 100)
+      }
+    }
+  }, [calendarSwipe])
+
+  const handlePointerCancel = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (holdTimerRef.current) {
+      window.clearTimeout(holdTimerRef.current)
+      holdTimerRef.current = null
+    }
+    isPressAndHoldActiveRef.current = false
+    calendarSwipe.onPointerCancel(e)
+  }, [calendarSwipe])
+
+  const onContainerPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    calendarSwipe.onPointerDown(e)
+    handlePointerDown(e)
+  }, [calendarSwipe, handlePointerDown])
+
+  const checkSelectAllowed = useCallback(() => {
+    if (isTouchInteractionRef.current && !isPressAndHoldActiveRef.current) {
+      return false
+    }
+    return true
+  }, [])
+
   const onSelectMobile = (dayIso: string) => {
     if (!selections.length) return
     const startStr = `${dayIso}T09:00`
@@ -332,9 +444,10 @@ export default function Calendar() {
     // Size each slot so all rows fill the scroller exactly (floor => the total is
     // never taller than the pane, so it never scrolls; the few leftover px are a
     // negligible gap at the bottom). No expandRows, so this height is authoritative.
-    const h = Math.max(7, Math.floor(avail / rows))
+    const minSlotH = isMobile ? 44 : 28
+    const h = Math.max(minSlotH, Math.floor(avail / rows))
     wrap.style.setProperty('--fc-slot-h', `${h}px`)
-  }, [])
+  }, [isMobile])
 
   // FullCalendar's flex layout can take a couple of frames to settle after a
   // re-render, so measure across a few beats rather than a single rAF.
@@ -414,6 +527,12 @@ export default function Calendar() {
 
   const onSelect = (arg: DateSelectArg) => {
     if (!selections.length) return
+
+    // Require press-and-hold for touch devices; drop unintentional swipe/scroll selections
+    if (isTouchInteractionRef.current && !isPressAndHoldActiveRef.current) {
+      calRef.current?.getApi().unselect()
+      return
+    }
 
     if (isMobile && currentViewMode === 'month') {
       setCurrentViewMode('schedule')
@@ -720,7 +839,11 @@ export default function Calendar() {
       ) : (
         <div
           ref={wrapRef}
-          {...calendarSwipe}
+          onPointerDown={onContainerPointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerCancel}
+          style={calendarSwipe.style}
           aria-label="Calendar view; swipe left or right to change period"
           className="glass min-h-0 flex-1 p-3 lg:p-4 flex flex-col overflow-hidden"
         >
@@ -751,9 +874,10 @@ export default function Calendar() {
               editable
               selectable
               selectMirror
-              longPressDelay={200}
-              selectLongPressDelay={300}
-              eventLongPressDelay={200}
+              longPressDelay={500}
+              selectLongPressDelay={500}
+              eventLongPressDelay={500}
+              selectAllow={checkSelectAllowed}
               slotMinTime="08:00:00"
               slotMaxTime="18:00:00"
               scrollTime="00:00:00"
