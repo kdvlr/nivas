@@ -378,7 +378,7 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVide
 
   const caption = (item.location_name || item.date_taken) && (
     <div
-      style={{ fontFamily: "'Homemade Apple', cursive" }}
+      style={{ fontFamily: "'Caveat', cursive" }}
       className={`mt-3 mb-0.5 w-full text-center ${pair ? 'text-[1.5rem]' : 'text-[1.7rem]'} font-normal tracking-wide text-slate-800/85 select-none pointer-events-none flex flex-wrap items-center justify-center gap-x-2 leading-relaxed px-1.5`}
     >
       {item.location_name && <span>{item.location_name}</span>}
