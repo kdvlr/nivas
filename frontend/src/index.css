@@ -496,6 +496,11 @@ body {
   background: var(--secondary-container) !important;
   color: var(--on-secondary-container) !important;
   box-shadow: none !important;
+  min-height: 44px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  touch-action: manipulation;
 }
 .fc .fc-button-primary:not(:disabled).fc-button-active,
 .fc .fc-button-primary:not(:disabled):active {
@@ -532,8 +537,10 @@ body {
     font-size: 1.15rem !important;
   }
   .fc .fc-button {
-    padding: 0.4rem 0.75rem !important;
-    font-size: 0.85rem !important;
+    padding: 0.45rem 0.85rem !important;
+    font-size: 0.9rem !important;
+    min-height: 44px !important;
+    touch-action: manipulation;
   }
   .fc .fc-toolbar-chunk {
     display: flex;

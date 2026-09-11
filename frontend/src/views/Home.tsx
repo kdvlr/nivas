@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { api } from '../lib/api'
 import Avatar from '../components/Avatar'
@@ -10,6 +10,7 @@ import TopClockHeader from '../components/TopClockHeader'
 import MorningKidsBanner from '../components/kids/MorningKidsBanner'
 import { useCelebration } from '../components/celebrations/CelebrationContext'
 import { useClock, useData, todayISO, addDaysISO } from '../lib/hooks'
+import { useSwipeNavigation } from '../lib/useSwipeNavigation'
 import type { CalendarStatus, CalEvent, ChoreItem, CoinBalance, ShoppingItem, Task, WeatherData } from '../lib/types'
 
 const fmtTime = (iso: string) =>
@@ -26,11 +27,11 @@ const getLocalDateString = (iso: string) => {
   return `${year}-${month}-${day}`
 }
 
-const getDayLabel = (isoDate: string, index: number) => {
+const getDayLabel = (isoDate: string, _index: number) => {
   const d = new Date(isoDate + 'T12:00:00')
   const weekday = d.toLocaleDateString(undefined, { weekday: 'short' })
-  if (index === 0) return `Today (${weekday})`
-  if (index === 1) return `Tomorrow (${weekday})`
+  if (isoDate === todayISO()) return `Today (${weekday})`
+  if (isoDate === addDaysISO(todayISO(), 1)) return `Tomorrow (${weekday})`
   return d.toLocaleDateString(undefined, { weekday: 'long' })
 }
 
@@ -150,8 +151,9 @@ export default function Home() {
   const [kidsHubOpen, setKidsHubOpen] = useState(false)
   const now = useClock()
   const today = todayISO()
+  const [scheduleStartDate, setScheduleStartDate] = useState(() => todayISO())
   const { data: events, loading: loadingEvents } = useData<CalEvent[]>(
-    `/api/calendar/events?start=${today}T00:00:00&end=${addDaysISO(today, 3)}T00:00:00`,
+    `/api/calendar/events?start=${scheduleStartDate}T00:00:00&end=${addDaysISO(scheduleStartDate, 3)}T00:00:00`,
     ['calendar'],
   )
   const { data: taskData, loading: loadingTasks, reload: reloadTasks } = useData<{ tasks: Task[] }>(
@@ -250,10 +252,28 @@ export default function Home() {
   }, [todayChores, removedIds])
   const todayWeather = weather?.daily.find((d) => d.date === today)
 
-  const day0 = today
-  const day1 = addDaysISO(today, 1)
-  const day2 = addDaysISO(today, 2)
+  const day0 = scheduleStartDate
+  const day1 = addDaysISO(scheduleStartDate, 1)
+  const day2 = addDaysISO(scheduleStartDate, 2)
   const daysList = [day0, day1, day2]
+
+  const shiftSchedule = useCallback((days: number) => {
+    setScheduleStartDate((current) => addDaysISO(current, days))
+  }, [])
+  const showNextScheduleDay = useCallback(() => shiftSchedule(1), [shiftSchedule])
+  const showPreviousScheduleDay = useCallback(() => shiftSchedule(-1), [shiftSchedule])
+  const scheduleSwipe = useSwipeNavigation({
+    onSwipeLeft: showNextScheduleDay,
+    onSwipeRight: showPreviousScheduleDay,
+    disabled: Boolean(selectedEvent),
+  })
+  const scheduleRangeLabel = useMemo(() => {
+    const start = new Date(`${day0}T12:00:00`)
+    const end = new Date(`${day2}T12:00:00`)
+    const startLabel = start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    const endLabel = end.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    return `${startLabel}–${endLabel}`
+  }, [day0, day2])
 
   const eventsByDay = useMemo(() => {
     const map = new Map<string, CalEvent[]>()
@@ -405,21 +425,61 @@ export default function Home() {
   }
 
   const renderSchedule = (isDesktop: boolean) => (
-    <section className={`glass flex min-h-64 flex-col p-5 ${isDesktop ? 'lg:col-span-2 lg:min-h-0' : 'flex-1 min-h-0 overflow-hidden'} ${loadingEvents ? 'shimmer-loading' : ''}`}>
-      <a href="#/calendar" className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xl font-normal text-ink">
-        <Icon name="calendar_month" className="text-2xl" /> Schedule
+    <section
+      {...scheduleSwipe}
+      aria-label="Three-day schedule; swipe left or right to change dates"
+      className={`glass flex min-h-64 flex-col p-5 ${isDesktop ? 'lg:col-span-2 lg:min-h-0' : 'flex-1 min-h-0 overflow-hidden'} ${loadingEvents ? 'shimmer-loading' : ''}`}
+    >
+      <div className="mb-4 flex flex-wrap items-center gap-2.5">
+        <a href="#/calendar" className="flex min-h-11 items-center gap-2 rounded-xl px-1 text-xl font-normal text-ink active:scale-[0.98]">
+          <Icon name="calendar_month" className="text-2xl" /> Schedule
+        </a>
         {calendarLegend.length > 0 && (
-          <span className="ml-2.5 flex flex-wrap items-center gap-x-3.5 gap-y-1">
+          <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1">
             {calendarLegend.map(([label, bg]) => (
               <span key={label} className="flex items-center gap-1.5 text-sm font-semibold text-ink-soft">
                 <span className="vivid-dim relative h-3 w-3 rounded-full shadow-sm" style={{ background: bg }} />
                 {label}
               </span>
             ))}
-          </span>
+          </div>
         )}
-        <span className="ml-auto text-sm font-medium text-sky-600 dark:text-sky-400">full calendar ›</span>
-      </a>
+        <div className="ml-auto flex items-center gap-1.5" data-swipe-ignore="true">
+          <button
+            type="button"
+            onClick={() => shiftSchedule(-1)}
+            aria-label="Show previous day"
+            title="Previous day"
+            className="btn-glass flex h-11 w-11 shrink-0 items-center justify-center rounded-full p-0 active:scale-95"
+          >
+            <Icon name="chevron_left" className="text-xl" />
+          </button>
+          <span className="min-w-[5.75rem] text-center text-sm font-semibold tabular-nums text-ink-soft">
+            {scheduleRangeLabel}
+          </span>
+          {scheduleStartDate !== today && (
+            <button
+              type="button"
+              onClick={() => setScheduleStartDate(today)}
+              className="btn-glass min-h-11 rounded-xl px-3 text-sm font-semibold"
+            >
+              Today
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => shiftSchedule(1)}
+            aria-label="Show next day"
+            title="Next day"
+            className="btn-glass flex h-11 w-11 shrink-0 items-center justify-center rounded-full p-0 active:scale-95"
+          >
+            <Icon name="chevron_right" className="text-xl" />
+          </button>
+          <a href="#/calendar" className="hidden min-h-11 items-center rounded-xl px-2 text-sm font-semibold text-sky-600 active:scale-[0.98] dark:text-sky-400 sm:flex">
+            Full calendar
+          </a>
+        </div>
+      </div>
       {!events || events.length === 0 ? (
         <p className="my-auto text-center text-lg text-ink-faint">Nothing scheduled 🎈</p>
       ) : isDesktop ? (
@@ -431,7 +491,7 @@ export default function Home() {
               const dayWeather = weather?.daily?.find((d) => d.date === dayIso)
               return (
                 <h3 key={dayIso} className="flex items-center gap-2 border-b pb-1.5 border-ink-faint flex-wrap">
-                  <span className={`text-base font-semibold ${idx === 0 ? 'text-[var(--primary)]' : 'text-ink'}`}>
+                  <span className={`text-base font-semibold ${dayIso === today ? 'text-[var(--primary)]' : 'text-ink'}`}>
                     {getDayLabel(dayIso, idx)}
                   </span>
                   <span className="text-[0.7rem] font-medium text-ink-soft opacity-85">
@@ -459,14 +519,16 @@ export default function Home() {
                 return (
                   <div key={dayIso} className="flex w-full items-center gap-1.5">
                     {allDay.map((e) => (
-                      <span
+                      <button
+                        type="button"
                         key={e.id}
-                        className="vivid-dim relative truncate rounded-full px-3 py-1 text-[0.65rem] font-bold text-white shadow text-center flex-1 min-w-0"
+                        className="vivid-dim relative min-h-11 flex-1 min-w-0 truncate rounded-xl px-3 py-2 text-center text-[0.7rem] font-bold text-white shadow active:scale-[0.98]"
                         style={{ background: eventBg(e) }}
                         title={e.title}
+                        onClick={() => setSelectedEvent(e)}
                       >
                         {e.title}
-                      </span>
+                      </button>
                     ))}
                   </div>
                 )
@@ -509,7 +571,7 @@ export default function Home() {
                 return (
                   <div key={dayIso} className="relative">
                     {/* today's column gets a soft highlight; dividers separate the days */}
-                    {idx === 0 && (
+                    {dayIso === today && (
                       <div
                         className="pointer-events-none absolute inset-y-0 -inset-x-1 rounded-lg"
                         style={{ background: 'color-mix(in srgb, var(--primary) 7%, transparent)' }}
@@ -526,7 +588,7 @@ export default function Home() {
                           className="vivid-dim absolute z-[5] flex flex-col overflow-hidden rounded-lg px-2.5 py-1.5 text-white shadow-md transition-transform hover:z-10 hover:scale-[1.02] cursor-pointer"
                           style={{
                             top: `${axisPct(it.s)}%`,
-                            height: `max(${heightPct}%, 2.6rem)`,
+                            height: `max(${heightPct}%, 2.75rem)`,
                             left: `calc(${(it.lane / it.cols) * 100}% + 2px)`,
                             width: `calc(${100 / it.cols}% - 4px)`,
                             background: eventBg(it.ev),

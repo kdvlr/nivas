@@ -14,6 +14,7 @@ import Modal from '../components/Modal'
 import { useEffect } from 'react'
 import Icon from '../components/Icon'
 import TopClockHeader from '../components/TopClockHeader'
+import { useSwipeNavigation } from '../lib/useSwipeNavigation'
 
 const FAMILY_GRADIENT = 'linear-gradient(115deg, #ef4444, #f97316, #eab308, #22c55e, #3b82f6, #a855f7)'
 const fmtTime = (iso: string) =>
@@ -165,29 +166,35 @@ export default function Calendar() {
     })
   }, [mobileDaysList, mobileEventsByDay])
 
-  const handlePrev = () => {
+  const handlePrev = useCallback(() => {
     if (currentViewMode === 'schedule') {
       setMobileStartDate((d) => addDays(d, -30))
     } else {
       calRef.current?.getApi().prev()
     }
-  }
+  }, [currentViewMode])
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     if (currentViewMode === 'schedule') {
       setMobileStartDate((d) => addDays(d, 30))
     } else {
       calRef.current?.getApi().next()
     }
-  }
+  }, [currentViewMode])
 
-  const handleToday = () => {
+  const handleToday = useCallback(() => {
     if (currentViewMode === 'schedule') {
       setMobileStartDate(new Date())
     } else {
       calRef.current?.getApi().today()
     }
-  }
+  }, [currentViewMode])
+
+  const calendarSwipe = useSwipeNavigation({
+    onSwipeLeft: handleNext,
+    onSwipeRight: handlePrev,
+    disabled: Boolean(draft),
+  })
 
   const onSelectMobile = (dayIso: string) => {
     if (!selections.length) return
@@ -506,12 +513,14 @@ export default function Calendar() {
     const displayTitle = currentViewMode === 'schedule' ? rangeText : viewTitle
 
     return (
-      <div className="mb-4 flex flex-col items-center justify-center gap-3 shrink-0 w-full">
+      <div className="mb-4 flex flex-col items-center justify-center gap-3 shrink-0 w-full" data-swipe-ignore="true">
         {/* Title row */}
         <div className="flex items-center gap-3 justify-center w-full">
           <button
+            type="button"
             onClick={handlePrev}
-            className="btn-glass flex h-10 w-10 items-center justify-center rounded-full p-0 shrink-0"
+            aria-label="Previous period"
+            className="btn-glass flex h-11 w-11 items-center justify-center rounded-full p-0 shrink-0 active:scale-95"
           >
             <Icon name="chevron_left" className="text-xl" />
           </button>
@@ -519,8 +528,10 @@ export default function Calendar() {
             {displayTitle}
           </h2>
           <button
+            type="button"
             onClick={handleNext}
-            className="btn-glass flex h-10 w-10 items-center justify-center rounded-full p-0 shrink-0"
+            aria-label="Next period"
+            className="btn-glass flex h-11 w-11 items-center justify-center rounded-full p-0 shrink-0 active:scale-95"
           >
             <Icon name="chevron_right" className="text-xl" />
           </button>
@@ -529,13 +540,14 @@ export default function Calendar() {
         {/* Actions row */}
         <div className="flex items-center gap-2.5 justify-center w-full">
           <button
+            type="button"
             onClick={handleToday}
-            className="btn-glass px-3 py-1.5 text-xs font-semibold rounded-lg shrink-0"
+            className="btn-glass min-h-11 px-4 py-2 text-sm font-semibold rounded-xl shrink-0 active:scale-95"
           >
             today
           </button>
           <div 
-            className="flex p-0.5 rounded-lg border shrink-0"
+            className="flex p-0.5 rounded-xl border shrink-0"
             style={{ 
               backgroundColor: 'color-mix(in srgb, var(--secondary-container) 50%, transparent)',
               borderColor: 'var(--outline-var)'
@@ -545,9 +557,10 @@ export default function Calendar() {
               const active = currentViewMode === mode
               return (
                 <button
+                  type="button"
                   key={mode}
                   onClick={() => setCurrentViewMode(mode)}
-                  className="px-3 py-1.5 text-xs font-semibold rounded-md transition-all active:scale-95"
+                  className="min-h-10 px-3.5 py-2 text-sm font-semibold rounded-lg transition-all active:scale-95"
                   style={
                     active
                       ? {
@@ -598,12 +611,14 @@ export default function Calendar() {
                 </span>
               )}
               <button
+                type="button"
                 onClick={() => onSelectMobile(dayIso)}
-                className="ml-auto flex h-8 w-8 items-center justify-center rounded-full p-0 active:scale-95 transition-transform shrink-0"
+                className="ml-auto flex h-10 w-10 items-center justify-center rounded-full p-0 active:scale-95 transition-transform shrink-0"
                 style={{ backgroundColor: 'var(--primary)', color: 'var(--on-primary)', boxShadow: 'var(--shadow-1)' }}
                 title="Add event"
+                aria-label="Add event"
               >
-                <Icon name="add" className="text-base font-bold" />
+                <Icon name="add" className="text-xl font-bold" />
               </button>
             </h3>
             {dayEvents.length === 0 ? (
@@ -690,7 +705,11 @@ export default function Calendar() {
         </div>
       )}
       {isMobile && currentViewMode === 'schedule' ? (
-        <div className="glass min-h-0 flex-1 p-3 lg:p-4 flex flex-col overflow-hidden">
+        <div
+          {...calendarSwipe}
+          aria-label="Calendar schedule list; swipe left or right to change months"
+          className="glass min-h-0 flex-1 p-3 lg:p-4 flex flex-col overflow-hidden"
+        >
           {renderMobileHeader()}
           {loadingMobileEvents ? (
             <div className="my-auto text-center text-lg text-ink-faint">Loading schedule...</div>
@@ -699,7 +718,12 @@ export default function Calendar() {
           )}
         </div>
       ) : (
-        <div ref={wrapRef} className="glass min-h-0 flex-1 p-3 lg:p-4 flex flex-col overflow-hidden">
+        <div
+          ref={wrapRef}
+          {...calendarSwipe}
+          aria-label="Calendar view; swipe left or right to change period"
+          className="glass min-h-0 flex-1 p-3 lg:p-4 flex flex-col overflow-hidden"
+        >
           {isMobile && renderMobileHeader()}
           <div className="flex-1 min-h-0">
             <FullCalendar
