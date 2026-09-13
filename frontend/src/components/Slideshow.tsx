@@ -376,13 +376,40 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVide
     </div>
   )
 
+  const ink = useMemo(() => {
+    // Choose ink randomly per photo so each print gets its own authentic ballpoint pen note
+    const inks = [
+      // Classic Ballpoint Blue (rich Bic / Papermate royal ink)
+      {
+        color: '#1b3f7a',
+        shadow: '0 0 0.35px rgba(27, 63, 122, 0.45), 0.2px 0.2px 0.35px rgba(27, 63, 122, 0.35)',
+      },
+      // Classic Ballpoint Black (graphite/charcoal oil-based ink)
+      {
+        color: '#22252a',
+        shadow: '0 0 0.35px rgba(34, 37, 42, 0.4), 0.2px 0.2px 0.35px rgba(34, 37, 42, 0.3)',
+      },
+      // Classic Ballpoint Red (crimson annotation ink)
+      {
+        color: '#962228',
+        shadow: '0 0 0.35px rgba(150, 34, 40, 0.45), 0.2px 0.2px 0.35px rgba(150, 34, 40, 0.35)',
+      },
+    ]
+    const inkSeed = hashStr((item.url || '') + (item.date_taken || '') + (item.location_name || '') + 'ballpoint')
+    return inks[inkSeed % inks.length]
+  }, [item.url, item.date_taken, item.location_name])
+
   const caption = (item.location_name || item.date_taken) && (
     <div
-      style={{ fontFamily: "'Caveat', cursive" }}
-      className={`mt-3 mb-0.5 w-full text-center ${pair ? 'text-[1.5rem]' : 'text-[1.7rem]'} font-normal tracking-wide text-slate-800/85 select-none pointer-events-none flex flex-wrap items-center justify-center gap-x-2 leading-relaxed px-1.5`}
+      style={{
+        fontFamily: "'Caveat', cursive",
+        color: ink.color,
+        textShadow: ink.shadow,
+      }}
+      className={`mt-3 mb-0.5 w-full text-center ${pair ? 'text-[1.65rem] sm:text-[1.85rem]' : 'text-[1.85rem] sm:text-[2.15rem]'} font-medium tracking-normal select-none pointer-events-none flex flex-wrap items-center justify-center gap-x-2 leading-relaxed px-1.5`}
     >
       {item.location_name && <span>{item.location_name}</span>}
-      {item.location_name && item.date_taken && <span className="text-slate-400/70">-</span>}
+      {item.location_name && item.date_taken && <span style={{ opacity: 0.65 }}>-</span>}
       {item.date_taken && <span>{formatDate(item.date_taken)}</span>}
     </div>
   )
