@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { api } from '../lib/api'
 import Avatar from '../components/Avatar'
-import CoinIcon from '../components/CoinIcon'
 import Icon from '../components/Icon'
 import Modal from '../components/Modal'
 import WeatherModal from '../components/WeatherModal'
@@ -691,43 +690,64 @@ export default function Home() {
 
   const renderChores = (isDesktop: boolean) => {
     const isEmpty = sortedBalances.length === 0
+    const memberCount = sortedBalances.length
+    // Dynamically size avatar based on screen and member count
+    const avatarSize = isDesktop
+      ? (memberCount > 3 ? 56 : 68)
+      : (memberCount > 3 ? 46 : 56)
+
     return (
       <section
-        className={`glass flex flex-col p-3.5 ${loadingBalances ? 'shimmer-loading' : ''} ${
-          isDesktop ? (isEmpty ? 'flex-none' : 'flex-1 min-h-0 overflow-hidden') : (isEmpty ? 'h-auto' : 'flex-1 min-h-0 overflow-hidden')
-        }`}
+        className={`glass flex flex-col p-4 sm:p-5 shrink-0 ${loadingBalances ? 'shimmer-loading' : ''}`}
       >
-        <a href="#/chores" className="mb-2 flex items-center gap-3 text-lg font-normal text-ink group">
-          <Icon name="emoji_events" className="text-2xl text-amber-500" />
-          <span className="font-semibold">Chore Leaderboard</span>
-          <span className="ml-auto rounded-full bg-amber-100 dark:bg-amber-900/40 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:text-amber-300">
-            {todayChores.length - openChores.length}/{todayChores.length} done today
-          </span>
+        <a href="#/chores" className="flex items-center justify-between group cursor-pointer select-none mb-3 sm:mb-4">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <Icon name="emoji_events" className="text-3xl sm:text-4xl text-amber-500 shrink-0" />
+            <span className="text-2xl sm:text-3xl font-bold text-ink tracking-tight">Chores</span>
+          </div>
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            <span className="rounded-full bg-amber-900/30 dark:bg-[#42361e] px-3.5 sm:px-4 py-1 text-xs sm:text-sm font-semibold text-amber-800 dark:text-[#eed053]">
+              {todayChores.length - openChores.length}/{todayChores.length} done
+            </span>
+            <Icon name="chevron_right" className="text-2xl sm:text-3xl text-ink-soft group-hover:text-ink group-hover:translate-x-0.5 transition-all" />
+          </div>
         </a>
         {isEmpty ? (
-          <p className="my-auto text-center text-lg text-ink-faint py-3">
+          <p className="my-auto text-center text-base sm:text-lg text-ink-faint py-4">
             No family balances yet
           </p>
         ) : (
-          <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pb-1">
+          <div className="flex items-start justify-around w-full px-1 sm:px-2 pt-1 pb-2">
             {sortedBalances.map((b, index) => {
               const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`
               return (
                 <a
                   key={b.person_name}
                   href="#/chores"
-                  className="glass-inset flex shrink-0 items-center gap-2.5 px-3 py-1.5 text-left hover:bg-black/5 dark:hover:bg-white/5 transition-all rounded-xl"
-                  style={{ borderLeft: `4px solid ${b.color}` }}
+                  className="flex flex-col items-center group/member cursor-pointer active:scale-95 transition-transform"
                 >
-                  <span className="text-base font-bold w-6 text-center shrink-0 text-ink-soft">
-                    {medal}
-                  </span>
-                  <Avatar name={b.person_name} color={b.color} src={b.avatar} emoji={b.avatar_emoji} size={28} />
-                  <span className="min-w-0 flex-1 truncate text-base font-bold leading-tight" style={{ color: b.color }}>
+                  <div className="relative flex items-center justify-center">
+                    <span
+                      className="absolute -left-6 sm:-left-8 top-1/2 -translate-y-1/2 text-2xl sm:text-3xl select-none filter drop-shadow-sm pointer-events-none"
+                      aria-label={`Rank ${index + 1}`}
+                    >
+                      {medal}
+                    </span>
+                    <Avatar
+                      name={b.person_name}
+                      color={b.color}
+                      src={b.avatar}
+                      emoji={b.avatar_emoji}
+                      size={avatarSize}
+                    />
+                  </div>
+                  <span
+                    className="mt-2 text-base sm:text-lg font-bold leading-tight truncate max-w-[5.5rem] sm:max-w-[7.5rem] text-center"
+                    style={{ color: b.color }}
+                  >
                     {b.person_name}
                   </span>
-                  <div className="flex items-center gap-1.5 rounded-full bg-amber-500/10 dark:bg-amber-400/15 px-2.5 py-0.5 text-amber-700 dark:text-amber-300 font-bold text-sm tabular-nums">
-                    <CoinIcon className="text-sm" />
+                  <div className="mt-1.5 sm:mt-2 flex items-center justify-center rounded-full bg-amber-900/30 dark:bg-[#42361e] px-4 sm:px-5 py-1 text-amber-800 dark:text-[#eed053] font-bold text-base sm:text-lg tabular-nums shadow-sm min-w-[4rem] sm:min-w-[5rem]">
                     <span>{b.balance}</span>
                   </div>
                 </a>
