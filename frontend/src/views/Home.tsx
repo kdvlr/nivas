@@ -691,33 +691,33 @@ export default function Home() {
   const renderChores = (isDesktop: boolean) => {
     const isEmpty = sortedBalances.length === 0
     const memberCount = sortedBalances.length
-    // Dynamically size avatar based on screen and member count
+    // Dynamically size avatar based on screen and member count (one size smaller)
     const avatarSize = isDesktop
-      ? (memberCount > 3 ? 50 : 60)
-      : (memberCount > 3 ? 42 : 50)
+      ? (memberCount > 3 ? 42 : 50)
+      : (memberCount > 3 ? 34 : 42)
 
     return (
       <section
-        className={`glass flex flex-col p-3.5 sm:p-4 shrink-0 ${loadingBalances ? 'shimmer-loading' : ''}`}
+        className={`glass flex flex-col p-3 sm:p-3.5 shrink-0 ${loadingBalances ? 'shimmer-loading' : ''}`}
       >
-        <a href="#/chores" className="flex items-center justify-between group cursor-pointer select-none mb-2.5 sm:mb-3">
-          <div className="flex items-center gap-2 sm:gap-2.5">
-            <Icon name="emoji_events" className="text-2xl sm:text-3xl text-amber-500 shrink-0" />
-            <span className="text-xl sm:text-2xl font-bold text-ink tracking-tight">Chores</span>
+        <a href="#/chores" className="flex items-center justify-between group cursor-pointer select-none mb-2 sm:mb-2.5">
+          <div className="flex items-center gap-2">
+            <Icon name="emoji_events" className="text-xl sm:text-2xl text-amber-500 shrink-0" />
+            <span className="text-lg sm:text-xl font-bold text-ink tracking-tight">Chores</span>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2">
-            <span className="rounded-full bg-amber-900/30 dark:bg-[#42361e] px-3 sm:px-3.5 py-0.5 sm:py-1 text-[0.75rem] sm:text-xs font-semibold text-amber-800 dark:text-[#eed053]">
+            <span className="rounded-full bg-amber-900/30 dark:bg-[#42361e] px-2.5 sm:px-3 py-0.5 text-[0.68rem] sm:text-[0.75rem] font-semibold text-amber-800 dark:text-[#eed053]">
               {todayChores.length - openChores.length}/{todayChores.length} done
             </span>
-            <Icon name="chevron_right" className="text-xl sm:text-2xl text-ink-soft group-hover:text-ink group-hover:translate-x-0.5 transition-all" />
+            <Icon name="chevron_right" className="text-lg sm:text-xl text-ink-soft group-hover:text-ink group-hover:translate-x-0.5 transition-all" />
           </div>
         </a>
         {isEmpty ? (
-          <p className="my-auto text-center text-sm sm:text-base text-ink-faint py-3">
+          <p className="my-auto text-center text-xs sm:text-sm text-ink-faint py-3">
             No family balances yet
           </p>
         ) : (
-          <div className="flex items-start justify-around w-full px-1 sm:px-2 pt-0.5 pb-1.5">
+          <div className="flex items-start justify-around w-full px-1 sm:px-2 pt-0.5 pb-1">
             {sortedBalances.map((b, index) => {
               const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`
               return (
@@ -728,7 +728,7 @@ export default function Home() {
                 >
                   <div className="relative flex items-center justify-center">
                     <span
-                      className="absolute -left-5 sm:-left-7 top-1/2 -translate-y-1/2 text-xl sm:text-2xl select-none filter drop-shadow-sm pointer-events-none"
+                      className="absolute -left-6 sm:-left-7 top-1/2 -translate-y-1/2 text-2xl sm:text-3xl select-none filter drop-shadow-sm pointer-events-none"
                       aria-label={`Rank ${index + 1}`}
                     >
                       {medal}
@@ -742,12 +742,12 @@ export default function Home() {
                     />
                   </div>
                   <span
-                    className="mt-1.5 text-sm sm:text-base font-bold leading-tight truncate max-w-[5rem] sm:max-w-[6.5rem] text-center"
+                    className="mt-1 text-xs sm:text-sm font-bold leading-tight truncate max-w-[4.5rem] sm:max-w-[6rem] text-center"
                     style={{ color: b.color }}
                   >
                     {b.person_name}
                   </span>
-                  <div className="mt-1 sm:mt-1.5 flex items-center justify-center rounded-full bg-amber-900/30 dark:bg-[#42361e] px-3.5 sm:px-4 py-0.5 sm:py-1 text-amber-800 dark:text-[#eed053] font-bold text-sm sm:text-base tabular-nums shadow-sm min-w-[3.5rem] sm:min-w-[4.25rem]">
+                  <div className="mt-1 flex items-center justify-center rounded-full bg-amber-900/30 dark:bg-[#42361e] px-3 sm:px-3.5 py-0.5 text-amber-800 dark:text-[#eed053] font-bold text-xs sm:text-sm tabular-nums shadow-sm min-w-[3rem] sm:min-w-[3.5rem]">
                     <span>{b.balance}</span>
                   </div>
                 </a>
