@@ -728,7 +728,7 @@ export default function Home() {
                 >
                   <div className="relative flex items-center justify-center">
                     <span
-                      className="absolute -left-6 sm:-left-7 top-1/2 -translate-y-1/2 text-2xl sm:text-3xl select-none filter drop-shadow-sm pointer-events-none"
+                      className="absolute -left-7 sm:-left-8 top-1/2 -translate-y-1/2 text-3xl sm:text-4xl select-none filter drop-shadow-sm pointer-events-none"
                       aria-label={`Rank ${index + 1}`}
                     >
                       {medal}
