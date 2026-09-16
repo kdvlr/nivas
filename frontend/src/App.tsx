@@ -189,6 +189,8 @@ export default function App() {
   const [isPlaying, setIsPlaying] = useState<boolean>(false)
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0)
   const [durationSeconds, setDurationSeconds] = useState<number>(0)
+  const [isBuffering, setIsBuffering] = useState<boolean>(false)
+  const [playbackError, setPlaybackError] = useState<string | null>(null)
   const [playQueue, setPlayQueue] = useState<Track[]>([])
 
   const syncPlayerState = async () => {
@@ -196,6 +198,8 @@ export default function App() {
       const state = await api.get<any>('/api/ytmusic/player/state')
       if (state) {
         setIsPlaying(state.isPlaying)
+        setIsBuffering(Boolean(state.isBuffering))
+        setPlaybackError(state.playbackError || null)
         setCurrentTrack(state.currentTrack)
         setElapsedSeconds(state.elapsedSeconds || 0)
         setDurationSeconds(state.durationSeconds || 0)
@@ -212,6 +216,8 @@ export default function App() {
       if (message.type !== 'player_state' || !message.payload) return
       const state = message.payload
       setIsPlaying(Boolean(state.isPlaying))
+      setIsBuffering(Boolean(state.isBuffering))
+      setPlaybackError(state.playbackError || null)
       setCurrentTrack(state.currentTrack ?? null)
       setElapsedSeconds(state.elapsedSeconds || 0)
       setDurationSeconds(state.durationSeconds || 0)
@@ -847,6 +853,7 @@ function isWithinQuietHours(now: Date, startStr = '22:00', endStr = '06:00'): bo
                     </div>
                   }
                 >
+                  {playbackError && <div role="alert" className="rounded-lg bg-red-950 px-4 py-3 text-sm text-white">{playbackError}</div>}
                   <View
                     now={now}
                     config={config}
@@ -876,6 +883,7 @@ function isWithinQuietHours(now: Date, startStr = '22:00', endStr = '06:00'): bo
                 docked
                 currentTrack={currentTrack}
                 isPlaying={isPlaying}
+                isBuffering={isBuffering}
                 elapsedSeconds={elapsedSeconds}
                 durationSeconds={durationSeconds}
                 onTogglePlay={handleTogglePlay}

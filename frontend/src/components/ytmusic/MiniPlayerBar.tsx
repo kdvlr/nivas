@@ -20,6 +20,7 @@ export interface Track {
 interface MiniPlayerBarProps {
   currentTrack: Track | null
   isPlaying: boolean
+  isBuffering?: boolean
   elapsedSeconds: number
   durationSeconds: number
   onTogglePlay: () => void
@@ -36,6 +37,7 @@ interface MiniPlayerBarProps {
 export default function MiniPlayerBar({
   currentTrack,
   isPlaying,
+  isBuffering = false,
   elapsedSeconds,
   durationSeconds,
   onTogglePlay,
@@ -128,11 +130,15 @@ export default function MiniPlayerBar({
             )}
             {isPlaying && (
               <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                <div className="flex items-end gap-0.5 h-3.5">
-                  <span className="w-1 bg-[var(--primary)] rounded-full animate-[bounce_1s_infinite_100ms] h-full" />
-                  <span className="w-1 bg-[var(--primary)] rounded-full animate-[bounce_1s_infinite_300ms] h-2.5" />
-                  <span className="w-1 bg-[var(--primary)] rounded-full animate-[bounce_1s_infinite_200ms] h-full" />
-                </div>
+                {isBuffering ? (
+                  <Icon name="progress_activity" className="text-white text-base animate-spin" />
+                ) : (
+                  <div className="flex items-end gap-0.5 h-3.5">
+                    <span className="w-1 bg-[var(--primary)] rounded-full animate-[bounce_1s_infinite_100ms] h-full" />
+                    <span className="w-1 bg-[var(--primary)] rounded-full animate-[bounce_1s_infinite_300ms] h-2.5" />
+                    <span className="w-1 bg-[var(--primary)] rounded-full animate-[bounce_1s_infinite_200ms] h-full" />
+                  </div>
+                )}
               </div>
             )}
           </div>

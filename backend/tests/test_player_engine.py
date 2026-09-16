@@ -25,6 +25,39 @@ class FakeProcess:
         return 0
 
 
+def test_redundant_speaker_selection_does_not_restart_sender():
+    engine, kitchen, _ = configured_engine()
+    engine.current_track = {"videoId": "song"}
+    engine.is_playing = True
+    with patch.object(engine, "_stop_current_stream") as stop:
+        engine.toggle_device(kitchen.id, True)
+    stop.assert_not_called()
+
+
+def test_stale_sender_cannot_update_progress():
+    engine = PlayerEngine()
+    engine.elapsed_seconds = 12
+    old = SimpleNamespace(stdout=io.StringIO("Position: 99.0s, State: Playing\n"), wait=lambda: 0)
+    engine._stream_procs[GROUP_STREAM_ID] = FakeProcess()
+    engine._watch_stream_process(GROUP_STREAM_ID, old, [])
+    assert engine.elapsed_seconds == 12
+    assert engine._last_sender_progress is None
+
+
+@pytest.mark.asyncio
+async def test_loading_does_not_advance_progress():
+    engine = PlayerEngine()
+    engine.current_track = {"videoId": "song"}
+    engine.is_playing = True
+    task = asyncio.create_task(engine._playback_ticker())
+    await asyncio.sleep(1.05)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert engine.elapsed_seconds == 0
+    assert engine.get_state()["isBuffering"] is True
+
+
 def configured_engine():
     engine = PlayerEngine()
     kitchen = AirPlayDevice(
@@ -444,7 +477,7 @@ async def test_playback_ticker_advances_after_grace_period():
     engine.is_playing = True
     engine.current_track = {"videoId": "test1", "title": "Track 1"}
     engine.duration_seconds = 10
-    engine.elapsed_seconds = 24
+    engine.elapsed_seconds = 25
     engine.queue = [{"videoId": "test2", "title": "Track 2"}]
 
     advanced = False
@@ -454,7 +487,7 @@ async def test_playback_ticker_advances_after_grace_period():
 
     engine.next_track = mock_next_track
 
-    # Run one step of ticker logic: elapsed_seconds reaches 25 >= 10 + 15 -> next_track
+    # Native progress has reached the watchdog boundary; wall time cannot advance it.
     ticker_task = asyncio.create_task(engine._playback_ticker())
     await asyncio.sleep(1.1)
     ticker_task.cancel()
@@ -562,6 +595,7 @@ def test_watch_stream_process_deduplicates_eof_and_exit():
     )
 
     try:
+        engine._stream_procs["stream_test"] = mock_proc
         engine._watch_stream_process("stream_test", mock_proc, [], None, generation_id=1)
         time.sleep(0.1)
     finally:
@@ -614,3 +648,56 @@ def test_watch_stream_process_ignores_stale_generation():
         loop.close()
 
     assert len(advance_calls) == 0
+
+
+def test_update_master_volume_preserves_advancing_flag():
+    engine = PlayerEngine()
+    engine._advancing = True
+    engine._update_master_volume_from_devices()
+    assert engine._advancing is True
+
+
+def test_coalesced_speaker_toggle_resets_timer():
+    engine, kitchen, family = configured_engine()
+    engine.current_track = {"videoId": "test"}
+    engine.is_playing = True
+    denied = AirPlayDevice("den", "Den", "192.168.100.199", 7000)
+    engine.devices[denied.id] = denied
+
+    with patch.object(threading, "Timer") as mock_timer_cls:
+        mock_timer_1 = SimpleNamespace(cancel=patch.object, start=patch.object, daemon=True)
+        mock_timer_2 = SimpleNamespace(cancel=patch.object, start=patch.object, daemon=True)
+        mock_timer_cls.side_effect = [mock_timer_1, mock_timer_2]
+
+        engine.toggle_device(denied.id, True)
+        assert engine._membership_restart_timer is mock_timer_1
+
+        # Second toggle within coalesce window resets timer
+        engine.toggle_device(denied.id, False)
+        assert engine._membership_restart_timer is mock_timer_2
+
+
+@pytest.mark.asyncio
+async def test_startup_stall_timeout_halts_without_autoskip():
+    engine = PlayerEngine()
+    engine.is_playing = True
+    engine.current_track = {"videoId": "test", "title": "Test"}
+    engine.duration_seconds = 180
+    engine.elapsed_seconds = 0
+    engine._last_sender_progress = None
+    engine._sender_started_at = time.monotonic() - 19.0
+
+    mock_next = AsyncMock()
+    engine.next_track = mock_next
+
+    task = asyncio.create_task(engine._playback_ticker())
+    await asyncio.sleep(1.05)
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+
+    assert engine.is_playing is False
+    assert "failed to respond within 18 seconds" in (engine._playback_error or "")
+    mock_next.assert_not_called()
