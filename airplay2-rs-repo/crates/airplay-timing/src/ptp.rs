@@ -1728,28 +1728,14 @@ fn bind_ptp_socket(port: u16) -> Result<tokio::net::UdpSocket> {
     use socket2::{Domain, Protocol, Socket, Type};
     let socket = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP))?;
     let _ = socket.set_reuse_address(true);
-    #[cfg(not(windows))]
-    let _ = socket.set_reuse_port(true);
     let _ = socket.set_nonblocking(true);
     let address = std::net::SocketAddr::new(std::net::Ipv4Addr::UNSPECIFIED.into(), port);
-    match socket.bind(&address.into()) {
-        Ok(_) => {
-            let std_socket: std::net::UdpSocket = socket.into();
-            Ok(tokio::net::UdpSocket::from_std(std_socket)?)
-        }
-        Err(e) => {
-            tracing::warn!("Failed to bind PTP port {}: {}; falling back to ephemeral port", port, e);
-            let ephemeral_addr = std::net::SocketAddr::new(std::net::Ipv4Addr::UNSPECIFIED.into(), 0);
-            let ephem_socket = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP))?;
-            let _ = ephem_socket.set_reuse_address(true);
-            #[cfg(not(windows))]
-            let _ = ephem_socket.set_reuse_port(true);
-            let _ = ephem_socket.set_nonblocking(true);
-            ephem_socket.bind(&ephemeral_addr.into())?;
-            let std_socket: std::net::UdpSocket = ephem_socket.into();
-            Ok(tokio::net::UdpSocket::from_std(std_socket)?)
-        }
-    }
+    socket.bind(&address.into()).map_err(|e| {
+        tracing::error!("Failed to bind required PTP port {}: {}", port, e);
+        Error::Connection(e)
+    })?;
+    let std_socket: std::net::UdpSocket = socket.into();
+    Ok(tokio::net::UdpSocket::from_std(std_socket)?)
 }
 
 pub async fn run_ptp_group_master_flow(
@@ -1757,7 +1743,7 @@ pub async fn run_ptp_group_master_flow(
     priority1: u8,
     clock_id_tx: tokio::sync::oneshot::Sender<[u8; 8]>,
 ) -> Result<()> {
-    // Bind to PTP ports with SO_REUSEADDR and SO_REUSEPORT for instant port reuse
+    // Bind to PTP ports with SO_REUSEADDR for exclusive single-master port binding
     let event_socket = bind_ptp_socket(PTP_EVENT_PORT)?;
     let general_socket = bind_ptp_socket(PTP_GENERAL_PORT)?;
 

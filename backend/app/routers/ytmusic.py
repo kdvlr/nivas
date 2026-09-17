@@ -251,25 +251,15 @@ def get_watch(video_id: Optional[str] = None, playlist_id: Optional[str] = None)
 def get_lyrics(video_id: str):
     return ytmusic_service.get_lyrics(video_id)
 
-@router.get("/stream/{video_id}")
-async def get_stream(video_id: str):
-    stream_url = ytmusic_service.get_stream_url(video_id)
-    if not stream_url:
-        raise HTTPException(status_code=400, detail="Stream URL not found for video")
-    return RedirectResponse(url=stream_url, status_code=307)
-
-@router.get("/artwork/{video_id}")
-async def get_artwork(video_id: str):
-    art_path = f"/tmp/ytmusic_{video_id}_artwork.jpg"
-    if os.path.exists(art_path) and os.path.getsize(art_path) > 0:
-        return FileResponse(art_path, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=86400"})
-    raise HTTPException(status_code=404, detail="Artwork not found")
-
 # --- Server-Side AirPlay & Synchronized Player Engine APIs ---
 
 @router.get("/player/state")
 def get_player_state():
     return player_engine.get_state()
+
+@router.post("/player/error/dismiss")
+def player_dismiss_error():
+    return player_engine.clear_playback_error()
 
 @router.post("/player/play")
 async def player_play(req: PlayRequest):

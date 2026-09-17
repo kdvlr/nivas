@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, lazy, Suspense } from 'react'
+import { useEffect, useRef, useState, useCallback, lazy, Suspense } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   PRESS_SPRING,
@@ -225,6 +225,14 @@ export default function App() {
     })
   }, [])
 
+  const handleDismissPlaybackError = useCallback(async () => {
+    setPlaybackError(null)
+    try {
+      await api.post<any>('/api/ytmusic/player/error/dismiss', {})
+    } catch {
+      // no-op
+    }
+  }, [])
 
   const handlePlayTrack = (track: Track, queue?: Track[]) => {
     api.post<any>('/api/ytmusic/player/play', {
@@ -853,13 +861,25 @@ function isWithinQuietHours(now: Date, startStr = '22:00', endStr = '06:00'): bo
                     </div>
                   }
                 >
-                  {playbackError && <div role="alert" className="rounded-lg bg-red-950 px-4 py-3 text-sm text-white">{playbackError}</div>}
+                  {playbackError && (
+                    <div role="alert" className="mb-4 flex items-center justify-between rounded-lg bg-red-950/90 border border-red-800/50 px-4 py-3 text-sm text-red-200">
+                      <span>{playbackError}</span>
+                      <button
+                        type="button"
+                        onClick={handleDismissPlaybackError}
+                        className="ml-4 shrink-0 rounded px-2.5 py-1 text-xs font-semibold text-red-300 hover:bg-red-900/60 hover:text-white transition-colors cursor-pointer"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  )}
                   <View
                     now={now}
                     config={config}
                     onStartSlideshow={() => setSlideshowActive(true)}
                     currentTrack={currentTrack}
                     isPlaying={isPlaying}
+                    isBuffering={isBuffering}
                     queue={playQueue}
                     elapsedSeconds={elapsedSeconds}
                     durationSeconds={durationSeconds}

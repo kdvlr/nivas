@@ -28,10 +28,10 @@ class MediaCache:
     def audio_path(self, source: str) -> Path:
         key = self._key(source)
         m4a = self.root / f"{key}.m4a"
-        if m4a.exists():
+        if m4a.exists() and m4a.stat().st_size > 44:
             return m4a
         wav = self.root / f"{key}.wav"
-        if wav.exists():
+        if wav.exists() and wav.stat().st_size > 44:
             return wav
         return m4a
 
@@ -62,12 +62,12 @@ class MediaCache:
             now = time.time()
             files = [p for p in self.root.iterdir() if p.is_file() and not p.name.endswith(".tmp")]
             for p in files:
-                if p not in self._pinned and now - p.stat().st_atime > self.MAX_AGE_SECONDS:
+                if p not in self._pinned and now - p.stat().st_mtime > self.MAX_AGE_SECONDS:
                     p.unlink(missing_ok=True)
             files = [p for p in self.root.iterdir() if p.is_file() and not p.name.endswith(".tmp")]
             tracks = sorted({p.stem for p in files})
             total = sum(p.stat().st_size for p in files)
-            for p in sorted(files, key=lambda item: item.stat().st_atime):
+            for p in sorted(files, key=lambda item: item.stat().st_mtime):
                 if len(tracks) <= self.MAX_TRACKS and total <= self.MAX_BYTES:
                     break
                 if p in self._pinned:

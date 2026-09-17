@@ -18,8 +18,6 @@ from PIL import Image
 from ..config import get_settings
 from ..ws import manager
 from .ytmusic import ytmusic_service
-from .sonos_listener import SonosEventListener
-from .media_remote import MediaRemotePublisher
 from .media_cache import media_cache
 
 logger = logging.getLogger(__name__)
@@ -63,6 +61,7 @@ class PlayerEngine:
         self.current_track: Optional[Dict[str, Any]] = None
         self.queue: List[Dict[str, Any]] = []
         self.elapsed_seconds: float = 0
+        self.raw_elapsed_seconds: float = 0.0
         self.duration_seconds: float = 0
         self.master_volume: int = 70
         self.devices: Dict[str, AirPlayDevice] = {}
@@ -108,11 +107,6 @@ class PlayerEngine:
             1,
             int(os.getenv("AIRPLAY_PAUSE_TIMEOUT_SECONDS", DEFAULT_PAUSED_SESSION_TIMEOUT_SECONDS)),
         )
-        self.sonos_listener = SonosEventListener(
-            on_volume_change=self._on_external_sonos_volume,
-            on_state_change=self._on_external_sonos_state,
-        )
-        self.media_remote = MediaRemotePublisher(display_name="Nivas", port=49152)
         self._save_pref_lock = threading.Lock()
         self._save_pref_timer: Optional[threading.Timer] = None
         self._membership_restart_timer: Optional[threading.Timer] = None
@@ -151,10 +145,6 @@ class PlayerEngine:
         selected_devs = [dev for dev in self.devices.values() if dev.is_selected]
         if selected_devs:
             self.master_volume = round(sum(dev.volume for dev in selected_devs) / len(selected_devs))
-        self._paused_session_timeout = max(
-            1,
-            int(os.getenv("AIRPLAY_PAUSE_TIMEOUT_SECONDS", DEFAULT_PAUSED_SESSION_TIMEOUT_SECONDS)),
-        )
 
     def _load_preferences(self) -> tuple[set[str], set[str], set[str], dict[str, int], dict[str, int]]:
         try:
@@ -173,10 +163,6 @@ class PlayerEngine:
             return hidden, selected_ids, selected_names, volumes, sync_offsets
         except (FileNotFoundError, json.JSONDecodeError, OSError, AttributeError):
             return set(), set(), set(), {}, {}
-
-    def _load_hidden_device_ids(self) -> set[str]:
-        hidden, _, _, _, _ = self._load_preferences()
-        return hidden
 
     def _schedule_save_preferences(self, delay: float = 0.5) -> None:
         with self._save_pref_lock:
@@ -209,27 +195,6 @@ class PlayerEngine:
         except Exception as e:
             logger.error("Failed to save AirPlay preferences: %s", e)
 
-    def _save_hidden_device_ids(self) -> None:
-        self._save_preferences()
-
-    def _on_external_sonos_volume(self, ip: str, volume: int):
-        for dev_id, dev in self.devices.items():
-            if dev.address == ip:
-                dev.volume = max(0, min(100, volume))
-                self._device_volumes[dev_id] = dev.volume
-                self._schedule_save_preferences(0.5)
-                self._update_master_volume_from_devices()
-                self._broadcast_state()
-                break
-
-    def _on_external_sonos_state(self, is_playing: bool):
-        if self.is_playing != is_playing and self._event_loop and self._event_loop.is_running():
-            logger.info("External Sonos state change: is_playing=%s", is_playing)
-            if is_playing:
-                asyncio.run_coroutine_threadsafe(self.resume(), self._event_loop)
-            else:
-                asyncio.run_coroutine_threadsafe(self.pause(), self._event_loop)
-
     def start(self):
         loop = asyncio.get_event_loop()
         self._event_loop = loop
@@ -237,12 +202,6 @@ class PlayerEngine:
             self._scanner_task = loop.create_task(self._device_scanner_loop())
         if self._ticker_task is None or self._ticker_task.done():
             self._ticker_task = loop.create_task(self._playback_ticker())
-        
-        self.sonos_listener.start()
-        self.media_remote.on_play_pause = lambda: asyncio.run_coroutine_threadsafe(self.toggle_play_pause(), loop)
-        self.media_remote.on_next = lambda: asyncio.run_coroutine_threadsafe(self.next_track(), loop)
-        self.media_remote.on_prev = lambda: asyncio.run_coroutine_threadsafe(self.prev_track(), loop)
-        self.media_remote.start(loop)
         self._media_cache.cleanup()
 
     def stop(self):
@@ -250,16 +209,21 @@ class PlayerEngine:
             self._scanner_task.cancel()
         if self._ticker_task and not self._ticker_task.done():
             self._ticker_task.cancel()
-        self.sonos_listener.stop()
-        self.media_remote.stop()
         self._stop_current_stream()
+
+    def clear_playback_error(self) -> Dict[str, Any]:
+        self._playback_error = None
+        self._broadcast_state()
+        return self.get_state()
 
     async def stop_playback(self) -> Dict[str, Any]:
         """Stops the current track, terminates streaming processes, and clears active track."""
         self.is_playing = False
-        self._stop_current_stream()
+        await self._stop_current_stream_async()
+        self._playback_error = None
         self.current_track = None
         self.elapsed_seconds = 0
+        self.raw_elapsed_seconds = 0.0
         self.duration_seconds = 0
         self.queue.clear()
         self.history.clear()
@@ -324,7 +288,7 @@ class PlayerEngine:
         except subprocess.TimeoutExpired:
             logger.error("AirPlay sender %s did not exit after SIGKILL", proc.pid)
 
-    def _stop_current_stream(self, cancel_play_task: bool = True):
+    def _stop_current_stream(self, cancel_play_task: bool = True, wait_exit: bool = False):
         self._last_sender_progress = None
         self._sender_started_at = None
         if self._membership_restart_timer:
@@ -340,7 +304,7 @@ class PlayerEngine:
             log_handles = list(self._stream_log_handles.values())
             self._stream_log_handles.clear()
 
-        # Send "stop\n" immediately to all sender processes without blocking the event loop
+        # Send "stop\n" immediately to all sender processes
         for _, proc in processes:
             try:
                 if proc.poll() is None and proc.stdin is not None:
@@ -349,7 +313,6 @@ class PlayerEngine:
             except (BrokenPipeError, OSError, ValueError):
                 pass
 
-        # Escalate and reap in a background daemon thread so teardown never blocks the event loop
         if processes or log_handles:
             def _reap_processes(procs_to_kill, handles_to_close):
                 for _, proc in procs_to_kill:
@@ -360,13 +323,58 @@ class PlayerEngine:
                     except OSError:
                         pass
 
-            reaper_thread = threading.Thread(
-                target=_reap_processes,
-                args=(processes, log_handles),
-                name="airplay-stream-reaper",
-                daemon=True,
-            )
-            reaper_thread.start()
+            if wait_exit:
+                _reap_processes(processes, log_handles)
+            else:
+                reaper_thread = threading.Thread(
+                    target=_reap_processes,
+                    args=(processes, log_handles),
+                    name="airplay-stream-reaper",
+                    daemon=True,
+                )
+                reaper_thread.start()
+
+        self._paused_at = None
+        self._paused_stream_expired = False
+        for device in self.devices.values():
+            device.is_connected = False
+
+    async def _stop_current_stream_async(self, cancel_play_task: bool = True):
+        self._last_sender_progress = None
+        self._sender_started_at = None
+        if self._membership_restart_timer:
+            self._membership_restart_timer.cancel()
+            self._membership_restart_timer = None
+        if cancel_play_task and self._play_task and not self._play_task.done():
+            self._play_task.cancel()
+            self._play_task = None
+
+        with self._stream_lock:
+            processes = list(self._stream_procs.items())
+            self._stream_procs.clear()
+            log_handles = list(self._stream_log_handles.values())
+            self._stream_log_handles.clear()
+
+        for _, proc in processes:
+            try:
+                if proc.poll() is None and proc.stdin is not None:
+                    proc.stdin.write("stop\n")
+                    proc.stdin.flush()
+            except (BrokenPipeError, OSError, ValueError):
+                pass
+
+        if processes or log_handles:
+            def _reap_sync():
+                for _, proc in processes:
+                    PlayerEngine._terminate_stream_process(proc, send_stop=False)
+                for handle in log_handles:
+                    try:
+                        handle.close()
+                    except OSError:
+                        pass
+
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, _reap_sync)
 
         self._paused_at = None
         self._paused_stream_expired = False
@@ -470,7 +478,7 @@ class PlayerEngine:
                             self._playback_error = "AirPlay speaker failed to respond within 18 seconds. Please retry."
                             logger.warning(self._playback_error)
                             self.is_playing = False
-                            self._stop_current_stream()
+                            await self._stop_current_stream_async()
                             self._broadcast_state()
                             continue
                     else:
@@ -478,21 +486,21 @@ class PlayerEngine:
                             self._playback_error = "AirPlay sender stopped reporting progress. Please retry playback."
                             logger.warning(self._playback_error)
                             self.is_playing = False
-                            self._stop_current_stream()
+                            await self._stop_current_stream_async()
                             self._broadcast_state()
                             continue
                     # Only native sender progress advances the timeline. Process
                     # creation and a playing intent do not establish audio flow.
                     if self._last_sender_progress is not None and time.monotonic() - self._last_sender_progress < 6:
                         self._last_audio_at = time.monotonic()
-                    # Deterministic ticker watchdog fallback (+15s grace period)
+                    # Deterministic ticker watchdog fallback (+4s grace period)
                     if (
                         self.duration_seconds > 0
-                        and self.elapsed_seconds >= self.duration_seconds + 15
+                        and self.raw_elapsed_seconds >= self.duration_seconds + 4.0
                     ):
                         logger.info(
-                            "Watchdog: Track elapsed seconds (%s) reached duration (%s) + 15s grace period; advancing to next track",
-                            self.elapsed_seconds,
+                            "Watchdog: Track raw elapsed seconds (%s) reached duration (%s) + 4s grace period; advancing to next track",
+                            self.raw_elapsed_seconds,
                             self.duration_seconds,
                         )
                         await self.next_track(auto=True, from_generation=self._play_generation_id)
@@ -506,6 +514,7 @@ class PlayerEngine:
                     self.current_track = None
                     self.queue = []
                     self.elapsed_seconds = 0
+                    self.raw_elapsed_seconds = 0.0
                     self.duration_seconds = 0
                     self._last_audio_at = None
                     self._broadcast_state()
@@ -535,8 +544,6 @@ class PlayerEngine:
     def _broadcast_state(self):
         try:
             state = self.get_state()
-            if hasattr(self, "sonos_listener") and self.sonos_listener:
-                self.sonos_listener.sync_active_devices(self.devices)
             manager.broadcast_json({"type": "player_state", "payload": state})
         except Exception:
             pass
@@ -624,9 +631,11 @@ class PlayerEngine:
             "duration": parsed_duration,
             "isPureAudio": True if is_local else track.get("isPureAudio", False),
             "source": "local" if is_local else track.get("source", "youtube"),
+            "filePath": track.get("filePath"),
         }
         self.played_history[video_id] = time.time()
         self.elapsed_seconds = 0
+        self.raw_elapsed_seconds = 0.0
         self.duration_seconds = float(parsed_duration or 180)
         self.is_playing = True
         self._has_advanced_current = False
@@ -765,16 +774,37 @@ class PlayerEngine:
 
             if prefetch_tasks:
                 await asyncio.gather(*prefetch_tasks, return_exceptions=True)
-            self._media_cache.pin([str(t.get("videoId")) for t in tracks_to_prefetch if not str(t.get("videoId")).startswith("local:")])
+            pinned = []
+            if self.current_track and self.current_track.get("videoId"):
+                c_vid = str(self.current_track.get("videoId"))
+                if not c_vid.startswith("local:"):
+                    pinned.append(c_vid)
+            pinned.extend([str(t.get("videoId")) for t in tracks_to_prefetch if not str(t.get("videoId")).startswith("local:")])
+            self._media_cache.pin(pinned)
             self._media_cache.cleanup()
         except Exception as e:
             logger.debug(f"Next track prefetch background task error: {e}")
+
+    @staticmethod
+    def _get_audio_channels(file_path: str) -> Optional[int]:
+        try:
+            import mutagen
+            audio = mutagen.File(file_path)
+            if audio and hasattr(audio, "info") and hasattr(audio.info, "channels"):
+                return audio.info.channels
+        except Exception as e:
+            logger.debug("Error inspecting audio channels for %s: %s", file_path, e)
+        return None
 
     def _resolve_audio_path(self, video_id: Optional[str], track_info: Optional[Dict[str, Any]] = None) -> Optional[str]:
         if not video_id:
             return None
         vid_str = str(video_id)
         if vid_str.startswith("local:"):
+            # If normalized cache exists for this local track, use it
+            cached = self._media_cache.audio_path(vid_str)
+            if cached.exists() and cached.stat().st_size > 44:
+                return str(cached)
             target_info = track_info or self.current_track or {}
             local_file = target_info.get("filePath")
             if not local_file or not os.path.exists(local_file):
@@ -827,8 +857,8 @@ class PlayerEngine:
             audio_path = None
 
             if is_local:
-                audio_path = self._resolve_audio_path(video_id, track_info)
-                if not audio_path:
+                raw_path = self._resolve_audio_path(video_id, track_info)
+                if not raw_path:
                     logger.warning(
                         "Local audio file for %s (%s) not found on disk; advancing to next track",
                         track_info.get("title"),
@@ -836,6 +866,20 @@ class PlayerEngine:
                     )
                     await self.next_track(auto=True, from_generation=generation_id)
                     return
+
+                channels = self._get_audio_channels(raw_path)
+                if channels is not None and channels != 2:
+                    logger.info("Local audio %s has %s channels; normalizing to 2-channel stereo...", raw_path, channels)
+                    audio_path_obj = self._media_cache.audio_path(video_id)
+                    if not audio_path_obj.exists() or audio_path_obj.stat().st_size <= 44:
+                        await loop.run_in_executor(None, self._fetch_audio, f"local:{video_id.split('local:', 1)[-1]}", str(audio_path_obj))
+                    if audio_path_obj.exists() and audio_path_obj.stat().st_size > 44:
+                        audio_path = str(audio_path_obj)
+                    else:
+                        audio_path = raw_path
+                else:
+                    audio_path = raw_path
+
                 if track_info.get("duration"):
                     self.duration_seconds = float(track_info["duration"])
                 elif track_info.get("duration_seconds"):
@@ -880,7 +924,7 @@ class PlayerEngine:
 
             artwork_arg = str(artwork_path) if artwork_path.exists() and artwork_path.stat().st_size > 0 else None
 
-            self._stop_current_stream(cancel_play_task=False)
+            await self._stop_current_stream_async(cancel_play_task=False)
             logger.info(
                 "Ready to stream '%s' (%s) via airplay2-rs to %s selected AirPlay speakers",
                 track_info.get("title"),
@@ -933,7 +977,8 @@ class PlayerEngine:
 
                 if local_file:
                     ext = os.path.splitext(local_file)[1].lower()
-                    if not is_wav and ext in [".m4a", ".mp4", ".aac", ".flac", ".mp3", ".wav"]:
+                    channels = self._get_audio_channels(local_file)
+                    if not is_wav and ext in [".m4a", ".mp4", ".aac", ".flac", ".mp3", ".wav"] and channels == 2:
                         try:
                             if os.path.exists(output_path):
                                 os.remove(output_path)
@@ -948,14 +993,15 @@ class PlayerEngine:
                             output_path
                         ]
                         subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                        logger.info(f"Transcoded local audio file {local_file} directly to {output_path}")
+                        logger.info(f"Transcoded local audio file {local_file} (channels={channels}) directly to {output_path}")
                 else:
                     logger.warning(f"Local audio file for {source} not found on disk")
                 return
 
             if os.path.exists(source):
                 ext = os.path.splitext(source)[1].lower()
-                if not is_wav and ext in [".m4a", ".mp4", ".aac", ".flac", ".mp3", ".wav"]:
+                channels = self._get_audio_channels(source)
+                if not is_wav and ext in [".m4a", ".mp4", ".aac", ".flac", ".mp3", ".wav"] and channels == 2:
                     try:
                         if os.path.exists(output_path):
                             os.remove(output_path)
@@ -970,7 +1016,7 @@ class PlayerEngine:
                         output_path
                     ]
                     subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                    logger.info(f"Transcoded direct audio file {source} to {output_path}")
+                    logger.info(f"Transcoded direct audio file {source} (channels={channels}) to {output_path}")
                 return
 
             # 1. Direct HTTP/HTTPS audio URL (non-YouTube)
@@ -1052,10 +1098,6 @@ class PlayerEngine:
                         pass
         except Exception as e:
             logger.error(f"yt-dlp download/audio fetch error: {e}")
-
-    def _transcode_to_wav(self, source: str, output_path: str):
-        """Backwards-compatible alias for _fetch_audio."""
-        self._fetch_audio(source, output_path)
 
     def _selected_devices(self) -> List[AirPlayDevice]:
         return [self.devices[device_id] for device_id in self.active_targets if device_id in self.devices]
@@ -1170,6 +1212,7 @@ class PlayerEngine:
                                 if device_id in self.devices:
                                     self.devices[device_id].is_connected = True
                             calculated_sec = max(0, int(self._stream_start_offset + pos_sec))
+                            self.raw_elapsed_seconds = float(calculated_sec)
                             if self.duration_seconds > 0:
                                 self.elapsed_seconds = min(self.duration_seconds, calculated_sec)
                             else:
@@ -1403,6 +1446,11 @@ class PlayerEngine:
                     # A deliberately expired session cannot retain its RTP
                     # timeline. Recreate it cleanly and restart the local file.
                     self.elapsed_seconds = 0
+                    self.raw_elapsed_seconds = 0.0
+                    self._stream_start_offset = 0.0
+                    self._play_generation_id += 1
+                    self._has_advanced_current = False
+                    await self._stop_current_stream_async(cancel_play_task=False)
                     artwork_path = str(self._media_cache.artwork_path(video_id))
                     self.is_playing = self._start_airplay_streams(
                         audio_path,
@@ -1419,20 +1467,24 @@ class PlayerEngine:
 
         target_seconds = max(0.0, min(self.duration_seconds, float(seconds)))
         self.elapsed_seconds = target_seconds
+        self.raw_elapsed_seconds = target_seconds
         self._stream_start_offset = target_seconds
+        self._play_generation_id += 1
+        self._has_advanced_current = False
 
         video_id = self.current_track.get("videoId")
         audio_path = self._resolve_audio_path(video_id, self.current_track)
 
         if audio_path:
             was_paused = not self.is_playing
-            self._stop_current_stream()
+            await self._stop_current_stream_async(cancel_play_task=False)
 
             artwork_path = str(self._media_cache.artwork_path(video_id))
             artwork_arg = artwork_path if os.path.exists(artwork_path) and os.path.getsize(artwork_path) > 0 else None
             started = self._start_airplay_streams(audio_path, self.current_track, artwork_arg)
             if started:
                 self.elapsed_seconds = target_seconds
+                self.raw_elapsed_seconds = target_seconds
                 if was_paused:
                     self._write_stream_command("pause")
                     self._paused_at = time.monotonic()
@@ -1554,15 +1606,17 @@ class PlayerEngine:
         if self.current_track and self.elapsed_seconds > 3.0:
             logger.info("Restarting current track from beginning (elapsed > 3s)")
             self.elapsed_seconds = 0
+            self.raw_elapsed_seconds = 0.0
             self._stream_start_offset = 0.0
             self._play_generation_id += 1
+            self._has_advanced_current = False
             generation_id = self._play_generation_id
             video_id = self.current_track.get("videoId")
             audio_path = self._resolve_audio_path(video_id, self.current_track)
             artwork_path = str(self._media_cache.artwork_path(video_id))
             artwork_arg = artwork_path if os.path.exists(artwork_path) and os.path.getsize(artwork_path) > 0 else None
             if audio_path:
-                self._stop_current_stream()
+                await self._stop_current_stream_async(cancel_play_task=False)
                 self.is_playing = self._start_airplay_streams(audio_path, self.current_track, artwork_arg)
             else:
                 loop = asyncio.get_running_loop()
@@ -1584,13 +1638,16 @@ class PlayerEngine:
         # 3. Fallback: restart current track from beginning if no history
         if self.current_track:
             self.elapsed_seconds = 0
+            self.raw_elapsed_seconds = 0.0
             self._stream_start_offset = 0.0
+            self._play_generation_id += 1
+            self._has_advanced_current = False
             video_id = self.current_track.get("videoId")
             audio_path = self._resolve_audio_path(video_id, self.current_track)
             artwork_path = str(self._media_cache.artwork_path(video_id))
             artwork_arg = artwork_path if os.path.exists(artwork_path) and os.path.getsize(artwork_path) > 0 else None
             if audio_path:
-                self._stop_current_stream()
+                await self._stop_current_stream_async(cancel_play_task=False)
                 self.is_playing = self._start_airplay_streams(audio_path, self.current_track, artwork_arg)
             self._broadcast_state()
             return self.get_state()
@@ -1613,7 +1670,9 @@ class PlayerEngine:
                 return
             was_paused = not self.is_playing
             current_offset = max(0.0, self.elapsed_seconds)
-            self._stop_current_stream(cancel_play_task=False)
+            self._play_generation_id += 1
+            self._has_advanced_current = False
+            self._stop_current_stream(cancel_play_task=False, wait_exit=True)
             self._stream_start_offset = current_offset
 
             artwork_path = str(self._media_cache.artwork_path(video_id))
@@ -1624,6 +1683,7 @@ class PlayerEngine:
             )
             if started:
                 self.elapsed_seconds = current_offset
+                self.raw_elapsed_seconds = current_offset
                 if was_paused:
                     self._write_stream_command("pause")
                     self._paused_at = time.monotonic()

@@ -8,6 +8,8 @@ import logging
 import threading
 from typing import Dict, Any, List, Optional, Tuple
 
+from ..config import get_settings
+
 logger = logging.getLogger(__name__)
 
 SUPPORTED_EXTENSIONS = {".m4a", ".flac", ".mp3", ".aac", ".wav", ".alac", ".ogg", ".aiff", ".aif"}
@@ -16,7 +18,7 @@ ARTWORK_NAMES = {"cover.jpg", "cover.png", "cover.jpeg", "folder.jpg", "folder.p
 class LocalMusicService:
     def __init__(self, music_dir: Optional[str] = None, data_dir: Optional[str] = None):
         self.music_dir = music_dir or os.getenv("MUSIC_DIR", "/media/music")
-        self.data_dir = data_dir or os.getenv("DATA_DIR", "/data")
+        self.data_dir = data_dir or str(get_settings().data_dir)
         self.db_path = os.path.join(self.data_dir, "local_music.db")
         self.artwork_cache_dir = os.path.join(self.data_dir, "local_artwork_cache")
         os.makedirs(self.artwork_cache_dir, exist_ok=True)

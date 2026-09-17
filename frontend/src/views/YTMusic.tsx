@@ -11,6 +11,7 @@ interface YTMusicViewProps {
   config?: any
   currentTrack: Track | null
   isPlaying: boolean
+  isBuffering?: boolean
   queue: Track[]
   elapsedSeconds: number
   durationSeconds: number
@@ -200,6 +201,7 @@ export default function YTMusicView({
   config,
   currentTrack,
   isPlaying,
+  isBuffering = false,
   queue,
   elapsedSeconds,
   durationSeconds,
@@ -2011,10 +2013,14 @@ export default function YTMusicView({
                     </button>
                     <button
                       onClick={onTogglePlay}
-                      aria-label={isPlaying ? 'Pause' : 'Play'}
+                      aria-label={isPlaying ? (isBuffering ? 'Buffering' : 'Pause') : 'Play'}
                       className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--on-primary)] shadow-md transition hover:scale-105 cursor-pointer"
                     >
-                      <Icon name={isPlaying ? 'pause' : 'play_arrow'} filled className="text-2xl" />
+                      {isPlaying && isBuffering ? (
+                        <Icon name="progress_activity" className="animate-spin text-2xl" />
+                      ) : (
+                        <Icon name={isPlaying ? 'pause' : 'play_arrow'} filled className="text-2xl" />
+                      )}
                     </button>
                     <button
                       onClick={onNextTrack}
@@ -2072,10 +2078,14 @@ export default function YTMusicView({
                     </button>
                     <button
                       onClick={onTogglePlay}
-                      aria-label={isPlaying ? 'Pause' : 'Play'}
+                      aria-label={isPlaying ? (isBuffering ? 'Buffering' : 'Pause') : 'Play'}
                       className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--primary)] hover:brightness-110 text-[var(--on-primary)] shadow-md transition hover:scale-105 cursor-pointer"
                     >
-                      <Icon name={isPlaying ? 'pause' : 'play_arrow'} filled className="text-3xl" />
+                      {isPlaying && isBuffering ? (
+                        <Icon name="progress_activity" className="animate-spin text-3xl" />
+                      ) : (
+                        <Icon name={isPlaying ? 'pause' : 'play_arrow'} filled className="text-3xl" />
+                      )}
                     </button>
                     <button
                       onClick={onNextTrack}

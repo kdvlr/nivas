@@ -229,7 +229,8 @@ def test_hidden_speakers_persist_and_are_deselected(tmp_path):
 
     restarted = PlayerEngine()
     restarted._preferences_path = engine._preferences_path
-    assert restarted._load_hidden_device_ids() == {kitchen.id}
+    hidden, _, _, _, _ = restarted._load_preferences()
+    assert hidden == {kitchen.id}
 
 
 @pytest.mark.asyncio
@@ -417,7 +418,7 @@ def test_played_history_deduplication():
     assert "old_track" not in recent_ids
 
 
-def test_transcode_to_wav_runs_standard_pcm_transcoding(monkeypatch):
+def test_fetch_audio_runs_standard_pcm_transcoding(monkeypatch):
     engine = PlayerEngine()
     captured_cmd = []
 
@@ -425,7 +426,7 @@ def test_transcode_to_wav_runs_standard_pcm_transcoding(monkeypatch):
         captured_cmd.extend(cmd)
 
     monkeypatch.setattr(subprocess, "run", mock_run)
-    engine._transcode_to_wav("http://example.com/stream.m4a", "/tmp/output.wav")
+    engine._fetch_audio("http://example.com/stream.m4a", "/tmp/output.wav")
 
     assert "ffmpeg" in captured_cmd
     assert "-acodec" in captured_cmd
@@ -457,34 +458,13 @@ async def test_non_blocking_autoplay_fetch(monkeypatch):
     assert broadcasted is True
 
 
-def test_media_remote_publisher():
-    from app.services.media_remote import MediaRemotePublisher
-    pub = MediaRemotePublisher(display_name="Nivas Test", port=59999)
-    assert pub.display_name == "Nivas Test"
-    assert pub.port == 59999
-
-
-def test_sonos_event_listener():
-    from app.services.sonos_listener import SonosEventListener
-    vol_changed = []
-    state_changed = []
-    listener = SonosEventListener(
-        on_volume_change=lambda ip, vol: vol_changed.append((ip, vol)),
-        on_state_change=lambda s: state_changed.append(s),
-    )
-    listener.start()
-    assert listener._is_running is True
-    listener.stop()
-    assert listener._is_running is False
-
-
 @pytest.mark.asyncio
 async def test_playback_ticker_advances_after_grace_period():
     engine = PlayerEngine()
     engine.is_playing = True
     engine.current_track = {"videoId": "test1", "title": "Track 1"}
     engine.duration_seconds = 10
-    engine.elapsed_seconds = 25
+    engine.raw_elapsed_seconds = 14.5
     engine.queue = [{"videoId": "test2", "title": "Track 2"}]
 
     advanced = False
@@ -494,7 +474,7 @@ async def test_playback_ticker_advances_after_grace_period():
 
     engine.next_track = mock_next_track
 
-    # Native progress has reached the watchdog boundary; wall time cannot advance it.
+    # Native raw progress has reached duration (10) + 4s grace; watchdog advances it.
     ticker_task = asyncio.create_task(engine._playback_ticker())
     await asyncio.sleep(1.1)
     ticker_task.cancel()
@@ -739,12 +719,12 @@ async def test_orchestrate_playback_bypasses_transcode_for_local_files(tmp_path)
     }
     engine.current_track = dict(track_info)
 
-    with patch.object(engine, "_transcode_to_wav") as mock_transcode, \
+    with patch.object(engine, "_fetch_audio") as mock_fetch, \
          patch.object(engine, "_start_airplay_streams", return_value=True) as mock_start:
         await engine._orchestrate_playback("local:456", track_info, engine._play_generation_id)
 
-        # Transcoding must NEVER be called for local audio files!
-        mock_transcode.assert_not_called()
+        # Transcoding must NEVER be called for stereo local audio files!
+        mock_fetch.assert_not_called()
         # Direct local file path must be passed directly into the AirPlay streamer
         mock_start.assert_called_once()
         args, _ = mock_start.call_args
@@ -792,5 +772,109 @@ async def test_stop_playback_clears_state_and_broadcasts():
     assert engine.duration_seconds == 0
     assert state["isPlaying"] is False
     assert state["currentTrack"] is None
+
+
+@pytest.mark.asyncio
+async def test_seek_invalidates_generation_and_resets_advancement():
+    engine = PlayerEngine()
+    engine.is_playing = True
+    engine.current_track = {"videoId": "test1", "title": "Track 1"}
+    engine.duration_seconds = 200
+    engine.elapsed_seconds = 10
+    engine.raw_elapsed_seconds = 10.0
+    engine._has_advanced_current = True
+    engine._play_generation_id = 5
+
+    with patch.object(engine, "_resolve_audio_path", return_value="/tmp/test.m4a"), \
+         patch.object(engine, "_stop_current_stream_async", AsyncMock()) as mock_stop_async, \
+         patch.object(engine, "_start_airplay_streams", return_value=True):
+        await engine.seek(50.0)
+
+        assert engine.elapsed_seconds == 50.0
+        assert engine.raw_elapsed_seconds == 50.0
+        assert engine._play_generation_id == 6
+        assert engine._has_advanced_current is False
+        mock_stop_async.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_prev_track_generation_invalidation():
+    engine = PlayerEngine()
+    engine.is_playing = True
+    engine.current_track = {"videoId": "test1", "title": "Track 1"}
+    engine.duration_seconds = 200
+    engine.elapsed_seconds = 15.0
+    engine.raw_elapsed_seconds = 15.0
+    engine._has_advanced_current = True
+    engine._play_generation_id = 3
+
+    # Branch 1: elapsed > 3.0 restarts track and invalidates generation
+    with patch.object(engine, "_resolve_audio_path", return_value="/tmp/test.m4a"), \
+         patch.object(engine, "_stop_current_stream_async", AsyncMock()) as mock_stop_async, \
+         patch.object(engine, "_start_airplay_streams", return_value=True):
+        await engine.prev_track()
+
+        assert engine.elapsed_seconds == 0.0
+        assert engine.raw_elapsed_seconds == 0.0
+        assert engine._play_generation_id == 4
+        assert engine._has_advanced_current is False
+        mock_stop_async.assert_called_once()
+
+
+def test_clear_playback_error():
+    engine = PlayerEngine()
+    engine._playback_error = "Test error"
+    state = engine.clear_playback_error()
+    assert engine._playback_error is None
+    assert state["playbackError"] is None
+
+
+@pytest.mark.asyncio
+async def test_stop_playback_clears_error():
+    engine = PlayerEngine()
+    engine.is_playing = True
+    engine._playback_error = "Active error"
+    with patch.object(engine, "_stop_current_stream_async", AsyncMock()):
+        state = await engine.stop_playback()
+        assert engine._playback_error is None
+        assert state["playbackError"] is None
+
+
+@pytest.mark.asyncio
+async def test_prefetch_pins_current_track_alongside_queue():
+    engine = PlayerEngine()
+    engine.current_track = {"videoId": "curr_123", "title": "Current"}
+    engine.queue = [{"videoId": "next_456", "title": "Next"}]
+
+    pinned_sources = []
+    engine._media_cache.pin = lambda sources: pinned_sources.extend(sources)
+    with patch("app.services.player_engine.ytmusic_service.resolve_pure_audio_song", return_value=None), \
+         patch.object(engine, "_fetch_audio"):
+        await engine._prefetch_next_track()
+
+    assert "curr_123" in pinned_sources
+    assert "next_456" in pinned_sources
+
+
+@pytest.mark.asyncio
+async def test_mono_audio_triggers_stereo_transcoding():
+    engine = PlayerEngine()
+    track_info = {
+        "videoId": "local:mono_track",
+        "title": "Mono Local Track",
+        "filePath": "/tmp/mono.m4a",
+        "duration": 100,
+    }
+    engine.current_track = dict(track_info)
+
+    with patch.object(engine, "_resolve_audio_path", return_value="/tmp/mono.m4a"), \
+         patch.object(engine, "_get_audio_channels", return_value=1), \
+         patch.object(engine, "_fetch_audio") as mock_fetch, \
+         patch.object(engine, "_stop_current_stream_async", AsyncMock()), \
+         patch.object(engine, "_start_airplay_streams", return_value=True):
+        await engine._orchestrate_playback("local:mono_track", track_info, engine._play_generation_id)
+
+        # Mono file (channels=1) must trigger normalization transcode to stereo in cache
+        mock_fetch.assert_called_once()
 
 

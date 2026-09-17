@@ -21,7 +21,6 @@ CACHE_TTL = {
     "album": 3600,        # 1 hour
     "playlist": 900,      # 15 minutes
     "lyrics": 86400,      # 24 hours
-    "stream": 14400,      # 4 hours
 }
 
 
@@ -809,40 +808,5 @@ class YTMusicService:
         except Exception as e:
             logger.error(f"YTMusic get_lyrics error for video '{video_id}': {e}")
             return {}
-
-    def get_stream_url_and_headers(self, video_id: str) -> tuple[Optional[str], Dict[str, str]]:
-        cache_key = f"stream_info:{video_id}"
-        cached = self._get_cache(cache_key)
-        if cached is not None:
-            return cached
-
-        url = f"https://www.youtube.com/watch?v={video_id}"
-        try:
-            import yt_dlp
-            ydl_opts = {
-                # Prefer the highest-bitrate audio-only representation. The
-                # fallback still requires an audio codec so a video-only URL
-                # can never be selected accidentally.
-                'format': 'bestaudio[acodec!=none]/best[acodec!=none]',
-                'format_sort': ['abr', 'asr', 'acodec', 'filesize'],
-                'quiet': True,
-                'no_warnings': True,
-                'skip_download': True,
-            }
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=False)
-                stream_url = info.get('url')
-                headers = info.get('http_headers', {})
-                if stream_url:
-                    self._set_cache(cache_key, (stream_url, headers), CACHE_TTL["stream"])
-                    return stream_url, headers
-        except Exception as e:
-            logger.error(f"yt-dlp extract error for video '{video_id}': {e}")
-
-        return None, {}
-
-    def get_stream_url(self, video_id: str) -> Optional[str]:
-        stream_url, _ = self.get_stream_url_and_headers(video_id)
-        return stream_url
 
 ytmusic_service = YTMusicService()
