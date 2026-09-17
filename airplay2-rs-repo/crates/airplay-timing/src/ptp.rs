@@ -1685,15 +1685,12 @@ pub async fn run_bmca_yield_flow(
 /// 4. Reports our own clock identity (offset is 0 since we ARE the clock)
 ///
 /// All HomePods sync to our clock, putting them in the same clock domain.
-const GROUP_MASTER_NEGOTIATION_ATTEMPTS: usize = 3;
-const GROUP_MASTER_NEGOTIATION_TIMEOUT: Duration = Duration::from_secs(3);
-
 fn group_peers_ready(
     expected: &HashSet<std::net::IpAddr>,
-    announced: &HashSet<std::net::IpAddr>,
+    _announced: &HashSet<std::net::IpAddr>,
     delay_exchanged: &HashSet<std::net::IpAddr>,
 ) -> bool {
-    expected.is_subset(announced) && expected.is_subset(delay_exchanged)
+    expected.is_subset(delay_exchanged)
 }
 
 fn build_group_delay_response(
@@ -1727,37 +1724,42 @@ async fn respond_to_group_delay_request(
     Ok(())
 }
 
+fn bind_ptp_socket(port: u16) -> Result<tokio::net::UdpSocket> {
+    use socket2::{Domain, Protocol, Socket, Type};
+    let socket = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP))?;
+    let _ = socket.set_reuse_address(true);
+    #[cfg(not(windows))]
+    let _ = socket.set_reuse_port(true);
+    let _ = socket.set_nonblocking(true);
+    let address = std::net::SocketAddr::new(std::net::Ipv4Addr::UNSPECIFIED.into(), port);
+    match socket.bind(&address.into()) {
+        Ok(_) => {
+            let std_socket: std::net::UdpSocket = socket.into();
+            Ok(tokio::net::UdpSocket::from_std(std_socket)?)
+        }
+        Err(e) => {
+            tracing::warn!("Failed to bind PTP port {}: {}; falling back to ephemeral port", port, e);
+            let ephemeral_addr = std::net::SocketAddr::new(std::net::Ipv4Addr::UNSPECIFIED.into(), 0);
+            let ephem_socket = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP))?;
+            let _ = ephem_socket.set_reuse_address(true);
+            #[cfg(not(windows))]
+            let _ = ephem_socket.set_reuse_port(true);
+            let _ = ephem_socket.set_nonblocking(true);
+            ephem_socket.bind(&ephemeral_addr.into())?;
+            let std_socket: std::net::UdpSocket = ephem_socket.into();
+            Ok(tokio::net::UdpSocket::from_std(std_socket)?)
+        }
+    }
+}
+
 pub async fn run_ptp_group_master_flow(
     peer_ips: Vec<std::net::IpAddr>,
     priority1: u8,
     clock_id_tx: tokio::sync::oneshot::Sender<[u8; 8]>,
 ) -> Result<()> {
-    use tokio::net::UdpSocket;
-
-    // Bind to PTP ports (privileged)
-    let event_socket = match UdpSocket::bind(("0.0.0.0", PTP_EVENT_PORT)).await {
-        Ok(s) => {
-            tracing::info!("PTP master: bound to event port {}", PTP_EVENT_PORT);
-            s
-        }
-        Err(_) => {
-            let s = UdpSocket::bind("0.0.0.0:0").await?;
-            tracing::warn!("PTP master: using ephemeral event port {}", s.local_addr()?.port());
-            s
-        }
-    };
-
-    let general_socket = match UdpSocket::bind(("0.0.0.0", PTP_GENERAL_PORT)).await {
-        Ok(s) => {
-            tracing::info!("PTP master: bound to general port {}", PTP_GENERAL_PORT);
-            s
-        }
-        Err(_) => {
-            let s = UdpSocket::bind("0.0.0.0:0").await?;
-            tracing::warn!("PTP master: using ephemeral general port {}", s.local_addr()?.port());
-            s
-        }
-    };
+    // Bind to PTP ports with SO_REUSEADDR and SO_REUSEPORT for instant port reuse
+    let event_socket = bind_ptp_socket(PTP_EVENT_PORT)?;
+    let general_socket = bind_ptp_socket(PTP_GENERAL_PORT)?;
 
     // Build destination addresses for all peers
     let event_dests: Vec<std::net::SocketAddr> = peer_ips.iter()
@@ -1787,38 +1789,55 @@ pub async fn run_ptp_group_master_flow(
     let mut announced_peers = HashSet::new();
     let mut delay_peers = HashSet::new();
 
-    // Delay_Req can arrive while BMCA is still in progress. It must be answered
-    // immediately or the receiver cannot calculate its path delay and lock.
-    for attempt in 1..=GROUP_MASTER_NEGOTIATION_ATTEMPTS {
-        // Send 3 Syncs + 2 Announces + Mac-style Signaling to each peer.
-        for peer_idx in 0..peer_ips.len() {
-            let event_dest = event_dests[peer_idx];
-            let general_dest = general_dests[peer_idx];
+    let sync_interval = std::time::Duration::from_millis(125);
+    let negotiation_timeout = std::time::Duration::from_secs(5);
+    let negotiation_deadline = tokio::time::Instant::now() + negotiation_timeout;
+    let mut cycle: u32 = 0;
 
-            for i in 0..3 {
-                send_ptp_sync(&event_socket, &general_socket, event_dest, &clock_identity, &mut sync_seq).await?;
-                if i < 2 {
-                    send_ptp_announce(&general_socket, general_dest, &clock_identity, &mut announce_seq, 248, priority1).await?;
-                }
-                tokio::time::sleep(Duration::from_millis(125)).await;
-            }
-            send_mac_style_signaling(&general_socket, general_dest, &clock_identity, &mut signaling_seq).await?;
-            tracing::info!(
-                "PTP master: Negotiation attempt {}/{} sent to peer {}",
-                attempt,
-                GROUP_MASTER_NEGOTIATION_ATTEMPTS,
-                peer_ips[peer_idx]
+    // Send initial signaling immediately to all peers
+    for &general_dest in &general_dests {
+        send_mac_style_signaling(&general_socket, general_dest, &clock_identity, &mut signaling_seq).await?;
+    }
+
+    // Continuous Sync/Announce negotiation loop: transmit continuously so receiver clocks lock immediately
+    while !group_peers_ready(&expected_peers, &announced_peers, &delay_peers) {
+        if tokio::time::Instant::now() >= negotiation_deadline {
+            tracing::error!(
+                "PTP master: Unable to synchronize all peers within negotiation timeout (delay_exchanged: {}/{})",
+                delay_peers.len(),
+                expected_peers.len()
             );
+            return Err(Error::Streaming(StreamingError::TimingSyncLost));
         }
 
-        let deadline = tokio::time::Instant::now() + GROUP_MASTER_NEGOTIATION_TIMEOUT;
-        loop {
+        // Send Sync + Follow_Up to all peers on every tick (125ms / 8 Hz)
+        for &event_dest in &event_dests {
+            if let Err(e) = send_ptp_sync(&event_socket, &general_socket, event_dest, &clock_identity, &mut sync_seq).await {
+                tracing::warn!("PTP master: Failed to send Sync to {}: {}", event_dest, e);
+            }
+        }
+
+        // Send Announce and Signaling every 4 cycles (~500ms) during negotiation
+        if cycle % 4 == 0 {
+            for &general_dest in &general_dests {
+                if let Err(e) = send_ptp_announce(&general_socket, general_dest, &clock_identity, &mut announce_seq, 248, priority1).await {
+                    tracing::warn!("PTP master: Failed to send Announce to {}: {}", general_dest, e);
+                }
+                if let Err(e) = send_mac_style_signaling(&general_socket, general_dest, &clock_identity, &mut signaling_seq).await {
+                    tracing::warn!("PTP master: Failed to send Signaling to {}: {}", general_dest, e);
+                }
+            }
+        }
+        cycle = cycle.wrapping_add(1);
+
+        // Process incoming DelayReq and Announce during the sync interval
+        let tick_deadline = tokio::time::Instant::now() + sync_interval;
+        while tokio::time::Instant::now() < tick_deadline {
             if group_peers_ready(&expected_peers, &announced_peers, &delay_peers) {
                 break;
             }
-
             tokio::select! {
-                _ = tokio::time::sleep_until(deadline) => break,
+                _ = tokio::time::sleep_until(tick_deadline) => break,
                 result = general_socket.recv_from(&mut general_buf) => {
                     if let Ok((len, src)) = result {
                         if let Ok(header) = PtpHeader::parse(&general_buf[..len]) {
@@ -1852,34 +1871,15 @@ pub async fn run_ptp_group_master_flow(
                                     tracing::info!("PTP master: Completed initial delay exchange with {}", src.ip());
                                 }
                             } else {
-                                tracing::debug!("PTP master: Received {:?} on event port during BMCA", header.message_type);
+                                tracing::debug!("PTP master: Received {:?} on event port during negotiation", header.message_type);
                             }
                         }
                     }
                 }
             }
         }
-
-        if group_peers_ready(&expected_peers, &announced_peers, &delay_peers) {
-            break;
-        }
-
-        tracing::warn!(
-            "PTP master: Negotiation attempt {}/{} incomplete (announces={}/{}, delay_exchanges={}/{})",
-            attempt,
-            GROUP_MASTER_NEGOTIATION_ATTEMPTS,
-            announced_peers.len(),
-            expected_peers.len(),
-            delay_peers.len(),
-            expected_peers.len()
-        );
     }
 
-    if !group_peers_ready(&expected_peers, &announced_peers, &delay_peers) {
-        tracing::error!("PTP master: Unable to synchronize all peers after {} attempts",
-            GROUP_MASTER_NEGOTIATION_ATTEMPTS);
-        return Err(Error::Streaming(StreamingError::TimingSyncLost));
-    }
 
     // Only report readiness after every peer completes the initial exchange.
     clock_id_tx.send(clock_identity)
@@ -2206,18 +2206,14 @@ mod tests {
         use super::*;
 
         #[test]
-        fn readiness_requires_both_exchanges_from_every_peer() {
+        fn readiness_requires_delay_exchange_from_every_peer() {
             let peer_one = "192.168.1.10".parse().unwrap();
             let peer_two = "192.168.1.11".parse().unwrap();
             let expected = HashSet::from([peer_one, peer_two]);
-            let mut announced = HashSet::new();
+            let announced = HashSet::new();
             let mut delayed = HashSet::new();
 
-            announced.insert(peer_one);
             delayed.insert(peer_one);
-            assert!(!group_peers_ready(&expected, &announced, &delayed));
-
-            announced.insert(peer_two);
             assert!(!group_peers_ready(&expected, &announced, &delayed));
 
             delayed.insert(peer_two);

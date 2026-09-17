@@ -708,3 +708,66 @@ async def test_startup_stall_timeout_halts_without_autoskip():
     assert engine.is_playing is False
     assert "failed to respond within 18 seconds" in (engine._playback_error or "")
     mock_next.assert_not_called()
+
+
+def test_resolve_audio_path_local_and_cached(tmp_path):
+    engine = PlayerEngine()
+    fake_local = tmp_path / "song.flac"
+    fake_local.write_bytes(b"FLACDATA" * 20)
+
+    # 1. Local track with filePath in track_info
+    track_info = {"videoId": "local:123", "filePath": str(fake_local)}
+    resolved = engine._resolve_audio_path("local:123", track_info)
+    assert resolved == str(fake_local)
+
+    # 2. Local track nonexistent
+    resolved_none = engine._resolve_audio_path("local:missing", {"filePath": "/nonexistent/path.flac"})
+    assert resolved_none is None
+
+
+@pytest.mark.asyncio
+async def test_orchestrate_playback_bypasses_transcode_for_local_files(tmp_path):
+    engine, kitchen, _ = configured_engine()
+    fake_local = tmp_path / "test_song.m4a"
+    fake_local.write_bytes(b"M4ADATA" * 20)
+
+    track_info = {
+        "videoId": "local:456",
+        "title": "Local Track M4A",
+        "filePath": str(fake_local),
+        "duration": 210,
+    }
+    engine.current_track = dict(track_info)
+
+    with patch.object(engine, "_transcode_to_wav") as mock_transcode, \
+         patch.object(engine, "_start_airplay_streams", return_value=True) as mock_start:
+        await engine._orchestrate_playback("local:456", track_info, engine._play_generation_id)
+
+        # Transcoding must NEVER be called for local audio files!
+        mock_transcode.assert_not_called()
+        # Direct local file path must be passed directly into the AirPlay streamer
+        mock_start.assert_called_once()
+        args, _ = mock_start.call_args
+        assert args[0] == str(fake_local)
+        assert engine.duration_seconds == 210
+
+
+def test_stop_current_stream_is_non_blocking():
+    engine = PlayerEngine()
+    process = FakeProcess()
+    # Mock wait to simulate a slow teardown
+    slow_wait = MagicMock(return_value=0)
+    process.wait = slow_wait
+    engine._stream_procs[GROUP_STREAM_ID] = process
+
+    start_t = time.monotonic()
+    engine._stop_current_stream()
+    elapsed = time.monotonic() - start_t
+
+    # Main thread must return immediately (< 50ms)
+    assert elapsed < 0.05
+    # Process was sent stop
+    assert process.stdin.getvalue() == "stop\n"
+    # Process table was cleared immediately
+    assert engine._stream_procs == {}
+

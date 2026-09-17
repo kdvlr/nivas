@@ -289,12 +289,12 @@ class PlayerEngine:
         return sent
 
     @staticmethod
-    def _terminate_stream_process(proc: subprocess.Popen):
+    def _terminate_stream_process(proc: subprocess.Popen, send_stop: bool = True):
         """Request protocol cleanup, then escalate without leaving descendants."""
         if proc.poll() is not None:
             return
         try:
-            if proc.stdin is not None:
+            if send_stop and proc.stdin is not None:
                 proc.stdin.write("stop\n")
                 proc.stdin.flush()
             # Multi-room senders tear down each RTSP session concurrently, but
@@ -345,13 +345,35 @@ class PlayerEngine:
             self._stream_procs.clear()
             log_handles = list(self._stream_log_handles.values())
             self._stream_log_handles.clear()
+
+        # Send "stop\n" immediately to all sender processes without blocking the event loop
         for _, proc in processes:
-            self._terminate_stream_process(proc)
-        for handle in log_handles:
             try:
-                handle.close()
-            except OSError:
+                if proc.poll() is None and proc.stdin is not None:
+                    proc.stdin.write("stop\n")
+                    proc.stdin.flush()
+            except (BrokenPipeError, OSError, ValueError):
                 pass
+
+        # Escalate and reap in a background daemon thread so teardown never blocks the event loop
+        if processes or log_handles:
+            def _reap_processes(procs_to_kill, handles_to_close):
+                for _, proc in procs_to_kill:
+                    PlayerEngine._terminate_stream_process(proc, send_stop=False)
+                for handle in handles_to_close:
+                    try:
+                        handle.close()
+                    except OSError:
+                        pass
+
+            reaper_thread = threading.Thread(
+                target=_reap_processes,
+                args=(processes, log_handles),
+                name="airplay-stream-reaper",
+                daemon=True,
+            )
+            reaper_thread.start()
+
         self._paused_at = None
         self._paused_stream_expired = False
         for device in self.devices.values():
@@ -718,7 +740,7 @@ class PlayerEngine:
                     if resolved and resolved.get("videoId"):
                         track_item.update(resolved)
                         vid = track_item.get("videoId")
-                if not vid or vid in self._prefetching_video_ids:
+                if not vid or str(vid).startswith("local:") or vid in self._prefetching_video_ids:
                     return
                 self._prefetching_video_ids.add(vid)
                 try:
@@ -749,10 +771,36 @@ class PlayerEngine:
 
             if prefetch_tasks:
                 await asyncio.gather(*prefetch_tasks, return_exceptions=True)
-            self._media_cache.pin([str(t.get("videoId")) for t in tracks_to_prefetch])
+            self._media_cache.pin([str(t.get("videoId")) for t in tracks_to_prefetch if not str(t.get("videoId")).startswith("local:")])
             self._media_cache.cleanup()
         except Exception as e:
             logger.debug(f"Next track prefetch background task error: {e}")
+
+    def _resolve_audio_path(self, video_id: Optional[str], track_info: Optional[Dict[str, Any]] = None) -> Optional[str]:
+        if not video_id:
+            return None
+        vid_str = str(video_id)
+        if vid_str.startswith("local:"):
+            target_info = track_info or self.current_track or {}
+            local_file = target_info.get("filePath")
+            if not local_file or not os.path.exists(local_file):
+                try:
+                    from .local_music import local_music_service
+                    trk_id = vid_str.split("local:", 1)[1]
+                    trk = local_music_service.get_track(trk_id)
+                    if trk and trk.get("filePath") and os.path.exists(trk["filePath"]):
+                        local_file = trk["filePath"]
+                except Exception as e:
+                    logger.debug(f"Error resolving local audio track {vid_str}: {e}")
+            if local_file and os.path.exists(local_file):
+                return str(local_file)
+            return None
+
+        # YouTube Music audio cache
+        wav_path = self._media_cache.wav_path(vid_str)
+        if wav_path.exists() and wav_path.stat().st_size > 44:
+            return str(wav_path)
+        return None
 
     async def _orchestrate_playback(self, video_id: str, track_info: Dict[str, Any], generation_id: int):
         try:
@@ -781,51 +829,67 @@ class PlayerEngine:
                             self.duration_seconds = float(resolved["duration"])
                         self._broadcast_state()
 
-            wav_path = self._media_cache.wav_path(video_id)
+            is_local = str(video_id).startswith("local:")
+            audio_path = None
+
+            if is_local:
+                audio_path = self._resolve_audio_path(video_id, track_info)
+                if not audio_path:
+                    logger.warning(
+                        "Local audio file for %s (%s) not found on disk; advancing to next track",
+                        track_info.get("title"),
+                        video_id,
+                    )
+                    await self.next_track(auto=True, from_generation=generation_id)
+                    return
+                if track_info.get("duration"):
+                    self.duration_seconds = float(track_info["duration"])
+                elif track_info.get("duration_seconds"):
+                    self.duration_seconds = float(track_info["duration_seconds"])
+            else:
+                wav_path = self._media_cache.wav_path(video_id)
+                if not wav_path.exists() or wav_path.stat().st_size <= 44:
+                    logger.info(f"Downloading and converting track '{track_info['title']}' to 44.1kHz PCM WAV...")
+                    await loop.run_in_executor(None, self._transcode_to_wav, video_id, str(wav_path))
+
+                if generation_id != self._play_generation_id:
+                    logger.info("Aborting stale playback orchestration (generation %s superseded by %s)", generation_id, self._play_generation_id)
+                    return
+
+                if not wav_path.exists() or wav_path.stat().st_size <= 44:
+                    logger.warning(
+                        "Transcoding produced unplayable file for %s (%s); advancing to next track",
+                        track_info.get("title"),
+                        video_id,
+                    )
+                    await self.next_track(auto=True, from_generation=generation_id)
+                    return
+
+                self._media_cache.pin([video_id, *[str(track.get("videoId")) for track in self.queue[:2] if not str(track.get("videoId")).startswith("local:")]])
+                self._media_cache.touch(wav_path)
+                file_size = wav_path.stat().st_size
+                if file_size > 44:
+                    calc_duration = int((file_size - 44) / 176400)
+                    if calc_duration > 0:
+                        self.duration_seconds = calc_duration
+                audio_path = str(wav_path)
+
             artwork_path = self._media_cache.artwork_path(video_id)
-
-            # Concurrently transcode audio and download artwork in parallel
-            fetch_tasks = []
-            if not wav_path.exists() or wav_path.stat().st_size <= 44:
-                logger.info(f"Downloading and converting track '{track_info['title']}' to 44.1kHz PCM WAV...")
-                fetch_tasks.append(loop.run_in_executor(None, self._transcode_to_wav, video_id, str(wav_path)))
-
             thumbnail_url = track_info.get("thumbnail")
             if thumbnail_url and (not artwork_path.exists() or artwork_path.stat().st_size == 0):
-                # Artwork is optional metadata: a slow image host must not hold
-                # up prepared audio. The cached image is used when available.
                 loop.run_in_executor(None, self._download_artwork, thumbnail_url, str(artwork_path))
-
-            if fetch_tasks:
-                await asyncio.gather(*fetch_tasks, return_exceptions=True)
-
-            if generation_id != self._play_generation_id:
-                logger.info("Aborting stale playback orchestration (generation %s superseded by %s)", generation_id, self._play_generation_id)
-                return
-
-            if not wav_path.exists() or wav_path.stat().st_size <= 44:
-                logger.warning(
-                    "Transcoding produced unplayable file for %s (%s); advancing to next track",
-                    track_info.get("title"),
-                    video_id,
-                )
-                await self.next_track(auto=True, from_generation=generation_id)
-                return
-
-            self._media_cache.pin([video_id, *[str(track.get("videoId")) for track in self.queue[:2]]])
-            self._media_cache.touch(wav_path)
-            file_size = wav_path.stat().st_size
-            if file_size > 44:
-                calc_duration = int((file_size - 44) / 176400)
-                if calc_duration > 0:
-                    self.duration_seconds = calc_duration
 
             artwork_arg = str(artwork_path) if artwork_path.exists() and artwork_path.stat().st_size > 0 else None
 
             self._stop_current_stream(cancel_play_task=False)
-            logger.info(f"Transcode complete. Streaming '{track_info['title']}' via airplay2-rs to {len(self.active_targets)} selected AirPlay speakers")
+            logger.info(
+                "Ready to stream '%s' (%s) via airplay2-rs to %s selected AirPlay speakers",
+                track_info.get("title"),
+                "direct local" if is_local else "cached WAV",
+                len(self.active_targets),
+            )
             started = self._start_airplay_streams(
-                str(wav_path),
+                audio_path,
                 track_info,
                 artwork_arg,
             )
@@ -946,7 +1010,7 @@ class PlayerEngine:
 
     def _start_airplay_streams(
         self,
-        wav_path: str,
+        audio_path: str,
         track_info: Optional[Dict[str, Any]] = None,
         artwork_path: Optional[str] = None,
     ):
@@ -955,7 +1019,7 @@ class PlayerEngine:
         if not devices:
             logger.warning("Playback requested without an AirPlay target")
             return False
-        return self._start_airplay_process(devices, wav_path, track_info, artwork_path)
+        return self._start_airplay_process(devices, audio_path, track_info, artwork_path)
 
     def _watch_stream_process(
         self,
@@ -1121,7 +1185,7 @@ class PlayerEngine:
     def _build_airplay_command(
         self,
         devices: List[AirPlayDevice],
-        wav_path: str,
+        audio_path: str,
         track_info: Optional[Dict[str, Any]] = None,
         artwork_path: Optional[str] = None,
     ) -> List[str]:
@@ -1136,7 +1200,7 @@ class PlayerEngine:
             "/usr/local/bin/airplay-play-audio",
             target_ips,
             str(devices[0].port),
-            wav_path,
+            audio_path,
             "--airplay2",
             "--control-stdin",
             "--dacp",
@@ -1186,12 +1250,12 @@ class PlayerEngine:
     def _start_airplay_process(
         self,
         devices: List[AirPlayDevice],
-        wav_path: str,
+        audio_path: str,
         track_info: Optional[Dict[str, Any]] = None,
         artwork_path: Optional[str] = None,
     ) -> bool:
         try:
-            cmd = self._build_airplay_command(devices, wav_path, track_info, artwork_path)
+            cmd = self._build_airplay_command(devices, audio_path, track_info, artwork_path)
             log_path = os.getenv("AIRPLAY_LOG_PATH", "/tmp/nivas-airplay.log")
             log_handle = open(log_path, "a", encoding="utf-8", buffering=1)
             proc = subprocess.Popen(
@@ -1282,14 +1346,14 @@ class PlayerEngine:
                 self._paused_at = None
             else:
                 video_id = self.current_track.get("videoId")
-                wav_path = str(self._media_cache.wav_path(video_id))
-                if os.path.exists(wav_path):
+                audio_path = self._resolve_audio_path(video_id, self.current_track)
+                if audio_path:
                     # A deliberately expired session cannot retain its RTP
                     # timeline. Recreate it cleanly and restart the local file.
                     self.elapsed_seconds = 0
                     artwork_path = str(self._media_cache.artwork_path(video_id))
                     self.is_playing = self._start_airplay_streams(
-                        wav_path,
+                        audio_path,
                         self.current_track,
                         artwork_path if os.path.exists(artwork_path) else None,
                     )
@@ -1306,15 +1370,15 @@ class PlayerEngine:
         self._stream_start_offset = target_seconds
 
         video_id = self.current_track.get("videoId")
-        wav_path = str(self._media_cache.wav_path(video_id))
+        audio_path = self._resolve_audio_path(video_id, self.current_track)
 
-        if os.path.exists(wav_path) and os.path.getsize(wav_path) > 44:
+        if audio_path:
             was_paused = not self.is_playing
             self._stop_current_stream()
 
             artwork_path = str(self._media_cache.artwork_path(video_id))
             artwork_arg = artwork_path if os.path.exists(artwork_path) and os.path.getsize(artwork_path) > 0 else None
-            started = self._start_airplay_streams(wav_path, self.current_track, artwork_arg)
+            started = self._start_airplay_streams(audio_path, self.current_track, artwork_arg)
             if started:
                 self.elapsed_seconds = target_seconds
                 if was_paused:
@@ -1442,12 +1506,12 @@ class PlayerEngine:
             self._play_generation_id += 1
             generation_id = self._play_generation_id
             video_id = self.current_track.get("videoId")
-            wav_path = str(self._media_cache.wav_path(video_id))
+            audio_path = self._resolve_audio_path(video_id, self.current_track)
             artwork_path = str(self._media_cache.artwork_path(video_id))
             artwork_arg = artwork_path if os.path.exists(artwork_path) and os.path.getsize(artwork_path) > 0 else None
-            if os.path.exists(wav_path) and os.path.getsize(wav_path) > 44:
+            if audio_path:
                 self._stop_current_stream()
-                self.is_playing = self._start_airplay_streams(wav_path, self.current_track, artwork_arg)
+                self.is_playing = self._start_airplay_streams(audio_path, self.current_track, artwork_arg)
             else:
                 loop = asyncio.get_running_loop()
                 self._play_task = loop.create_task(self._orchestrate_playback(video_id, self.current_track, generation_id))
@@ -1470,12 +1534,12 @@ class PlayerEngine:
             self.elapsed_seconds = 0
             self._stream_start_offset = 0.0
             video_id = self.current_track.get("videoId")
-            wav_path = str(self._media_cache.wav_path(video_id))
+            audio_path = self._resolve_audio_path(video_id, self.current_track)
             artwork_path = str(self._media_cache.artwork_path(video_id))
             artwork_arg = artwork_path if os.path.exists(artwork_path) and os.path.getsize(artwork_path) > 0 else None
-            if os.path.exists(wav_path) and os.path.getsize(wav_path) > 44:
+            if audio_path:
                 self._stop_current_stream()
-                self.is_playing = self._start_airplay_streams(wav_path, self.current_track, artwork_arg)
+                self.is_playing = self._start_airplay_streams(audio_path, self.current_track, artwork_arg)
             self._broadcast_state()
             return self.get_state()
 
@@ -1492,8 +1556,8 @@ class PlayerEngine:
             if not ((self.is_playing or self._stream_procs) and self.current_track):
                 return
             video_id = self.current_track.get("videoId")
-            wav_path = str(self._media_cache.wav_path(video_id))
-            if not os.path.exists(wav_path):
+            audio_path = self._resolve_audio_path(video_id, self.current_track)
+            if not audio_path:
                 return
             was_paused = not self.is_playing
             current_offset = max(0.0, self.elapsed_seconds)
@@ -1502,7 +1566,7 @@ class PlayerEngine:
 
             artwork_path = str(self._media_cache.artwork_path(video_id))
             started = self._start_airplay_streams(
-                wav_path,
+                audio_path,
                 self.current_track,
                 artwork_path if os.path.exists(artwork_path) else None,
             )

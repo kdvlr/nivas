@@ -30,7 +30,7 @@ async-stream = "0.3"
 
 # Networking
 mdns-sd = "0.11"
-socket2 = "0.5"
+socket2 = { version = "0.5", features = ["all"] }
 
 # Cryptography
 rand = "0.8"
