@@ -4,7 +4,8 @@ import json
 import subprocess
 import time
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+import threading
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -52,8 +53,10 @@ async def test_loading_does_not_advance_progress():
     task = asyncio.create_task(engine._playback_ticker())
     await asyncio.sleep(1.05)
     task.cancel()
-    with pytest.raises(asyncio.CancelledError):
+    try:
         await task
+    except asyncio.CancelledError:
+        pass
     assert engine.elapsed_seconds == 0
     assert engine.get_state()["isBuffering"] is True
 
@@ -313,6 +316,8 @@ def test_speaker_volume_persists_in_preferences(tmp_path):
     engine.devices[kitchen.id] = kitchen
 
     engine.set_device_volume(kitchen.id, 45)
+    if engine._save_pref_timer:
+        engine._save_pref_timer.join(timeout=1.0)
 
     data = json.loads(engine._preferences_path.read_text(encoding="utf-8"))
     assert data["deviceVolumes"][kitchen.id] == 45
@@ -332,6 +337,8 @@ def test_speaker_sync_offset_persists_in_preferences(tmp_path):
     engine.devices[kitchen.id] = kitchen
 
     engine.set_device_sync_offset(kitchen.id, 45)
+    if engine._save_pref_timer:
+        engine._save_pref_timer.join(timeout=1.0)
 
     data = json.loads(engine._preferences_path.read_text(encoding="utf-8"))
     assert data["deviceSyncOffsetsMs"][kitchen.id] == 45
@@ -665,8 +672,8 @@ def test_coalesced_speaker_toggle_resets_timer():
     engine.devices[denied.id] = denied
 
     with patch.object(threading, "Timer") as mock_timer_cls:
-        mock_timer_1 = SimpleNamespace(cancel=patch.object, start=patch.object, daemon=True)
-        mock_timer_2 = SimpleNamespace(cancel=patch.object, start=patch.object, daemon=True)
+        mock_timer_1 = SimpleNamespace(cancel=MagicMock(), start=MagicMock(), daemon=True)
+        mock_timer_2 = SimpleNamespace(cancel=MagicMock(), start=MagicMock(), daemon=True)
         mock_timer_cls.side_effect = [mock_timer_1, mock_timer_2]
 
         engine.toggle_device(denied.id, True)

@@ -216,7 +216,7 @@ class PlayerEngine:
             if dev.address == ip:
                 dev.volume = max(0, min(100, volume))
                 self._device_volumes[dev_id] = dev.volume
-                self._save_preferences()
+                self._schedule_save_preferences(0.5)
                 self._update_master_volume_from_devices()
                 self._broadcast_state()
                 break
@@ -1576,7 +1576,7 @@ class PlayerEngine:
                     f"volume {device.address} {device.volume / 100.0:.4f}"
                 )
         self._update_master_volume_from_devices()
-        self._save_preferences()
+        self._schedule_save_preferences(0.5)
         self._broadcast_state()
         return self.get_state()
 
@@ -1587,7 +1587,7 @@ class PlayerEngine:
         self._device_sync_offsets[device_id] = offset
         if device_id in self.devices:
             self.devices[device_id].sync_offset_ms = offset
-        self._save_preferences()
+        self._schedule_save_preferences(0.5)
         self._broadcast_state()
         return self.get_state()
 
@@ -1605,7 +1605,7 @@ class PlayerEngine:
                         f"volume {dev.address} {dev.volume / 100.0:.4f}"
                     )
         self._update_master_volume_from_devices()
-        self._save_preferences()
+        self._schedule_save_preferences(0.5)
         self._broadcast_state()
         return self.get_state()
 

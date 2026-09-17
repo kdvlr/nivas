@@ -1,4 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import Icon from '../Icon'
 import { api } from '../../lib/api'
@@ -187,7 +188,10 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
     })
 
     pendingDeviceVolRef.current.set(deviceId, volume)
-    if (!deviceThrottleTimerRef.current.has(deviceId)) {
+    if (!deviceInFlightRef.current.get(deviceId) && !deviceThrottleTimerRef.current.has(deviceId)) {
+      pendingDeviceVolRef.current.delete(deviceId)
+      sendDeviceVolumeRequest(deviceId, volume)
+    } else if (!deviceThrottleTimerRef.current.has(deviceId)) {
       const timer = setTimeout(() => {
         deviceThrottleTimerRef.current.delete(deviceId)
         if (!deviceInFlightRef.current.get(deviceId) && pendingDeviceVolRef.current.has(deviceId)) {
@@ -195,7 +199,7 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
           pendingDeviceVolRef.current.delete(deviceId)
           sendDeviceVolumeRequest(deviceId, nextVol)
         }
-      }, 80)
+      }, 50)
       deviceThrottleTimerRef.current.set(deviceId, timer)
     }
   }
@@ -253,7 +257,10 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
     })
 
     pendingMasterVolRef.current = newVolume
-    if (!masterThrottleTimerRef.current) {
+    if (!masterInFlightRef.current && !masterThrottleTimerRef.current) {
+      pendingMasterVolRef.current = null
+      sendGroupVolumeRequest(newVolume)
+    } else if (!masterThrottleTimerRef.current) {
       masterThrottleTimerRef.current = setTimeout(() => {
         masterThrottleTimerRef.current = null
         if (!masterInFlightRef.current && pendingMasterVolRef.current !== null) {
@@ -261,7 +268,7 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
           pendingMasterVolRef.current = null
           sendGroupVolumeRequest(nextVol)
         }
-      }, 80)
+      }, 50)
     }
   }
 
@@ -312,10 +319,10 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
   const hiddenDevices = devices.filter((device) => device.isHidden)
   const displayedDevices = devices.filter((device) => showHidden ? device.isHidden : !device.isHidden)
 
-  return (
+  const modalContent = (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[150]" onPointerDown={onClose}>
+        <div className="fixed inset-0 z-[150] pointer-events-auto" onPointerDown={onClose}>
           <motion.div
             initial={{ opacity: 0, scale: 0.94, y: position.bottom ? 6 : -6 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -328,7 +335,7 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
               right: position.isMobile ? undefined : position.right,
               transformOrigin: position.origin,
             }}
-            className={`fixed z-[150] overflow-hidden rounded-[1.35rem] border border-[var(--outline-var)] glass p-2.5 text-ink shadow-[0_20px_55px_rgba(0,0,0,0.35)] backdrop-blur-2xl ${
+            className={`fixed z-[150] pointer-events-auto overflow-hidden rounded-[1.35rem] border border-[var(--outline-var)] glass p-2.5 text-ink shadow-[0_20px_55px_rgba(0,0,0,0.35)] backdrop-blur-2xl ${
               position.isMobile
                 ? 'left-3 right-3 mx-auto w-auto max-w-[23rem]'
                 : 'w-[23rem]'
@@ -340,7 +347,7 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
                 onClick={onClose}
                 aria-label="Close AirPlay speakers"
                 title="Close"
-                className="absolute right-2 top-2 z-10 flex h-9 w-9 items-center justify-center rounded-xl text-ink-soft transition hover:bg-[var(--sc-high)] hover:text-ink"
+                className="absolute right-2 top-2 z-10 flex h-9 w-9 items-center justify-center rounded-xl text-ink-soft transition hover:bg-[var(--sc-high)] hover:text-ink cursor-pointer"
               >
                 <Icon name="close" className="text-xl" />
               </button>
@@ -455,19 +462,17 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
                         <button
                           type="button"
                           onClick={() => commitDeviceSyncOffset(device.id, 0)}
-                          className="rounded-lg px-2 py-1 text-[0.7rem] font-medium text-ink-soft hover:bg-[var(--sc-high)] hover:text-ink"
+                          className="rounded-lg px-2 py-1 text-[0.7rem] font-medium text-ink-soft hover:bg-[var(--sc-high)] hover:text-ink cursor-pointer"
                         >
                           Reset
                         </button>
                       </div>
-                      <p className="mt-1 text-[0.65rem] text-ink-soft">Used the next time the speaker connects.</p>
                     </div>
                   )}
                 </div>
               )) : (
-                <div className="flex h-24 items-center justify-center gap-2 text-sm text-ink-soft">
-                  {loading && <Icon name="progress_activity" className="animate-spin" />}
-                  {showHidden ? 'No hidden speakers' : 'Looking for speakers…'}
+                <div className="py-8 text-center text-sm text-ink-soft">
+                  {loading ? 'Scanning for AirPlay speakers...' : 'No speakers found.'}
                 </div>
               )}
             </div>
@@ -487,4 +492,7 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
       )}
     </AnimatePresence>
   )
+
+  if (typeof document === 'undefined') return null
+  return createPortal(modalContent, document.body)
 }

@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { motion } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import Icon from '../Icon'
 import { api } from '../../lib/api'
+import { onWsMessage } from '../../lib/ws'
 import AirPlaySelectorModal from './AirPlaySelectorModal'
 import MusicSourceIcon from './MusicSourceIcon'
+import VolumeCapsuleScrubber from './VolumeCapsuleScrubber'
 
 export interface Track {
   videoId: string
@@ -51,13 +53,76 @@ export default function MiniPlayerBar({
   const [showAirPlayModal, setShowAirPlayModal] = useState(false)
   const airPlayButtonRef = useRef<HTMLButtonElement>(null)
   const [activeAirPlayCount, setActiveAirPlayCount] = useState(0)
+  const [masterVolume, setMasterVolume] = useState<number>(70)
+  const [showVolumeControl, setShowVolumeControl] = useState(false)
+
+  const masterInFlightRef = useRef(false)
+  const pendingMasterVolRef = useRef<number | null>(null)
+  const masterThrottleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isInteractingRef = useRef(false)
+  const lastInteractionTimeRef = useRef(0)
+
+  const sendMasterVolumeRequest = async (volume: number) => {
+    masterInFlightRef.current = true
+    try {
+      await api.post<any>('/api/ytmusic/airplay/volume/master', { volume })
+    } catch (e) {
+      // Ignore
+    } finally {
+      masterInFlightRef.current = false
+      if (pendingMasterVolRef.current !== null) {
+        const nextVol = pendingMasterVolRef.current
+        pendingMasterVolRef.current = null
+        sendMasterVolumeRequest(nextVol)
+      }
+    }
+  }
+
+  const handleVolumeChange = (newVolume: number) => {
+    isInteractingRef.current = true
+    lastInteractionTimeRef.current = Date.now()
+    setMasterVolume(newVolume)
+    pendingMasterVolRef.current = newVolume
+    if (!masterInFlightRef.current && !masterThrottleTimerRef.current) {
+      pendingMasterVolRef.current = null
+      sendMasterVolumeRequest(newVolume)
+    } else if (!masterThrottleTimerRef.current) {
+      masterThrottleTimerRef.current = setTimeout(() => {
+        masterThrottleTimerRef.current = null
+        if (!masterInFlightRef.current && pendingMasterVolRef.current !== null) {
+          const nextVol = pendingMasterVolRef.current
+          pendingMasterVolRef.current = null
+          sendMasterVolumeRequest(nextVol)
+        }
+      }, 50)
+    }
+  }
+
+  const handleVolumeCommit = (newVolume: number) => {
+    isInteractingRef.current = false
+    lastInteractionTimeRef.current = Date.now()
+    if (masterThrottleTimerRef.current) {
+      clearTimeout(masterThrottleTimerRef.current)
+      masterThrottleTimerRef.current = null
+    }
+    if (masterInFlightRef.current) {
+      pendingMasterVolRef.current = newVolume
+    } else {
+      pendingMasterVolRef.current = null
+      sendMasterVolumeRequest(newVolume)
+    }
+  }
 
   const checkAirPlayStatus = async () => {
     try {
       const res = await api.get<any>('/api/ytmusic/player/state')
+      const isInteracting = isInteractingRef.current || (Date.now() - lastInteractionTimeRef.current < 1500)
       if (res && Array.isArray(res.devices)) {
         const count = res.devices.filter((d: any) => d.isSelected).length
         setActiveAirPlayCount(count)
+      }
+      if (typeof res?.masterVolume === 'number' && !isInteracting) {
+        setMasterVolume(res.masterVolume)
       }
     } catch (e) {
       // Ignore
@@ -67,7 +132,22 @@ export default function MiniPlayerBar({
   useEffect(() => {
     checkAirPlayStatus()
     const interval = setInterval(checkAirPlayStatus, 5000)
-    return () => clearInterval(interval)
+    const unsub = onWsMessage((msg) => {
+      if (msg.type === 'player_state' && msg.payload) {
+        const isInteracting = isInteractingRef.current || (Date.now() - lastInteractionTimeRef.current < 1500)
+        if (typeof msg.payload.masterVolume === 'number' && !isInteracting) {
+          setMasterVolume(msg.payload.masterVolume)
+        }
+        if (Array.isArray(msg.payload.devices)) {
+          setActiveAirPlayCount(msg.payload.devices.filter((d: any) => d.isSelected).length)
+        }
+      }
+    })
+    return () => {
+      clearInterval(interval)
+      unsub()
+      if (masterThrottleTimerRef.current) clearTimeout(masterThrottleTimerRef.current)
+    }
   }, [])
 
   if (!currentTrack) return null
@@ -164,27 +244,48 @@ export default function MiniPlayerBar({
           />
         </div>
 
-        {/* Action Controls: AirPlay, Play/Pause, Next, Full Player */}
+        {/* Action Controls: AirPlay, Volume, Play/Pause, Next, Full Player */}
         <div className="flex items-center justify-between gap-1 pt-0.5">
-          {/* AirPlay Button */}
-          <button
-            ref={airPlayButtonRef}
-            onClick={() => setShowAirPlayModal((open) => !open)}
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition border shadow-sm active:scale-95 cursor-pointer ${
-              activeAirPlayCount > 0
-                ? 'bg-[var(--primary-container)] text-[var(--on-primary-container)] border-[var(--primary)]/40'
-                : 'bg-[var(--sc)] hover:bg-[var(--sc-high)] text-ink border-[var(--outline-var)]'
-            }`}
-            title={showAirPlayModal ? 'Close AirPlay speakers' : 'AirPlay audio output'}
-          >
-            <Icon name="airplay" className="text-sm shrink-0" />
-            <span className="text-xs font-semibold">AirPlay</span>
-            {activeAirPlayCount > 0 && (
-              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[var(--primary)] text-[10px] font-bold text-[var(--on-primary)] ml-0.5">
-                {activeAirPlayCount}
-              </span>
-            )}
-          </button>
+          {/* Left Controls: AirPlay + Volume */}
+          <div className="flex items-center gap-1">
+            {/* AirPlay Button */}
+            <button
+              ref={airPlayButtonRef}
+              onClick={() => setShowAirPlayModal((open) => !open)}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition border shadow-sm active:scale-95 cursor-pointer ${
+                activeAirPlayCount > 0
+                  ? 'bg-[var(--primary-container)] text-[var(--on-primary-container)] border-[var(--primary)]/40'
+                  : 'bg-[var(--sc)] hover:bg-[var(--sc-high)] text-ink border-[var(--outline-var)]'
+              }`}
+              title={showAirPlayModal ? 'Close AirPlay speakers' : 'AirPlay audio output'}
+            >
+              <Icon name="airplay" className="text-sm shrink-0" />
+              <span className="text-xs font-semibold">AirPlay</span>
+              {activeAirPlayCount > 0 && (
+                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[var(--primary)] text-[10px] font-bold text-[var(--on-primary)] ml-0.5">
+                  {activeAirPlayCount}
+                </span>
+              )}
+            </button>
+
+            {/* Volume Toggle Button */}
+            <button
+              type="button"
+              onClick={() => setShowVolumeControl((open) => !open)}
+              className={`inline-flex items-center gap-1 px-2 py-1.5 rounded-xl transition border shadow-sm active:scale-95 cursor-pointer ${
+                showVolumeControl
+                  ? 'bg-[var(--primary-container)] text-[var(--on-primary-container)] border-[var(--primary)]/40'
+                  : 'bg-[var(--sc)] hover:bg-[var(--sc-high)] text-ink border-[var(--outline-var)]'
+              }`}
+              title={showVolumeControl ? 'Hide volume slider' : `Adjust volume (${masterVolume}%)`}
+            >
+              <Icon
+                name={masterVolume === 0 ? 'volume_off' : masterVolume < 50 ? 'volume_down' : 'volume_up'}
+                className="text-sm shrink-0"
+              />
+              <span className="text-xs font-semibold tabular-nums">{masterVolume}%</span>
+            </button>
+          </div>
 
           {/* Playback Controls */}
           <div className="flex items-center gap-1.5">
@@ -213,6 +314,27 @@ export default function MiniPlayerBar({
             </button>
           </div>
         </div>
+
+        {/* Expandable Master Volume Capsule */}
+        <AnimatePresence>
+          {showVolumeControl && (
+            <motion.div
+              initial={{ height: 0, opacity: 0, marginTop: 0 }}
+              animate={{ height: 'auto', opacity: 1, marginTop: 8 }}
+              exit={{ height: 0, opacity: 0, marginTop: 0 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+              className="overflow-hidden"
+            >
+              <VolumeCapsuleScrubber
+                value={masterVolume}
+                onChange={handleVolumeChange}
+                onChangeEnd={handleVolumeCommit}
+                label="Master Volume"
+                className="w-full"
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
 
       <AirPlaySelectorModal

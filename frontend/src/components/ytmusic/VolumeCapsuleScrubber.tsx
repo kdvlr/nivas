@@ -49,10 +49,17 @@ export default function VolumeCapsuleScrubber({
     isDraggingRef.current = true
     setIsDragging(true)
 
-    const nextValue = computeVolumeFromPointer(event.clientX)
-    dragValueRef.current = nextValue
-    setDragValue(nextValue)
-    onChange(nextValue)
+    // Calculate click coordinate
+    const clickX = event.clientX
+    const currentVal = dragValueRef.current
+    const thumbX = rect.left + (currentVal / 100) * rect.width
+    // If clicked within 14px of thumb center, grab without jumping
+    if (Math.abs(clickX - thumbX) > 14) {
+      const nextValue = computeVolumeFromPointer(clickX)
+      dragValueRef.current = nextValue
+      setDragValue(nextValue)
+      onChange(nextValue)
+    }
   }
 
   const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -77,6 +84,28 @@ export default function VolumeCapsuleScrubber({
     onChangeEnd?.(finalValue)
   }
 
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (disabled) return
+    let step = 0
+    if (event.key === 'ArrowRight' || event.key === 'ArrowUp') {
+      step = event.shiftKey ? 5 : 2
+    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') {
+      step = event.shiftKey ? -5 : -2
+    } else if (event.key === 'Home') {
+      step = -dragValueRef.current
+    } else if (event.key === 'End') {
+      step = 100 - dragValueRef.current
+    }
+    if (step !== 0) {
+      event.preventDefault()
+      const nextVal = Math.max(0, Math.min(100, dragValueRef.current + step))
+      dragValueRef.current = nextVal
+      setDragValue(nextVal)
+      onChange(nextVal)
+      onChangeEnd?.(nextVal)
+    }
+  }
+
   const displayValue = isDragging ? dragValue : value
 
   const toggleMute = (event: React.MouseEvent) => {
@@ -97,63 +126,51 @@ export default function VolumeCapsuleScrubber({
     }
   }
 
-  const setFromRange = (nextValue: number) => {
-    isDraggingRef.current = true
-    dragValueRef.current = nextValue
-    setDragValue(nextValue)
-    setIsDragging(true)
-    onChange(nextValue)
-  }
-
-  const commitRange = () => {
-    if (!isDraggingRef.current) return
-    isDraggingRef.current = false
-    setIsDragging(false)
-    onChangeEnd?.(dragValueRef.current)
-  }
-
   const volumeIcon = displayValue === 0 ? 'volume_off' : displayValue < 50 ? 'volume_down' : icon
 
   return (
     <div
       ref={containerRef}
+      role="slider"
+      aria-label={`${label} volume`}
+      aria-valuenow={displayValue}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      tabIndex={disabled ? -1 : 0}
+      onKeyDown={handleKeyDown}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
       style={{ touchAction: 'none' }}
-      className={`relative flex h-11 select-none items-center overflow-hidden rounded-xl border border-[var(--outline-var)] bg-[var(--sc)] transition-transform duration-100 ${
-        isDragging ? 'scale-[0.99] border-[var(--primary)]' : ''
-      } ${disabled ? 'opacity-40 pointer-events-none' : 'cursor-ew-resize'} ${className}`}
+      className={`group relative flex h-11 select-none items-center overflow-hidden rounded-xl border border-[var(--outline-var)] bg-[var(--sc)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] ${
+        isDragging ? 'border-[var(--primary)] shadow-sm' : 'hover:border-[var(--outline)]'
+      } ${disabled ? 'opacity-40 pointer-events-none' : isDragging ? 'cursor-grabbing' : 'cursor-pointer'} ${className}`}
     >
       {/* Fill Bar */}
       <div
-        className={`absolute inset-y-0 left-0 bg-[var(--primary)]/20 dark:bg-[var(--primary)]/35 ${
+        className={`absolute inset-y-0 left-0 rounded-l-xl bg-[var(--primary)]/20 dark:bg-[var(--primary)]/35 ${
           isDragging ? 'transition-none' : 'transition-all duration-150 ease-out'
         }`}
         style={{ width: `${displayValue}%` }}
       />
 
-      {/* Native range input makes drag, touch, keyboard, and assistive
-          technology interaction reliable; the custom layer remains visual. */}
-      <input
-        type="range"
-        min="0"
-        max="100"
-        value={displayValue}
-        aria-label={`${label} volume`}
-        onPointerDown={(event) => event.stopPropagation()}
-        onChange={(event) => setFromRange(Number(event.target.value))}
-        onPointerUp={(event) => { event.stopPropagation(); commitRange() }}
-        onKeyUp={commitRange}
-        className="absolute inset-y-0 left-10 right-8 z-20 w-auto cursor-ew-resize opacity-0"
-      />
+      {/* Visible Draggable Thumb */}
+      <div
+        className={`pointer-events-none absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-20 flex h-7 w-3.5 items-center justify-center rounded-full bg-white dark:bg-neutral-100 shadow-[0_1px_4px_rgba(0,0,0,0.35)] border border-black/15 transition-transform ${
+          isDragging ? 'scale-110 ring-2 ring-[var(--primary)]/50' : 'group-hover:scale-105'
+        }`}
+        style={{ left: `clamp(10px, ${displayValue}%, calc(100% - 10px))` }}
+      >
+        <div className="h-3 w-0.5 rounded-full bg-neutral-400 dark:bg-neutral-500" />
+      </div>
 
       {/* Label and Controls */}
       <div className="relative z-10 flex w-full items-center justify-between gap-2 px-3 text-ink pointer-events-none">
         <div className="flex min-w-0 items-center gap-2">
           <button
             type="button"
+            onPointerDown={(event) => event.stopPropagation()}
             onClick={toggleMute}
             className="pointer-events-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-ink-soft transition hover:bg-[var(--sc-high)] hover:text-ink cursor-pointer"
             title={displayValue === 0 ? 'Unmute' : 'Mute'}
