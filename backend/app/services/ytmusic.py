@@ -124,6 +124,26 @@ def parse_and_build_ytmusic_headers(raw_input: str) -> Dict[str, str]:
     return user_headers
 
 
+def write_netscape_cookies(cookie_str: str, target_path: Path) -> None:
+    """Write raw cookie string or Netscape cookies into a Netscape cookie file for yt-dlp."""
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(target_path, "w", encoding="utf-8") as f:
+        f.write("# Netscape HTTP Cookie File\n")
+        if cookie_str.startswith("# Netscape") or "\tTRUE\t" in cookie_str or "\tFALSE\t" in cookie_str:
+            for line in cookie_str.splitlines():
+                if line.strip() and not line.startswith("#"):
+                    f.write(f"{line.strip()}\n")
+            return
+
+        for item in cookie_str.split(";"):
+            item = item.strip()
+            if not item or "=" not in item:
+                continue
+            k, v = item.split("=", 1)
+            f.write(f".youtube.com\tTRUE\t/\tTRUE\t2147483647\t{k.strip()}\t{v.strip()}\n")
+            f.write(f".google.com\tTRUE\t/\tTRUE\t2147483647\t{k.strip()}\t{v.strip()}\n")
+
+
 class YTMusicService:
     def __init__(self):
         self._ytmusic = None
@@ -187,6 +207,10 @@ class YTMusicService:
             with open(auth_file, "w", encoding="utf-8") as f:
                 json.dump(headers_dict, f, indent=2)
 
+            # Save Netscape cookie file for yt-dlp authenticated stream extraction
+            if "cookie" in headers_dict:
+                write_netscape_cookies(headers_dict["cookie"], settings.youtube_cookies_file)
+
             self._init_client()
             return True, None
         except Exception as e:
@@ -196,11 +220,17 @@ class YTMusicService:
     def clear_auth(self) -> bool:
         settings = get_settings()
         auth_file = settings.ytmusic_headers_file
+        cookies_file = settings.youtube_cookies_file
         if auth_file.exists():
             try:
                 auth_file.unlink()
             except Exception as e:
                 logger.error(f"Failed to delete auth file: {e}")
+        if cookies_file.exists():
+            try:
+                cookies_file.unlink()
+            except Exception as e:
+                logger.error(f"Failed to delete youtube cookies file: {e}")
         self._init_client()
         return True
 
@@ -248,6 +278,11 @@ class YTMusicService:
                 normalized_albums = [self.normalize_album(i) for i in results if self.normalize_album(i)]
                 self._set_cache(cache_key, normalized_albums, CACHE_TTL["search"])
                 return normalized_albums
+
+            elif effective_filter in ["artists", "playlists"]:
+                results = self._ytmusic.search(query, filter=effective_filter, limit=20)
+                self._set_cache(cache_key, results, CACHE_TTL["search"])
+                return results
 
             else:
                 # "all" search: fetch raw unfiltered search (for Top Result), plus songs, albums, and videos

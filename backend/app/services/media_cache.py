@@ -25,15 +25,31 @@ class MediaCache:
     def _key(self, source: str) -> str:
         return hashlib.sha256(source.encode("utf-8")).hexdigest()
 
+    def audio_path(self, source: str) -> Path:
+        key = self._key(source)
+        m4a = self.root / f"{key}.m4a"
+        if m4a.exists():
+            return m4a
+        wav = self.root / f"{key}.wav"
+        if wav.exists():
+            return wav
+        return m4a
+
     def wav_path(self, source: str) -> Path:
-        return self.root / f"{self._key(source)}.wav"
+        return self.audio_path(source)
 
     def artwork_path(self, source: str) -> Path:
         return self.root / f"{self._key(source)}.jpg"
 
     def pin(self, sources: list[str]) -> None:
         with self._lock:
-            self._pinned = {path for source in sources for path in (self.wav_path(source), self.artwork_path(source))}
+            pinned = set()
+            for source in sources:
+                key = self._key(source)
+                pinned.add(self.root / f"{key}.m4a")
+                pinned.add(self.root / f"{key}.wav")
+                pinned.add(self.artwork_path(source))
+            self._pinned = pinned
 
     def touch(self, path: Path) -> None:
         try:

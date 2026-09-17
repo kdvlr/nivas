@@ -57,6 +57,10 @@ class Settings(BaseSettings):
     def ytmusic_headers_file(self) -> Path:
         return self.data_dir / "credentials" / "ytmusic_headers.json"
 
+    @property
+    def youtube_cookies_file(self) -> Path:
+        return self.data_dir / "credentials" / "youtube_cookies.txt"
+
 
 @lru_cache
 def get_settings() -> Settings:

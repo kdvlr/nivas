@@ -36,7 +36,7 @@ def test_search_prioritizes_pure_audio_and_allows_videos():
     service = YTMusicService()
     service._ytmusic = FakeClient()
 
-    results = service.search("test")
+    results = service.search("test", filter_type="songs")
 
     assert service._ytmusic.filter == "songs"
     # Pure audio song is sorted first, then video items
@@ -70,6 +70,7 @@ def test_normalize_song_accepts_videos_and_maps_metadata():
         "thumbnail": "large",
         "duration": 185,
         "isPureAudio": True,
+        "source": "youtube",
     }
 
 
@@ -127,6 +128,7 @@ def test_playlist_songs_resolves_music_videos_to_audio():
         "album": "",
         "duration": 0,
         "isPureAudio": True,
+        "source": "youtube",
     }]
 
 

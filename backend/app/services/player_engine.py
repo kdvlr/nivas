@@ -4,6 +4,7 @@ import io
 import json
 import logging
 import os
+import shutil
 import signal
 import subprocess
 import threading
@@ -737,16 +738,16 @@ class PlayerEngine:
                     return
                 self._prefetching_video_ids.add(vid)
                 try:
-                    wpath = self._media_cache.wav_path(str(vid))
+                    wpath = self._media_cache.audio_path(str(vid))
                     apath = self._media_cache.artwork_path(str(vid))
                     subtasks = []
 
                     if not wpath.exists() or wpath.stat().st_size <= 44:
                         logger.info("Pre-fetching track in background: %s (%s)", track_item.get("title"), vid)
-                        async def transcode():
+                        async def fetch():
                             async with self._audio_prefetch_semaphore:
-                                await loop.run_in_executor(None, self._transcode_to_wav, str(vid), str(wpath))
-                        subtasks.append(transcode())
+                                await loop.run_in_executor(None, self._fetch_audio, str(vid), str(wpath))
+                        subtasks.append(fetch())
 
                     if not apath.exists() and track_item.get("thumbnail"):
                         loop.run_in_executor(None, self._download_artwork, track_item["thumbnail"], str(apath))
@@ -790,9 +791,9 @@ class PlayerEngine:
             return None
 
         # YouTube Music audio cache
-        wav_path = self._media_cache.wav_path(vid_str)
-        if wav_path.exists() and wav_path.stat().st_size > 44:
-            return str(wav_path)
+        audio_path = self._media_cache.audio_path(vid_str)
+        if audio_path.exists() and audio_path.stat().st_size > 44:
+            return str(audio_path)
         return None
 
     async def _orchestrate_playback(self, video_id: str, track_info: Dict[str, Any], generation_id: int):
@@ -840,18 +841,18 @@ class PlayerEngine:
                 elif track_info.get("duration_seconds"):
                     self.duration_seconds = float(track_info["duration_seconds"])
             else:
-                wav_path = self._media_cache.wav_path(video_id)
-                if not wav_path.exists() or wav_path.stat().st_size <= 44:
-                    logger.info(f"Downloading and converting track '{track_info['title']}' to 44.1kHz PCM WAV...")
-                    await loop.run_in_executor(None, self._transcode_to_wav, video_id, str(wav_path))
+                audio_path_obj = self._media_cache.audio_path(video_id)
+                if not audio_path_obj.exists() or audio_path_obj.stat().st_size <= 44:
+                    logger.info("Downloading track '%s' (preferring 256kbps AAC)...", track_info.get("title"))
+                    await loop.run_in_executor(None, self._fetch_audio, video_id, str(audio_path_obj))
 
                 if generation_id != self._play_generation_id:
                     logger.info("Aborting stale playback orchestration (generation %s superseded by %s)", generation_id, self._play_generation_id)
                     return
 
-                if not wav_path.exists() or wav_path.stat().st_size <= 44:
+                if not audio_path_obj.exists() or audio_path_obj.stat().st_size <= 44:
                     logger.warning(
-                        "Transcoding produced unplayable file for %s (%s); advancing to next track",
+                        "Audio fetch produced unplayable file for %s (%s); advancing to next track",
                         track_info.get("title"),
                         video_id,
                     )
@@ -859,13 +860,18 @@ class PlayerEngine:
                     return
 
                 self._media_cache.pin([video_id, *[str(track.get("videoId")) for track in self.queue[:2] if not str(track.get("videoId")).startswith("local:")]])
-                self._media_cache.touch(wav_path)
-                file_size = wav_path.stat().st_size
-                if file_size > 44:
-                    calc_duration = int((file_size - 44) / 176400)
-                    if calc_duration > 0:
-                        self.duration_seconds = calc_duration
-                audio_path = str(wav_path)
+                self._media_cache.touch(audio_path_obj)
+                if str(audio_path_obj).endswith(".wav"):
+                    file_size = audio_path_obj.stat().st_size
+                    if file_size > 44:
+                        calc_duration = int((file_size - 44) / 176400)
+                        if calc_duration > 0:
+                            self.duration_seconds = calc_duration
+                elif track_info.get("duration"):
+                    self.duration_seconds = float(track_info["duration"])
+                elif track_info.get("duration_seconds"):
+                    self.duration_seconds = float(track_info["duration_seconds"])
+                audio_path = str(audio_path_obj)
 
             artwork_path = self._media_cache.artwork_path(video_id)
             thumbnail_url = track_info.get("thumbnail")
@@ -878,7 +884,7 @@ class PlayerEngine:
             logger.info(
                 "Ready to stream '%s' (%s) via airplay2-rs to %s selected AirPlay speakers",
                 track_info.get("title"),
-                "direct local" if is_local else "cached WAV",
+                "direct local" if is_local else ("cached AAC" if str(audio_path).endswith(".m4a") else "cached audio"),
                 len(self.active_targets),
             )
             started = self._start_airplay_streams(
@@ -904,9 +910,11 @@ class PlayerEngine:
             self.is_playing = False
             self._broadcast_state()
 
-    def _transcode_to_wav(self, source: str, output_path: str):
+    def _fetch_audio(self, source: str, output_path: str):
         if os.path.exists(output_path) and os.path.getsize(output_path) > 44:
             return
+        is_wav = output_path.endswith(".wav")
+        codec_args = ["-acodec", "pcm_s16le"] if is_wav else ["-acodec", "aac", "-b:a", "256k"]
         try:
             # 0. Local filesystem audio file (e.g. local:track_id or absolute path)
             if source.startswith("local:"):
@@ -923,70 +931,113 @@ class PlayerEngine:
                     logger.debug(f"Error finding local track for source {source}: {e}")
 
                 if local_file:
-                    cmd = [
-                        "ffmpeg", "-y", "-i", local_file,
-                        "-vn", "-ar", "44100", "-ac", "2", "-acodec", "pcm_s16le",
-                        output_path
-                    ]
-                    subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                    logger.info(f"Transcoded local audio file {local_file} directly to {output_path}")
+                    ext = os.path.splitext(local_file)[1].lower()
+                    if not is_wav and ext in [".m4a", ".mp4", ".aac", ".flac", ".mp3", ".wav"]:
+                        try:
+                            if os.path.exists(output_path):
+                                os.remove(output_path)
+                            os.link(local_file, output_path)
+                        except OSError:
+                            shutil.copyfile(local_file, output_path)
+                        logger.info(f"Linked local audio file {local_file} directly to {output_path}")
+                    else:
+                        cmd = [
+                            "ffmpeg", "-y", "-i", local_file,
+                            "-vn", "-ar", "44100", "-ac", "2", *codec_args,
+                            output_path
+                        ]
+                        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                        logger.info(f"Transcoded local audio file {local_file} directly to {output_path}")
                 else:
                     logger.warning(f"Local audio file for {source} not found on disk")
                 return
 
             if os.path.exists(source):
-                cmd = [
-                    "ffmpeg", "-y", "-i", source,
-                    "-vn", "-ar", "44100", "-ac", "2", "-acodec", "pcm_s16le",
-                    output_path
-                ]
-                subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                logger.info(f"Transcoded direct audio file {source} to {output_path}")
+                ext = os.path.splitext(source)[1].lower()
+                if not is_wav and ext in [".m4a", ".mp4", ".aac", ".flac", ".mp3", ".wav"]:
+                    try:
+                        if os.path.exists(output_path):
+                            os.remove(output_path)
+                        os.link(source, output_path)
+                    except OSError:
+                        shutil.copyfile(source, output_path)
+                    logger.info(f"Linked direct audio file {source} to {output_path}")
+                else:
+                    cmd = [
+                        "ffmpeg", "-y", "-i", source,
+                        "-vn", "-ar", "44100", "-ac", "2", *codec_args,
+                        output_path
+                    ]
+                    subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    logger.info(f"Transcoded direct audio file {source} to {output_path}")
                 return
 
             # 1. Direct HTTP/HTTPS audio URL (non-YouTube)
             if source.startswith("http://") or (source.startswith("https://") and not ("youtube.com" in source or "youtu.be" in source)):
                 cmd = [
                     "ffmpeg", "-y", "-i", source,
-                    "-vn", "-ar", "44100", "-ac", "2", "-acodec", "pcm_s16le",
+                    "-vn", "-ar", "44100", "-ac", "2", *codec_args,
                     output_path
                 ]
                 subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 logger.info(f"Transcoded direct audio URL successfully to {output_path}")
                 return
 
-            # 2. Strict yt-dlp download & extract into thread-isolated temp file
+            # 2. Strict yt-dlp download: Prefer ITAG 141 (256kbps AAC), fallback to ITAG 140 (128kbps AAC), then best audio
             import yt_dlp
-            url = source if (source.startswith("http://") or source.startswith("https://")) else f"https://www.youtube.com/watch?v={source}"
+            settings = get_settings()
+            url = source if (source.startswith("http://") or source.startswith("https://")) else f"https://music.youtube.com/watch?v={source}"
             tmp_base = f"{output_path}.{os.getpid()}_{threading.get_ident()}_{int(time.time() * 1000)}.tmp"
-            tmp_wav = f"{tmp_base}.wav"
+
             ydl_opts = {
-                "format": "bestaudio/best",
+                "format": "141/140/bestaudio[ext=m4a]/bestaudio/best",
                 "outtmpl": f"{tmp_base}.%(ext)s",
-                "postprocessors": [{
-                    "key": "FFmpegExtractAudio",
-                    "preferredcodec": "wav",
-                    "preferredquality": "0",
-                }],
-                "postprocessor_args": [
-                    "-ar", "44100",
-                    "-ac", "2",
-                    "-acodec", "pcm_s16le",
-                ],
-                "extractor_args": {
-                    "youtube": {
-                        "player_client": ["android", "web", "ios"]
-                    }
-                },
+                "remote_components": ["ejs:github"],
                 "quiet": True,
                 "no_warnings": True,
             }
+
+            if settings.youtube_cookies_file.exists():
+                ydl_opts["cookiefile"] = str(settings.youtube_cookies_file)
+
+            node_path = shutil.which("node")
+            if node_path:
+                ydl_opts["js_runtimes"] = {"node": {"path": node_path}}
+
             try:
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     ydl.download([url])
-                if os.path.exists(tmp_wav) and os.path.getsize(tmp_wav) > 44:
-                    os.replace(tmp_wav, output_path)
-                    logger.info(f"Downloaded and converted audio successfully to 44.1kHz WAV: {output_path}")
+
+                matches = glob.glob(f"{tmp_base}.*")
+                completed = [m for m in matches if not (m.endswith(".part") or m.endswith(".ytdl") or m.endswith(".tmp"))]
+
+                if completed:
+                    downloaded_file = completed[0]
+                    ext = os.path.splitext(downloaded_file)[1].lower()
+
+                    if ext in [".m4a", ".mp4", ".aac"]:
+                        os.replace(downloaded_file, output_path)
+                        logger.info(f"Downloaded native AAC stream directly to {output_path} (zero transcoding)")
+                    elif ext in [".mp3", ".flac", ".wav"]:
+                        target_with_ext = os.path.splitext(output_path)[0] + ext
+                        os.replace(downloaded_file, target_with_ext)
+                        if target_with_ext != output_path:
+                            try:
+                                if os.path.exists(output_path):
+                                    os.remove(output_path)
+                                os.link(target_with_ext, output_path)
+                            except OSError:
+                                shutil.copyfile(target_with_ext, output_path)
+                        logger.info(f"Downloaded native {ext} stream directly to {output_path}")
+                    else:
+                        logger.info(f"Downloaded {ext} stream; transcoding to {output_path}...")
+                        cmd = [
+                            "ffmpeg", "-y", "-i", downloaded_file,
+                            "-vn", "-ar", "44100", "-ac", "2", *codec_args,
+                            output_path
+                        ]
+                        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                        logger.info(f"Transcoded {ext} to {output_path}")
                 else:
                     logger.error(f"yt-dlp output missing or empty for {source}")
             finally:
@@ -996,7 +1047,11 @@ class PlayerEngine:
                     except OSError:
                         pass
         except Exception as e:
-            logger.error(f"yt-dlp download/transcoding error: {e}")
+            logger.error(f"yt-dlp download/audio fetch error: {e}")
+
+    def _transcode_to_wav(self, source: str, output_path: str):
+        """Backwards-compatible alias for _fetch_audio."""
+        self._fetch_audio(source, output_path)
 
     def _selected_devices(self) -> List[AirPlayDevice]:
         return [self.devices[device_id] for device_id in self.active_targets if device_id in self.devices]

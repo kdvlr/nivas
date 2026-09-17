@@ -26,7 +26,7 @@ ENV PYTHONUNBUFFERED=1 \
 
 # Install runtime dependencies and build essentials for packages requiring compilation
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg libasound2 gcc g++ \
+    && apt-get install -y --no-install-recommends ffmpeg libasound2 gcc g++ nodejs \
     && rm -rf /var/lib/apt/lists/*
 
 COPY backend/pyproject.toml ./
