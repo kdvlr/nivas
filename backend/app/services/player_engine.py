@@ -262,14 +262,7 @@ class PlayerEngine:
         self.duration_seconds = 0
         self.queue.clear()
         self.history.clear()
-        self.media_remote.update_state(
-            PlaybackState.STOPPED,
-            title="Not Playing",
-            artist="",
-            album="",
-            duration=0,
-            elapsed=0,
-        )
+        self._broadcast_state()
         return self.get_state()
 
     def _write_stream_command(self, command: str) -> bool:

@@ -771,3 +771,26 @@ def test_stop_current_stream_is_non_blocking():
     # Process table was cleared immediately
     assert engine._stream_procs == {}
 
+
+@pytest.mark.asyncio
+async def test_stop_playback_clears_state_and_broadcasts():
+    engine = PlayerEngine()
+    engine.is_playing = True
+    engine.current_track = {"videoId": "test", "title": "Test"}
+    engine.queue = [{"videoId": "q1"}]
+    engine.history = [{"videoId": "h1"}]
+    engine.elapsed_seconds = 45
+    engine.duration_seconds = 200
+
+    state = await engine.stop_playback()
+
+    assert engine.is_playing is False
+    assert engine.current_track is None
+    assert engine.queue == []
+    assert engine.history == []
+    assert engine.elapsed_seconds == 0
+    assert engine.duration_seconds == 0
+    assert state["isPlaying"] is False
+    assert state["currentTrack"] is None
+
+
