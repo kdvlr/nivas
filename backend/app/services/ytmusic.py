@@ -81,13 +81,18 @@ def parse_and_build_ytmusic_headers(raw_input: str) -> Dict[str, str]:
         for line in raw_input.splitlines():
             if ":" in line:
                 k, v = line.split(":", 1)
-                user_headers[k.strip().lower()] = v.strip()
-                if k.strip().lower() == "cookie":
-                    cookie_str = v.strip()
-                    has_colon_headers = True
+                k_clean = k.strip().lower()
+                if re.match(r"^[a-z0-9_-]+$", k_clean):
+                    user_headers[k_clean] = v.strip()
+                    if k_clean == "cookie":
+                        cookie_str = v.strip()
+                        has_colon_headers = True
 
         if not cookie_str and not has_colon_headers and "=" in raw_input:
             cookie_str = raw_input.replace("\n", "; ").strip()
+
+    # Filter out any non-standard header keys
+    user_headers = {k: v for k, v in user_headers.items() if re.match(r"^[a-z0-9_-]+$", k)}
 
     if cookie_str:
         user_headers["cookie"] = cookie_str

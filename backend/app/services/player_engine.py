@@ -9,7 +9,7 @@ import signal
 import subprocess
 import threading
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 from pathlib import Path
 
 import httpx
@@ -910,7 +910,8 @@ class PlayerEngine:
             self.is_playing = False
             self._broadcast_state()
 
-    def _fetch_audio(self, source: str, output_path: str):
+    def _fetch_audio(self, source: str, output_path: Union[str, Path]):
+        output_path = str(output_path)
         if os.path.exists(output_path) and os.path.getsize(output_path) > 44:
             return
         is_wav = output_path.endswith(".wav")
@@ -1000,8 +1001,11 @@ class PlayerEngine:
             if settings.youtube_cookies_file.exists():
                 ydl_opts["cookiefile"] = str(settings.youtube_cookies_file)
 
+            deno_path = shutil.which("deno")
             node_path = shutil.which("node")
-            if node_path:
+            if deno_path:
+                ydl_opts["js_runtimes"] = {"deno": {"path": deno_path}}
+            elif node_path:
                 ydl_opts["js_runtimes"] = {"node": {"path": node_path}}
 
             try:

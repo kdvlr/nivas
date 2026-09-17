@@ -26,7 +26,10 @@ ENV PYTHONUNBUFFERED=1 \
 
 # Install runtime dependencies and build essentials for packages requiring compilation
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg libasound2 gcc g++ nodejs \
+    && apt-get install -y --no-install-recommends ffmpeg libasound2 gcc g++ curl unzip \
+    && curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh \
+    && apt-get purge -y curl unzip \
+    && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
 COPY backend/pyproject.toml ./
