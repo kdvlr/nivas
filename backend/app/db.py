@@ -93,6 +93,10 @@ def init_db() -> None:
                 "WHERE occurrence_date != '' AND reference_id IS NOT NULL"
             )
         )
+        try:
+            conn.execute(text("ALTER TABLE recipes ADD COLUMN nutrition JSON DEFAULT NULL"))
+        except Exception:
+            pass
 
 
 def get_db() -> Generator[Session, None, None]:

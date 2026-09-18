@@ -48,6 +48,28 @@ export interface ShoppingItem {
   sources: string[]
 }
 
+export interface NutritionFacts {
+  serving_size?: string
+  servings_per_recipe?: string
+  calories?: number | string
+  total_fat?: string
+  saturated_fat?: string
+  trans_fat?: string
+  cholesterol?: string
+  sodium?: string
+  total_carbohydrate?: string
+  dietary_fiber?: string
+  sugars?: string
+  protein?: string
+  source?: 'website' | 'ai'
+}
+
+export interface RecipeNutrition {
+  website?: NutritionFacts | null
+  ai?: NutritionFacts | null
+  active_source?: 'website' | 'ai'
+}
+
 export interface Recipe {
   id: number
   title: string
@@ -60,6 +82,7 @@ export interface Recipe {
   cook_time?: string
   ingredients?: string[]
   steps?: string[]
+  nutrition?: RecipeNutrition | null
 }
 
 export interface MealSlot {

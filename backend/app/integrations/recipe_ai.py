@@ -39,6 +39,25 @@ RECIPE_SCHEMA = {
     "required": ["title", "ingredients", "steps"],
 }
 
+NUTRITION_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "serving_size": {"type": "string", "description": "e.g. '1 serving', '1 cup (240g)', '2 pieces'"},
+        "servings_per_recipe": {"type": "string", "description": "e.g. '4', '6 servings'"},
+        "calories": {"type": "integer", "description": "Estimated calories per serving"},
+        "total_fat": {"type": "string", "description": "e.g. '12g'"},
+        "saturated_fat": {"type": "string", "description": "e.g. '3.5g'"},
+        "trans_fat": {"type": "string", "description": "e.g. '0g'"},
+        "cholesterol": {"type": "string", "description": "e.g. '30mg'"},
+        "sodium": {"type": "string", "description": "e.g. '450mg'"},
+        "total_carbohydrate": {"type": "string", "description": "e.g. '35g'"},
+        "dietary_fiber": {"type": "string", "description": "e.g. '4g'"},
+        "sugars": {"type": "string", "description": "e.g. '6g'"},
+        "protein": {"type": "string", "description": "e.g. '14g'"},
+    },
+    "required": ["serving_size", "calories", "total_fat", "total_carbohydrate", "protein"],
+}
+
 
 import ipaddress
 import socket
@@ -81,6 +100,142 @@ def _minutes(value) -> str:
         return str(value or "")
 
 
+def normalize_scraped_nutrients(raw: dict | None, fallback_servings: str = "") -> dict | None:
+    """Standardize nutrient dictionary from recipe-scrapers / schema.org."""
+    if not raw or not isinstance(raw, dict):
+        return None
+
+    def _val(keys: list[str]) -> str:
+        for k in keys:
+            for rk, rv in raw.items():
+                if rk.lower().replace(" ", "").replace("_", "") == k.lower().replace(" ", "").replace("_", ""):
+                    if rv is not None:
+                        s = str(rv).strip()
+                        if s and s.lower() not in ("none", "null", "unknown"):
+                            return s
+        return ""
+
+    def _extract_int(val: str) -> int | None:
+        if not val:
+            return None
+        m = re.search(r"(\d+(?:\.\d+)?)", val)
+        if m:
+            try:
+                return round(float(m.group(1)))
+            except ValueError:
+                return None
+        return None
+
+    calories_str = _val(["calories", "calorie", "energy", "caloriescontent"])
+    calories = _extract_int(calories_str)
+
+    total_fat = _val(["fatContent", "totalFat", "fat", "totalFatContent", "fats"])
+    sat_fat = _val(["saturatedFatContent", "saturatedFat", "satFat"])
+    trans_fat = _val(["transFatContent", "transFat"])
+    cholesterol = _val(["cholesterolContent", "cholesterol"])
+    sodium = _val(["sodiumContent", "sodium"])
+    carbs = _val(["carbohydrateContent", "carbohydrates", "carbohydrate", "totalCarbohydrate", "carbs"])
+    fiber = _val(["fiberContent", "fiber", "dietaryFiber", "dietaryFiberContent"])
+    sugars = _val(["sugarContent", "sugar", "sugars", "totalSugars"])
+    protein = _val(["proteinContent", "protein", "proteins"])
+    serving_size = _val(["servingSize", "serving", "yield"]) or fallback_servings or "1 serving"
+
+    # Require at least calories or at least two macros
+    has_macros = sum(bool(x) for x in [total_fat, carbs, protein]) >= 2
+    if calories is None and not has_macros:
+        return None
+
+    def _unit(val: str, default_unit: str = "g") -> str:
+        if not val:
+            return ""
+        v = val.strip()
+        if re.match(r"^\d+(?:\.\d+)?$", v):
+            return f"{v}{default_unit}"
+        return v
+
+    return {
+        "serving_size": serving_size,
+        "servings_per_recipe": fallback_servings or "1",
+        "calories": calories if calories is not None else 0,
+        "total_fat": _unit(total_fat, "g"),
+        "saturated_fat": _unit(sat_fat, "g"),
+        "trans_fat": _unit(trans_fat, "g"),
+        "cholesterol": _unit(cholesterol, "mg"),
+        "sodium": _unit(sodium, "mg"),
+        "total_carbohydrate": _unit(carbs, "g"),
+        "dietary_fiber": _unit(fiber, "g"),
+        "sugars": _unit(sugars, "g"),
+        "protein": _unit(protein, "g"),
+        "source": "website",
+    }
+
+
+def calculate_nutrition_ai(title: str, servings: str, ingredients: list[str], steps: list[str]) -> dict:
+    """Calculate per-serving nutrition facts using Gemini with gemini-3.8-flash (and 3.6 fallback)."""
+    s = get_settings()
+    api_key = s.gemini_api_key
+    if not api_key:
+        raise RuntimeError("GEMINI_API_KEY is not configured")
+
+    from google import genai
+    from google.genai import types
+
+    client = genai.Client(api_key=api_key)
+
+    ingredients_text = "\n".join(f"- {ing}" for ing in ingredients) if ingredients else "None specified"
+    steps_text = "\n".join(f"{i+1}. {step}" for i, step in enumerate(steps)) if steps else "None specified"
+
+    prompt = (
+        "You are an expert culinary nutritionist and dietitian.\n"
+        "Analyze the recipe ingredients, quantities, cooking techniques (e.g. pan frying, baking, boiling, deep frying), "
+        "and total yield/servings.\n"
+        "Calculate the estimated nutritional facts PER SERVING for this recipe.\n"
+        f"Recipe Title: {title}\n"
+        f"Declared Servings: {servings or '1 serving'}\n\n"
+        f"Ingredients:\n{ingredients_text}\n\n"
+        f"Cooking Instructions:\n{steps_text}\n\n"
+        "Provide accurate estimates for calories, total fat, saturated fat, trans fat, cholesterol, sodium, "
+        "total carbohydrate, dietary fiber, sugars, and protein per serving."
+    )
+
+    models_to_try = [s.gemini_model, "gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.7-flash"]
+    seen = set()
+    models_to_try = [m for m in models_to_try if not (m in seen or seen.add(m))]
+
+    last_err = None
+    for model_name in models_to_try:
+        try:
+            resp = client.models.generate_content(
+                model=model_name,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_json_schema=NUTRITION_SCHEMA,
+                ),
+            )
+            data = json.loads(resp.text)
+            return {
+                "serving_size": data.get("serving_size", "1 serving"),
+                "servings_per_recipe": data.get("servings_per_recipe") or servings or "1",
+                "calories": int(data.get("calories", 0)),
+                "total_fat": str(data.get("total_fat", "")),
+                "saturated_fat": str(data.get("saturated_fat", "")),
+                "trans_fat": str(data.get("trans_fat", "")),
+                "cholesterol": str(data.get("cholesterol", "")),
+                "sodium": str(data.get("sodium", "")),
+                "total_carbohydrate": str(data.get("total_carbohydrate", "")),
+                "dietary_fiber": str(data.get("dietary_fiber", "")),
+                "sugars": str(data.get("sugars", "")),
+                "protein": str(data.get("protein", "")),
+                "source": "ai",
+            }
+        except Exception as e:
+            log.warning("Gemini nutrition calculation failed with model %s: %s", model_name, e)
+            last_err = e
+
+    raise RuntimeError(f"AI nutrition calculation failed across models: {last_err}")
+
+
 def try_scraper(url: str, html: str) -> dict | None:
     """recipe-scrapers extraction; None if the site is unsupported or data is unusable."""
     try:
@@ -95,6 +250,22 @@ def try_scraper(url: str, html: str) -> dict | None:
             except Exception:
                 return default
 
+        # Try extracting website nutrition
+        website_nutrition = None
+        try:
+            raw_nutrients = grab(scraper.nutrients, None)
+            if raw_nutrients:
+                website_nutrition = normalize_scraped_nutrients(raw_nutrients, fallback_servings=str(grab(scraper.yields)))
+        except Exception as ne:
+            log.info("scraper nutrients extraction failed for %s: %s", url, ne)
+
+        nutrition = None
+        if website_nutrition:
+            nutrition = {
+                "website": website_nutrition,
+                "active_source": "website",
+            }
+
         data = {
             "title": grab(scraper.title),
             "image_url": grab(scraper.image),
@@ -105,6 +276,7 @@ def try_scraper(url: str, html: str) -> dict | None:
             "ingredients": grab(scraper.ingredients, []),
             "steps": grab(scraper.instructions_list, []),
             "tags": [t for t in [grab(scraper.category), grab(scraper.cuisine)] if t],
+            "nutrition": nutrition,
         }
         if data["title"] and data["ingredients"] and data["steps"]:
             return data
@@ -147,17 +319,31 @@ def gemini_extract(url: str, html: str) -> dict:
         "- tags: 2-5 short tags (cuisine, course, key ingredient).\n"
         f"Source URL: {url}\n\nPAGE CONTENT:\n{_page_text(html)}"
     )
-    resp = client.models.generate_content(
-        model=s.gemini_model,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            response_json_schema=RECIPE_SCHEMA,
-        ),
-    )
-    data = json.loads(resp.text)
-    if not data.get("title") or not data.get("ingredients"):
-        raise RuntimeError("Gemini could not find a recipe on that page")
+
+    models_to_try = [s.gemini_model, "gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.7-flash"]
+    seen = set()
+    models_to_try = [m for m in models_to_try if not (m in seen or seen.add(m))]
+
+    last_err = None
+    data = None
+    for model_name in models_to_try:
+        try:
+            resp = client.models.generate_content(
+                model=model_name,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_json_schema=RECIPE_SCHEMA,
+                ),
+            )
+            data = json.loads(resp.text)
+            break
+        except Exception as e:
+            log.warning("Gemini extraction failed with model %s: %s", model_name, e)
+            last_err = e
+
+    if not data or not data.get("title") or not data.get("ingredients"):
+        raise RuntimeError(f"Gemini could not find a recipe on that page: {last_err}")
     return {
         "title": data.get("title", ""),
         "image_url": data.get("image_url", ""),
@@ -168,6 +354,7 @@ def gemini_extract(url: str, html: str) -> dict:
         "ingredients": data.get("ingredients", []),
         "steps": data.get("steps", []),
         "tags": data.get("tags", []),
+        "nutrition": None,
     }
 
 
@@ -178,4 +365,23 @@ def extract_recipe(url: str) -> dict:
     if data is None:
         data = gemini_extract(url, html)
     data["source_url"] = url
+
+    # If website did not provide nutrition, calculate AI nutrition automatically
+    if not data.get("nutrition") or not data["nutrition"].get("website"):
+        try:
+            s = get_settings()
+            if s.gemini_api_key:
+                ai_nutr = calculate_nutrition_ai(
+                    title=data.get("title", ""),
+                    servings=data.get("servings", ""),
+                    ingredients=data.get("ingredients", []),
+                    steps=data.get("steps", []),
+                )
+                current_nutr = data.get("nutrition") or {}
+                current_nutr["ai"] = ai_nutr
+                current_nutr["active_source"] = "ai"
+                data["nutrition"] = current_nutr
+        except Exception as e:
+            log.warning("Automatic AI nutrition estimation during recipe extraction skipped: %s", e)
+
     return data

@@ -7,6 +7,7 @@ import type { Recipe } from '../lib/types'
 import Modal from '../components/Modal'
 import ConfirmModal from '../components/ConfirmModal'
 import TopClockHeader from '../components/TopClockHeader'
+import NutritionLabel from '../components/recipes/NutritionLabel'
 import { PRESS_SPRING } from '../lib/motion'
 
 function detailIdFromHash() {
@@ -15,7 +16,7 @@ function detailIdFromHash() {
 }
 
 function RecipeDetail({ id, onBack }: { id: number; onBack: () => void }) {
-  const { data: r, error } = useData<Recipe>(`/api/recipes/${id}`, ['recipes'])
+  const { data: r, error, reload } = useData<Recipe>(`/api/recipes/${id}`, ['recipes'])
   const [checked, setChecked] = useState<Set<number>>(new Set())
   const [step, setStep] = useState(-1) // -1 = overview, otherwise cook-mode step index
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -137,6 +138,11 @@ function RecipeDetail({ id, onBack }: { id: number; onBack: () => void }) {
                 </div>
               ))}
           </div>
+          <NutritionLabel
+            recipeId={r.id}
+            nutrition={r.nutrition}
+            onUpdated={() => reload()}
+          />
           {r.source_url && (
             <p className="mt-4 truncate text-sm text-ink-soft">from {new URL(r.source_url).hostname}</p>
           )}
@@ -475,7 +481,15 @@ export default function Recipes() {
               <div className="p-4">
                 <h3 className="line-clamp-2 text-base lg:text-lg font-medium leading-tight">{r.title}</h3>
                 <p className="mt-1 text-xs lg:text-sm text-ink-soft">
-                  {[r.total_time, r.servings].filter(Boolean).join(' · ')}
+                  {[
+                    r.total_time,
+                    r.servings,
+                    (r.nutrition?.website?.calories || r.nutrition?.ai?.calories)
+                      ? `${r.nutrition?.website?.calories || r.nutrition?.ai?.calories} cal`
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
                 </p>
               </div>
             </a>

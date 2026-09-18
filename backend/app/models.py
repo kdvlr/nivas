@@ -117,6 +117,7 @@ class Recipe(Base):
     ingredients: Mapped[list] = mapped_column(JSON, default=list)  # list[str]
     steps: Mapped[list] = mapped_column(JSON, default=list)  # list[str]
     tags: Mapped[list] = mapped_column(JSON, default=list)  # list[str]
+    nutrition: Mapped[dict | None] = mapped_column(JSON, nullable=True, default=None)  # {"website": {...}, "ai": {...}, "active_source": "..."}
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 

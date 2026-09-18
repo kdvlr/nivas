@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..integrations.recipe_ai import extract_recipe
+from ..integrations.recipe_ai import calculate_nutrition_ai, extract_recipe, fetch_html, try_scraper
 from ..models import Recipe
 from ..ws import manager
 
@@ -29,6 +29,11 @@ class RecipeManual(BaseModel):
     tags: list[str] = []
     image_url: str = ""
     source_url: str = ""
+    nutrition: dict | None = None
+
+
+class NutritionUpdate(BaseModel):
+    active_source: str | None = None
 
 
 def _dict(r: Recipe) -> dict:
@@ -44,6 +49,7 @@ def _dict(r: Recipe) -> dict:
         "cook_time": r.cook_time,
         "ingredients": r.ingredients,
         "steps": r.steps,
+        "nutrition": r.nutrition,
     }
 
 
@@ -96,3 +102,90 @@ async def delete_recipe(recipe_id: int, db: Session = Depends(get_db)):
     db.commit()
     await manager.broadcast("recipes")
     return {"ok": True}
+
+
+@router.post("/{recipe_id}/nutrition/ai-estimate")
+async def estimate_nutrition_ai(recipe_id: int, db: Session = Depends(get_db)):
+    """Run AI nutrition estimation for a recipe and save under nutrition.ai."""
+    row = db.get(Recipe, recipe_id)
+    if row is None:
+        raise HTTPException(404, "Recipe not found")
+
+    try:
+        ai_data = await asyncio.to_thread(
+            calculate_nutrition_ai,
+            title=row.title,
+            servings=row.servings,
+            ingredients=row.ingredients or [],
+            steps=row.steps or [],
+        )
+    except Exception as e:
+        log.warning("AI nutrition calculation failed for recipe %s: %s", recipe_id, e)
+        raise HTTPException(500, str(e))
+
+    current = dict(row.nutrition or {})
+    current["ai"] = ai_data
+    if "active_source" not in current or current.get("active_source") != "website":
+        current["active_source"] = "ai"
+    row.nutrition = current
+    db.commit()
+    db.refresh(row)
+    await manager.broadcast("recipes")
+    return _dict(row)
+
+
+@router.post("/{recipe_id}/nutrition")
+async def calculate_or_extract_nutrition(
+    recipe_id: int,
+    body: NutritionUpdate | None = None,
+    db: Session = Depends(get_db),
+):
+    """Extract website nutrition or calculate with AI, or update active_source toggle."""
+    row = db.get(Recipe, recipe_id)
+    if row is None:
+        raise HTTPException(404, "Recipe not found")
+
+    if body and body.active_source:
+        current = dict(row.nutrition or {})
+        current["active_source"] = body.active_source
+        row.nutrition = current
+        db.commit()
+        db.refresh(row)
+        await manager.broadcast("recipes")
+        return _dict(row)
+
+    current = dict(row.nutrition or {})
+
+    # Try website extraction if source_url exists and we don't already have website nutrition
+    if row.source_url and not current.get("website"):
+        try:
+            html = await asyncio.to_thread(fetch_html, row.source_url)
+            scraped = await asyncio.to_thread(try_scraper, row.source_url, html)
+            if scraped and scraped.get("nutrition") and scraped["nutrition"].get("website"):
+                current["website"] = scraped["nutrition"]["website"]
+                if "active_source" not in current:
+                    current["active_source"] = "website"
+        except Exception as e:
+            log.info("Website nutrition scrape failed for recipe %s: %s", recipe_id, e)
+
+    # If neither website nor AI nutrition exists, calculate AI estimate
+    if not current.get("website") and not current.get("ai"):
+        try:
+            ai_data = await asyncio.to_thread(
+                calculate_nutrition_ai,
+                title=row.title,
+                servings=row.servings,
+                ingredients=row.ingredients or [],
+                steps=row.steps or [],
+            )
+            current["ai"] = ai_data
+            current["active_source"] = "ai"
+        except Exception as e:
+            log.warning("AI nutrition estimate failed for recipe %s: %s", recipe_id, e)
+            raise HTTPException(500, str(e))
+
+    row.nutrition = current
+    db.commit()
+    db.refresh(row)
+    await manager.broadcast("recipes")
+    return _dict(row)
