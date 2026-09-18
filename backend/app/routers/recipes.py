@@ -6,7 +6,14 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..integrations.recipe_ai import calculate_nutrition_ai, extract_recipe, fetch_html, try_scraper
+from ..integrations.recipe_ai import (
+    calculate_nutrition_ai,
+    extract_html_table_nutrients,
+    extract_recipe,
+    fetch_html,
+    normalize_scraped_nutrients,
+    try_scraper,
+)
 from ..models import Recipe
 from ..ws import manager
 
@@ -165,6 +172,14 @@ async def calculate_or_extract_nutrition(
                 current["website"] = scraped["nutrition"]["website"]
                 if "active_source" not in current:
                     current["active_source"] = "website"
+            else:
+                table_raw = await asyncio.to_thread(extract_html_table_nutrients, html)
+                if table_raw:
+                    web_nutr = normalize_scraped_nutrients(table_raw, fallback_servings=row.servings or "")
+                    if web_nutr:
+                        current["website"] = web_nutr
+                        if "active_source" not in current:
+                            current["active_source"] = "website"
         except Exception as e:
             log.info("Website nutrition scrape failed for recipe %s: %s", recipe_id, e)
 

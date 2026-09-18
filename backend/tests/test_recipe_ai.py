@@ -219,3 +219,98 @@ def test_recipe_nutrition_endpoints():
         app.dependency_overrides.clear()
         db.close()
 
+
+def test_sanitize_ld_json():
+    from app.integrations.recipe_ai import sanitize_ld_json
+
+    # Test trailing colon after closing brace
+    bad_html = '<script type="application/ld+json">{"@type": "Recipe", "name": "Curry"}:</script>'
+    cleaned = sanitize_ld_json(bad_html)
+    assert '}:' not in cleaned
+    assert '{"@type": "Recipe", "name": "Curry"}' in cleaned
+
+    # Test trailing comma inside json
+    bad_comma = '<script type="application/ld+json">{"@type": "Recipe", "items": [1, 2, ],}</script>'
+    cleaned_comma = sanitize_ld_json(bad_comma)
+    assert ',}' not in cleaned_comma
+    assert ', ]' not in cleaned_comma
+
+
+def test_extract_html_table_nutrients_and_normalization():
+    from app.integrations.recipe_ai import extract_html_table_nutrients, normalize_scraped_nutrients
+
+    sample_html = """
+    <html><body>
+    <div class="nutrition">
+      <table class="table">
+        <tbody>
+          <tr><td>Energy</td><td>201 kcal</td></tr>
+          <tr><td>Fat (g)</td><td>5</td></tr>
+          <tr><td>of which saturates (g)</td><td>1</td></tr>
+          <tr><td>Carbohydrates (g)</td><td>37</td></tr>
+          <tr><td>of which sugars (g)</td><td>3</td></tr>
+          <tr><td>Fibre (g)</td><td>5</td></tr>
+          <tr><td>Protein (g)</td><td>4</td></tr>
+          <tr><td>Salt (mg)</td><td>573</td></tr>
+        </tbody>
+      </table>
+    </div>
+    </body></html>
+    """
+    raw = extract_html_table_nutrients(sample_html)
+    assert raw is not None
+    assert "Energy" in raw
+    assert raw["Energy"] == "201 kcal"
+    assert raw["Fat (g)"] == "5"
+
+    norm = normalize_scraped_nutrients(raw, fallback_servings="4")
+    assert norm is not None
+    assert norm["calories"] == 201
+    assert norm["total_fat"] == "5g"
+    assert norm["saturated_fat"] == "1g"
+    assert norm["total_carbohydrate"] == "37g"
+    assert norm["sugars"] == "3g"
+    assert norm["dietary_fiber"] == "5g"
+    assert norm["protein"] == "4g"
+    assert norm["sodium"] == "573mg"
+    assert norm["source"] == "website"
+
+
+def test_try_scraper_sanitizes_ld_json_and_extracts_table_nutrition():
+    from app.integrations.recipe_ai import try_scraper
+
+    page = """
+    <html><head>
+    <script type="application/ld+json">
+    {"@context":"https://schema.org","@type":"Recipe","name":"Bombay Potatoes",
+     "image":"https://example.com/bombay.jpg","recipeYield":"4 servings",
+     "recipeIngredient":["2 potatoes","1 tsp cumin"],
+     "recipeInstructions":[{"@type":"HowToStep","text":"Boil and fry."}]}:
+    </script>
+    </head>
+    <body>
+      <h1>Bombay Potatoes</h1>
+      <div class="nutrition">
+        <table>
+          <tr><td>Energy</td><td>841 kJ / 201 kcal</td></tr>
+          <tr><td>Fat (g)</td><td>5</td></tr>
+          <tr><td>Carbohydrates (g)</td><td>37</td></tr>
+          <tr><td>Protein (g)</td><td>4</td></tr>
+        </table>
+      </div>
+    </body></html>
+    """
+    data = try_scraper("https://example.com/bombay", page)
+    assert data is not None
+    assert data["title"] == "Bombay Potatoes"
+    assert len(data["ingredients"]) == 2
+    assert data["nutrition"] is not None
+    assert "website" in data["nutrition"]
+    web = data["nutrition"]["website"]
+    assert web["calories"] == 201
+    assert web["total_fat"] == "5g"
+    assert web["total_carbohydrate"] == "37g"
+    assert web["protein"] == "4g"
+    assert web["source"] == "website"
+
+

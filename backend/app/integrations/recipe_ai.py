@@ -100,24 +100,120 @@ def _minutes(value) -> str:
         return str(value or "")
 
 
+def sanitize_ld_json(html: str) -> str:
+    """Clean up common syntax mistakes in <script type="application/ld+json"> blocks.
+
+    Fixes:
+    - Trailing colon/semicolon/comma after outermost closing brace (e.g. `}: </script>`)
+    - Trailing commas before closing braces/brackets (e.g. `{"a": 1, }`)
+    """
+    if not html or "ld+json" not in html:
+        return html
+
+    def _clean_block(match: re.Match) -> str:
+        tag_open = match.group(1)
+        content = match.group(2)
+        tag_close = match.group(3)
+
+        # 1. Strip trailing colons, semicolons, or commas after the outermost closing brace/bracket
+        cleaned = re.sub(r'([\}\]])\s*[:;,]+\s*$', r'\1', content.strip())
+        # 2. Clean up trailing comma before closing brace or bracket
+        cleaned = re.sub(r',\s*([\}\]])', r'\1', cleaned)
+        return f"{tag_open}{cleaned}{tag_close}"
+
+    pattern = re.compile(
+        r'(<script\s+[^>]*type=[\'"]?application/ld\+json[\'"]?[^>]*>)(.*?)(</script>)',
+        re.DOTALL | re.IGNORECASE,
+    )
+    return pattern.sub(_clean_block, html)
+
+
+def extract_html_table_nutrients(html: str) -> dict | None:
+    """Extract nutrient key-value pairs from HTML tables or nutrition containers."""
+    if not html:
+        return None
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(html, "html.parser")
+    nutrients = {}
+
+    # Target containers likely to contain nutrition info
+    containers = soup.find_all(
+        lambda tag: tag.name in ("div", "section", "table", "aside")
+        and any(
+            term in " ".join(tag.get("class", [])).lower() or term in (tag.get("id") or "").lower()
+            for term in ["nutrition", "recipe-nutrition", "nutrition-facts", "nutrients", "nutrition-info"]
+        )
+    )
+
+    if not containers:
+        containers = soup.find_all("table")
+
+    candidate_pairs = []
+    for container in containers:
+        table_rows = container.find_all("tr")
+        if table_rows:
+            for tr in table_rows:
+                cells = tr.find_all(["td", "th"])
+                if len(cells) >= 2:
+                    k = cells[0].get_text(strip=True)
+                    v = cells[1].get_text(strip=True)
+                    candidate_pairs.append((k, v))
+        else:
+            for item in container.find_all(["li", "div"], recursive=False) or container.find_all(["li"]):
+                spans = item.find_all(["span", "div", "p"], recursive=False)
+                if len(spans) >= 2:
+                    k = spans[0].get_text(strip=True)
+                    v = spans[1].get_text(strip=True)
+                    candidate_pairs.append((k, v))
+                else:
+                    txt = item.get_text(strip=True)
+                    if ":" in txt:
+                        parts = txt.split(":", 1)
+                        candidate_pairs.append((parts[0].strip(), parts[1].strip()))
+
+    for label, val in candidate_pairs:
+        clean_lbl = label.lower()
+        if any(term in clean_lbl for term in [
+            "calorie", "energy", "fat", "saturate", "carb", "sugar",
+            "fiber", "fibre", "protein", "salt", "sodium", "cholesterol"
+        ]):
+            if label not in nutrients and val:
+                nutrients[label] = val
+
+    return nutrients if nutrients else None
+
+
 def normalize_scraped_nutrients(raw: dict | None, fallback_servings: str = "") -> dict | None:
-    """Standardize nutrient dictionary from recipe-scrapers / schema.org."""
+    """Standardize nutrient dictionary from recipe-scrapers / schema.org / HTML tables."""
     if not raw or not isinstance(raw, dict):
         return None
 
+    def _clean_key(k: str) -> str:
+        # Strip parentheticals like (g), (mg), (kcal)
+        cleaned = re.sub(r'\(.*?\)', '', k)
+        return cleaned.lower().replace(" ", "").replace("_", "").replace("-", "")
+
     def _val(keys: list[str]) -> str:
-        for k in keys:
-            for rk, rv in raw.items():
-                if rk.lower().replace(" ", "").replace("_", "") == k.lower().replace(" ", "").replace("_", ""):
-                    if rv is not None:
-                        s = str(rv).strip()
-                        if s and s.lower() not in ("none", "null", "unknown"):
-                            return s
+        norm_keys = [k.lower().replace(" ", "").replace("_", "").replace("-", "") for k in keys]
+        for rk, rv in raw.items():
+            if _clean_key(rk) in norm_keys:
+                if rv is not None:
+                    s = str(rv).strip()
+                    if s and s.lower() not in ("none", "null", "unknown"):
+                        return s
         return ""
 
     def _extract_int(val: str) -> int | None:
         if not val:
             return None
+        # Prefer kcal/calorie value if energy format has both kJ and kcal
+        cal_m = re.search(r"(\d+(?:\.\d+)?)\s*k?cal", val, re.IGNORECASE)
+        if cal_m:
+            try:
+                return round(float(cal_m.group(1)))
+            except ValueError:
+                pass
         m = re.search(r"(\d+(?:\.\d+)?)", val)
         if m:
             try:
@@ -126,17 +222,17 @@ def normalize_scraped_nutrients(raw: dict | None, fallback_servings: str = "") -
                 return None
         return None
 
-    calories_str = _val(["calories", "calorie", "energy", "caloriescontent"])
+    calories_str = _val(["calories", "calorie", "energy", "caloriescontent", "kcal"])
     calories = _extract_int(calories_str)
 
     total_fat = _val(["fatContent", "totalFat", "fat", "totalFatContent", "fats"])
-    sat_fat = _val(["saturatedFatContent", "saturatedFat", "satFat"])
+    sat_fat = _val(["saturatedFatContent", "saturatedFat", "satFat", "saturates", "ofwhichsaturates", "saturated"])
     trans_fat = _val(["transFatContent", "transFat"])
     cholesterol = _val(["cholesterolContent", "cholesterol"])
-    sodium = _val(["sodiumContent", "sodium"])
+    sodium = _val(["sodiumContent", "sodium", "salt"])
     carbs = _val(["carbohydrateContent", "carbohydrates", "carbohydrate", "totalCarbohydrate", "carbs"])
-    fiber = _val(["fiberContent", "fiber", "dietaryFiber", "dietaryFiberContent"])
-    sugars = _val(["sugarContent", "sugar", "sugars", "totalSugars"])
+    fiber = _val(["fiberContent", "fiber", "fibre", "dietaryFiber", "dietaryFiberContent", "dietaryfibre"])
+    sugars = _val(["sugarContent", "sugar", "sugars", "totalSugars", "ofwhichsugars"])
     protein = _val(["proteinContent", "protein", "proteins"])
     serving_size = _val(["servingSize", "serving", "yield"]) or fallback_servings or "1 serving"
 
@@ -241,7 +337,8 @@ def try_scraper(url: str, html: str) -> dict | None:
     try:
         from recipe_scrapers import scrape_html
 
-        scraper = scrape_html(html, org_url=url, supported_only=False)
+        sanitized_html = sanitize_ld_json(html)
+        scraper = scrape_html(sanitized_html, org_url=url, supported_only=False)
 
         def grab(fn, default=""):
             try:
@@ -258,6 +355,15 @@ def try_scraper(url: str, html: str) -> dict | None:
                 website_nutrition = normalize_scraped_nutrients(raw_nutrients, fallback_servings=str(grab(scraper.yields)))
         except Exception as ne:
             log.info("scraper nutrients extraction failed for %s: %s", url, ne)
+
+        # Fallback to HTML table nutrients if scraper didn't find website nutrition
+        if not website_nutrition:
+            try:
+                table_raw = extract_html_table_nutrients(sanitized_html)
+                if table_raw:
+                    website_nutrition = normalize_scraped_nutrients(table_raw, fallback_servings=str(grab(scraper.yields)))
+            except Exception as te:
+                log.info("table nutrients extraction failed for %s: %s", url, te)
 
         nutrition = None
         if website_nutrition:
@@ -364,6 +470,17 @@ def extract_recipe(url: str) -> dict:
     data = try_scraper(url, html)
     if data is None:
         data = gemini_extract(url, html)
+        try:
+            table_raw = extract_html_table_nutrients(html)
+            if table_raw:
+                web_nutr = normalize_scraped_nutrients(table_raw, fallback_servings=data.get("servings", ""))
+                if web_nutr:
+                    data["nutrition"] = {
+                        "website": web_nutr,
+                        "active_source": "website",
+                    }
+        except Exception as te:
+            log.info("fallback table nutrients extraction failed: %s", te)
     data["source_url"] = url
 
     # If website did not provide nutrition, calculate AI nutrition automatically
