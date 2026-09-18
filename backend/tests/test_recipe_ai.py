@@ -158,39 +158,64 @@ def test_calculate_nutrition_ai_with_mock_and_fallback(monkeypatch):
 
 def test_recipe_nutrition_endpoints():
     from fastapi.testclient import TestClient
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.pool import StaticPool
     from app.main import app
+    from app.db import get_db
+    from app.models import Base
 
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    TestingSessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
+    db = TestingSessionLocal()
+
+    def override_get_db():
+        try:
+            yield db
+        finally:
+            pass
+
+    app.dependency_overrides[get_db] = override_get_db
     client = TestClient(app)
 
-    # 1. Create a manual recipe
-    create_res = client.post("/api/recipes/manual", json={
-        "title": "Nutrition Test Stew",
-        "servings": "4 servings",
-        "ingredients": ["1 lb beef", "2 carrots", "2 potatoes"],
-        "steps": ["Chop and simmer for 1 hour."],
-        "nutrition": {
-            "website": {
-                "serving_size": "1 bowl",
-                "calories": 320,
-                "total_fat": "12g",
-                "protein": "25g",
-                "total_carbohydrate": "20g",
-                "source": "website"
-            },
-            "active_source": "website"
-        }
-    })
-    assert create_res.status_code == 200
-    recipe = create_res.json()
-    r_id = recipe["id"]
-    assert recipe["nutrition"]["website"]["calories"] == 320
+    try:
+        # 1. Create a manual recipe
+        create_res = client.post("/api/recipes/manual", json={
+            "title": "Nutrition Test Stew",
+            "servings": "4 servings",
+            "ingredients": ["1 lb beef", "2 carrots", "2 potatoes"],
+            "steps": ["Chop and simmer for 1 hour."],
+            "nutrition": {
+                "website": {
+                    "serving_size": "1 bowl",
+                    "calories": 320,
+                    "total_fat": "12g",
+                    "protein": "25g",
+                    "total_carbohydrate": "20g",
+                    "source": "website"
+                },
+                "active_source": "website"
+            }
+        })
+        assert create_res.status_code == 200
+        recipe = create_res.json()
+        r_id = recipe["id"]
+        assert recipe["nutrition"]["website"]["calories"] == 320
 
-    # 2. Toggle active_source
-    toggle_res = client.post(f"/api/recipes/{r_id}/nutrition", json={"active_source": "ai"})
-    assert toggle_res.status_code == 200
-    assert toggle_res.json()["nutrition"]["active_source"] == "ai"
+        # 2. Toggle active_source
+        toggle_res = client.post(f"/api/recipes/{r_id}/nutrition", json={"active_source": "ai"})
+        assert toggle_res.status_code == 200
+        assert toggle_res.json()["nutrition"]["active_source"] == "ai"
 
-    # Cleanup
-    del_res = client.delete(f"/api/recipes/{r_id}")
-    assert del_res.status_code == 200
+        # Cleanup
+        del_res = client.delete(f"/api/recipes/{r_id}")
+        assert del_res.status_code == 200
+    finally:
+        app.dependency_overrides.clear()
+        db.close()
 
