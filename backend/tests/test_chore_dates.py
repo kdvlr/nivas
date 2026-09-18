@@ -110,7 +110,7 @@ def test_reset_chore_dates_endpoint(client_and_db):
     db.refresh(c2)
     db.refresh(c3)
 
-    today = date.today()
+    today = date.fromisoformat(data["today"])
     # Daily chore due date is today
     assert c2.due_date == today.isoformat()
     # One off past chore due date is today
