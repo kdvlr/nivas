@@ -56,3 +56,66 @@ def is_due_on(check_date: date, ref_date: date, recurrence: str) -> bool:
         return check_date.weekday() == ref_date.weekday() and check_occurrence == ref_occurrence
 
     return False
+
+
+def next_due_date(today: date, recurrence: str, ref_date: date | None = None) -> date:
+    """
+    Calculate the next occurrence date on or after `today` (>= today) for an item
+    with the given recurrence rule and optional starting ref_date.
+    """
+    if not recurrence:
+        if ref_date and ref_date < today:
+            return today
+        return ref_date or today
+
+    if recurrence == "daily":
+        return today
+
+    if recurrence.startswith("weekly:"):
+        parts = recurrence.split(":")
+        if len(parts) >= 2:
+            weekdays = parts[1].split(",")
+            for offset in range(7):
+                candidate = today + timedelta(days=offset)
+                if str(candidate.weekday()) in weekdays:
+                    return candidate
+        return today
+
+    if recurrence.startswith("biweekly:"):
+        anchor = ref_date or today
+        for offset in range(14):
+            candidate = today + timedelta(days=offset)
+            if is_due_on(candidate, anchor, recurrence):
+                return candidate
+        # Fallback if anchor parity didn't match: anchor to today
+        for offset in range(14):
+            candidate = today + timedelta(days=offset)
+            if is_due_on(candidate, today, recurrence):
+                return candidate
+        return today
+
+    if recurrence == "monthly:day":
+        target_day = ref_date.day if ref_date else today.day
+        # Check current month
+        last_day_this_month = calendar.monthrange(today.year, today.month)[1]
+        cand_this_month = date(today.year, today.month, min(target_day, last_day_this_month))
+        if cand_this_month >= today:
+            return cand_this_month
+        # Next month
+        next_month = today.month + 1
+        next_year = today.year
+        if next_month > 12:
+            next_month = 1
+            next_year += 1
+        last_day_next_month = calendar.monthrange(next_year, next_month)[1]
+        return date(next_year, next_month, min(target_day, last_day_next_month))
+
+    if recurrence == "monthly:weekday":
+        anchor = ref_date or today
+        for offset in range(35):
+            candidate = today + timedelta(days=offset)
+            if is_due_on(candidate, anchor, recurrence):
+                return candidate
+        return today
+
+    return today

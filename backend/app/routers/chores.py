@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -8,9 +8,15 @@ from sqlalchemy.orm import Session
 from ..db import get_db
 from ..config import get_settings
 from ..models import Chore, CoinTransaction
+from ..utils import next_due_date
 from ..ws import manager
 
 router = APIRouter(prefix="/api/chores", tags=["chores"])
+
+
+class ChoreResetDatesRequest(BaseModel):
+    reset_completed: bool = True
+    include_one_off: bool = True
 
 
 class ChoreCreate(BaseModel):
@@ -155,3 +161,45 @@ async def delete_chore(chore_id: int, db: Session = Depends(get_db)):
     db.delete(row)
     db.commit()
     await manager.broadcast("chores")
+
+
+@router.post("/reset-dates")
+async def reset_chore_dates(body: ChoreResetDatesRequest = ChoreResetDatesRequest(), db: Session = Depends(get_db)):
+    """
+    Advance all recurring chores and past-due one-off chores to today or their next upcoming scheduled date.
+    """
+    today = datetime.now(ZoneInfo(get_settings().tz)).date()
+    chores = db.query(Chore).all()
+    updated_count = 0
+
+    for chore in chores:
+        changed = False
+        orig_due = date.fromisoformat(chore.due_date) if chore.due_date else None
+
+        if chore.recurrence:
+            new_due = next_due_date(today, chore.recurrence, ref_date=orig_due)
+            new_due_str = new_due.isoformat()
+            if chore.due_date != new_due_str:
+                chore.due_date = new_due_str
+                changed = True
+            if body.reset_completed and chore.completed:
+                # Clear completed status so chore is fresh for its upcoming occurrence
+                chore.completed = False
+                chore.completed_at = None
+                changed = True
+        elif body.include_one_off and orig_due and orig_due < today:
+            chore.due_date = today.isoformat()
+            changed = True
+
+        if changed:
+            updated_count += 1
+
+    if updated_count > 0:
+        db.commit()
+        await manager.broadcast("chores")
+
+    return {
+        "updated_count": updated_count,
+        "total_chores": len(chores),
+        "today": today.isoformat(),
+    }

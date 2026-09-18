@@ -28,7 +28,7 @@ import { REWARD_ANIMATIONS } from '../components/celebrations/reward-animations'
 import { PIN_FAIL_ANIMATIONS, type PinFailAnimation } from '../components/celebrations/pin-fail-animations'
 import PinFailOverlay from '../components/celebrations/PinFailOverlay'
 import ConfirmModal from '../components/ConfirmModal'
-import { PointsAdminCard, RewardStoreCard } from '../components/setup/RewardsAdminCards'
+import { PointsAdminCard, RewardStoreCard, ChoresAdminCard } from '../components/setup/RewardsAdminCards'
 
 const COLORS = [
   '#f87171', '#fb923c', '#fbbf24', '#facc15', '#a3e635', '#4ade80', '#34d399', '#2dd4bf',
@@ -985,6 +985,7 @@ function SetupInner() {
 
         {section === 'rewards' && <PointsAdminCard />}
         {section === 'rewards' && <RewardStoreCard />}
+        {section === 'rewards' && <ChoresAdminCard />}
 
         {section === 'looks' && <AppearanceCard />}
 

@@ -60,22 +60,34 @@ class MediaCache:
     def cleanup(self) -> None:
         with self._lock:
             now = time.time()
-            files = [p for p in self.root.iterdir() if p.is_file() and not p.name.endswith(".tmp")]
-            for p in files:
-                if p not in self._pinned and now - p.stat().st_mtime > self.MAX_AGE_SECONDS:
-                    p.unlink(missing_ok=True)
-            files = [p for p in self.root.iterdir() if p.is_file() and not p.name.endswith(".tmp")]
-            tracks = sorted({p.stem for p in files})
-            total = sum(p.stat().st_size for p in files)
-            for p in sorted(files, key=lambda item: item.stat().st_mtime):
-                if len(tracks) <= self.MAX_TRACKS and total <= self.MAX_BYTES:
-                    break
-                if p in self._pinned:
+            entries = []
+            for path in self.root.iterdir():
+                if not path.is_file() or path.name.endswith(".tmp"):
                     continue
-                size = p.stat().st_size
-                p.unlink(missing_ok=True)
-                total -= size
-                tracks = sorted({item.stem for item in self.root.iterdir() if item.is_file() and not item.name.endswith(".tmp")})
+                try:
+                    stat = path.stat()
+                except OSError:
+                    continue
+                if path not in self._pinned and now - stat.st_mtime > self.MAX_AGE_SECONDS:
+                    path.unlink(missing_ok=True)
+                    continue
+                entries.append((path, stat.st_size, stat.st_mtime, path.stem))
+
+            grouped: dict[str, list[tuple[Path, int, float, str]]] = {}
+            for entry in entries:
+                grouped.setdefault(entry[3], []).append(entry)
+            total = sum(entry[1] for entry in entries)
+            for stem, group in sorted(
+                grouped.items(), key=lambda item: min(entry[2] for entry in item[1])
+            ):
+                if len(grouped) <= self.MAX_TRACKS and total <= self.MAX_BYTES:
+                    break
+                if any(entry[0] in self._pinned for entry in group):
+                    continue
+                for path, size, _, _ in group:
+                    path.unlink(missing_ok=True)
+                    total -= size
+                grouped.pop(stem, None)
 
 
 media_cache = MediaCache()

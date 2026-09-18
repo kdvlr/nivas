@@ -376,3 +376,123 @@ export function RewardStoreCard() {
     </Card>
   )
 }
+
+interface ChoreItemSummary {
+  id: number
+  title: string
+  assigned_to: string
+  due_date: string
+  recurrence: string
+  completed: boolean
+}
+
+/** Reset chore dates to today and upcoming future dates. */
+export function ChoresAdminCard() {
+  const { data: chores, reload } = useData<ChoreItemSummary[]>('/api/chores', ['chores'])
+  const [busy, setBusy] = useState(false)
+  const [confirmReset, setConfirmReset] = useState(false)
+  const [resetCompleted, setResetCompleted] = useState(true)
+  const [includeOneOff, setIncludeOneOff] = useState(true)
+  const [resultMsg, setResultMsg] = useState<string | null>(null)
+
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const allChores = chores ?? []
+  const pastDueCount = allChores.filter((c) => c.due_date && c.due_date < todayStr).length
+
+  const handleResetDates = async () => {
+    setBusy(true)
+    setResultMsg(null)
+    try {
+      const res = await api.post<{ updated_count: number; total_chores: number }>('/api/chores/reset-dates', {
+        reset_completed: resetCompleted,
+        include_one_off: includeOneOff,
+      })
+      reload()
+      setResultMsg(`Successfully updated ${res.updated_count} chore${res.updated_count === 1 ? '' : 's'} to today and upcoming dates.`)
+    } catch (e) {
+      console.error('Failed to reset chore dates', e)
+    } finally {
+      setBusy(false)
+      setConfirmReset(false)
+    }
+  }
+
+  return (
+    <Card title={<><Icon name="checklist" /> Chore Dates & Scheduling</>}>
+      <p className="mb-4 text-sm text-ink-soft">
+        Advance past due dates for recurring and overdue chores to today and upcoming dates according to each chore's recurrence pattern (daily, weekly, bi-weekly, or monthly).
+      </p>
+
+      <div className="glass-inset mb-4 flex flex-col gap-2.5 rounded-2xl p-4">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-ink">Total Chores</span>
+          <span className="text-sm font-semibold text-ink">{allChores.length}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-ink">Chores with Past Due Dates</span>
+          <span className={`text-sm font-semibold ${pastDueCount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+            {pastDueCount}
+          </span>
+        </div>
+      </div>
+
+      <div className="mb-4 flex flex-col gap-2">
+        <label className="flex items-center gap-2.5 text-sm text-ink-soft cursor-pointer">
+          <input
+            type="checkbox"
+            checked={resetCompleted}
+            onChange={(e) => setResetCompleted(e.target.checked)}
+            className="rounded border-[var(--outline)]"
+          />
+          <span>Reset completion status for upcoming recurring chores</span>
+        </label>
+        <label className="flex items-center gap-2.5 text-sm text-ink-soft cursor-pointer">
+          <input
+            type="checkbox"
+            checked={includeOneOff}
+            onChange={(e) => setIncludeOneOff(e.target.checked)}
+            className="rounded border-[var(--outline)]"
+          />
+          <span>Advance overdue one-off chores to today</span>
+        </label>
+      </div>
+
+      {resultMsg && (
+        <div className="mb-4 rounded-xl bg-emerald-500/15 border border-emerald-500/30 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300">
+          {resultMsg}
+        </div>
+      )}
+
+      <button
+        onClick={() => setConfirmReset(true)}
+        disabled={busy}
+        className="btn-primary flex items-center gap-2 px-4 py-2.5 text-sm font-medium cursor-pointer disabled:opacity-40"
+      >
+        <Icon name="event_repeat" /> Reset Chore Dates
+      </button>
+
+      <AnimatePresence>
+        {confirmReset && (
+          <ConfirmModal
+            title="Reset Chore Dates?"
+            confirmText="Reset Dates"
+            message={
+              <div className="flex flex-col gap-2 text-sm">
+                <p>
+                  This will update all chore due dates that are in the past. Daily chores will be set to today, weekly and bi-weekly chores will advance to their next scheduled occurrence, and overdue one-off chores will be brought forward.
+                </p>
+                {resetCompleted && (
+                  <p className="text-amber-600 dark:text-amber-400">
+                    Recurring chores scheduled for today or upcoming dates will be set to open/uncompleted so they can be completed anew.
+                  </p>
+                )}
+              </div>
+            }
+            onConfirm={handleResetDates}
+            onCancel={() => setConfirmReset(false)}
+          />
+        )}
+      </AnimatePresence>
+    </Card>
+  )
+}

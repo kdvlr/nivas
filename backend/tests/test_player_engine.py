@@ -644,24 +644,21 @@ def test_update_master_volume_preserves_advancing_flag():
     assert engine._advancing is True
 
 
-def test_coalesced_speaker_toggle_resets_timer():
+@pytest.mark.asyncio
+async def test_coalesced_speaker_toggle_restarts_once():
     engine, kitchen, family = configured_engine()
+    engine._event_loop = asyncio.get_running_loop()
     engine.current_track = {"videoId": "test"}
     engine.is_playing = True
     denied = AirPlayDevice("den", "Den", "192.168.100.199", 7000)
     engine.devices[denied.id] = denied
 
-    with patch.object(threading, "Timer") as mock_timer_cls:
-        mock_timer_1 = SimpleNamespace(cancel=MagicMock(), start=MagicMock(), daemon=True)
-        mock_timer_2 = SimpleNamespace(cancel=MagicMock(), start=MagicMock(), daemon=True)
-        mock_timer_cls.side_effect = [mock_timer_1, mock_timer_2]
-
+    with patch.object(engine, "_coalesced_restart_sender", AsyncMock()) as restart:
         engine.toggle_device(denied.id, True)
-        assert engine._membership_restart_timer is mock_timer_1
-
-        # Second toggle within coalesce window resets timer
         engine.toggle_device(denied.id, False)
-        assert engine._membership_restart_timer is mock_timer_2
+        await asyncio.sleep(0.4)
+
+    restart.assert_awaited_once_with(engine._membership_revision)
 
 
 @pytest.mark.asyncio
@@ -857,6 +854,49 @@ async def test_prefetch_pins_current_track_alongside_queue():
 
 
 @pytest.mark.asyncio
+async def test_foreground_and_prefetch_share_one_audio_preparation(tmp_path):
+    engine = PlayerEngine()
+    output = tmp_path / "shared.m4a"
+    calls = 0
+
+    def fetch(_video_id, output_path):
+        nonlocal calls
+        calls += 1
+        time.sleep(0.05)
+        with open(output_path, "wb") as media:
+            media.write(b"audio" * 20)
+
+    with patch.object(engine, "_fetch_audio", side_effect=fetch):
+        await asyncio.gather(
+            engine._ensure_audio_cached("shared", output),
+            engine._ensure_audio_cached("shared", output),
+        )
+
+    assert calls == 1
+
+
+@pytest.mark.asyncio
+async def test_sender_replacement_waits_for_teardown():
+    engine = PlayerEngine()
+    engine._play_generation_id = 7
+    events = []
+
+    async def stop_sender(cancel_play_task=False):
+        events.append("stop-start")
+        await asyncio.sleep(0)
+        events.append("stop-finished")
+
+    with patch.object(engine, "_stop_current_stream_async", side_effect=stop_sender), \
+         patch.object(engine, "_start_airplay_streams", side_effect=lambda *_: events.append("start") or True):
+        started = await engine._replace_sender(
+            "/tmp/song.m4a", {"videoId": "song"}, None, 7
+        )
+
+    assert started is True
+    assert events == ["stop-start", "stop-finished", "start"]
+
+
+@pytest.mark.asyncio
 async def test_mono_audio_triggers_stereo_transcoding():
     engine = PlayerEngine()
     track_info = {
@@ -876,5 +916,3 @@ async def test_mono_audio_triggers_stereo_transcoding():
 
         # Mono file (channels=1) must trigger normalization transcode to stereo in cache
         mock_fetch.assert_called_once()
-
-

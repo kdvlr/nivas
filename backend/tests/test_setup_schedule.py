@@ -5,7 +5,8 @@ from app.main import app
 
 @pytest.fixture
 def client():
-    return TestClient(app)
+    with TestClient(app) as test_client:
+        yield test_client
 
 
 def test_kiosk_schedule_get_default_and_update(client):

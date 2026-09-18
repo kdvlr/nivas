@@ -1,5 +1,5 @@
 import logging
-from datetime import date
+from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from ..db import SessionLocal, get_db
 from ..admin_auth import require_admin
 from ..models import CalendarAccount, CalendarSelection, Chore, CoinTransaction, Person, RewardItem, utcnow
-from ..utils import is_due_on
+from ..utils import is_due_on, next_due_date
 from ..ws import manager
 
 log = logging.getLogger(__name__)
@@ -387,15 +387,18 @@ def check_missed_chores() -> None:
                     penalised = True
                     log.info("Missed chore penalty: %s owes %d coin(s) for '%s'", chore.assigned_to, chore.coins, chore.title)
 
-            # Reset recurring chore for next occurrence
+            # Reset recurring chore for next occurrence and advance due date
             chore.completed = False
             chore.completed_at = None
             chore.last_reset_date = today_iso
+            tomorrow = today + timedelta(days=1)
+            orig_due = date.fromisoformat(chore.due_date) if chore.due_date else None
+            chore.due_date = next_due_date(tomorrow, chore.recurrence, ref_date=orig_due).isoformat()
 
         db.commit()
+        manager.broadcast_threadsafe("chores")
         if penalised:
             manager.broadcast_threadsafe("rewards")
-            manager.broadcast_threadsafe("chores")
     except Exception:
         log.exception("Error checking missed chores")
         db.rollback()

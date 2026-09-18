@@ -73,6 +73,7 @@ class PlayerEngine:
         self._preferences_path = Path(get_settings().data_dir) / "airplay_preferences.json"
         self._media_cache = media_cache
         self._audio_prefetch_semaphore = asyncio.Semaphore(1)
+        self._sender_lifecycle_lock = asyncio.Lock()
         self._render_delay_ms = max(0, min(2000, get_settings().airplay_render_delay_ms))
         self._airplay_diagnostics: Dict[str, Any] = {
             "renderDelayMs": self._render_delay_ms,
@@ -88,6 +89,10 @@ class PlayerEngine:
         self._scanner_task: Optional[asyncio.Task] = None
         self._ticker_task: Optional[asyncio.Task] = None
         self._play_task: Optional[asyncio.Task] = None
+        self._media_prepare_tasks: Dict[str, asyncio.Task] = {}
+        self._artwork_prepare_tasks: Dict[str, asyncio.Task] = {}
+        self._prefetch_task: Optional[asyncio.Task] = None
+        self._prefetch_revision = 0
         self._stream_procs: Dict[str, subprocess.Popen] = {}
         self._stream_log_handles: Dict[str, Any] = {}
         self._stream_lock = threading.RLock()
@@ -102,14 +107,15 @@ class PlayerEngine:
         self._has_advanced_current: bool = False
         self._play_generation_id: int = 0
         self._stream_start_offset: float = 0.0
-        self._prefetching_video_ids: set[str] = set()
+        self._audio_channel_cache: Dict[str, tuple[int, int, Optional[int]]] = {}
         self._paused_session_timeout = max(
             1,
             int(os.getenv("AIRPLAY_PAUSE_TIMEOUT_SECONDS", DEFAULT_PAUSED_SESSION_TIMEOUT_SECONDS)),
         )
         self._save_pref_lock = threading.Lock()
         self._save_pref_timer: Optional[threading.Timer] = None
-        self._membership_restart_timer: Optional[threading.Timer] = None
+        self._membership_restart_task: Optional[asyncio.Task] = None
+        self._membership_revision = 0
         self._reap_orphaned_airplay_processes()
 
     @staticmethod
@@ -209,6 +215,10 @@ class PlayerEngine:
             self._scanner_task.cancel()
         if self._ticker_task and not self._ticker_task.done():
             self._ticker_task.cancel()
+        if self._prefetch_task and not self._prefetch_task.done():
+            self._prefetch_task.cancel()
+        if self._membership_restart_task and not self._membership_restart_task.done():
+            self._membership_restart_task.cancel()
         self._stop_current_stream()
 
     def clear_playback_error(self) -> Dict[str, Any]:
@@ -219,7 +229,9 @@ class PlayerEngine:
     async def stop_playback(self) -> Dict[str, Any]:
         """Stops the current track, terminates streaming processes, and clears active track."""
         self.is_playing = False
-        await self._stop_current_stream_async()
+        self._play_generation_id += 1
+        async with self._sender_lifecycle_lock:
+            await self._stop_current_stream_async()
         self._playback_error = None
         self.current_track = None
         self.elapsed_seconds = 0
@@ -291,9 +303,9 @@ class PlayerEngine:
     def _stop_current_stream(self, cancel_play_task: bool = True, wait_exit: bool = False):
         self._last_sender_progress = None
         self._sender_started_at = None
-        if self._membership_restart_timer:
-            self._membership_restart_timer.cancel()
-            self._membership_restart_timer = None
+        if self._membership_restart_task and not self._membership_restart_task.done():
+            self._membership_restart_task.cancel()
+            self._membership_restart_task = None
         if cancel_play_task and self._play_task and not self._play_task.done():
             self._play_task.cancel()
             self._play_task = None
@@ -342,9 +354,14 @@ class PlayerEngine:
     async def _stop_current_stream_async(self, cancel_play_task: bool = True):
         self._last_sender_progress = None
         self._sender_started_at = None
-        if self._membership_restart_timer:
-            self._membership_restart_timer.cancel()
-            self._membership_restart_timer = None
+        current_task = asyncio.current_task()
+        if (
+            self._membership_restart_task
+            and self._membership_restart_task is not current_task
+            and not self._membership_restart_task.done()
+        ):
+            self._membership_restart_task.cancel()
+            self._membership_restart_task = None
         if cancel_play_task and self._play_task and not self._play_task.done():
             self._play_task.cancel()
             self._play_task = None
@@ -475,18 +492,20 @@ class PlayerEngine:
                 if self.is_playing and self.current_track:
                     if self._last_sender_progress is None:
                         if self._sender_started_at is not None and time.monotonic() - self._sender_started_at > 18.0:
+                            failed_generation = self._play_generation_id
                             self._playback_error = "AirPlay speaker failed to respond within 18 seconds. Please retry."
                             logger.warning(self._playback_error)
                             self.is_playing = False
-                            await self._stop_current_stream_async()
+                            await self._stop_sender_for_generation(failed_generation)
                             self._broadcast_state()
                             continue
                     else:
                         if time.monotonic() - self._last_sender_progress > 20.0:
+                            failed_generation = self._play_generation_id
                             self._playback_error = "AirPlay sender stopped reporting progress. Please retry playback."
                             logger.warning(self._playback_error)
                             self.is_playing = False
-                            await self._stop_current_stream_async()
+                            await self._stop_sender_for_generation(failed_generation)
                             self._broadcast_state()
                             continue
                     # Only native sender progress advances the timeline. Process
@@ -544,7 +563,9 @@ class PlayerEngine:
     def _broadcast_state(self):
         try:
             state = self.get_state()
-            manager.broadcast_json({"type": "player_state", "payload": state})
+            manager.broadcast_latest_json(
+                "player_state", {"type": "player_state", "payload": state}
+            )
         except Exception:
             pass
 
@@ -614,7 +635,12 @@ class PlayerEngine:
 
         self._ensure_default_target()
         self._playback_error = None
-        self._stop_current_stream()
+        if self._play_task and not self._play_task.done():
+            self._play_task.cancel()
+            self._play_task = None
+        # Keep ownership of the PTP ports until replacement media is ready, but
+        # do not let the previous song remain audible during preparation.
+        self._write_stream_command("pause")
         self._stream_start_offset = 0.0
 
         self._play_generation_id += 1
@@ -719,12 +745,69 @@ class PlayerEngine:
                     added = True
             if added:
                 self._broadcast_state()
-                loop.create_task(self._prefetch_next_track())
+                self._schedule_prefetch()
         except Exception as e:
             logger.warning(f"Background autoplay recommendation fetch failed: {e}")
 
-    async def _prefetch_next_track(self):
+    def _schedule_prefetch(self, delay: float = 0.05) -> None:
+        self._prefetch_revision += 1
+        revision = self._prefetch_revision
+        if not self._event_loop or not self._event_loop.is_running():
+            return
+
+        def schedule() -> None:
+            if self._prefetch_task and not self._prefetch_task.done():
+                self._prefetch_task.cancel()
+
+            async def run() -> None:
+                if delay:
+                    await asyncio.sleep(delay)
+                await self._prefetch_next_track(revision)
+
+            self._prefetch_task = self._event_loop.create_task(run())
+
+        self._event_loop.call_soon_threadsafe(schedule)
+
+    async def _ensure_audio_cached(self, video_id: str, output_path: Path) -> None:
+        if output_path.exists() and output_path.stat().st_size > 44:
+            return
+        task = self._media_prepare_tasks.get(video_id)
+        if task is None or task.done():
+            task = asyncio.create_task(
+                asyncio.to_thread(self._fetch_audio, video_id, str(output_path)),
+                name=f"prepare-audio-{video_id}",
+            )
+            self._media_prepare_tasks[video_id] = task
+
+            def remove_finished(finished: asyncio.Task, key: str = video_id) -> None:
+                if self._media_prepare_tasks.get(key) is finished:
+                    self._media_prepare_tasks.pop(key, None)
+
+            task.add_done_callback(remove_finished)
+        await asyncio.shield(task)
+
+    def _schedule_artwork(self, video_id: str, url: Optional[str], output_path: Path) -> None:
+        if not url or (output_path.exists() and output_path.stat().st_size > 0):
+            return
+        task = self._artwork_prepare_tasks.get(video_id)
+        if task and not task.done():
+            return
+        task = asyncio.create_task(
+            asyncio.to_thread(self._download_artwork, url, str(output_path)),
+            name=f"prepare-artwork-{video_id}",
+        )
+        self._artwork_prepare_tasks[video_id] = task
+
+        def remove_finished(finished: asyncio.Task, key: str = video_id) -> None:
+            if self._artwork_prepare_tasks.get(key) is finished:
+                self._artwork_prepare_tasks.pop(key, None)
+
+        task.add_done_callback(remove_finished)
+
+    async def _prefetch_next_track(self, revision: Optional[int] = None):
         try:
+            if revision is not None and revision != self._prefetch_revision:
+                return
             tracks_to_prefetch = []
             if self.queue:
                 # Pre-fetch the upcoming 2 tracks so track-to-track handover is instant
@@ -743,33 +826,23 @@ class PlayerEngine:
                     if resolved and resolved.get("videoId"):
                         track_item.update(resolved)
                         vid = track_item.get("videoId")
-                if not vid or str(vid).startswith("local:") or vid in self._prefetching_video_ids:
+                if not vid or str(vid).startswith("local:"):
                     return
-                self._prefetching_video_ids.add(vid)
-                try:
-                    wpath = self._media_cache.audio_path(str(vid))
-                    apath = self._media_cache.artwork_path(str(vid))
-                    subtasks = []
-
-                    if not wpath.exists() or wpath.stat().st_size <= 44:
-                        logger.info("Pre-fetching track in background: %s (%s)", track_item.get("title"), vid)
-                        async def fetch():
-                            async with self._audio_prefetch_semaphore:
-                                await loop.run_in_executor(None, self._fetch_audio, str(vid), str(wpath))
-                        subtasks.append(fetch())
-
-                    if not apath.exists() and track_item.get("thumbnail"):
-                        loop.run_in_executor(None, self._download_artwork, track_item["thumbnail"], str(apath))
-
-                    if subtasks:
-                        await asyncio.gather(*subtasks, return_exceptions=True)
-                finally:
-                    self._prefetching_video_ids.discard(vid)
+                if revision is not None and revision != self._prefetch_revision:
+                    return
+                wpath = self._media_cache.audio_path(str(vid))
+                apath = self._media_cache.artwork_path(str(vid))
+                if not wpath.exists() or wpath.stat().st_size <= 44:
+                    logger.info("Pre-fetching track in background: %s (%s)", track_item.get("title"), vid)
+                    async with self._audio_prefetch_semaphore:
+                        await self._ensure_audio_cached(str(vid), wpath)
+                if not apath.exists() and track_item.get("thumbnail"):
+                    self._schedule_artwork(str(vid), track_item["thumbnail"], apath)
 
             prefetch_tasks = [
                 _prefetch_single(t)
                 for t in tracks_to_prefetch
-                if t.get("videoId") and t["videoId"] not in self._prefetching_video_ids
+                if t.get("videoId")
             ]
 
             if prefetch_tasks:
@@ -781,17 +854,30 @@ class PlayerEngine:
                     pinned.append(c_vid)
             pinned.extend([str(t.get("videoId")) for t in tracks_to_prefetch if not str(t.get("videoId")).startswith("local:")])
             self._media_cache.pin(pinned)
-            self._media_cache.cleanup()
+            await asyncio.to_thread(self._media_cache.cleanup)
         except Exception as e:
             logger.debug(f"Next track prefetch background task error: {e}")
 
-    @staticmethod
-    def _get_audio_channels(file_path: str) -> Optional[int]:
+    def _get_audio_channels(self, file_path: str) -> Optional[int]:
+        try:
+            stat = os.stat(file_path)
+            cache_key = os.path.abspath(file_path)
+            cached = self._audio_channel_cache.get(cache_key)
+            if cached and cached[:2] == (stat.st_size, stat.st_mtime_ns):
+                return cached[2]
+        except OSError:
+            return None
         try:
             import mutagen
             audio = mutagen.File(file_path)
             if audio and hasattr(audio, "info") and hasattr(audio.info, "channels"):
-                return audio.info.channels
+                channels = audio.info.channels
+                self._audio_channel_cache[cache_key] = (
+                    stat.st_size,
+                    stat.st_mtime_ns,
+                    channels,
+                )
+                return channels
         except Exception as e:
             logger.debug("Error inspecting audio channels for %s: %s", file_path, e)
         return None
@@ -872,7 +958,7 @@ class PlayerEngine:
                     logger.info("Local audio %s has %s channels; normalizing to 2-channel stereo...", raw_path, channels)
                     audio_path_obj = self._media_cache.audio_path(video_id)
                     if not audio_path_obj.exists() or audio_path_obj.stat().st_size <= 44:
-                        await loop.run_in_executor(None, self._fetch_audio, f"local:{video_id.split('local:', 1)[-1]}", str(audio_path_obj))
+                        await self._ensure_audio_cached(video_id, audio_path_obj)
                     if audio_path_obj.exists() and audio_path_obj.stat().st_size > 44:
                         audio_path = str(audio_path_obj)
                     else:
@@ -888,7 +974,7 @@ class PlayerEngine:
                 audio_path_obj = self._media_cache.audio_path(video_id)
                 if not audio_path_obj.exists() or audio_path_obj.stat().st_size <= 44:
                     logger.info("Downloading track '%s' (preferring 256kbps AAC)...", track_info.get("title"))
-                    await loop.run_in_executor(None, self._fetch_audio, video_id, str(audio_path_obj))
+                    await self._ensure_audio_cached(video_id, audio_path_obj)
 
                 if generation_id != self._play_generation_id:
                     logger.info("Aborting stale playback orchestration (generation %s superseded by %s)", generation_id, self._play_generation_id)
@@ -920,23 +1006,25 @@ class PlayerEngine:
             artwork_path = self._media_cache.artwork_path(video_id)
             thumbnail_url = track_info.get("thumbnail")
             if thumbnail_url and (not artwork_path.exists() or artwork_path.stat().st_size == 0):
-                loop.run_in_executor(None, self._download_artwork, thumbnail_url, str(artwork_path))
+                self._schedule_artwork(video_id, thumbnail_url, artwork_path)
 
             artwork_arg = str(artwork_path) if artwork_path.exists() and artwork_path.stat().st_size > 0 else None
 
-            await self._stop_current_stream_async(cancel_play_task=False)
             logger.info(
                 "Ready to stream '%s' (%s) via airplay2-rs to %s selected AirPlay speakers",
                 track_info.get("title"),
                 "direct local" if is_local else ("cached AAC" if str(audio_path).endswith(".m4a") else "cached audio"),
                 len(self.active_targets),
             )
-            started = self._start_airplay_streams(
+            started = await self._replace_sender(
                 audio_path,
                 track_info,
                 artwork_arg,
+                generation_id,
             )
 
+            if started is None:
+                return
             if not started:
                 self.is_playing = False
                 self._broadcast_state()
@@ -947,12 +1035,13 @@ class PlayerEngine:
                     self._paused_at = time.monotonic()
                 # Spawn background non-blocking tasks for autoplay recommendations & next-track prefetch
                 loop.create_task(self._fetch_autoplay_recommendations(video_id))
-                loop.create_task(self._prefetch_next_track())
-                self._media_cache.cleanup()
+                self._schedule_prefetch()
+                await asyncio.to_thread(self._media_cache.cleanup)
         except Exception as e:
             logger.error(f"Error orchestrating playback: {e}")
-            self.is_playing = False
-            self._broadcast_state()
+            if generation_id == self._play_generation_id:
+                self.is_playing = False
+                self._broadcast_state()
 
     def _fetch_audio(self, source: str, output_path: Union[str, Path]):
         output_path = str(output_path)
@@ -1114,6 +1203,30 @@ class PlayerEngine:
             logger.warning("Playback requested without an AirPlay target")
             return False
         return self._start_airplay_process(devices, audio_path, track_info, artwork_path)
+
+    async def _replace_sender(
+        self,
+        audio_path: str,
+        track_info: Dict[str, Any],
+        artwork_path: Optional[str],
+        generation_id: int,
+    ) -> Optional[bool]:
+        """Atomically tear down the previous PTP owner and start its replacement."""
+        async with self._sender_lifecycle_lock:
+            if generation_id != self._play_generation_id:
+                return None
+            await self._stop_current_stream_async(cancel_play_task=False)
+            if generation_id != self._play_generation_id:
+                return None
+            return self._start_airplay_streams(audio_path, track_info, artwork_path)
+
+    async def _stop_sender_for_generation(self, generation_id: int) -> bool:
+        """Stop a failed sender only if it still belongs to the observed track."""
+        async with self._sender_lifecycle_lock:
+            if generation_id != self._play_generation_id:
+                return False
+            await self._stop_current_stream_async()
+            return True
 
     def _watch_stream_process(
         self,
@@ -1450,13 +1563,15 @@ class PlayerEngine:
                     self._stream_start_offset = 0.0
                     self._play_generation_id += 1
                     self._has_advanced_current = False
-                    await self._stop_current_stream_async(cancel_play_task=False)
                     artwork_path = str(self._media_cache.artwork_path(video_id))
-                    self.is_playing = self._start_airplay_streams(
+                    started = await self._replace_sender(
                         audio_path,
                         self.current_track,
                         artwork_path if os.path.exists(artwork_path) else None,
+                        self._play_generation_id,
                     )
+                    if started is not None:
+                        self.is_playing = started
                     self._paused_stream_expired = False
         self._broadcast_state()
         return self.get_state()
@@ -1477,11 +1592,14 @@ class PlayerEngine:
 
         if audio_path:
             was_paused = not self.is_playing
-            await self._stop_current_stream_async(cancel_play_task=False)
-
             artwork_path = str(self._media_cache.artwork_path(video_id))
             artwork_arg = artwork_path if os.path.exists(artwork_path) and os.path.getsize(artwork_path) > 0 else None
-            started = self._start_airplay_streams(audio_path, self.current_track, artwork_arg)
+            started = await self._replace_sender(
+                audio_path,
+                self.current_track,
+                artwork_arg,
+                self._play_generation_id,
+            )
             if started:
                 self.elapsed_seconds = target_seconds
                 self.raw_elapsed_seconds = target_seconds
@@ -1554,8 +1672,7 @@ class PlayerEngine:
             self.queue.insert(0, normalized)
         else:
             self.queue.append(normalized)
-        if self._event_loop and self._event_loop.is_running():
-            self._event_loop.create_task(self._prefetch_next_track())
+        self._schedule_prefetch()
         self._broadcast_state()
         return self.get_state()
 
@@ -1577,8 +1694,7 @@ class PlayerEngine:
         else:
             self.queue.extend(normalized_tracks)
 
-        if self._event_loop and self._event_loop.is_running():
-            self._event_loop.create_task(self._prefetch_next_track())
+        self._schedule_prefetch()
         self._broadcast_state()
         return self.get_state()
 
@@ -1593,8 +1709,7 @@ class PlayerEngine:
             if normalized["videoId"] != current_video_id:
                 normalized_queue.append(normalized)
         self.queue = normalized_queue
-        if self._event_loop and self._event_loop.is_running():
-            self._event_loop.create_task(self._prefetch_next_track())
+        self._schedule_prefetch()
         self._broadcast_state()
         return self.get_state()
 
@@ -1616,8 +1731,14 @@ class PlayerEngine:
             artwork_path = str(self._media_cache.artwork_path(video_id))
             artwork_arg = artwork_path if os.path.exists(artwork_path) and os.path.getsize(artwork_path) > 0 else None
             if audio_path:
-                await self._stop_current_stream_async(cancel_play_task=False)
-                self.is_playing = self._start_airplay_streams(audio_path, self.current_track, artwork_arg)
+                started = await self._replace_sender(
+                    audio_path,
+                    self.current_track,
+                    artwork_arg,
+                    generation_id,
+                )
+                if started is not None:
+                    self.is_playing = started
             else:
                 loop = asyncio.get_running_loop()
                 self._play_task = loop.create_task(self._orchestrate_playback(video_id, self.current_track, generation_id))
@@ -1642,13 +1763,20 @@ class PlayerEngine:
             self._stream_start_offset = 0.0
             self._play_generation_id += 1
             self._has_advanced_current = False
+            generation_id = self._play_generation_id
             video_id = self.current_track.get("videoId")
             audio_path = self._resolve_audio_path(video_id, self.current_track)
             artwork_path = str(self._media_cache.artwork_path(video_id))
             artwork_arg = artwork_path if os.path.exists(artwork_path) and os.path.getsize(artwork_path) > 0 else None
             if audio_path:
-                await self._stop_current_stream_async(cancel_play_task=False)
-                self.is_playing = self._start_airplay_streams(audio_path, self.current_track, artwork_arg)
+                started = await self._replace_sender(
+                    audio_path,
+                    self.current_track,
+                    artwork_arg,
+                    generation_id,
+                )
+                if started is not None:
+                    self.is_playing = started
             self._broadcast_state()
             return self.get_state()
 
@@ -1660,8 +1788,10 @@ class PlayerEngine:
         with self._membership_lock:
             return self._toggle_device_locked(device_id, selected)
 
-    def _coalesced_restart_sender(self) -> None:
+    async def _coalesced_restart_sender(self, revision: int) -> None:
         with self._membership_lock:
+            if revision != self._membership_revision:
+                return
             if not ((self.is_playing or self._stream_procs) and self.current_track):
                 return
             video_id = self.current_track.get("videoId")
@@ -1671,16 +1801,20 @@ class PlayerEngine:
             was_paused = not self.is_playing
             current_offset = max(0.0, self.elapsed_seconds)
             self._play_generation_id += 1
+            generation_id = self._play_generation_id
             self._has_advanced_current = False
-            self._stop_current_stream(cancel_play_task=False, wait_exit=True)
             self._stream_start_offset = current_offset
-
             artwork_path = str(self._media_cache.artwork_path(video_id))
-            started = self._start_airplay_streams(
-                audio_path,
-                self.current_track,
-                artwork_path if os.path.exists(artwork_path) else None,
-            )
+            track_info = self.current_track
+        started = await self._replace_sender(
+            audio_path,
+            track_info,
+            artwork_path if os.path.exists(artwork_path) else None,
+            generation_id,
+        )
+        if started is None:
+            return
+        with self._membership_lock:
             if started:
                 self.elapsed_seconds = current_offset
                 self.raw_elapsed_seconds = current_offset
@@ -1690,6 +1824,32 @@ class PlayerEngine:
             else:
                 self.is_playing = False
             self._broadcast_state()
+
+    def _schedule_membership_restart(self) -> None:
+        self._membership_revision += 1
+        if not self._event_loop or not self._event_loop.is_running():
+            return
+
+        def ensure_worker() -> None:
+            if self._membership_restart_task and not self._membership_restart_task.done():
+                return
+
+            async def worker() -> None:
+                try:
+                    while True:
+                        revision = self._membership_revision
+                        await asyncio.sleep(0.35)
+                        if revision != self._membership_revision:
+                            continue
+                        await self._coalesced_restart_sender(revision)
+                        if revision == self._membership_revision:
+                            return
+                finally:
+                    self._membership_restart_task = None
+
+            self._membership_restart_task = self._event_loop.create_task(worker())
+
+        self._event_loop.call_soon_threadsafe(ensure_worker)
 
     def _toggle_device_locked(self, device_id: str, selected: bool) -> Dict[str, Any]:
         device_id = str(device_id)
@@ -1715,11 +1875,7 @@ class PlayerEngine:
             # rapid room changes (350 ms debounce) so multiple toggles result in
             # exactly ONE clean group sender restart.
             if (self.is_playing or self._stream_procs) and self.current_track:
-                if self._membership_restart_timer:
-                    self._membership_restart_timer.cancel()
-                self._membership_restart_timer = threading.Timer(0.35, self._coalesced_restart_sender)
-                self._membership_restart_timer.daemon = True
-                self._membership_restart_timer.start()
+                self._schedule_membership_restart()
 
         self._update_master_volume_from_devices()
         self._broadcast_state()
