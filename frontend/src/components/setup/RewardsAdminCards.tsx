@@ -140,19 +140,17 @@ export function PointsAdminCard() {
                   value={typed}
                   onChange={(e) => setCustom((c) => ({ ...c, [b.person_name]: e.target.value }))}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') adjust(b.person_name, parseInt(typed, 10) || 0)
+                    if (e.key === 'Enter') {
+                      const val = parseInt(typed, 10)
+                      if (val) adjust(b.person_name, val)
+                    }
+                  }}
+                  onBlur={() => {
+                    const val = parseInt(typed, 10)
+                    if (val) adjust(b.person_name, val)
                   }}
                   className="input-glass h-9 w-16 text-center text-sm"
                 />
-                <motion.button
-                  whileTap={{ scale: 0.94 }}
-                  transition={PRESS_SPRING}
-                  disabled={pending || !parseInt(typed, 10)}
-                  onClick={() => adjust(b.person_name, parseInt(typed, 10) || 0)}
-                  className="btn-glass h-9 px-3 text-sm disabled:opacity-40"
-                >
-                  Apply
-                </motion.button>
                 <motion.button
                   whileTap={{ scale: 0.94 }}
                   transition={PRESS_SPRING}

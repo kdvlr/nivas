@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence, LayoutGroup, useMotionValue, useTransform } from 'framer-motion'
 import { PRESS_SPRING, EXPRESSIVE_ENTER } from '../lib/motion'
 import { api } from '../lib/api'
@@ -94,6 +94,27 @@ export default function Shopping() {
   const [newTitle, setNewTitle] = useState('')
   const [busy, setBusy] = useState(false)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [modalTitle, setModalTitle] = useState('')
+
+  useEffect(() => {
+    const handleCreateItem = (e: Event) => {
+      const customEvent = e as CustomEvent
+      if (customEvent.detail?.type === 'shopping') {
+        setShowAddModal(true)
+      }
+    }
+    window.addEventListener('nivas:create-item', handleCreateItem)
+
+    if (location.hash.includes('action=new')) {
+      setShowAddModal(true)
+      history.replaceState(null, '', '#/shopping')
+    }
+
+    return () => {
+      window.removeEventListener('nivas:create-item', handleCreateItem)
+    }
+  }, [])
 
   const active = (items ?? []).filter((i) => !i.completed)
   const done = (items ?? []).filter((i) => i.completed)
@@ -110,6 +131,20 @@ export default function Shopping() {
     try {
       await api.post('/api/shopping', { title })
       setNewTitle('')
+      reload()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const addFromModal = async (titleToAdd?: string) => {
+    const title = (titleToAdd || modalTitle).trim()
+    if (!title || busy) return
+    setBusy(true)
+    try {
+      await api.post('/api/shopping', { title })
+      setModalTitle('')
+      setShowAddModal(false)
       reload()
     } finally {
       setBusy(false)
@@ -244,6 +279,50 @@ export default function Shopping() {
                 className="btn-primary flex-1 py-4 text-xl cursor-pointer"
               >
                 {busy ? 'Clearing...' : 'Yes, clear all'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {showAddModal && (
+        <Modal title="Add to shopping list" onClose={() => { setShowAddModal(false); setModalTitle('') }}>
+          <div className="flex flex-col gap-5">
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+              {['Milk', 'Eggs', 'Bread', 'Bananas', 'Apples', 'Butter', 'Cheese', 'Coffee'].map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => addFromModal(item)}
+                  className="shrink-0 rounded-full bg-orange-50 dark:bg-orange-900/30 px-3 py-1 text-sm font-medium text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800 transition-transform active:scale-95 cursor-pointer"
+                >
+                  + {item}
+                </button>
+              ))}
+            </div>
+            <input
+              autoFocus
+              value={modalTitle}
+              onChange={(e) => setModalTitle(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addFromModal()}
+              placeholder="What do you need?"
+              className="input-glass px-5 py-4 text-xl"
+            />
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => { setShowAddModal(false); setModalTitle('') }}
+                className="btn-glass flex-1 py-3 text-lg cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!modalTitle.trim() || busy}
+                onClick={() => addFromModal()}
+                className="btn-primary flex-1 py-3 text-lg disabled:opacity-40 cursor-pointer"
+              >
+                {busy ? 'Adding...' : 'Add item'}
               </button>
             </div>
           </div>

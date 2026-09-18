@@ -90,14 +90,12 @@ const SWIPE_THRESHOLD = 80
 function ChoreCard({
   chore,
   isCompleting,
-  personColor,
   onToggle,
   onEdit,
   onDelete,
 }: {
   chore: ChoreItem
   isCompleting?: boolean
-  personColor?: string
   onToggle: (c: ChoreItem) => void
   onEdit: (c: ChoreItem) => void
   onDelete: (c: ChoreItem) => void
@@ -201,20 +199,7 @@ function ChoreCard({
           >
             {chore.title}
           </span>
-          <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.7rem] text-ink-soft mt-0.5">
-            {chore.assigned_to && (
-              <span
-                className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.2 font-semibold"
-                style={{
-                  backgroundColor: `${personColor || '#64748b'}20`,
-                  color: personColor || '#64748b',
-                  border: `1px solid ${personColor || '#64748b'}35`,
-                }}
-              >
-                <span className="h-1.5 w-1.5 rounded-full" style={{ background: personColor || '#64748b' }} />
-                {chore.assigned_to}
-              </span>
-            )}
+          <span className="flex flex-wrap items-center gap-x-2 text-[0.7rem] text-ink-soft">
             {chore.due_date && <span>due {fmtDate(chore.due_date)}</span>}
             {chore.recurrence && (
               <span className="font-medium text-sky-600 dark:text-sky-400">
@@ -246,8 +231,6 @@ function ChoreCard({
 export default function Chores() {
   const [draft, setDraft] = useState<Draft | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<{ id: number, title: string } | null>(null)
-  const [confirmResetDates, setConfirmResetDates] = useState(false)
-  const [, setResettingDates] = useState(false)
   const [filterPerson, setFilterPerson] = useState('')
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
 
@@ -370,19 +353,6 @@ export default function Chores() {
     setConfirmDelete({ id: draft.id, title: draft.title })
   }
 
-  const handleResetDates = async () => {
-    setResettingDates(true)
-    try {
-      await api.post('/api/chores/reset-dates', { reset_completed: true, include_one_off: true })
-      reload()
-    } catch (e) {
-      console.error('Failed to reset chore dates', e)
-    } finally {
-      setResettingDates(false)
-      setConfirmResetDates(false)
-    }
-  }
-
   const personColor = useCallback(
     (name: string) =>
       people?.find((p) => p.name.toLowerCase() === name.toLowerCase())?.color ?? '#64748b',
@@ -445,17 +415,6 @@ export default function Chores() {
             )}
           </div>
           <div className="flex items-center gap-2 lg:gap-3">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              transition={PRESS_SPRING}
-              onClick={() => setConfirmResetDates(true)}
-              className="btn-glass flex items-center gap-1.5 rounded-full px-3 py-2 text-sm lg:text-base cursor-pointer !text-ink-soft hover:!text-ink"
-              title="Reset chore dates to today and upcoming dates"
-            >
-              <Icon name="event_repeat" />
-              <span className="hidden sm:inline">Reset Dates</span>
-            </motion.button>
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -536,7 +495,6 @@ export default function Chores() {
                         key={chore.id}
                         chore={chore}
                         isCompleting={completingId === chore.id}
-                        personColor={personColor(chore.assigned_to || person)}
                         onToggle={toggle}
                         onEdit={(c) => setDraft(draftFrom(c))}
                         onDelete={deleteChore}
@@ -759,16 +717,6 @@ export default function Chores() {
           message={`Are you sure you want to delete "${confirmDelete.title}"?`}
           onConfirm={performDelete}
           onCancel={() => setConfirmDelete(null)}
-        />
-      )}
-
-      {confirmResetDates && (
-        <ConfirmModal
-          title="Reset Chore Dates?"
-          confirmText="Reset Dates"
-          message="This will update all chore due dates to today and their next upcoming scheduled dates, bringing overdue recurring chores up to date."
-          onConfirm={handleResetDates}
-          onCancel={() => setConfirmResetDates(false)}
         />
       )}
     </div>

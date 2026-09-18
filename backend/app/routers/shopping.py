@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta, timezone
 import uuid
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -11,6 +12,8 @@ from ..services.merge import normalize_title
 from ..ws import manager
 
 router = APIRouter(prefix="/api/shopping", tags=["shopping"])
+
+SHOPPING_COMPLETED_RETENTION_DAYS = 3
 
 
 class ItemCreate(BaseModel):
@@ -32,6 +35,12 @@ def _item_dict(i: ShoppingItem) -> dict:
 
 @router.get("")
 def list_items(db: Session = Depends(get_db)):
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=SHOPPING_COMPLETED_RETENTION_DAYS)
+    expired = db.query(ShoppingItem).filter(ShoppingItem.completed, ShoppingItem.updated_at < cutoff).all()
+    if expired:
+        for row in expired:
+            db.delete(row)
+        db.commit()
     rows = db.query(ShoppingItem).order_by(ShoppingItem.completed, ShoppingItem.title).all()
     return [_item_dict(i) for i in rows]
 
@@ -82,6 +91,7 @@ async def patch_item(
         raise HTTPException(404)
     if row.completed != body.completed:
         row.completed = body.completed
+        row.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         db.commit()
         bg.add_task(sync.write_shopping_completion, row, body.completed)
     await manager.broadcast("shopping")

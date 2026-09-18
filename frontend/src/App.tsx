@@ -725,7 +725,7 @@ function isWithinQuietHours(now: Date, startStr = '22:00', endStr = '06:00'): bo
             FullCalendar keeps its measured layout) but skips paint and
             compositing for the whole app — the slideshow gets the GPU. */}
         <div
-          className="flex h-full flex-col lg:flex-row gap-2 p-2 lg:gap-4 lg:p-4"
+          className="flex h-full max-h-full flex-col lg:flex-row gap-2 p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] lg:gap-4 lg:p-4 lg:pb-[calc(1rem+env(safe-area-inset-bottom,0px))] overflow-hidden"
           ref={dashboardRef}
           style={slideshowActive ? { visibility: 'hidden' } : undefined}
         >
@@ -827,7 +827,7 @@ function isWithinQuietHours(now: Date, startStr = '22:00', endStr = '06:00'): bo
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
-            className="flex min-w-0 flex-1 flex-col overflow-y-auto relative py-1 lg:py-0"
+            className="flex min-w-0 flex-1 flex-col overflow-hidden relative py-1 lg:py-0"
           >
             {pullY > 0 && (
               <div 
@@ -852,7 +852,7 @@ function isWithinQuietHours(now: Date, startStr = '22:00', endStr = '06:00'): bo
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -12 }}
                 transition={EXPRESSIVE_ENTER}
-                className="flex flex-1 flex-col min-h-0"
+                className="flex flex-1 flex-col h-full min-h-0 max-h-full overflow-hidden"
               >
                 <Suspense
                   fallback={

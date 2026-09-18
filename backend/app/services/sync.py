@@ -232,6 +232,7 @@ async def add_shopping_everywhere(title: str) -> None:
 # ---- housekeeping ------------------------------------------------------------
 
 COMPLETED_RETENTION_DAYS = 90
+SHOPPING_COMPLETED_RETENTION_DAYS = 3
 
 
 def cleanup_old_completed() -> int:
@@ -240,10 +241,11 @@ def cleanup_old_completed() -> int:
 
     from ..models import Chore
 
-    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(
-        days=COMPLETED_RETENTION_DAYS
-    )
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    cutoff = now - timedelta(days=COMPLETED_RETENTION_DAYS)
+    shopping_cutoff = now - timedelta(days=SHOPPING_COMPLETED_RETENTION_DAYS)
     removed = 0
+    shopping_removed = 0
     with SessionLocal() as db:
         removed += (
             db.query(Task)
@@ -260,14 +262,29 @@ def cleanup_old_completed() -> int:
             )
             .delete(synchronize_session=False)
         )
-        removed += (
+        shopping_removed = (
             db.query(ShoppingItem)
-            .filter(ShoppingItem.completed, ShoppingItem.updated_at < cutoff)
+            .filter(ShoppingItem.completed, ShoppingItem.updated_at < shopping_cutoff)
             .delete(synchronize_session=False)
         )
+        removed += shopping_removed
         db.commit()
     if removed:
-        log.info("cleanup: removed %d completed items older than %d days", removed, COMPLETED_RETENTION_DAYS)
+        log.info(
+            "cleanup: removed %d completed items (including %d shopping items older than %d days)",
+            removed,
+            shopping_removed,
+            SHOPPING_COMPLETED_RETENTION_DAYS,
+        )
+    if shopping_removed:
+        try:
+            import asyncio
+            loop = asyncio.get_running_loop()
+            loop.create_task(manager.broadcast("shopping"))
+        except RuntimeError:
+            pass
+        except Exception:
+            pass
     return removed
 
 

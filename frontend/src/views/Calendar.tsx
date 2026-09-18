@@ -444,7 +444,7 @@ export default function Calendar() {
     // Size each slot so all rows fill the scroller exactly (floor => the total is
     // never taller than the pane, so it never scrolls; the few leftover px are a
     // negligible gap at the bottom). No expandRows, so this height is authoritative.
-    const minSlotH = isMobile ? 44 : 28
+    const minSlotH = isMobile ? 36 : 18
     const h = Math.max(minSlotH, Math.floor(avail / rows))
     wrap.style.setProperty('--fc-slot-h', `${h}px`)
   }, [isMobile])
@@ -798,7 +798,7 @@ export default function Calendar() {
   const weatherByDate = new Map((weather?.daily ?? []).map((d) => [d.date, d]))
 
   return (
-    <div className="flex h-full flex-col px-4 lg:px-8">
+    <div className="flex h-full max-h-full flex-col px-4 lg:px-8 pb-2 lg:pb-3 min-h-0 overflow-hidden">
       <div className="mb-3 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink">Calendar</h1>
