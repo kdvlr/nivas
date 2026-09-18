@@ -246,14 +246,10 @@ function SetupInner() {
   const { celebrate } = useCelebration()
   const { celebrateReward } = useRewardCelebration()
   const choreAnimationGroups = [
-    { label: 'Original favorites', animations: CELEBRATIONS.filter((animation) => !animation.collection) },
-    { label: 'Adventure themes', animations: CELEBRATIONS.filter((animation) => animation.collection === 'adventure') },
-    { label: 'Sparkle themes', animations: CELEBRATIONS.filter((animation) => animation.collection === 'sparkle') },
+    { label: 'Celebration animations', animations: CELEBRATIONS },
   ]
   const rewardAnimationGroups = [
-    { label: 'Original favorites', animations: REWARD_ANIMATIONS.filter((animation) => !animation.collection) },
-    { label: 'Adventure themes', animations: REWARD_ANIMATIONS.filter((animation) => animation.collection === 'adventure') },
-    { label: 'Sparkle themes', animations: REWARD_ANIMATIONS.filter((animation) => animation.collection === 'sparkle') },
+    { label: 'Reward animations', animations: REWARD_ANIMATIONS },
   ]
 
   const [icUser, setIcUser] = useState('')
@@ -1087,9 +1083,7 @@ function SetupInner() {
 function PinFailPreviewCard() {
   const [fail, setFail] = useState<PinFailAnimation | null>(null)
   const groups = [
-    { label: 'Original favorites', animations: PIN_FAIL_ANIMATIONS.filter((animation) => !animation.collection) },
-    { label: 'Adventure themes', animations: PIN_FAIL_ANIMATIONS.filter((animation) => animation.collection === 'adventure') },
-    { label: 'Sparkle themes', animations: PIN_FAIL_ANIMATIONS.filter((animation) => animation.collection === 'sparkle') },
+    { label: 'Wrong-PIN animations', animations: PIN_FAIL_ANIMATIONS },
   ]
 
   return (

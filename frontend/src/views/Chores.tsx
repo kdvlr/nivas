@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { motion, AnimatePresence, LayoutGroup, useMotionValue, useTransform } from 'framer-motion'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
 import { PRESS_SPRING, EXPRESSIVE_ENTER } from '../lib/motion'
 import Avatar from '../components/Avatar'
 import CoinIcon from '../components/CoinIcon'
@@ -89,11 +89,15 @@ const SWIPE_THRESHOLD = 80
 
 function ChoreCard({
   chore,
+  isCompleting,
+  personColor,
   onToggle,
   onEdit,
   onDelete,
 }: {
   chore: ChoreItem
+  isCompleting?: boolean
+  personColor?: string
   onToggle: (c: ChoreItem) => void
   onEdit: (c: ChoreItem) => void
   onDelete: (c: ChoreItem) => void
@@ -104,14 +108,22 @@ function ChoreCard({
   const deleteHint = useTransform(x, [-60, 0], [1, 0])
   const suppressClick = useRef(false)
 
+  const isChecked = isCompleting || chore.completed
+
   return (
     <motion.div
-      layoutId={`chore-${chore.id}`}
       initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: chore.completed ? 0.6 : 1, scale: 1 }}
+      animate={{
+        opacity: isCompleting ? 1 : chore.completed ? 0.6 : 1,
+        scale: isCompleting ? 1.02 : 1,
+      }}
       exit={{ opacity: 0, scale: 0.95 }}
       transition={EXPRESSIVE_ENTER}
-      className="relative overflow-hidden rounded-xl"
+      className={`relative overflow-hidden rounded-xl transition-all duration-300 ${
+        isCompleting
+          ? 'ring-2 ring-emerald-500 shadow-lg shadow-emerald-500/25 bg-emerald-500/10'
+          : ''
+      }`}
     >
       <motion.div
         style={{ opacity: editHint }}
@@ -126,9 +138,26 @@ function ChoreCard({
         <Icon name="delete" className="text-2xl" />
       </motion.div>
 
+      {/* Floating reward celebration pill on completion */}
+      <AnimatePresence>
+        {isCompleting && (
+          <motion.div
+            initial={{ opacity: 0, y: 8, scale: 0.7 }}
+            animate={{ opacity: 1, y: -2, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.8 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+            className="absolute right-12 top-2 z-10 flex items-center gap-1 rounded-full bg-emerald-500 px-2.5 py-0.5 text-xs font-bold text-white shadow-md shadow-emerald-500/40 pointer-events-none"
+          >
+            <span>+{chore.coins}</span>
+            <CoinIcon className="text-xs" />
+            <span>DONE!</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <motion.div
         style={{ x }}
-        drag="x"
+        drag={isCompleting ? false : 'x'}
         dragConstraints={{ left: 0, right: 0 }}
         dragElastic={{ left: 0.5, right: 0.5 }}
         onDragEnd={(_, info) => {
@@ -139,30 +168,53 @@ function ChoreCard({
           if (info.offset.x > SWIPE_THRESHOLD) onEdit(chore)
           else if (info.offset.x < -SWIPE_THRESHOLD) onDelete(chore)
         }}
-        whileHover={{ scale: 1.02, y: -2 }}
-        whileTap={{ scale: 0.98 }}
+        whileHover={isCompleting ? {} : { scale: 1.02, y: -2 }}
+        whileTap={isCompleting ? {} : { scale: 0.98 }}
         transition={PRESS_SPRING}
         onClick={() => {
-          if (!suppressClick.current) onToggle(chore)
+          if (!suppressClick.current && !isCompleting) onToggle(chore)
         }}
-        className="relative flex w-full cursor-pointer items-center gap-3 rounded-xl glass-inset p-2.5 text-left select-none shadow-sm"
+        className={`relative flex w-full cursor-pointer items-center gap-3 rounded-xl glass-inset p-2.5 text-left select-none shadow-sm transition-colors duration-300 ${
+          isCompleting ? 'bg-emerald-500/10' : ''
+        }`}
       >
-        <span
+        <motion.span
+          animate={isCompleting ? { scale: [1, 1.3, 1] } : { scale: 1 }}
+          transition={{ type: 'spring', stiffness: 500, damping: 15 }}
           className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-[3px] text-sm font-bold transition-all duration-300 ${
-            chore.completed
-              ? 'border-emerald-400 bg-emerald-400 text-white shadow-sm'
+            isChecked
+              ? 'border-emerald-500 bg-emerald-500 text-white shadow-sm shadow-emerald-500/30'
               : 'border-teal-300/40 text-transparent'
           }`}
         >
           ✓
-        </span>
+        </motion.span>
         <span className="min-w-0 flex-1">
           <span
-            className={`block truncate text-base font-medium ${chore.completed ? 'line-through text-ink-soft' : 'text-ink'}`}
+            className={`block truncate text-base font-medium transition-colors duration-200 ${
+              isCompleting
+                ? 'text-emerald-700 dark:text-emerald-300 font-semibold'
+                : chore.completed
+                  ? 'line-through text-ink-soft'
+                  : 'text-ink'
+            }`}
           >
             {chore.title}
           </span>
-          <span className="flex flex-wrap items-center gap-x-2 text-[0.7rem] text-ink-soft">
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.7rem] text-ink-soft mt-0.5">
+            {chore.assigned_to && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.2 font-semibold"
+                style={{
+                  backgroundColor: `${personColor || '#64748b'}20`,
+                  color: personColor || '#64748b',
+                  border: `1px solid ${personColor || '#64748b'}35`,
+                }}
+              >
+                <span className="h-1.5 w-1.5 rounded-full" style={{ background: personColor || '#64748b' }} />
+                {chore.assigned_to}
+              </span>
+            )}
             {chore.due_date && <span>due {fmtDate(chore.due_date)}</span>}
             {chore.recurrence && (
               <span className="font-medium text-sky-600 dark:text-sky-400">
@@ -233,12 +285,33 @@ export default function Chores() {
   const { data: balances } = useData<CoinBalance[]>('/api/rewards/balances', ['chores', 'rewards'])
   const { celebrate } = useCelebration()
 
+  const [completingId, setCompletingId] = useState<number | null>(null)
+
   const toggle = async (chore: ChoreItem) => {
+    if (completingId !== null) return
     const completing = !chore.completed
-    if (completing && typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(50)
-    await api.patch(`/api/chores/${chore.id}`, { completed: completing })
-    if (completing) celebrate()
-    reload()
+    if (completing) {
+      setCompletingId(chore.id)
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate([40, 60, 40])
+      }
+      try {
+        await api.patch(`/api/chores/${chore.id}`, { completed: true })
+      } catch (err) {
+        console.error('Failed to complete chore', err)
+        setCompletingId(null)
+        return
+      }
+
+      // Visual confirmation hold period on the card before celebration and list reorder
+      await new Promise((resolve) => setTimeout(resolve, 650))
+      celebrate()
+      setCompletingId(null)
+      reload()
+    } else {
+      await api.patch(`/api/chores/${chore.id}`, { completed: false })
+      reload()
+    }
   }
 
   const deleteChore = async (chore: ChoreItem) => {
@@ -310,19 +383,44 @@ export default function Chores() {
     }
   }
 
-  const personColor = (name: string) =>
-    people?.find((p) => p.name.toLowerCase() === name.toLowerCase())?.color ?? '#64748b'
+  const personColor = useCallback(
+    (name: string) =>
+      people?.find((p) => p.name.toLowerCase() === name.toLowerCase())?.color ?? '#64748b',
+    [people]
+  )
+
+  const orderedPeople = useMemo(() => {
+    const list = (people ?? []).filter((p) => p.chores_enabled !== false).map((p) => p.name)
+    return ['Family', ...list]
+  }, [people])
 
   const allChores = chores ?? []
-  const filtered = filterPerson
-    ? allChores.filter((c) => (c.assigned_to || 'Family') === filterPerson)
-    : allChores
+  const filtered = useMemo(() => {
+    return filterPerson
+      ? allChores.filter((c) => (c.assigned_to || 'Family') === filterPerson)
+      : allChores
+  }, [allChores, filterPerson])
 
-  const groups = new Map<string, ChoreItem[]>()
-  for (const c of filtered) {
-    const key = c.assigned_to || 'Family'
-    groups.set(key, [...(groups.get(key) ?? []), c])
-  }
+  const groups = useMemo(() => {
+    const map = new Map<string, ChoreItem[]>()
+    for (const p of orderedPeople) {
+      map.set(p, [])
+    }
+    for (const c of filtered) {
+      const key = c.assigned_to || 'Family'
+      if (!map.has(key)) {
+        map.set(key, [])
+      }
+      map.get(key)!.push(c)
+    }
+    const result = new Map<string, ChoreItem[]>()
+    for (const [key, items] of map.entries()) {
+      if (items.length > 0) {
+        result.set(key, items)
+      }
+    }
+    return result
+  }, [orderedPeople, filtered])
 
   const sortedBalances = [...(balances ?? [])].sort((a, b) => b.balance - a.balance)
 
@@ -418,37 +516,37 @@ export default function Chores() {
             <p className="text-2xl font-medium">No chores here — time to assign some!</p>
           </motion.div>
         ) : (
-          <LayoutGroup>
-            <motion.div layout className="grid min-h-0 flex-1 auto-rows-min grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-x-4 gap-y-3 lg:gap-x-6 lg:gap-y-4 overflow-y-auto pb-4 pr-1">
-              <AnimatePresence initial={false}>
-                {[...groups.entries()].map(([person, list]) => (
-                  <motion.section key={person} layout className="mb-4">
-                    <h2
-                      className="mb-1.5 flex items-center gap-2 text-lg font-semibold"
-                      style={{ color: personColor(person) }}
-                    >
-                      <span className="h-4 w-4 rounded-full" style={{ background: personColor(person) }} />
-                      {person}
-                      <span className="text-sm font-medium text-ink-soft">
-                        {list.filter((c) => !c.completed).length}
-                      </span>
-                    </h2>
-                    <div className="grid gap-2 grid-cols-[repeat(auto-fill,minmax(270px,1fr))]">
-                      {list.map((chore) => (
-                        <ChoreCard
-                          key={chore.id}
-                          chore={chore}
-                          onToggle={toggle}
-                          onEdit={(c) => setDraft(draftFrom(c))}
-                          onDelete={deleteChore}
-                        />
-                      ))}
-                    </div>
-                  </motion.section>
-                ))}
-              </AnimatePresence>
-            </motion.div>
-          </LayoutGroup>
+          <div className="grid min-h-0 flex-1 auto-rows-min grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-x-4 gap-y-3 lg:gap-x-6 lg:gap-y-4 overflow-y-auto pb-4 pr-1">
+            <AnimatePresence initial={false}>
+              {[...groups.entries()].map(([person, list]) => (
+                <section key={person} className="mb-4">
+                  <h2
+                    className="mb-1.5 flex items-center gap-2 text-lg font-semibold"
+                    style={{ color: personColor(person) }}
+                  >
+                    <span className="h-4 w-4 rounded-full" style={{ background: personColor(person) }} />
+                    {person}
+                    <span className="text-sm font-medium text-ink-soft">
+                      {list.filter((c) => !c.completed).length}
+                    </span>
+                  </h2>
+                  <div className="grid gap-2 grid-cols-[repeat(auto-fill,minmax(270px,1fr))]">
+                    {list.map((chore) => (
+                      <ChoreCard
+                        key={chore.id}
+                        chore={chore}
+                        isCompleting={completingId === chore.id}
+                        personColor={personColor(chore.assigned_to || person)}
+                        onToggle={toggle}
+                        onEdit={(c) => setDraft(draftFrom(c))}
+                        onDelete={deleteChore}
+                      />
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </AnimatePresence>
+          </div>
         )}
       </div>
 
