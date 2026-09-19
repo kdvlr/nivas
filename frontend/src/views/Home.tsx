@@ -56,24 +56,18 @@ const isFamilyEvent = (e: CalEvent) =>
 
 const eventBg = (e: CalEvent) => (isFamilyEvent(e) ? FAMILY_GRADIENT : e.color)
 
-/** Calendar feeds sometimes prefix a title with its owner (occasionally twice). */
-const displayEventTitle = (e: CalEvent) => {
-  let title = e.title.trim()
-  const person = e.person_name?.trim()
-  if (!person) return title
-  const prefix = `${person}:`
-  while (title.toLocaleLowerCase().startsWith(prefix.toLocaleLowerCase())) {
-    title = title.slice(prefix.length).trim()
-  }
-  return title || e.title
-}
-
 const minutesOfDay = (iso: string) => {
   const d = new Date(iso)
   return d.getHours() * 60 + d.getMinutes()
 }
 
 const fmtHour = (h: number) => `${((h + 11) % 12) + 1} ${h % 24 < 12 ? 'AM' : 'PM'}`
+
+const DAY_PERIODS = [
+  { label: 'Morning', emoji: '🌅', from: 0, to: 12 * 60, tint: 'rgba(251, 146, 60, 0.07)' },
+  { label: 'Afternoon', emoji: '☀️', from: 12 * 60, to: 17 * 60, tint: 'rgba(56, 189, 248, 0.07)' },
+  { label: 'Evening', emoji: '🌙', from: 17 * 60, to: 24 * 60, tint: 'rgba(99, 102, 241, 0.09)' },
+]
 
 interface PlacedEvent {
   ev: CalEvent
@@ -495,16 +489,16 @@ export default function Home() {
             {daysList.map((dayIso, idx) => {
               const dayWeather = weather?.daily?.find((d) => d.date === dayIso)
               return (
-                <h3 key={dayIso} className={`flex min-h-[4.6rem] items-start content-start gap-x-2 gap-y-1 border-b-2 px-2 pb-2 pt-1 flex-wrap ${dayIso === today ? 'border-[var(--primary)]' : 'border-ink-faint'}`}>
-                  <span className={`text-lg font-bold tracking-tight ${dayIso === today ? 'text-[var(--primary)]' : 'text-ink'}`}>
+                <h3 key={dayIso} className="flex items-center gap-2 border-b pb-1.5 border-ink-faint flex-wrap">
+                  <span className={`text-base font-semibold ${dayIso === today ? 'text-[var(--primary)]' : 'text-ink'}`}>
                     {getDayLabel(dayIso, idx)}
                   </span>
-                  <span className="pt-1 text-sm font-semibold text-ink-soft">
+                  <span className="text-[0.7rem] font-medium text-ink-soft opacity-85">
                     {new Date(dayIso + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                   </span>
                   {dayWeather && (
-                    <span className="flex w-full items-center gap-1.5 text-sm font-semibold text-ink-soft">
-                      <span className="text-lg leading-none">{dayWeather.icon}</span>
+                    <span className="mt-0.5 flex w-full items-center gap-1.5 text-[0.82rem] font-semibold text-ink-soft">
+                      <span className="text-base leading-none">{dayWeather.icon}</span>
                       <span>
                         {dayWeather.label} · {dayWeather.tmax}° / {dayWeather.tmin}°
                       </span>
@@ -543,11 +537,27 @@ export default function Home() {
 
           {/* the timeline itself */}
           <div className="relative mt-2 min-h-[24rem] flex-1 lg:min-h-0">
+            {/* morning / afternoon / evening bands */}
+            {DAY_PERIODS.map((p) => {
+              const from = Math.max(p.from, timeline.axis.start)
+              const to = Math.min(p.to, timeline.axis.end)
+              if (to <= from) return null
+              return (
+                <div
+                  key={p.label}
+                  className="absolute inset-x-0"
+                  style={{ top: `${axisPct(from)}%`, height: `${axisPct(to) - axisPct(from)}%` }}
+                >
+                  <div className="absolute inset-y-0 right-0 rounded-lg" style={{ left: AXIS_GUTTER, background: p.tint }} />
+                </div>
+              )
+            })}
+
             {/* hour gridlines + labels */}
             {timeline.hours.map((h) => (
               <div key={h} className="absolute inset-x-0" style={{ top: `${axisPct(h * 60)}%` }}>
                 <div className="border-t border-[var(--outline-var)] opacity-80" style={{ marginLeft: AXIS_GUTTER }} />
-                <span className="absolute left-0 top-0 -translate-y-1/2 pr-2 text-right text-[0.82rem] font-semibold tabular-nums text-ink-soft" style={{ width: AXIS_GUTTER }}>
+                <span className="absolute left-0 top-0 -translate-y-1/2 pr-1.5 text-right text-[0.7rem] font-medium tabular-nums text-ink-soft opacity-80" style={{ width: AXIS_GUTTER }}>
                   {fmtHour(h)}
                 </span>
               </div>
@@ -574,36 +584,28 @@ export default function Home() {
                       return (
                         <div
                           key={it.ev.id}
-                          className="vivid-dim absolute z-[5] flex flex-col overflow-hidden rounded-xl border-l-[6px] border-white/70 px-3 py-2 text-white shadow-md transition-transform hover:z-10 hover:scale-[1.02] cursor-pointer"
+                          className="vivid-dim absolute z-[5] flex flex-col overflow-hidden rounded-lg px-2.5 py-1.5 text-white shadow-md transition-transform hover:z-10 hover:scale-[1.02] cursor-pointer"
                           style={{
                             top: `${axisPct(it.s)}%`,
-                            height: `max(${heightPct}%, 4.25rem)`,
-                            left: `calc(${(it.lane / it.cols) * 100}% + 3px)`,
-                            width: `calc(${100 / it.cols}% - 6px)`,
+                            height: `max(${heightPct}%, 2.75rem)`,
+                            left: `calc(${(it.lane / it.cols) * 100}% + 2px)`,
+                            width: `calc(${100 / it.cols}% - 4px)`,
                             background: eventBg(it.ev),
                           }}
-                          title={`${displayEventTitle(it.ev)} · ${fmtTime(it.ev.start)}–${fmtTime(it.ev.end)}`}
                           onClick={() => setSelectedEvent(it.ev)}
                         >
-                          <div className="whitespace-nowrap text-[0.72rem] font-extrabold leading-tight tabular-nums">
+                          <div className="hidden lg:block text-[0.7rem] font-bold leading-tight tracking-tight opacity-95 tabular-nums">
                             {fmtTime(it.ev.start)} – {fmtTime(it.ev.end)}
                           </div>
-                          <div className="line-clamp-2 text-[0.92rem] font-extrabold leading-tight tracking-tight">
-                            {displayEventTitle(it.ev)}
+                          <div className="truncate text-sm font-semibold leading-snug tracking-tight">
+                            {it.ev.title}
                           </div>
-                          <div className="mt-auto flex min-w-0 items-center gap-1.5">
-                            {it.ev.person_name && !isFamilyEvent(it.ev) && (
-                              <span className="max-w-[7rem] truncate rounded-full bg-black/20 px-2 py-0.5 text-[0.66rem] font-bold">
-                                {titleCase(it.ev.person_name)}
-                              </span>
-                            )}
-                          {it.ev.location && (it.e - it.s > 90) && (
-                            <div className="flex min-w-0 items-center gap-1 truncate text-[0.68rem] font-semibold opacity-90">
+                          {it.ev.location && (it.e - it.s > 60) && (
+                            <div className="flex items-center gap-1 truncate text-[0.7rem] opacity-85">
                               <Icon name="location_on" className="text-[0.75rem] shrink-0" />
                               <span className="truncate">{it.ev.location}</span>
                             </div>
                           )}
-                          </div>
                         </div>
                       )
                     })}
@@ -612,9 +614,6 @@ export default function Home() {
                       <div className="pointer-events-none absolute inset-x-0 z-20" style={{ top: `${axisPct(nowMin)}%` }}>
                         <div className="h-[2px] bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.8)]" />
                         <div className="absolute -left-1 -top-[3px] h-2 w-2 rounded-full bg-rose-500" />
-                        <span className="absolute left-1 top-1 rounded bg-rose-500 px-1.5 py-0.5 text-[0.62rem] font-bold leading-none text-white shadow">
-                          now
-                        </span>
                       </div>
                     )}
                   </div>
