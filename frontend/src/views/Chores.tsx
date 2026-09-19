@@ -39,26 +39,6 @@ function formatRecurrence(rec: string): string {
   return ''
 }
 
-function formatRelativeDueDate(dateStr: string): { label: string; subLabel: string } {
-  const today = todayISO()
-  if (dateStr === today) {
-    return { label: 'Today', subLabel: fmtDate(dateStr) }
-  }
-  const t = new Date(today + 'T12:00:00').getTime()
-  const d = new Date(dateStr + 'T12:00:00').getTime()
-  const diffDays = Math.round((d - t) / (1000 * 60 * 60 * 24))
-
-  if (diffDays === 1) {
-    return { label: 'Tomorrow', subLabel: fmtDate(dateStr) }
-  }
-  if (diffDays > 1 && diffDays < 7) {
-    return { label: `In ${diffDays} days`, subLabel: fmtDate(dateStr) }
-  }
-  if (diffDays === 7) {
-    return { label: 'In 1 week', subLabel: fmtDate(dateStr) }
-  }
-  return { label: fmtDate(dateStr), subLabel: `in ${diffDays} days` }
-}
 
 interface Draft {
   id?: number
@@ -425,67 +405,54 @@ export default function Chores() {
 
   const today = todayISO()
 
-  // Partition into Today vs Upcoming
-  const { todayChores, upcomingChores } = useMemo(() => {
-    const todayList: ChoreItem[] = []
-    const upcomingList: ChoreItem[] = []
-    for (const c of filtered) {
-      if (!c.due_date || c.due_date <= today) {
-        todayList.push(c)
-      } else {
-        upcomingList.push(c)
-      }
-    }
-    return { todayChores: todayList, upcomingChores: upcomingList }
-  }, [filtered, today])
-
-  // Today's chores grouped by person
-  const todayGroups = useMemo(() => {
-    const map = new Map<string, ChoreItem[]>()
+  // Person groups: each member has todayList and chronologically sorted upcomingList
+  const personGroups = useMemo(() => {
+    const map = new Map<string, { todayList: ChoreItem[]; upcomingList: ChoreItem[] }>()
     for (const p of orderedPeople) {
-      map.set(p, [])
+      map.set(p, { todayList: [], upcomingList: [] })
     }
-    for (const c of todayChores) {
+    for (const c of filtered) {
       const key = c.assigned_to || 'Family'
       if (!map.has(key)) {
-        map.set(key, [])
+        map.set(key, { todayList: [], upcomingList: [] })
       }
-      map.get(key)!.push(c)
+      if (!c.due_date || c.due_date <= today) {
+        map.get(key)!.todayList.push(c)
+      } else {
+        map.get(key)!.upcomingList.push(c)
+      }
     }
-    const result = new Map<string, ChoreItem[]>()
-    for (const [key, items] of map.entries()) {
-      if (items.length > 0 || (filterPerson === key)) {
-        result.set(key, items)
+
+    // Sort each member's upcoming chores chronologically by due date (earliest first), then title
+    for (const group of map.values()) {
+      group.upcomingList.sort((a, b) => {
+        if (a.due_date !== b.due_date) {
+          return a.due_date.localeCompare(b.due_date)
+        }
+        if (a.completed !== b.completed) {
+          return a.completed ? 1 : -1
+        }
+        return a.title.localeCompare(b.title)
+      })
+    }
+
+    const result = new Map<string, { todayList: ChoreItem[]; upcomingList: ChoreItem[] }>()
+    for (const [key, group] of map.entries()) {
+      const hasChores = group.todayList.length > 0 || group.upcomingList.length > 0
+      if (hasChores || filterPerson === key) {
+        result.set(key, group)
       }
     }
     return result
-  }, [orderedPeople, todayChores, filterPerson])
+  }, [orderedPeople, filtered, today, filterPerson])
 
-  // Upcoming chores ordered by earliest to latest date, then title
-  const sortedUpcoming = useMemo(() => {
-    return [...upcomingChores].sort((a, b) => {
-      if (a.due_date !== b.due_date) {
-        return a.due_date.localeCompare(b.due_date)
-      }
-      if (a.completed !== b.completed) {
-        return a.completed ? 1 : -1
-      }
-      return a.title.localeCompare(b.title)
-    })
-  }, [upcomingChores])
-
-  // Group upcoming chores by date
-  const upcomingByDate = useMemo(() => {
-    const map = new Map<string, ChoreItem[]>()
-    for (const c of sortedUpcoming) {
-      const d = c.due_date
-      if (!map.has(d)) {
-        map.set(d, [])
-      }
-      map.get(d)!.push(c)
+  const totalUpcomingCount = useMemo(() => {
+    let count = 0
+    for (const group of personGroups.values()) {
+      count += group.upcomingList.length
     }
-    return [...map.entries()]
-  }, [sortedUpcoming])
+    return count
+  }, [personGroups])
 
   const sortedBalances = [...(balances ?? [])].sort((a, b) => b.balance - a.balance)
 
@@ -508,7 +475,7 @@ export default function Chores() {
                 {filterPerson} <Icon name="close" className="text-base" />
               </motion.button>
             )}
-            {upcomingChores.length > 0 && (
+            {totalUpcomingCount > 0 && (
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -522,7 +489,7 @@ export default function Chores() {
                 title={showUpcoming ? 'Hide upcoming chores' : 'Show upcoming chores'}
               >
                 <Icon name={showUpcoming ? 'visibility' : 'visibility_off'} className="text-base" />
-                <span>Upcoming ({upcomingChores.length})</span>
+                <span>Upcoming ({totalUpcomingCount})</span>
               </motion.button>
             )}
           </div>
@@ -589,142 +556,77 @@ export default function Chores() {
               <p className="text-2xl font-medium">No chores here — time to assign some!</p>
             </motion.div>
           ) : (
-            <>
-              {/* Today's Chores Section */}
-              {todayChores.length === 0 ? (
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={EXPRESSIVE_ENTER}
-                  className="flex flex-col items-center justify-center gap-2 rounded-2xl glass-inset p-6 text-center text-ink-soft mb-6"
-                >
-                  <span className="text-4xl">🎉</span>
-                  <p className="text-lg font-semibold text-ink">All caught up for today!</p>
-                  <p className="text-sm text-ink-soft">
-                    {upcomingChores.length > 0
-                      ? 'No tasks due today. Check upcoming chores scheduled below!'
-                      : 'No chores due today. Great job!'}
-                  </p>
-                </motion.div>
-              ) : (
-                <div className="grid auto-rows-min grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-x-4 gap-y-4 lg:gap-x-6 lg:gap-y-6 mb-6">
-                  <AnimatePresence initial={false}>
-                    {[...todayGroups.entries()].map(([person, list]) => (
-                      <section key={person} className="flex flex-col">
-                        <h2
-                          className="mb-2 flex items-center justify-between text-lg font-semibold"
-                          style={{ color: personColor(person) }}
-                        >
-                          <span className="flex items-center gap-2">
-                            <span className="h-3.5 w-3.5 rounded-full" style={{ background: personColor(person) }} />
-                            {person}
-                          </span>
-                          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-surface-variant text-ink-soft">
-                            {list.filter((c) => !c.completed).length} left
-                          </span>
-                        </h2>
-                        {list.length === 0 ? (
-                          <div className="rounded-xl glass-inset p-4 text-center text-sm text-ink-soft">
-                            All done for today! 🎉
-                          </div>
-                        ) : (
-                          <div className="grid gap-2 grid-cols-[repeat(auto-fill,minmax(270px,1fr))]">
-                            {list.map((chore) => (
-                              <ChoreCard
-                                key={chore.id}
-                                chore={chore}
-                                isCompleting={completingId === chore.id}
-                                onToggle={toggle}
-                                onEdit={(c) => setDraft(draftFrom(c))}
-                                onDelete={deleteChore}
-                              />
-                            ))}
-                          </div>
-                        )}
-                      </section>
-                    ))}
-                  </AnimatePresence>
-                </div>
-              )}
-
-              {/* Upcoming Chores Section */}
-              {upcomingChores.length > 0 && (
-                <div className="mt-4 pt-5 border-t border-slate-200/60 dark:border-slate-800/60">
-                  {/* Upcoming Section Header with toggle */}
-                  <div className="mb-4 flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-500/15 text-sky-600 dark:text-sky-400">
-                        <Icon name="event" className="text-lg" />
-                      </span>
-                      <h2 className="text-lg lg:text-xl font-bold tracking-tight text-ink flex items-center gap-2">
-                        Upcoming
-                        <span className="rounded-full bg-sky-500/15 px-2 py-0.2 text-xs font-bold text-sky-600 dark:text-sky-300">
-                          {upcomingChores.length}
-                        </span>
-                      </h2>
-                    </div>
-
-                    <motion.button
-                      whileHover={{ scale: 1.03 }}
-                      whileTap={{ scale: 0.97 }}
-                      transition={PRESS_SPRING}
-                      onClick={handleToggleUpcoming}
-                      className="btn-glass flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium cursor-pointer"
+            <div className="grid auto-rows-min grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-x-4 gap-y-4 lg:gap-x-6 lg:gap-y-6 mb-6">
+              <AnimatePresence initial={false}>
+                {[...personGroups.entries()].map(([person, { todayList, upcomingList }]) => (
+                  <section key={person} className="flex flex-col">
+                    <h2
+                      className="mb-2 flex items-center justify-between text-lg font-semibold"
+                      style={{ color: personColor(person) }}
                     >
-                      <Icon name={showUpcoming ? 'visibility_off' : 'visibility'} className="text-base" />
-                      <span>{showUpcoming ? 'Hide Upcoming' : 'Show Upcoming'}</span>
-                      <Icon name={showUpcoming ? 'expand_less' : 'expand_more'} className="text-base" />
-                    </motion.button>
-                  </div>
+                      <span className="flex items-center gap-2">
+                        <span className="h-3.5 w-3.5 rounded-full" style={{ background: personColor(person) }} />
+                        {person}
+                      </span>
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-surface-variant text-ink-soft">
+                        {todayList.filter((c) => !c.completed).length} left
+                      </span>
+                    </h2>
+                    {todayList.length === 0 ? (
+                      <div className="rounded-xl glass-inset p-4 text-center text-sm text-ink-soft">
+                        All done for today! 🎉
+                      </div>
+                    ) : (
+                      <div className="grid gap-2 grid-cols-[repeat(auto-fill,minmax(270px,1fr))]">
+                        {todayList.map((chore) => (
+                          <ChoreCard
+                            key={chore.id}
+                            chore={chore}
+                            isCompleting={completingId === chore.id}
+                            onToggle={toggle}
+                            onEdit={(c) => setDraft(draftFrom(c))}
+                            onDelete={deleteChore}
+                          />
+                        ))}
+                      </div>
+                    )}
 
-                  {/* Collapsible Upcoming Chores by Date (Earliest to Latest) */}
-                  <AnimatePresence>
-                    {showUpcoming && (
+                    {/* Upcoming chores under current chores for each member */}
+                    {upcomingList.length > 0 && showUpcoming && (
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.25, ease: 'easeInOut' }}
-                        className="overflow-hidden flex flex-col gap-5"
+                        transition={{ duration: 0.2 }}
+                        className="mt-4 pt-3 border-t border-slate-200/60 dark:border-slate-800/60 flex flex-col"
                       >
-                        {upcomingByDate.map(([dateStr, items]) => {
-                          const rel = formatRelativeDueDate(dateStr)
-                          return (
-                            <div key={dateStr} className="flex flex-col">
-                              <div className="mb-2 flex items-center gap-2">
-                                <span className="text-sm font-bold text-sky-600 dark:text-sky-400 uppercase tracking-wider">
-                                  {rel.label}
-                                </span>
-                                <span className="text-xs text-ink-soft">
-                                  · {rel.subLabel}
-                                </span>
-                                <span className="rounded-full bg-slate-200/60 dark:bg-slate-800/60 px-2 py-0.2 text-[0.7rem] font-bold text-ink-soft">
-                                  {items.length}
-                                </span>
-                              </div>
-                              <div className="grid gap-2 grid-cols-[repeat(auto-fill,minmax(270px,1fr))]">
-                                {items.map((chore) => (
-                                  <ChoreCard
-                                    key={chore.id}
-                                    chore={chore}
-                                    isCompleting={completingId === chore.id}
-                                    onToggle={toggle}
-                                    onEdit={(c) => setDraft(draftFrom(c))}
-                                    onDelete={deleteChore}
-                                    showPerson={!filterPerson}
-                                    personColor={personColor(chore.assigned_to || 'Family')}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                          )
-                        })}
+                        <div className="mb-2 flex items-center gap-2">
+                          <Icon name="event" className="text-sm text-sky-600 dark:text-sky-400" />
+                          <span className="text-xs font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">
+                            Upcoming
+                          </span>
+                          <span className="rounded-full bg-sky-500/15 px-1.5 py-0.2 text-[0.65rem] font-bold text-sky-600 dark:text-sky-300">
+                            {upcomingList.length}
+                          </span>
+                        </div>
+                        <div className="grid gap-2 grid-cols-[repeat(auto-fill,minmax(270px,1fr))]">
+                          {upcomingList.map((chore) => (
+                            <ChoreCard
+                              key={chore.id}
+                              chore={chore}
+                              isCompleting={completingId === chore.id}
+                              onToggle={toggle}
+                              onEdit={(c) => setDraft(draftFrom(c))}
+                              onDelete={deleteChore}
+                            />
+                          ))}
+                        </div>
                       </motion.div>
                     )}
-                  </AnimatePresence>
-                </div>
-              )}
-            </>
+                  </section>
+                ))}
+              </AnimatePresence>
+            </div>
           )}
         </div>
       </div>
