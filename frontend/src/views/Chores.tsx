@@ -101,44 +101,44 @@ export interface ChoreDensityConfig {
 }
 
 export function getChoreDensity(count: number, isShortScreen = false): ChoreDensityConfig {
-  const thresholdDense = isShortScreen ? 6 : 8
-  const thresholdCompact = isShortScreen ? 3 : 5
+  const thresholdDense = isShortScreen ? 8 : 9
+  const thresholdCompact = isShortScreen ? 4 : 5
 
   if (count >= thresholdDense) {
     return {
       cardPadding: 'px-2.5 py-1.5 gap-2',
-      checkSize: 'h-5 w-5 border-[2px] text-[10px]',
-      titleSize: 'text-xs font-semibold',
-      subSize: 'text-[0.65rem]',
-      coinSize: 'text-xs font-semibold',
-      coinIconSize: 'text-xs',
-      btnSize: 'h-6 w-6',
-      iconSize: 'text-xs',
+      checkSize: 'h-6 w-6 border-[2px] text-xs',
+      titleSize: 'text-sm font-semibold',
+      subSize: 'text-[0.7rem]',
+      coinSize: 'text-sm font-semibold',
+      coinIconSize: 'text-sm',
+      btnSize: 'h-7 w-7',
+      iconSize: 'text-sm',
       gap: 'gap-1.5',
     }
   }
   if (count >= thresholdCompact) {
     return {
-      cardPadding: 'px-3 py-1.5 gap-2.5',
-      checkSize: 'h-6 w-6 border-[2px] text-xs',
-      titleSize: 'text-sm font-medium',
-      subSize: 'text-[0.68rem]',
-      coinSize: 'text-sm font-semibold',
-      coinIconSize: 'text-sm',
-      btnSize: 'h-7 w-7',
-      iconSize: 'text-sm',
+      cardPadding: 'px-3.5 py-2 gap-2.5',
+      checkSize: 'h-7 w-7 border-[2px] text-sm',
+      titleSize: 'text-base font-medium',
+      subSize: 'text-xs',
+      coinSize: 'text-base font-semibold',
+      coinIconSize: 'text-base',
+      btnSize: 'h-8 w-8',
+      iconSize: 'text-base',
       gap: 'gap-2',
     }
   }
   return {
-    cardPadding: 'p-2.5 gap-3',
-    checkSize: 'h-7 w-7 border-[3px] text-sm',
-    titleSize: 'text-base font-medium',
-    subSize: 'text-[0.7rem]',
-    coinSize: 'text-base font-semibold',
-    coinIconSize: 'text-base',
-    btnSize: 'h-8 w-8',
-    iconSize: 'text-base',
+    cardPadding: 'p-3 gap-3',
+    checkSize: 'h-8 w-8 border-[3px] text-base',
+    titleSize: 'text-lg font-medium',
+    subSize: 'text-xs lg:text-sm',
+    coinSize: 'text-lg font-semibold',
+    coinIconSize: 'text-lg',
+    btnSize: 'h-9 w-9',
+    iconSize: 'text-lg',
     gap: 'gap-2.5',
   }
 }
@@ -526,7 +526,7 @@ export default function Chores() {
   return (
     <div className="flex h-full flex-col px-4 lg:px-8">
       {/* Header */}
-      <div className="mb-4 lg:mb-6 flex flex-col gap-4">
+      <div className="mb-3 lg:mb-4 flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink">Chores</h1>
@@ -578,7 +578,7 @@ export default function Chores() {
       {/* Layout for Chores */}
       <div className="flex flex-1 flex-col min-h-0 min-w-0">
         {/* Scrollable chore area containing Today's tasks + Upcoming section */}
-        <div className="flex-1 overflow-y-auto pr-1 pb-8 min-h-0">
+        <div className="flex-1 overflow-y-auto pr-1 pb-4 lg:pb-6 min-h-0">
           {/* Entirely Empty State */}
           {filtered.length === 0 ? (
             <motion.div
@@ -604,6 +604,16 @@ export default function Chores() {
                   const density = getChoreDensity(memberTotal, isShortScreen)
                   const isFiltered = filterPerson === person
 
+                  const personBalance = b?.balance
+                  let medal = ''
+                  if (sortedBalances.length > 0 && personBalance !== undefined) {
+                    const uniqueBalances = Array.from(new Set(sortedBalances.map((sb) => sb.balance))).sort((x, y) => y - x)
+                    const tier = uniqueBalances.indexOf(personBalance)
+                    if (tier === 0) medal = '🥇'
+                    else if (tier === 1) medal = '🥈'
+                    else if (tier === 2) medal = '🥉'
+                  }
+
                   return (
                     <section key={person} className="flex flex-col min-w-0">
                       <div className="mb-2.5 flex items-center justify-between">
@@ -617,32 +627,37 @@ export default function Chores() {
                           }`}
                           title={isFiltered ? 'Show all members' : `Filter to ${person}`}
                         >
+                          {medal && (
+                            <span className="text-xl lg:text-2xl select-none shrink-0" aria-label={`Medal ${medal}`}>
+                              {medal}
+                            </span>
+                          )}
                           {avatarSrc || avatarEmoji ? (
                             <Avatar
                               name={person}
                               color={color}
                               src={avatarSrc}
                               emoji={avatarEmoji}
-                              size={isMobile ? 22 : 28}
+                              size={isMobile ? 24 : 32}
                             />
                           ) : (
-                            <span className="h-3.5 w-3.5 rounded-full shrink-0" style={{ background: color }} />
+                            <span className="h-4 w-4 rounded-full shrink-0" style={{ background: color }} />
                           )}
-                          <span className="text-base lg:text-lg font-bold truncate" style={{ color }}>
+                          <span className="text-lg lg:text-xl font-bold truncate" style={{ color }}>
                             {person}
                           </span>
                           {balance !== undefined && (
-                            <span className="flex items-center gap-1 text-xs lg:text-sm font-semibold tabular-nums text-amber-500 bg-amber-500/10 dark:bg-amber-400/15 px-2 py-0.5 rounded-full">
-                              <CoinIcon className="text-xs lg:text-sm" /> {balance}
+                            <span className="flex items-center gap-1 text-sm lg:text-base font-semibold tabular-nums text-amber-500 bg-amber-500/10 dark:bg-amber-400/15 px-2.5 py-0.5 rounded-full">
+                              <CoinIcon className="text-sm lg:text-base" /> {balance}
                             </span>
                           )}
                         </button>
-                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-surface-variant text-ink-soft">
+                        <span className="text-xs lg:text-sm font-semibold px-2.5 py-0.5 rounded-full bg-surface-variant text-ink-soft">
                           {todayList.filter((c) => !c.completed).length} left
                         </span>
                       </div>
                       {todayList.length === 0 ? (
-                        <div className="rounded-xl glass-inset p-4 text-center text-sm text-ink-soft">
+                        <div className="rounded-xl glass-inset p-4 text-center text-base text-ink-soft">
                           All done for today! 🎉
                         </div>
                       ) : (
@@ -671,11 +686,11 @@ export default function Chores() {
                           className="mt-4 pt-3 border-t border-slate-200/60 dark:border-slate-800/60 flex flex-col"
                         >
                           <div className="mb-2 flex items-center gap-2">
-                            <Icon name="event" className="text-sm text-sky-600 dark:text-sky-400" />
-                            <span className="text-xs font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">
+                            <Icon name="event" className="text-base text-sky-600 dark:text-sky-400" />
+                            <span className="text-sm font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">
                               Upcoming
                             </span>
-                            <span className="rounded-full bg-sky-500/15 px-1.5 py-0.2 text-[0.65rem] font-bold text-sky-600 dark:text-sky-300">
+                            <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-xs font-bold text-sky-600 dark:text-sky-300">
                               {upcomingList.length}
                             </span>
                           </div>
