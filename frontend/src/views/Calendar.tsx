@@ -76,6 +76,8 @@ export default function Calendar() {
   )
   const [weekSubMode, setWeekSubMode] = useState<WeekSubMode>('sun-sat')
   const [yearSubMode, setYearSubMode] = useState<YearSubMode>('calendar')
+  const [yearAnchorDate, setYearAnchorDate] = useState(() => new Date())
+  const [yearEvents, setYearEvents] = useState<CalEvent[]>([])
   const [mobileStartDate, setMobileStartDate] = useState(() => new Date())
   const [mobileEvents, setMobileEvents] = useState<CalEvent[]>([])
   const [loadingMobileEvents, setLoadingMobileEvents] = useState(false)
@@ -166,6 +168,84 @@ export default function Calendar() {
     return map
   }, [mobileEvents, mobileDaysList])
 
+  const selectionColorMap = useMemo(() => {
+    const m = new Map<number, string>()
+    for (const s of selections) {
+      m.set(s.id, s.color)
+    }
+    return m
+  }, [selections])
+
+  const yearMonths = useMemo(() => {
+    const months: Date[] = []
+    const anchor = yearAnchorDate
+    if (yearSubMode === 'calendar') {
+      const y = anchor.getFullYear()
+      for (let m = 0; m < 12; m++) {
+        months.push(new Date(y, m, 1))
+      }
+    } else {
+      const y = anchor.getFullYear()
+      const startM = anchor.getMonth()
+      for (let i = 0; i < 12; i++) {
+        months.push(new Date(y, startM + i, 1))
+      }
+    }
+    return months
+  }, [yearAnchorDate, yearSubMode])
+
+  useEffect(() => {
+    if (currentViewMode !== 'year') return
+    let active = true
+    const startStr = `${isoDate(yearMonths[0])}T00:00:00`
+    const lastMonthEnd = new Date(yearMonths[11].getFullYear(), yearMonths[11].getMonth() + 1, 0)
+    const endStr = `${isoDate(lastMonthEnd)}T23:59:59`
+    api.get<CalEvent[]>(`/api/calendar/events?start=${encodeURIComponent(startStr)}&end=${encodeURIComponent(endStr)}`)
+      .then((data) => {
+        if (active) {
+          setYearEvents(data)
+        }
+      })
+      .catch((err) => {
+        if (active) {
+          setError(err instanceof Error ? err.message : String(err))
+        }
+      })
+    return () => {
+      active = false
+    }
+  }, [currentViewMode, yearMonths, refreshKey])
+
+  const yearEventsByDate = useMemo(() => {
+    const map = new Map<string, CalEvent[]>()
+    for (const e of yearEvents) {
+      const sDate = getLocalDateString(e.start)
+      const eDate = e.end ? getLocalDateString(e.end) : sDate
+      if (sDate === eDate || !e.end) {
+        const arr = map.get(sDate) ?? []
+        arr.push(e)
+        map.set(sDate, arr)
+      } else {
+        const cur = new Date(sDate + 'T12:00:00')
+        const end = new Date(eDate + 'T12:00:00')
+        const maxDays = 60
+        let count = 0
+        while (cur <= end && count < maxDays) {
+          const dStr = isoDate(cur)
+          if (e.all_day && dStr === eDate && count > 0) {
+            break
+          }
+          const arr = map.get(dStr) ?? []
+          arr.push(e)
+          map.set(dStr, arr)
+          cur.setDate(cur.getDate() + 1)
+          count++
+        }
+      }
+    }
+    return map
+  }, [yearEvents])
+
   const visibleDays = useMemo(() => {
     const todayStr = isoDate(new Date())
     return mobileDaysList.filter((dayIso) => {
@@ -178,22 +258,44 @@ export default function Calendar() {
   const handlePrev = useCallback(() => {
     if (currentViewMode === 'schedule') {
       setMobileStartDate((d) => addDays(d, -30))
+    } else if (currentViewMode === 'year') {
+      setYearAnchorDate((d) => {
+        const next = new Date(d)
+        if (yearSubMode === 'calendar') {
+          next.setFullYear(next.getFullYear() - 1)
+        } else {
+          next.setMonth(next.getMonth() - 12)
+        }
+        return next
+      })
     } else {
       calRef.current?.getApi().prev()
     }
-  }, [currentViewMode])
+  }, [currentViewMode, yearSubMode])
 
   const handleNext = useCallback(() => {
     if (currentViewMode === 'schedule') {
       setMobileStartDate((d) => addDays(d, 30))
+    } else if (currentViewMode === 'year') {
+      setYearAnchorDate((d) => {
+        const next = new Date(d)
+        if (yearSubMode === 'calendar') {
+          next.setFullYear(next.getFullYear() + 1)
+        } else {
+          next.setMonth(next.getMonth() + 12)
+        }
+        return next
+      })
     } else {
       calRef.current?.getApi().next()
     }
-  }, [currentViewMode])
+  }, [currentViewMode, yearSubMode])
 
   const handleToday = useCallback(() => {
     if (currentViewMode === 'schedule') {
       setMobileStartDate(new Date())
+    } else if (currentViewMode === 'year') {
+      setYearAnchorDate(new Date())
     } else {
       calRef.current?.getApi().today()
     }
@@ -474,6 +576,9 @@ export default function Calendar() {
   const onDatesSet = useCallback(
     (arg: DatesSetArg) => {
       setViewTitle(arg.view.title)
+      if (currentViewMode === 'year') {
+        return
+      }
       const viewType = arg.view.type
       if (viewType === 'timeGridDay') {
         setCurrentViewMode('day')
@@ -488,18 +593,12 @@ export default function Calendar() {
         setWeekSubMode('rolling-5')
       } else if (viewType === 'dayGridMonth') {
         setCurrentViewMode('month')
-      } else if (viewType === 'multiMonthYear') {
-        setCurrentViewMode('year')
-        setYearSubMode('calendar')
-      } else if (viewType === 'multiMonthRolling12') {
-        setCurrentViewMode('year')
-        setYearSubMode('rolling-12')
       }
       appliedRangeRef.current = ''
       fitSlotRange()
       scheduleFit()
     },
-    [fitSlotRange, scheduleFit],
+    [currentViewMode, fitSlotRange, scheduleFit],
   )
 
   const onEventsSet = useCallback(() => {
@@ -521,7 +620,7 @@ export default function Calendar() {
               start: e.start,
               end: e.end,
               allDay: e.all_day,
-              backgroundColor: `color-mix(in srgb, ${cardColor} 24%, rgba(24, 24, 27, 0.88))`,
+              backgroundColor: `color-mix(in srgb, ${cardColor} 82%, transparent)`,
               borderColor: 'transparent',
               textColor: '#ffffff',
               extendedProps: {
@@ -651,7 +750,14 @@ export default function Calendar() {
     if (currentViewMode !== 'week') {
       setCurrentViewMode('week')
       setWeekSubMode('sun-sat')
-      calendarApi?.changeView('timeGridWeek', new Date())
+      setTimeout(() => {
+        const api = calRef.current?.getApi()
+        if (api) {
+          api.changeView('timeGridWeek', new Date())
+          api.updateSize()
+          refit()
+        }
+      }, 50)
     } else {
       if (weekSubMode === 'sun-sat') {
         setWeekSubMode('rolling-7')
@@ -663,34 +769,63 @@ export default function Calendar() {
         setWeekSubMode('sun-sat')
         calendarApi?.changeView('timeGridWeek', new Date())
       }
+      refit()
     }
-  }, [currentViewMode, weekSubMode])
+  }, [currentViewMode, weekSubMode, refit])
 
   const handleYearClick = useCallback(() => {
-    const calendarApi = calRef.current?.getApi()
     if (currentViewMode !== 'year') {
+      const curCalDate = calRef.current?.getApi()?.getDate()
+      if (curCalDate) {
+        setYearAnchorDate(curCalDate)
+      }
       setCurrentViewMode('year')
       setYearSubMode('calendar')
-      calendarApi?.changeView('multiMonthYear', new Date())
     } else {
       if (yearSubMode === 'calendar') {
         setYearSubMode('rolling-12')
-        calendarApi?.changeView('multiMonthRolling12', new Date())
       } else {
         setYearSubMode('calendar')
-        calendarApi?.changeView('multiMonthYear', new Date())
       }
     }
   }, [currentViewMode, yearSubMode])
 
   const handleDayClick = useCallback(() => {
     setCurrentViewMode('day')
-    calRef.current?.getApi()?.changeView('timeGridDay', new Date())
-  }, [])
+    setTimeout(() => {
+      const api = calRef.current?.getApi()
+      if (api) {
+        api.changeView('timeGridDay', new Date())
+        api.updateSize()
+        refit()
+      }
+    }, 50)
+  }, [refit])
+
+  const handleDaySelect = useCallback(
+    (date: Date) => {
+      setCurrentViewMode('day')
+      setTimeout(() => {
+        const api = calRef.current?.getApi()
+        if (api) {
+          api.changeView('timeGridDay', date)
+          api.updateSize()
+          refit()
+        }
+      }, 50)
+    },
+    [refit],
+  )
 
   const handleMonthClick = useCallback(() => {
     setCurrentViewMode('month')
-    calRef.current?.getApi()?.changeView('dayGridMonth', new Date())
+    setTimeout(() => {
+      const api = calRef.current?.getApi()
+      if (api) {
+        api.changeView('dayGridMonth', new Date())
+        api.updateSize()
+      }
+    }, 50)
   }, [])
 
   const handleScheduleClick = useCallback(() => {
@@ -712,7 +847,16 @@ export default function Calendar() {
       rangeText = `${fmtMonthDay(startD)}, ${fmtYear(startD)} – ${fmtMonthDay(endD)}, ${fmtYear(endD)}`
     }
 
-    const displayTitle = currentViewMode === 'schedule' ? rangeText : viewTitle
+    const displayTitle =
+      currentViewMode === 'schedule'
+        ? rangeText
+        : currentViewMode === 'year'
+        ? yearSubMode === 'calendar'
+          ? (yearMonths[0] ? String(yearMonths[0].getFullYear()) : '')
+          : (yearMonths[0] && yearMonths[11]
+              ? `${yearMonths[0].toLocaleDateString(undefined, { month: 'short', year: 'numeric' })} – ${yearMonths[11].toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}`
+              : '')
+        : viewTitle
 
     const getWeekLabel = () => {
       if (currentViewMode !== 'week') return 'week'
@@ -970,6 +1114,111 @@ export default function Calendar() {
     </div>
   )
 
+  const renderYearView = () => {
+    const todayKey = isoDate(new Date())
+
+    return (
+      <div className="flex-1 min-h-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 lg:grid-rows-3 gap-2 lg:gap-2.5 p-0.5 overflow-y-auto lg:overflow-hidden">
+        {yearMonths.map((mDate) => {
+          const year = mDate.getFullYear()
+          const month = mDate.getMonth()
+          const firstDayOfWeek = new Date(year, month, 1).getDay()
+          const daysInMonth = new Date(year, month + 1, 0).getDate()
+          const totalCells = 42
+
+          return (
+            <div
+              key={mDate.toISOString()}
+              className="flex flex-col justify-between rounded-xl p-2 border border-white/10 bg-white/[0.02] shadow-sm min-h-0"
+            >
+              <div className="text-center font-bold text-ink text-xs lg:text-sm tracking-tight mb-1 truncate">
+                {mDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+              </div>
+
+              <div className="grid grid-cols-7 text-center mb-0.5">
+                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((wd, i) => (
+                  <div
+                    key={i}
+                    className={`text-[0.65rem] lg:text-[0.7rem] font-semibold ${
+                      i === 0 || i === 6 ? 'text-ink-soft/70' : 'text-ink-soft'
+                    }`}
+                  >
+                    {wd}
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-7 gap-y-0.5 flex-1 min-h-0">
+                {Array.from({ length: totalCells }, (_, idx) => {
+                  if (idx < firstDayOfWeek || idx >= firstDayOfWeek + daysInMonth) {
+                    return <div key={`empty-${idx}`} className="h-full min-h-[22px]" />
+                  }
+
+                  const dayNum = idx - firstDayOfWeek + 1
+                  const colIdx = idx % 7
+                  const isWeekend = colIdx === 0 || colIdx === 6
+                  const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`
+                  const isToday = dateKey === todayKey
+                  const dayEvents = yearEventsByDate.get(dateKey) || []
+
+                  const uniqueColors: string[] = []
+                  for (const ev of dayEvents) {
+                    const c = ev.color || selectionColorMap.get(ev.selection_id) || 'var(--primary)'
+                    if (!uniqueColors.includes(c)) {
+                      uniqueColors.push(c)
+                    }
+                  }
+
+                  return (
+                    <button
+                      type="button"
+                      key={dateKey}
+                      onClick={() => handleDaySelect(new Date(year, month, dayNum))}
+                      className="flex flex-col items-center justify-center rounded py-0.5 transition-all cursor-pointer hover:bg-white/10 active:scale-95 group relative"
+                      style={{
+                        backgroundColor: isToday
+                          ? 'color-mix(in srgb, var(--primary) 22%, transparent)'
+                          : isWeekend
+                          ? 'color-mix(in srgb, var(--primary) 6%, transparent)'
+                          : 'transparent',
+                        border: isToday ? '1.5px solid var(--primary)' : '1.5px solid transparent',
+                      }}
+                      title={`${dayNum} ${mDate.toLocaleDateString(undefined, { month: 'short' })}: ${dayEvents.length} event${dayEvents.length === 1 ? '' : 's'}`}
+                    >
+                      <span
+                        className={`text-[0.7rem] lg:text-[0.75rem] leading-none tabular-nums ${
+                          isToday
+                            ? 'font-bold text-[var(--primary)]'
+                            : isWeekend
+                            ? 'font-medium text-ink'
+                            : 'text-ink-soft'
+                        } group-hover:text-ink`}
+                      >
+                        {dayNum}
+                      </span>
+                      <div className="flex items-center justify-center gap-0.5 mt-0.5 h-1.5 w-full">
+                        {uniqueColors.slice(0, 3).map((c, i) => (
+                          <span
+                            key={i}
+                            className="h-1.5 w-1.5 rounded-full shrink-0"
+                            style={{ backgroundColor: c }}
+                          />
+                        ))}
+                        {uniqueColors.length > 3 && (
+                          <span className="h-1 w-1 rounded-full bg-ink-faint shrink-0" />
+                        )}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
   const weatherByDate = new Map((weather?.daily ?? []).map((d) => [d.date, d]))
 
   return (
@@ -1023,7 +1272,8 @@ export default function Calendar() {
           className="glass min-h-0 flex-1 p-3 lg:p-4 flex flex-col overflow-hidden"
         >
           {renderHeader()}
-          <div className="flex-1 min-h-0">
+          {currentViewMode === 'year' && renderYearView()}
+          <div className={currentViewMode === 'year' ? 'hidden' : 'flex-1 min-h-0'}>
             <FullCalendar
               key={isMobile ? 'fc-mobile' : 'fc-desktop'}
               ref={calRef}

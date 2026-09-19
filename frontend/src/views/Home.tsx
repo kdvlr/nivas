@@ -582,7 +582,7 @@ export default function Home() {
                             height: `max(${heightPct}%, 2.75rem)`,
                             left: leftStyle,
                             width: widthStyle,
-                            background: `color-mix(in srgb, ${cardColor} 24%, rgba(24, 24, 27, 0.88))`,
+                            background: `color-mix(in srgb, ${cardColor} 82%, transparent)`,
                           }}
                           onClick={() => setSelectedEvent(it.ev)}
                         >
