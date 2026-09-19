@@ -377,61 +377,11 @@ export default function Calendar() {
   // Fit the visible hours to the events of the currently-shown days: the axis
   // shrinks to [earliest .. latest] (anchored near the top, min 6h) and each
   // slot's pixel height is computed so the whole window fits the pane without
-  // scrolling — on any screen size. Falls back to a daytime band when empty.
-  const MIN_SPAN = 12 * 60
+  // Size each 30-min slot so the whole fitted window fills the scroller exactly
+  // (expandRows only grows rows; this lets a wide window shrink to fit too).
   const wrapRef = useRef<HTMLDivElement>(null)
   const appliedRangeRef = useRef('')
 
-  const fitSlotRange = useCallback(() => {
-    const api = calRef.current?.getApi()
-    if (!api || !api.view.type.startsWith('timeGrid')) return
-    const { activeStart, activeEnd } = api.view
-    let earliest = Infinity
-    let latest = -Infinity
-    for (const e of api.getEvents()) {
-      if (e.allDay || !e.start || e.start < activeStart || e.start >= activeEnd) continue
-      const s = e.start.getHours() * 60 + e.start.getMinutes()
-      let en = e.end ? e.end.getHours() * 60 + e.end.getMinutes() : s + 60
-      if (en <= s) en = 24 * 60 // spills past midnight
-      earliest = Math.min(earliest, s)
-      latest = Math.max(latest, en)
-    }
-
-    let start: number
-    let end: number
-    if (earliest === Infinity) {
-      start = 8 * 60 // no events → sensible daytime band
-      end = 18 * 60
-    } else {
-      // ~1h of breathing room around the events
-      start = Math.max(0, Math.floor(earliest / 60) * 60 - 60)
-      end = Math.min(24 * 60, Math.ceil(latest / 60) * 60 + 60)
-      // reach the minimum span by extending toward the far end of the day, so a
-      // morning event sits near the top and an evening event near the bottom
-      if (end - start < MIN_SPAN) {
-        if (earliest < 12 * 60) {
-          // morning: keep the top edge, grow downward
-          end = Math.min(24 * 60, start + MIN_SPAN)
-          if (end - start < MIN_SPAN) start = Math.max(0, end - MIN_SPAN)
-        } else {
-          // afternoon / evening: keep the bottom edge, grow upward
-          start = Math.max(0, end - MIN_SPAN)
-          if (end - start < MIN_SPAN) end = Math.min(24 * 60, start + MIN_SPAN)
-        }
-      }
-    }
-
-    const key = `${start}-${end}`
-    if (key !== appliedRangeRef.current) {
-      appliedRangeRef.current = key
-      const fmt = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:00:00`
-      api.setOption('slotMinTime', fmt(start))
-      api.setOption('slotMaxTime', fmt(end))
-    }
-  }, [MIN_SPAN])
-
-  // Size each 30-min slot so the whole fitted window fills the scroller exactly
-  // (expandRows only grows rows; this lets a wide window shrink to fit too).
   const fitHeights = useCallback(() => {
     const wrap = wrapRef.current
     if (!wrap) return
@@ -457,6 +407,46 @@ export default function Calendar() {
     setTimeout(fitHeights, 250)
   }, [fitHeights])
 
+  /** Fit slotMinTime / slotMaxTime responsively: 1h before earliest, 1h after latest */
+  const fitSlotRange = useCallback(() => {
+    const api = calRef.current?.getApi()
+    if (!api || !api.view.type.startsWith('timeGrid')) return
+    const { activeStart, activeEnd } = api.view
+    let earliest = Infinity
+    let latest = -Infinity
+    for (const e of api.getEvents()) {
+      if (e.allDay || !e.start || e.start < activeStart || e.start >= activeEnd) continue
+      const s = e.start.getHours() * 60 + e.start.getMinutes()
+      let en = e.end ? e.end.getHours() * 60 + e.end.getMinutes() : s + 60
+      if (en <= s) en = 24 * 60 // spills past midnight
+      earliest = Math.min(earliest, s)
+      latest = Math.max(latest, en)
+    }
+
+    let start: number
+    let end: number
+    if (earliest === Infinity) {
+      start = 8 * 60 // no events → sensible daytime band
+      end = 17 * 60
+    } else {
+      // 1h before earliest, 1h after latest
+      start = Math.max(0, Math.floor(earliest / 60) * 60 - 60)
+      end = Math.min(24 * 60, Math.ceil(latest / 60) * 60 + 60)
+      if (end <= start) {
+        end = Math.min(24 * 60, start + 2 * 60)
+      }
+    }
+
+    const key = `${start}-${end}`
+    if (key !== appliedRangeRef.current) {
+      appliedRangeRef.current = key
+      const fmt = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:00:00`
+      api.setOption('slotMinTime', fmt(start))
+      api.setOption('slotMaxTime', fmt(end))
+      scheduleFit()
+    }
+  }, [scheduleFit])
+
   const refit = useCallback(() => {
     fitSlotRange()
     scheduleFit()
@@ -472,11 +462,15 @@ export default function Calendar() {
   }, [fitHeights])
 
   // reset so navigating to a new week/day re-fits even if the event set matches
-  const onDatesSet = useCallback((arg: DatesSetArg) => {
-    setViewTitle(arg.view.title)
-    appliedRangeRef.current = ''
-    scheduleFit()
-  }, [scheduleFit])
+  const onDatesSet = useCallback(
+    (arg: DatesSetArg) => {
+      setViewTitle(arg.view.title)
+      appliedRangeRef.current = ''
+      fitSlotRange()
+      scheduleFit()
+    },
+    [fitSlotRange, scheduleFit],
+  )
 
   const onEventsSet = useCallback(() => {
     refit()
@@ -489,22 +483,27 @@ export default function Calendar() {
           `/api/calendar/events?start=${encodeURIComponent(info.startStr)}&end=${encodeURIComponent(info.endStr)}`,
         )
         ok(
-          evs.map((e) => ({
-            id: String(e.id),
-            title: e.title,
-            start: e.start,
-            end: e.end,
-            allDay: e.all_day,
-            backgroundColor: e.color,
-            borderColor: e.color,
-            extendedProps: {
-              rawTitle: e.title,
-              person: e.person_name,
-              selection_id: e.selection_id,
-              location: e.location || '',
-              description: e.description || '',
-            },
-          })),
+          evs.map((e) => {
+            const cardColor = e.color || 'var(--primary)'
+            return {
+              id: String(e.id),
+              title: e.title,
+              start: e.start,
+              end: e.end,
+              allDay: e.all_day,
+              backgroundColor: `color-mix(in srgb, ${cardColor} 24%, rgba(24, 24, 27, 0.88))`,
+              borderColor: 'transparent',
+              textColor: '#ffffff',
+              extendedProps: {
+                rawTitle: e.title,
+                person: e.person_name,
+                selection_id: e.selection_id,
+                location: e.location || '',
+                description: e.description || '',
+                color: cardColor,
+              },
+            }
+          }),
         )
       } catch (e) {
         fail(e as Error)
@@ -896,27 +895,56 @@ export default function Calendar() {
                 const end = eventInfo.event.end
                 const durationMin = start && end ? Math.round((end.getTime() - start.getTime()) / 60000) : 60
                 const isShort = durationMin <= 35
+                const isMonth = eventInfo.view.type === 'dayGridMonth'
 
-                if (isShort) {
+                const timeStr = start && end
+                  ? `${start.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })} – ${end.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`
+                  : start
+                  ? start.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+                  : eventInfo.timeText
+                const startStr = start
+                  ? start.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+                  : eventInfo.timeText
+
+                if (eventInfo.event.allDay || isMonth) {
                   return (
-                    <div className="flex items-center gap-1.5 px-1 py-0.5 w-full h-full overflow-hidden leading-tight">
-                      {eventInfo.timeText && (
-                        <span className="text-[0.7rem] font-medium opacity-90 shrink-0 tabular-nums">{eventInfo.timeText}</span>
+                    <div className="flex items-center gap-1.5 px-2 py-0.5 w-full min-w-0 overflow-hidden leading-tight text-white">
+                      {!eventInfo.event.allDay && startStr && (
+                        <span className="text-[0.7rem] font-medium opacity-85 shrink-0 tabular-nums">{startStr}</span>
                       )}
-                      {eventInfo.timeText && <span className="text-[0.7rem] opacity-60">•</span>}
+                      {!eventInfo.event.allDay && startStr && <span className="text-[0.7rem] opacity-60">•</span>}
                       <span className="text-xs font-medium truncate">{eventInfo.event.title}</span>
                     </div>
                   )
                 }
 
+                if (isShort) {
+                  return (
+                    <div className="flex items-center gap-1.5 px-2.5 py-0.5 w-full h-full min-w-0 overflow-hidden leading-tight text-white my-auto">
+                      {startStr && (
+                        <span className="text-[0.7rem] font-medium opacity-90 shrink-0 tabular-nums">{startStr}</span>
+                      )}
+                      {startStr && <span className="text-[0.7rem] opacity-60">•</span>}
+                      <span className="text-sm font-medium truncate tracking-tight">{eventInfo.event.title}</span>
+                    </div>
+                  )
+                }
+
                 return (
-                  <div className="flex flex-col gap-0.5 px-1 py-0.5 w-full h-full overflow-hidden leading-tight">
-                    {eventInfo.timeText && (
-                      <span className="text-[0.7rem] font-medium opacity-90 tabular-nums">{eventInfo.timeText}</span>
+                  <div className="flex flex-col gap-0.5 px-2.5 py-1 w-full h-full min-w-0 overflow-hidden leading-tight text-white">
+                    {timeStr && (
+                      <div className="text-[0.7rem] font-medium leading-tight tracking-tight opacity-90 tabular-nums">
+                        {timeStr}
+                      </div>
                     )}
-                    <span className="text-xs font-medium line-clamp-2">{eventInfo.event.title}</span>
-                    {eventInfo.event.extendedProps.location && (
-                      <span className="text-[0.65rem] opacity-75 truncate">{eventInfo.event.extendedProps.location}</span>
+                    <div className="truncate text-sm font-medium leading-snug tracking-tight">
+                      {eventInfo.event.title}
+                    </div>
+                    {eventInfo.event.extendedProps.location && durationMin > 60 && (
+                      <div className="flex items-center gap-1 truncate text-[0.7rem] opacity-80 mt-0.5">
+                        <Icon name="location_on" className="text-[0.75rem] shrink-0" />
+                        <span className="truncate">{eventInfo.event.extendedProps.location}</span>
+                      </div>
                     )}
                   </div>
                 )

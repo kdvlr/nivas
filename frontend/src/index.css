@@ -447,11 +447,6 @@ body {
   pointer-events: none;
 }
 
-/* FullCalendar events get the same treatment in dark mode */
-.dark .fc .fc-event {
-  filter: brightness(0.78) saturate(0.92);
-}
-
 .fc {
   --fc-border-color: var(--outline-var);
   --fc-page-bg-color: transparent;
@@ -472,12 +467,24 @@ body {
   height: var(--fc-slot-h, 2.5em) !important;
 }
 .fc .fc-event {
-  border-radius: 10px;
-  border: none;
-  padding: 2px 6px;
+  border-radius: 8px !important;
+  border: none !important;
+  padding: 0 !important;
   font-weight: 500;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgb(0 0 0 / 0.15);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.25) !important;
+  color: #ffffff !important;
+  overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.fc .fc-event:hover {
+  transform: scale(1.015);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.35) !important;
+  z-index: 20 !important;
+}
+.fc-timegrid-event .fc-event-main {
+  padding: 0 !important;
+  height: 100%;
 }
 .fc .fc-col-header-cell-cushion {
   padding: 8px 4px;
