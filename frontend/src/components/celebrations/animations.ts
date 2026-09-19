@@ -1,4 +1,4 @@
-/** Five fullscreen canvas celebrations. Each returns a cleanup function. */
+/** Fullscreen canvas celebrations. Each returns a cleanup function. */
 
 import confetti from 'canvas-confetti'
 
@@ -12,6 +12,7 @@ export type CelebrationName =
   | 'superhero'
   | 'bubbles'
   | 'dino'
+  | 'baa-chores'
   | 'hyperspace'
 
 export interface Celebration {
@@ -886,6 +887,139 @@ const dinoRun = (canvas: HTMLCanvasElement) => {
   })
 }
 
+/* ------------------------------------------------------- baa-baa chores */
+
+interface PastelPop {
+  x: number
+  y: number
+  vx: number
+  vy: number
+  rotation: number
+  spin: number
+  size: number
+  glyph: string
+  phase: number
+}
+
+const baaChoresRun = (canvas: HTMLCanvasElement) => {
+  const ctx = fit(canvas)
+  const W = canvas.width
+  const H = canvas.height
+  const centerX = W / 2
+  const sheepY = H * 0.64
+  const pops: PastelPop[] = Array.from({ length: 72 }, (_, index) => {
+    const angle = rand(-Math.PI * 0.92, -Math.PI * 0.08)
+    const speed = rand(H * 0.16, H * 0.42)
+    return {
+      x: centerX + rand(-W * 0.08, W * 0.08),
+      y: sheepY + rand(-20, 35),
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      rotation: rand(-Math.PI, Math.PI),
+      spin: rand(-3.5, 3.5),
+      size: rand(22, 54),
+      glyph: index % 6 === 0 ? '🎀' : pick(['💖', '✨', '🌸', '⭐', '💕', '🩷']),
+      phase: rand(0, Math.PI * 2),
+    }
+  })
+
+  return loop((dt, t) => {
+    ctx.clearRect(0, 0, W, H)
+
+    // Soft candy-colored spotlight behind the star of the show.
+    const glow = ctx.createRadialGradient(centerX, sheepY, 20, centerX, sheepY, H * 0.58)
+    glow.addColorStop(0, 'rgba(255, 255, 255, 0.9)')
+    glow.addColorStop(0.38, 'rgba(251, 207, 232, 0.5)')
+    glow.addColorStop(1, 'rgba(216, 180, 254, 0)')
+    ctx.fillStyle = glow
+    ctx.fillRect(0, 0, W, H)
+
+    // Scalloped party floor.
+    ctx.fillStyle = 'rgba(244, 114, 182, 0.22)'
+    ctx.fillRect(0, H * 0.82, W, H * 0.18)
+    for (let x = -30; x < W + 60; x += 72) {
+      ctx.beginPath()
+      ctx.arc(x, H * 0.82, 38, Math.PI, 0)
+      ctx.fill()
+    }
+
+    for (const pop of pops) {
+      pop.x += pop.vx * dt
+      pop.y += pop.vy * dt
+      pop.vy += H * 0.3 * dt
+      pop.rotation += pop.spin * dt
+      if (pop.y > H + 80 || pop.x < -80 || pop.x > W + 80) {
+        const angle = rand(-Math.PI * 0.88, -Math.PI * 0.12)
+        const speed = rand(H * 0.16, H * 0.4)
+        pop.x = centerX + rand(-W * 0.08, W * 0.08)
+        pop.y = sheepY + rand(-10, 30)
+        pop.vx = Math.cos(angle) * speed
+        pop.vy = Math.sin(angle) * speed
+      }
+      drawEmoji(
+        ctx,
+        pop.glyph,
+        pop.x + Math.sin(t * 3 + pop.phase) * 5,
+        pop.y,
+        pop.size,
+        pop.rotation,
+      )
+    }
+
+    // Sheep bounces in, then happily dances in place.
+    const entrance = Math.min(t / 0.55, 1)
+    const eased = 1 - Math.pow(1 - entrance, 3)
+    const bounce = Math.abs(Math.sin(t * 5.2)) * H * 0.035
+    const sheepSize = Math.min(W, H) * 0.27
+    const sheepX = centerX + Math.sin(t * 2.7) * W * 0.018
+    const currentY = H + sheepSize - eased * (H + sheepSize - sheepY) - bounce
+    const tilt = Math.sin(t * 5.2) * 0.055
+    drawEmoji(ctx, '🐑', sheepX, currentY, sheepSize, tilt)
+    drawEmoji(
+      ctx,
+      '🎀',
+      sheepX + sheepSize * 0.19,
+      currentY - sheepSize * 0.29,
+      sheepSize * 0.28,
+      -0.14 + tilt,
+    )
+
+    // The requested line is spoken by the sheep in a comic speech bubble.
+    if (t > 0.35) {
+      const reveal = Math.min((t - 0.35) / 0.35, 1)
+      const bubbleW = Math.min(W * 0.56, 820)
+      const bubbleH = Math.min(H * 0.18, 190)
+      const bubbleX = centerX - bubbleW / 2
+      const bubbleY = H * 0.27
+      ctx.save()
+      ctx.translate(centerX, bubbleY + bubbleH / 2)
+      ctx.scale(reveal, reveal)
+      ctx.translate(-centerX, -(bubbleY + bubbleH / 2))
+      ctx.shadowColor = 'rgba(131, 24, 67, 0.22)'
+      ctx.shadowBlur = 28
+      ctx.shadowOffsetY = 12
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.96)'
+      ctx.strokeStyle = '#f472b6'
+      ctx.lineWidth = 7
+      ctx.beginPath()
+      ctx.roundRect(bubbleX, bubbleY, bubbleW, bubbleH, 42)
+      ctx.moveTo(centerX + bubbleW * 0.12, bubbleY + bubbleH - 4)
+      ctx.lineTo(centerX + bubbleW * 0.04, bubbleY + bubbleH + 58)
+      ctx.lineTo(centerX - bubbleW * 0.02, bubbleY + bubbleH - 4)
+      ctx.closePath()
+      ctx.fill()
+      ctx.stroke()
+      ctx.shadowColor = 'transparent'
+      ctx.fillStyle = '#be185d'
+      ctx.font = `900 ${Math.min(72, W * 0.046)}px ui-rounded, "Arial Rounded MT Bold", system-ui, sans-serif`
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText('Baa-Baa-chores!!', centerX, bubbleY + bubbleH * 0.52)
+      ctx.restore()
+    }
+  })
+}
+
 /* -------------------------------------------------------- hyperspace jump */
 
 interface WarpStar {
@@ -1063,6 +1197,14 @@ export const CELEBRATIONS: Celebration[] = [
     backdrop: 'rgba(20, 40, 16, 0.98)',
     praise: ['ROAR-some job!', 'Dino-mite!', 'Stomp, stomp, HOORAY!'],
     run: dinoRun,
+  },
+  {
+    name: 'baa-chores',
+    emoji: '🐑',
+    label: 'Baa-Baa Chores',
+    backdrop: 'linear-gradient(145deg, rgba(253, 242, 248, 0.98), rgba(250, 232, 255, 0.98) 48%, rgba(224, 231, 255, 0.98))',
+    praise: ['Shear brilliance!', 'Ewe did it!', 'Fluffy fabulous!'],
+    run: baaChoresRun,
   },
   {
     name: 'hyperspace',
