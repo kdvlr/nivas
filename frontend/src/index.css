@@ -445,6 +445,14 @@ body {
   border-radius: inherit;
   background: rgb(3 7 18 / 0.34);
   pointer-events: none;
+  z-index: 0;
+}
+.vivid-dim {
+  isolation: isolate;
+}
+.vivid-dim > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* FullCalendar events get the same treatment in dark mode */
@@ -474,13 +482,25 @@ body {
 .fc .fc-event {
   border-radius: 10px;
   border: none;
-  padding: 2px 6px;
+  border-left: 5px solid rgb(255 255 255 / 0.68);
+  padding: 3px 5px;
   font-weight: 500;
   cursor: pointer;
   box-shadow: 0 2px 8px rgb(0 0 0 / 0.15);
+  overflow: hidden;
+}
+.fc .fc-timegrid-col.fc-day-today {
+  background: color-mix(in srgb, var(--primary) 5%, transparent);
+}
+.fc .fc-timegrid-event-harness {
+  margin-inline: 2px;
+}
+.fc .calendar-event-content {
+  position: relative;
+  z-index: 1;
 }
 .fc .fc-col-header-cell-cushion {
-  padding: 8px 4px;
+  padding: 6px 4px 9px;
   font-weight: 500;
   color: var(--on-surface);
 }
@@ -489,6 +509,9 @@ body {
   font-weight: 500;
   letter-spacing: -0.02em;
   color: var(--on-surface);
+}
+.fc .fc-header-toolbar {
+  margin-bottom: 0.75rem !important;
 }
 .fc .fc-button {
   border-radius: var(--shape-btn) !important;
@@ -516,6 +539,9 @@ body {
 }
 .fc .fc-timegrid-now-indicator-arrow {
   border-color: #ff7d84;
+}
+.fc .fc-timegrid-now-indicator-line {
+  box-shadow: 0 0 7px rgb(255 125 132 / 0.75);
 }
 .fc th,
 .fc td {

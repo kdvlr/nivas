@@ -20,6 +20,17 @@ const FAMILY_GRADIENT = 'linear-gradient(115deg, #ef4444, #f97316, #eab308, #22c
 const fmtTime = (iso: string) =>
   new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
 
+const cleanEventTitle = (title: string, person?: string) => {
+  let cleaned = title.trim()
+  const owner = person?.trim()
+  if (!owner) return cleaned
+  const prefix = `${owner}:`
+  while (cleaned.toLocaleLowerCase().startsWith(prefix.toLocaleLowerCase())) {
+    cleaned = cleaned.slice(prefix.length).trim()
+  }
+  return cleaned || title
+}
+
 const getLocalDateString = (iso: string) => {
   if (!iso.includes('T')) {
     return iso.slice(0, 10)
@@ -871,6 +882,9 @@ export default function Calendar() {
               }
               height="100%"
               nowIndicator
+              slotEventOverlap={false}
+              eventMinHeight={58}
+              eventShortHeight={58}
               editable
               selectable
               selectMirror
@@ -897,11 +911,10 @@ export default function Calendar() {
 
                 const containerStyle = arg.isToday
                   ? {
-                      backgroundColor: 'var(--primary)',
-                      color: 'var(--on-primary)',
-                      borderRadius: '8px',
-                      padding: '4px 2px',
-                      boxShadow: 'var(--shadow-1)',
+                      background: 'color-mix(in srgb, var(--primary) 18%, transparent)',
+                      border: '1px solid color-mix(in srgb, var(--primary) 55%, transparent)',
+                      borderRadius: '10px',
+                      padding: '5px 2px',
                     }
                   : {
                       padding: '4px 2px',
@@ -913,22 +926,22 @@ export default function Calendar() {
                     style={containerStyle}
                   >
                     <span className={`text-[0.65rem] sm:text-xs font-semibold uppercase tracking-wider ${
-                      arg.isToday ? 'text-[var(--on-primary)] opacity-90 font-extrabold' : 'text-ink-soft'
+                      arg.isToday ? 'text-[var(--primary)] font-extrabold' : 'text-ink-soft'
                     }`}>
                       {weekday}
                     </span>
                     {arg.view.type !== 'dayGridMonth' && (
-                      <span className={`text-sm sm:text-base ${arg.isToday ? 'font-extrabold' : 'font-bold text-ink'}`}>
+                      <span className={`text-sm sm:text-lg ${arg.isToday ? 'font-extrabold text-ink' : 'font-bold text-ink'}`}>
                         {dayNum}
                       </span>
                     )}
                     {w && arg.view.type !== 'dayGridMonth' && (
                       <span className={`flex flex-wrap justify-center items-center gap-x-1 gap-y-0 text-[0.6rem] sm:text-[0.7rem] font-semibold ${
-                        arg.isToday ? 'text-[var(--on-primary)] opacity-95' : 'text-ink-soft'
+                        arg.isToday ? 'text-ink-soft' : 'text-ink-soft'
                       }`}>
                         <span className="text-xs sm:text-sm leading-none">{w.icon}</span>
                         <span className="hidden sm:inline">
-                          {isDayView ? `${w.label} · ` : ''}{w.tmax}°<span className={arg.isToday ? 'text-[var(--on-primary)] opacity-70' : 'text-ink-faint'}>/{w.tmin}°</span>
+                          {isDayView ? `${w.label} · ` : ''}{w.tmax}°<span className="text-ink-faint">/{w.tmin}°</span>
                         </span>
                       </span>
                     )}
@@ -936,6 +949,35 @@ export default function Calendar() {
                 )
               }}
               events={fetchEvents}
+              eventContent={(arg) => {
+                const person = String(arg.event.extendedProps.person || '')
+                const location = String(arg.event.extendedProps.location || '')
+                const durationMinutes = arg.event.start && arg.event.end
+                  ? (arg.event.end.getTime() - arg.event.start.getTime()) / 60000
+                  : 60
+                return (
+                  <div className="calendar-event-content flex h-full min-w-0 flex-col gap-0.5 px-1 py-0.5 text-white">
+                    {!arg.event.allDay && (
+                      <div className="calendar-event-time whitespace-nowrap text-[0.72rem] font-extrabold leading-tight tabular-nums">
+                        {arg.timeText}
+                      </div>
+                    )}
+                    <div className="calendar-event-title line-clamp-2 text-[0.88rem] font-extrabold leading-tight">
+                      {cleanEventTitle(arg.event.title, person)}
+                    </div>
+                    <div className="mt-auto flex min-w-0 items-center gap-1">
+                      {person && !['family', 'shared'].includes(person.toLowerCase()) && (
+                        <span className="max-w-[6.5rem] truncate rounded-full bg-black/20 px-1.5 py-0.5 text-[0.62rem] font-bold">
+                          {person}
+                        </span>
+                      )}
+                      {location && durationMinutes >= 90 && (
+                        <span className="min-w-0 truncate text-[0.65rem] font-semibold opacity-90">• {location}</span>
+                      )}
+                    </div>
+                  </div>
+                )
+              }}
               eventDrop={moveEvent}
               eventResize={moveEvent}
               select={onSelect}
