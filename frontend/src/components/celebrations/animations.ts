@@ -13,6 +13,16 @@ export type CelebrationName =
   | 'bubbles'
   | 'dino'
   | 'baa-chores'
+  | 'monster-truck'
+  | 'ninja'
+  | 'robot'
+  | 'pirate'
+  | 'shark'
+  | 'princess'
+  | 'mermaid'
+  | 'kitten'
+  | 'butterflies'
+  | 'pop-star'
   | 'hyperspace'
 
 export interface Celebration {
@@ -1020,6 +1030,183 @@ const baaChoresRun = (canvas: HTMLCanvasElement) => {
   })
 }
 
+/* ------------------------------------------------ themed chore adventures */
+
+type AdventureKind =
+  | 'truck' | 'ninja' | 'robot' | 'pirate' | 'shark'
+  | 'princess' | 'mermaid' | 'kitten' | 'butterflies' | 'popstar'
+
+interface AdventureTheme {
+  kind: AdventureKind
+  colors: [string, string, string]
+  particles: string[]
+  banner: string
+}
+
+interface AdventureParticle {
+  x: number
+  y: number
+  vx: number
+  vy: number
+  size: number
+  spin: number
+  rotation: number
+  glyph: string
+  delay: number
+}
+
+const adventureRun = (theme: AdventureTheme) => (canvas: HTMLCanvasElement) => {
+  const ctx = fit(canvas)
+  const W = canvas.width
+  const H = canvas.height
+  const cx = W / 2
+  const particles: AdventureParticle[] = Array.from({ length: 58 }, () => ({
+    x: cx + rand(-W * 0.12, W * 0.12),
+    y: H * 0.58,
+    vx: rand(-W * 0.24, W * 0.24),
+    vy: rand(-H * 0.48, -H * 0.14),
+    size: rand(20, 48),
+    spin: rand(-4, 4),
+    rotation: rand(-Math.PI, Math.PI),
+    glyph: pick(theme.particles),
+    delay: rand(0, 0.8),
+  }))
+
+  const banner = (text: string, y: number, color = '#ffffff', ink = '#312e81') => {
+    const width = Math.min(W * 0.58, 790)
+    const height = Math.min(H * 0.13, 135)
+    ctx.save()
+    ctx.translate(cx, y)
+    ctx.rotate(Math.sin(y + performance.now() / 600) * 0.008)
+    ctx.fillStyle = color
+    ctx.strokeStyle = 'rgba(255,255,255,0.75)'
+    ctx.lineWidth = 5
+    ctx.shadowColor = 'rgba(15,23,42,0.22)'
+    ctx.shadowBlur = 24
+    ctx.beginPath()
+    ctx.roundRect(-width / 2, -height / 2, width, height, 32)
+    ctx.fill(); ctx.stroke()
+    ctx.shadowColor = 'transparent'
+    ctx.fillStyle = ink
+    ctx.font = `900 ${Math.min(58, W * 0.038)}px ui-rounded, "Arial Rounded MT Bold", system-ui, sans-serif`
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+    ctx.fillText(text, 0, 2)
+    ctx.restore()
+  }
+
+  return loop((dt, t) => {
+    ctx.clearRect(0, 0, W, H)
+    const bg = ctx.createLinearGradient(0, 0, W, H)
+    bg.addColorStop(0, theme.colors[0]); bg.addColorStop(0.5, theme.colors[1]); bg.addColorStop(1, theme.colors[2])
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H)
+
+    // A reusable celebratory burst, delayed so it follows the scene reveal.
+    for (const p of particles) {
+      if (t < p.delay) continue
+      p.x += p.vx * dt; p.y += p.vy * dt; p.vy += H * 0.34 * dt; p.rotation += p.spin * dt
+      if (p.y > H + 70) {
+        p.x = cx + rand(-W * 0.1, W * 0.1); p.y = H * 0.58
+        p.vx = rand(-W * 0.24, W * 0.24); p.vy = rand(-H * 0.48, -H * 0.16)
+      }
+      drawEmoji(ctx, p.glyph, p.x, p.y, p.size, p.rotation)
+    }
+
+    const reveal = Math.min(t / 0.55, 1)
+    const ease = 1 - Math.pow(1 - reveal, 3)
+    const bob = Math.sin(t * 5) * H * 0.015
+
+    if (theme.kind === 'truck') {
+      const ground = H * 0.76
+      ctx.fillStyle = '#78350f'; ctx.fillRect(0, ground, W, H - ground)
+      ctx.fillStyle = '#fbbf24'; ctx.fillRect(0, ground - 12, W, 12)
+      drawEmoji(ctx, '📋', W * 0.7, ground - 55, H * 0.14, -0.15)
+      const x = -180 + ease * (cx + 180)
+      drawEmoji(ctx, '🛻', x, ground - H * 0.13 - Math.abs(Math.sin(t * 7)) * 24, H * 0.25, -0.04)
+      banner(theme.banner, H * 0.33, '#fef3c7', '#92400e')
+    } else if (theme.kind === 'ninja') {
+      const x = W + 180 - ease * (cx + 180)
+      drawEmoji(ctx, '🥷', x, H * 0.61 + bob, H * 0.28, Math.sin(t * 6) * 0.06)
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 12; ctx.lineCap = 'round'
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath(); ctx.moveTo(cx - 250 + i * 90, H * 0.48 + i * 42); ctx.lineTo(cx + 180 + i * 70, H * 0.34 + i * 18); ctx.stroke()
+      }
+      banner(theme.banner, H * 0.3, '#fef2f2', '#991b1b')
+    } else if (theme.kind === 'robot') {
+      ctx.strokeStyle = 'rgba(34,211,238,0.55)'; ctx.lineWidth = 4
+      const scanY = H * (0.28 + ((t * 0.18) % 0.48)); ctx.beginPath(); ctx.moveTo(W * 0.12, scanY); ctx.lineTo(W * 0.88, scanY); ctx.stroke()
+      drawEmoji(ctx, '🤖', cx, H * 0.61 + bob, H * 0.28, Math.sin(t * 4) * 0.04)
+      ctx.save(); ctx.translate(W * 0.7, H * 0.63); ctx.rotate(-0.12)
+      ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 8; ctx.strokeRect(-135, -52, 270, 104)
+      ctx.fillStyle = '#a5f3fc'; ctx.font = '900 34px ui-monospace, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('COMPLETE', 0, 0); ctx.restore()
+      banner(theme.banner, H * 0.29, '#ecfeff', '#155e75')
+    } else if (theme.kind === 'pirate') {
+      ctx.fillStyle = 'rgba(14,116,144,0.45)'; ctx.fillRect(0, H * 0.72, W, H * 0.28)
+      for (let x = 0; x < W; x += 120) drawEmoji(ctx, '🌊', x, H * 0.72 + Math.sin(t * 3 + x) * 10, 90)
+      drawEmoji(ctx, '🏴‍☠️', cx - H * 0.17, H * 0.6 + bob, H * 0.25, -0.05)
+      drawEmoji(ctx, '🦜', cx + H * 0.17, H * 0.56 + bob, H * 0.14, 0.08)
+      drawEmoji(ctx, '🧰', cx, H * 0.76, H * 0.2)
+      banner(theme.banner, H * 0.29, '#fef3c7', '#78350f')
+    } else if (theme.kind === 'shark') {
+      for (let y = H * 0.48; y < H; y += 70) {
+        ctx.fillStyle = y % 140 ? 'rgba(56,189,248,0.22)' : 'rgba(125,211,252,0.2)'; ctx.fillRect(0, y, W, 72)
+      }
+      const arc = Math.sin(Math.min(t / 2.1, 1) * Math.PI)
+      drawEmoji(ctx, '🦈', -140 + Math.min(t / 2.1, 1) * (W + 280), H * 0.7 - arc * H * 0.42, H * 0.24, -arc * 0.18)
+      banner(theme.banner, H * 0.3, '#ecfeff', '#075985')
+    } else if (theme.kind === 'princess') {
+      drawEmoji(ctx, '🏰', cx, H * 0.68, H * 0.35)
+      drawEmoji(ctx, '👑', cx, H * 0.47 - ease * H * 0.14 + bob, H * 0.18, Math.sin(t * 3) * 0.05)
+      drawEmoji(ctx, '🎀', cx - H * 0.22, H * 0.6, H * 0.1, -0.18)
+      drawEmoji(ctx, '🌹', cx + H * 0.23, H * 0.61, H * 0.1, 0.18)
+      banner(theme.banner, H * 0.28, '#fff1f2', '#9d174d')
+    } else if (theme.kind === 'mermaid') {
+      ctx.fillStyle = 'rgba(14,116,144,0.28)'; ctx.fillRect(0, H * 0.43, W, H * 0.57)
+      for (let i = 0; i < 18; i++) drawEmoji(ctx, '🫧', (i * 127 + t * 40) % W, H - ((i * 83 + t * 90) % (H * 0.55)), rand(24, 42))
+      drawEmoji(ctx, '🧜‍♀️', cx - H * 0.14, H * 0.64 + bob, H * 0.28, -0.06)
+      drawEmoji(ctx, '🐚', cx + H * 0.18, H * 0.67, H * 0.2, 0.1)
+      drawEmoji(ctx, '⚪', cx + H * 0.22, H * 0.61, H * 0.07)
+      banner(theme.banner, H * 0.28, '#f0fdfa', '#0f766e')
+    } else if (theme.kind === 'kitten') {
+      ctx.strokeStyle = '#f9a8d4'; ctx.lineWidth = 12; ctx.lineCap = 'round'
+      ctx.beginPath(); ctx.moveTo(W * 0.12, H * 0.78); ctx.bezierCurveTo(W * 0.35, H * 0.55, W * 0.58, H * 0.9, W * 0.86, H * 0.67); ctx.stroke()
+      drawEmoji(ctx, '🐈', cx, H * 0.61 + bob, H * 0.28, Math.sin(t * 4) * 0.04)
+      drawEmoji(ctx, '🧶', cx + H * 0.24 + Math.sin(t * 5) * 20, H * 0.74, H * 0.13, t * 0.6)
+      drawEmoji(ctx, '🎉', cx - H * 0.24, H * 0.58, H * 0.12, -0.15)
+      banner(theme.banner, H * 0.29, '#fff7ed', '#9a3412')
+    } else if (theme.kind === 'butterflies') {
+      const count = 32
+      for (let i = 0; i < count; i++) {
+        const a = (i / count) * Math.PI * 2
+        const hx = 16 * Math.pow(Math.sin(a), 3)
+        const hy = 13 * Math.cos(a) - 5 * Math.cos(2 * a) - 2 * Math.cos(3 * a) - Math.cos(4 * a)
+        drawEmoji(ctx, i % 3 === 0 ? '🦋' : '🌸', cx + hx * W * 0.018 * ease, H * 0.59 - hy * H * 0.018 * ease + Math.sin(t * 4 + i) * 5, H * 0.055, Math.sin(t * 3 + i) * 0.15)
+      }
+      banner(theme.banner, H * 0.29, '#f0fdf4', '#166534')
+    } else {
+      const pulse = 0.65 + Math.sin(t * 7) * 0.2
+      for (const side of [-1, 1]) {
+        const light = ctx.createLinearGradient(cx, H * 0.2, cx + side * W * 0.35, H)
+        light.addColorStop(0, `rgba(255,255,255,${pulse})`); light.addColorStop(1, 'rgba(244,114,182,0)')
+        ctx.fillStyle = light; ctx.beginPath(); ctx.moveTo(cx + side * 50, H * 0.2); ctx.lineTo(cx + side * W * 0.42, H); ctx.lineTo(cx + side * W * 0.08, H); ctx.closePath(); ctx.fill()
+      }
+      drawEmoji(ctx, '👩‍🎤', cx, H * 0.61 + bob, H * 0.28, Math.sin(t * 5) * 0.04)
+      drawEmoji(ctx, '🎤', cx + H * 0.18, H * 0.61, H * 0.1, -0.3)
+      banner(theme.banner, H * 0.29, '#fdf2f8', '#9d174d')
+    }
+  })
+}
+
+const monsterTruckRun = adventureRun({ kind: 'truck', colors: ['#dbeafe', '#bfdbfe', '#fef3c7'], particles: ['🔥', '⭐', '💥', '🏁'], banner: 'CHORES CRUSHED!' })
+const ninjaRun = adventureRun({ kind: 'ninja', colors: ['#111827', '#312e81', '#7f1d1d'], particles: ['⚡', '✨', '🥷', '💫'], banner: 'CHORE COMPLETE — HI-YAH!' })
+const robotRun = adventureRun({ kind: 'robot', colors: ['#082f49', '#164e63', '#1e293b'], particles: ['⚙️', '🔩', '✨', '💾'], banner: 'MISSION ACCOMPLISHED!' })
+const pirateRun = adventureRun({ kind: 'pirate', colors: ['#0e7490', '#155e75', '#f59e0b'], particles: ['🪙', '💎', '⭐', '🗝️'], banner: 'ARRR-SOME CHORES!' })
+const sharkRun = adventureRun({ kind: 'shark', colors: ['#e0f2fe', '#38bdf8', '#0369a1'], particles: ['🫧', '🐠', '⭐', '💦'], banner: 'FIN-TASTIC JOB!' })
+const princessRun = adventureRun({ kind: 'princess', colors: ['#fdf2f8', '#fbcfe8', '#ddd6fe'], particles: ['🌹', '✨', '💖', '🎀'], banner: 'CHORE ROYALTY!' })
+const mermaidRun = adventureRun({ kind: 'mermaid', colors: ['#ccfbf1', '#a5f3fc', '#c4b5fd'], particles: ['🫧', '🪸', '✨', '🐚'], banner: 'MER-MAZING WORK!' })
+const kittenRun = adventureRun({ kind: 'kitten', colors: ['#fff7ed', '#fed7aa', '#fbcfe8'], particles: ['🐾', '💕', '✨', '🎀'], banner: 'CHORES COMPLETE — PURR-TY!' })
+const butterfliesRun = adventureRun({ kind: 'butterflies', colors: ['#f0fdf4', '#dcfce7', '#fce7f3'], particles: ['🦋', '🌸', '✨', '💚'], banner: 'YOU MADE TODAY BEAUTIFUL!' })
+const popStarRun = adventureRun({ kind: 'popstar', colors: ['#4c1d95', '#9d174d', '#1e1b4b'], particles: ['🎵', '⭐', '💖', '✨'], banner: 'YOU ROCKED THOSE CHORES!' })
+
 /* -------------------------------------------------------- hyperspace jump */
 
 interface WarpStar {
@@ -1205,6 +1392,86 @@ export const CELEBRATIONS: Celebration[] = [
     backdrop: 'linear-gradient(145deg, rgba(253, 242, 248, 0.98), rgba(250, 232, 255, 0.98) 48%, rgba(224, 231, 255, 0.98))',
     praise: ['Shear brilliance!', 'Ewe did it!', 'Fluffy fabulous!'],
     run: baaChoresRun,
+  },
+  {
+    name: 'monster-truck',
+    emoji: '🛻',
+    label: 'Monster Truck',
+    backdrop: '#bfdbfe',
+    praise: ['Chores crushed!', 'Mega jump!', 'Unstoppable!'],
+    run: monsterTruckRun,
+  },
+  {
+    name: 'ninja',
+    emoji: '🥷',
+    label: 'Ninja Chop',
+    backdrop: '#111827',
+    praise: ['Swift work!', 'Legendary focus!', 'Sneaky good!'],
+    run: ninjaRun,
+  },
+  {
+    name: 'robot',
+    emoji: '🤖',
+    label: 'Robot Protocol',
+    backdrop: '#082f49',
+    praise: ['Task protocol complete!', 'Maximum efficiency!', 'Beep-boop—brilliant!'],
+    run: robotRun,
+  },
+  {
+    name: 'pirate',
+    emoji: '🏴‍☠️',
+    label: 'Pirate Treasure',
+    backdrop: '#155e75',
+    praise: ['Treasure unlocked!', 'Aye, great job!', 'Captain of chores!'],
+    run: pirateRun,
+  },
+  {
+    name: 'shark',
+    emoji: '🦈',
+    label: 'Shark Splash',
+    backdrop: '#0ea5e9',
+    praise: ['Jawsome work!', 'Made a splash!', 'Fin-tastic!'],
+    run: sharkRun,
+  },
+  {
+    name: 'princess',
+    emoji: '👑',
+    label: 'Princess Crown',
+    backdrop: '#fbcfe8',
+    praise: ['Chore royalty!', 'Your crown awaits!', 'Majestically done!'],
+    run: princessRun,
+  },
+  {
+    name: 'mermaid',
+    emoji: '🧜‍♀️',
+    label: 'Mermaid Pearls',
+    backdrop: '#99f6e4',
+    praise: ['Mer-mazing!', 'Pearl-fect work!', 'Ocean of awesome!'],
+    run: mermaidRun,
+  },
+  {
+    name: 'kitten',
+    emoji: '🐱',
+    label: 'Kitten Purr-ty',
+    backdrop: '#fed7aa',
+    praise: ['Purr-fect!', 'Pawsome job!', 'The cat’s meow!'],
+    run: kittenRun,
+  },
+  {
+    name: 'butterflies',
+    emoji: '🦋',
+    label: 'Butterfly Garden',
+    backdrop: '#dcfce7',
+    praise: ['Beautiful work!', 'Watch you bloom!', 'Simply flutterful!'],
+    run: butterfliesRun,
+  },
+  {
+    name: 'pop-star',
+    emoji: '🎤',
+    label: 'Pop-Star Concert',
+    backdrop: '#831843',
+    praise: ['You rocked it!', 'Encore!', 'Chore chart-topper!'],
+    run: popStarRun,
   },
   {
     name: 'hyperspace',
