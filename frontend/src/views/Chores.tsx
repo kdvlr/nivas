@@ -525,7 +525,6 @@ export default function Chores() {
                   className={`glass flex md:min-w-36 items-center gap-1 md:gap-2 p-1 md:p-1.5 text-left cursor-pointer transition-all duration-200 ${
                     active ? 'ring-2 ring-[var(--primary)] shadow-md' : ''
                   }`}
-                  style={{ borderLeft: `${isMobile ? 3 : 4}px solid ${b.color}` }}
                 >
                   <Avatar name={b.person_name} color={b.color} src={b.avatar} emoji={b.avatar_emoji} size={isMobile ? 22 : 36} />
                   <div className="flex min-w-0 flex-col">

@@ -450,20 +450,6 @@ export default function ToDos() {
 
       {/* Member Filter Bar like Chores */}
       <div className="mb-3 lg:mb-4 flex items-center gap-2 overflow-x-auto pb-1 shrink-0 [&::-webkit-scrollbar]:hidden">
-        <button
-          type="button"
-          onClick={() => setFilterPerson('')}
-          className={`glass flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-sm font-semibold transition-all cursor-pointer shrink-0 ${
-            filterPerson === ''
-              ? 'ring-2 ring-[var(--primary)] shadow-md text-ink'
-              : 'text-ink-soft hover:text-ink opacity-80 hover:opacity-100'
-          }`}
-        >
-          <span>All</span>
-          <span className="rounded-full bg-surface-variant px-2 py-0.5 text-xs text-ink-soft">
-            {open}
-          </span>
-        </button>
         {orderedPeople.map((name) => {
           const count = (activeGroups.get(name) ?? []).length
           const active = filterPerson === name
@@ -479,7 +465,6 @@ export default function ToDos() {
                   ? 'ring-2 ring-[var(--primary)] shadow-md'
                   : 'text-ink-soft hover:text-ink opacity-80 hover:opacity-100'
               }`}
-              style={{ borderLeft: `3.5px solid ${color}` }}
             >
               {personObj?.avatar || personObj?.avatar_emoji ? (
                 <Avatar
