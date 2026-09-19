@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import dayGridPlugin from '@fullcalendar/daygrid'
+import multiMonthPlugin from '@fullcalendar/multimonth'
 import interactionPlugin from '@fullcalendar/interaction'
 import type { DateSelectArg, EventClickArg, EventDropArg, DatesSetArg } from '@fullcalendar/core'
 import type { EventResizeDoneArg } from '@fullcalendar/interaction'
@@ -57,6 +58,10 @@ const isoUtcDate = (d: Date) => {
   return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}`
 }
 
+type ViewMode = 'schedule' | 'day' | 'week' | 'month' | 'year'
+type WeekSubMode = 'sun-sat' | 'rolling-7' | 'rolling-5'
+type YearSubMode = 'calendar' | 'rolling-12'
+
 export default function Calendar() {
   const { data: status } = useData<CalendarStatus>('/api/calendar/status', ['calendar'])
   const { data: weather } = useData<WeatherData>('/api/weather', [], 15 * 60 * 1000)
@@ -66,7 +71,11 @@ export default function Calendar() {
   const [error, setError] = useState('')
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
 
-  const [currentViewMode, setCurrentViewMode] = useState<'schedule' | 'week' | 'month'>('month')
+  const [currentViewMode, setCurrentViewMode] = useState<ViewMode>(() =>
+    typeof window !== 'undefined' && window.innerWidth < 768 ? 'month' : 'week',
+  )
+  const [weekSubMode, setWeekSubMode] = useState<WeekSubMode>('sun-sat')
+  const [yearSubMode, setYearSubMode] = useState<YearSubMode>('calendar')
   const [mobileStartDate, setMobileStartDate] = useState(() => new Date())
   const [mobileEvents, setMobileEvents] = useState<CalEvent[]>([])
   const [loadingMobileEvents, setLoadingMobileEvents] = useState(false)
@@ -465,6 +474,27 @@ export default function Calendar() {
   const onDatesSet = useCallback(
     (arg: DatesSetArg) => {
       setViewTitle(arg.view.title)
+      const viewType = arg.view.type
+      if (viewType === 'timeGridDay') {
+        setCurrentViewMode('day')
+      } else if (viewType === 'timeGridWeek') {
+        setCurrentViewMode('week')
+        setWeekSubMode('sun-sat')
+      } else if (viewType === 'timeGridRolling7') {
+        setCurrentViewMode('week')
+        setWeekSubMode('rolling-7')
+      } else if (viewType === 'timeGridRolling5') {
+        setCurrentViewMode('week')
+        setWeekSubMode('rolling-5')
+      } else if (viewType === 'dayGridMonth') {
+        setCurrentViewMode('month')
+      } else if (viewType === 'multiMonthYear') {
+        setCurrentViewMode('year')
+        setYearSubMode('calendar')
+      } else if (viewType === 'multiMonthRolling12') {
+        setCurrentViewMode('year')
+        setYearSubMode('rolling-12')
+      }
       appliedRangeRef.current = ''
       fitSlotRange()
       scheduleFit()
@@ -616,7 +646,59 @@ export default function Calendar() {
     )
   }
 
-  const renderMobileHeader = () => {
+  const handleWeekClick = useCallback(() => {
+    const calendarApi = calRef.current?.getApi()
+    if (currentViewMode !== 'week') {
+      setCurrentViewMode('week')
+      setWeekSubMode('sun-sat')
+      calendarApi?.changeView('timeGridWeek', new Date())
+    } else {
+      if (weekSubMode === 'sun-sat') {
+        setWeekSubMode('rolling-7')
+        calendarApi?.changeView('timeGridRolling7', new Date())
+      } else if (weekSubMode === 'rolling-7') {
+        setWeekSubMode('rolling-5')
+        calendarApi?.changeView('timeGridRolling5', new Date())
+      } else {
+        setWeekSubMode('sun-sat')
+        calendarApi?.changeView('timeGridWeek', new Date())
+      }
+    }
+  }, [currentViewMode, weekSubMode])
+
+  const handleYearClick = useCallback(() => {
+    const calendarApi = calRef.current?.getApi()
+    if (currentViewMode !== 'year') {
+      setCurrentViewMode('year')
+      setYearSubMode('calendar')
+      calendarApi?.changeView('multiMonthYear', new Date())
+    } else {
+      if (yearSubMode === 'calendar') {
+        setYearSubMode('rolling-12')
+        calendarApi?.changeView('multiMonthRolling12', new Date())
+      } else {
+        setYearSubMode('calendar')
+        calendarApi?.changeView('multiMonthYear', new Date())
+      }
+    }
+  }, [currentViewMode, yearSubMode])
+
+  const handleDayClick = useCallback(() => {
+    setCurrentViewMode('day')
+    calRef.current?.getApi()?.changeView('timeGridDay', new Date())
+  }, [])
+
+  const handleMonthClick = useCallback(() => {
+    setCurrentViewMode('month')
+    calRef.current?.getApi()?.changeView('dayGridMonth', new Date())
+  }, [])
+
+  const handleScheduleClick = useCallback(() => {
+    setCurrentViewMode('schedule')
+    setMobileStartDate(new Date())
+  }, [])
+
+  const renderHeader = () => {
     const startD = mobileStartDate
     const endD = addDays(mobileStartDate, 29)
     const fmtMonthDay = (date: Date) =>
@@ -632,57 +714,83 @@ export default function Calendar() {
 
     const displayTitle = currentViewMode === 'schedule' ? rangeText : viewTitle
 
-    return (
-      <div className="mb-4 flex flex-col items-center justify-center gap-3 shrink-0 w-full" data-swipe-ignore="true">
-        {/* Title row */}
-        <div className="flex items-center gap-3 justify-center w-full">
-          <button
-            type="button"
-            onClick={handlePrev}
-            aria-label="Previous period"
-            className="btn-glass flex h-11 w-11 items-center justify-center rounded-full p-0 shrink-0 active:scale-95"
-          >
-            <Icon name="chevron_left" className="text-xl" />
-          </button>
-          <h2 className="text-lg font-bold text-ink truncate text-center max-w-[200px] sm:max-w-xs">
-            {displayTitle}
-          </h2>
-          <button
-            type="button"
-            onClick={handleNext}
-            aria-label="Next period"
-            className="btn-glass flex h-11 w-11 items-center justify-center rounded-full p-0 shrink-0 active:scale-95"
-          >
-            <Icon name="chevron_right" className="text-xl" />
-          </button>
-        </div>
-        
-        {/* Actions row */}
-        <div className="flex items-center gap-2.5 justify-center w-full">
-          <button
-            type="button"
-            onClick={handleToday}
-            className="btn-glass min-h-11 px-4 py-2 text-sm font-semibold rounded-xl shrink-0 active:scale-95"
-          >
-            today
-          </button>
-          <div 
-            className="flex p-0.5 rounded-xl border shrink-0"
-            style={{ 
-              backgroundColor: 'color-mix(in srgb, var(--secondary-container) 50%, transparent)',
-              borderColor: 'var(--outline-var)'
-            }}
-          >
-            {(['schedule', 'week', 'month'] as const).map((mode) => {
-              const active = currentViewMode === mode
-              return (
+    const getWeekLabel = () => {
+      if (currentViewMode !== 'week') return 'week'
+      if (weekSubMode === 'rolling-7') return 'week (7d)'
+      if (weekSubMode === 'rolling-5') return 'week (5d)'
+      return 'week'
+    }
+
+    const getYearLabel = () => {
+      if (currentViewMode !== 'year') return 'year'
+      if (yearSubMode === 'rolling-12') return 'year (12m)'
+      return 'year'
+    }
+
+    const viewButtons = isMobile
+      ? [
+          { key: 'schedule', label: 'schedule', onClick: handleScheduleClick, active: currentViewMode === 'schedule' },
+          { key: 'week', label: getWeekLabel(), onClick: handleWeekClick, active: currentViewMode === 'week' },
+          { key: 'month', label: 'month', onClick: handleMonthClick, active: currentViewMode === 'month' },
+          { key: 'year', label: getYearLabel(), onClick: handleYearClick, active: currentViewMode === 'year' },
+        ]
+      : [
+          { key: 'day', label: 'day', onClick: handleDayClick, active: currentViewMode === 'day' },
+          { key: 'week', label: getWeekLabel(), onClick: handleWeekClick, active: currentViewMode === 'week' },
+          { key: 'month', label: 'month', onClick: handleMonthClick, active: currentViewMode === 'month' },
+          { key: 'year', label: getYearLabel(), onClick: handleYearClick, active: currentViewMode === 'year' },
+        ]
+
+    if (isMobile) {
+      return (
+        <div className="mb-3 flex flex-col items-center justify-center gap-2.5 shrink-0 w-full" data-swipe-ignore="true">
+          {/* Title row */}
+          <div className="flex items-center gap-3 justify-center w-full">
+            <button
+              type="button"
+              onClick={handlePrev}
+              aria-label="Previous period"
+              className="btn-glass flex h-10 w-10 items-center justify-center rounded-full p-0 shrink-0 active:scale-95"
+            >
+              <Icon name="chevron_left" className="text-xl" />
+            </button>
+            <h2 className="text-base sm:text-lg font-bold text-ink truncate text-center max-w-[220px] sm:max-w-xs">
+              {displayTitle}
+            </h2>
+            <button
+              type="button"
+              onClick={handleNext}
+              aria-label="Next period"
+              className="btn-glass flex h-10 w-10 items-center justify-center rounded-full p-0 shrink-0 active:scale-95"
+            >
+              <Icon name="chevron_right" className="text-xl" />
+            </button>
+          </div>
+
+          {/* Actions row */}
+          <div className="flex items-center gap-2 justify-center w-full flex-wrap">
+            <button
+              type="button"
+              onClick={handleToday}
+              className="btn-glass min-h-9 px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-xl shrink-0 active:scale-95"
+            >
+              today
+            </button>
+            <div
+              className="flex p-0.5 rounded-xl border shrink-0 overflow-x-auto max-w-full"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--secondary-container) 50%, transparent)',
+                borderColor: 'var(--outline-var)',
+              }}
+            >
+              {viewButtons.map((btn) => (
                 <button
                   type="button"
-                  key={mode}
-                  onClick={() => setCurrentViewMode(mode)}
-                  className="min-h-10 px-3.5 py-2 text-sm font-semibold rounded-lg transition-all active:scale-95"
+                  key={btn.key}
+                  onClick={btn.onClick}
+                  className="min-h-9 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all active:scale-95 whitespace-nowrap"
                   style={
-                    active
+                    btn.active
                       ? {
                           backgroundColor: 'var(--primary)',
                           color: 'var(--on-primary)',
@@ -693,11 +801,77 @@ export default function Calendar() {
                         }
                   }
                 >
-                  {mode}
+                  {btn.label}
                 </button>
-              )
-            })}
+              ))}
+            </div>
           </div>
+        </div>
+      )
+    }
+
+    // Desktop Header
+    return (
+      <div className="mb-3 flex items-center justify-between gap-3 shrink-0 w-full flex-wrap" data-swipe-ignore="true">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handlePrev}
+              aria-label="Previous period"
+              className="btn-glass flex h-10 w-10 items-center justify-center rounded-xl p-0 shrink-0 active:scale-95"
+            >
+              <Icon name="chevron_left" className="text-xl" />
+            </button>
+            <button
+              type="button"
+              onClick={handleNext}
+              aria-label="Next period"
+              className="btn-glass flex h-10 w-10 items-center justify-center rounded-xl p-0 shrink-0 active:scale-95"
+            >
+              <Icon name="chevron_right" className="text-xl" />
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={handleToday}
+            className="btn-glass h-10 px-4 text-sm font-semibold rounded-xl shrink-0 active:scale-95"
+          >
+            today
+          </button>
+          <h2 className="text-lg lg:text-xl font-bold text-ink ml-1 truncate">
+            {displayTitle}
+          </h2>
+        </div>
+
+        <div
+          className="flex p-0.5 rounded-xl border shrink-0"
+          style={{
+            backgroundColor: 'color-mix(in srgb, var(--secondary-container) 50%, transparent)',
+            borderColor: 'var(--outline-var)',
+          }}
+        >
+          {viewButtons.map((btn) => (
+            <button
+              type="button"
+              key={btn.key}
+              onClick={btn.onClick}
+              className="min-h-10 px-4 py-2 text-sm font-semibold rounded-lg transition-all active:scale-95 whitespace-nowrap"
+              style={
+                btn.active
+                  ? {
+                      backgroundColor: 'var(--primary)',
+                      color: 'var(--on-primary)',
+                      boxShadow: 'var(--shadow-1)',
+                    }
+                  : {
+                      color: 'var(--on-secondary-container)',
+                    }
+              }
+            >
+              {btn.label}
+            </button>
+          ))}
         </div>
       </div>
     )
@@ -830,7 +1004,7 @@ export default function Calendar() {
           aria-label="Calendar schedule list; swipe left or right to change months"
           className="glass min-h-0 flex-1 p-3 lg:p-4 flex flex-col overflow-hidden"
         >
-          {renderMobileHeader()}
+          {renderHeader()}
           {loadingMobileEvents ? (
             <div className="my-auto text-center text-lg text-ink-faint">Loading schedule...</div>
           ) : (
@@ -848,28 +1022,50 @@ export default function Calendar() {
           aria-label="Calendar view; swipe left or right to change period"
           className="glass min-h-0 flex-1 p-3 lg:p-4 flex flex-col overflow-hidden"
         >
-          {isMobile && renderMobileHeader()}
+          {renderHeader()}
           <div className="flex-1 min-h-0">
             <FullCalendar
-              key={isMobile ? `mobile-${currentViewMode}` : 'desktop'}
+              key={isMobile ? 'fc-mobile' : 'fc-desktop'}
               ref={calRef}
-              plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin, listPlugin]}
-              initialView={isMobile ? (currentViewMode === 'week' ? 'timeGridWeek' : 'dayGridMonth') : 'timeGridWeek'}
-              customButtons={{
-                listSchedule: {
-                  text: 'schedule',
-                  click: () => setCurrentViewMode('schedule'),
+              plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin, listPlugin, multiMonthPlugin]}
+              initialView={
+                currentViewMode === 'day'
+                  ? 'timeGridDay'
+                  : currentViewMode === 'month'
+                  ? 'dayGridMonth'
+                  : currentViewMode === 'year'
+                  ? (yearSubMode === 'rolling-12' ? 'multiMonthRolling12' : 'multiMonthYear')
+                  : (weekSubMode === 'rolling-7' ? 'timeGridRolling7' : weekSubMode === 'rolling-5' ? 'timeGridRolling5' : 'timeGridWeek')
+              }
+              firstDay={0}
+              multiMonthMaxColumns={isMobile ? 1 : 4}
+              headerToolbar={false}
+              views={{
+                timeGridRolling7: {
+                  type: 'timeGrid',
+                  duration: { days: 7 },
+                  dateAlignment: 'day',
+                  dateIncrement: { days: 7 },
+                },
+                timeGridRolling5: {
+                  type: 'timeGrid',
+                  duration: { days: 5 },
+                  dateAlignment: 'day',
+                  dateIncrement: { days: 5 },
+                },
+                multiMonthYear: {
+                  type: 'multiMonth',
+                  duration: { years: 1 },
+                  multiMonthMaxEvents: 2,
+                },
+                multiMonthRolling12: {
+                  type: 'multiMonth',
+                  duration: { months: 12 },
+                  dateAlignment: 'month',
+                  dateIncrement: { months: 12 },
+                  multiMonthMaxEvents: 2,
                 },
               }}
-              headerToolbar={
-                isMobile
-                  ? false
-                  : {
-                      left: 'prev,next today',
-                      center: 'title',
-                      right: 'timeGridDay,timeGridWeek,dayGridMonth',
-                    }
-              }
               height="100%"
               nowIndicator
               editable
@@ -895,7 +1091,7 @@ export default function Calendar() {
                 const end = eventInfo.event.end
                 const durationMin = start && end ? Math.round((end.getTime() - start.getTime()) / 60000) : 60
                 const isShort = durationMin <= 35
-                const isMonth = eventInfo.view.type === 'dayGridMonth'
+                const isMonth = eventInfo.view.type === 'dayGridMonth' || eventInfo.view.type.startsWith('multiMonth')
 
                 const timeStr = start && end
                   ? `${start.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })} – ${end.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`
@@ -909,10 +1105,10 @@ export default function Calendar() {
                 if (eventInfo.event.allDay || isMonth) {
                   return (
                     <div className="flex items-center gap-1.5 px-2 py-0.5 w-full min-w-0 overflow-hidden leading-tight text-white">
-                      {!eventInfo.event.allDay && startStr && (
+                      {!eventInfo.event.allDay && startStr && !eventInfo.view.type.startsWith('multiMonth') && (
                         <span className="text-[0.7rem] font-medium opacity-85 shrink-0 tabular-nums">{startStr}</span>
                       )}
-                      {!eventInfo.event.allDay && startStr && <span className="text-[0.7rem] opacity-60">•</span>}
+                      {!eventInfo.event.allDay && startStr && !eventInfo.view.type.startsWith('multiMonth') && <span className="text-[0.7rem] opacity-60">•</span>}
                       <span className="text-xs font-medium truncate">{eventInfo.event.title}</span>
                     </div>
                   )
@@ -950,11 +1146,23 @@ export default function Calendar() {
                 )
               }}
               dayHeaderContent={(arg) => {
+                if (arg.view.type.startsWith('multiMonth')) {
+                  const narrowWeekday = arg.date.toLocaleDateString(undefined, { timeZone: 'UTC', weekday: 'narrow' })
+                  return (
+                    <div className="flex flex-col items-center py-1">
+                      <span className="text-[0.65rem] font-semibold text-ink-soft">
+                        {narrowWeekday}
+                      </span>
+                    </div>
+                  )
+                }
+
                 const dateStr = isoUtcDate(arg.date)
                 const w = weatherByDate.get(dateStr)
                 const weekday = arg.date.toLocaleDateString(undefined, { timeZone: 'UTC', weekday: 'short' })
                 const dayNum = arg.date.getUTCDate()
                 const isDayView = arg.view.type === 'timeGridDay'
+                const isMonthView = arg.view.type === 'dayGridMonth'
 
                 const containerStyle = arg.isToday
                   ? {
@@ -977,12 +1185,12 @@ export default function Calendar() {
                     }`}>
                       {weekday}
                     </span>
-                    {arg.view.type !== 'dayGridMonth' && (
+                    {!isMonthView && (
                       <span className={`text-sm sm:text-base ${arg.isToday ? 'font-bold text-[var(--primary)]' : 'font-bold text-ink'}`}>
                         {dayNum}
                       </span>
                     )}
-                    {w && arg.view.type !== 'dayGridMonth' && (
+                    {w && !isMonthView && (
                       <span className={`flex flex-wrap justify-center items-center gap-x-1 gap-y-0 text-[0.6rem] sm:text-[0.7rem] font-semibold ${
                         arg.isToday ? 'text-ink' : 'text-ink-soft'
                       }`}>

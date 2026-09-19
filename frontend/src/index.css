@@ -632,3 +632,42 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .fc td.fc-day-sun:not(.fc-day-today) {
   background-color: color-mix(in srgb, var(--primary) 9%, transparent) !important;
 }
+
+/* MultiMonth view styling */
+.fc .fc-multimonth {
+  border: 1px solid var(--outline-var) !important;
+  background: transparent !important;
+}
+
+.fc .fc-multimonth-title {
+  color: var(--on-surface) !important;
+  font-size: 1.1rem !important;
+  font-weight: 700 !important;
+  padding: 0.75rem 0 0.5rem 0 !important;
+}
+
+.fc .fc-multimonth-daygrid {
+  background: transparent !important;
+}
+
+.fc .fc-multimonth-month {
+  padding: 0 0.75rem 0.75rem !important;
+}
+
+.fc .fc-multimonth-daygrid-table th,
+.fc .fc-multimonth-daygrid-table td,
+.fc .fc-multimonth-header-table th,
+.fc .fc-multimonth-header-table td {
+  border-color: var(--outline-var) !important;
+}
+
+.fc .fc-multimonth-daygrid-table .fc-daygrid-day-number {
+  color: var(--on-surface-var) !important;
+  font-size: 0.8rem !important;
+  padding: 2px 4px !important;
+}
+
+.fc .fc-multimonth-daygrid-table .fc-day-today .fc-daygrid-day-number {
+  color: var(--primary) !important;
+  font-weight: 800 !important;
+}
