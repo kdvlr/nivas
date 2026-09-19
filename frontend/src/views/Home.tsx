@@ -63,11 +63,11 @@ const minutesOfDay = (iso: string) => {
 
 const fmtHour = (h: number) => `${((h + 11) % 12) + 1} ${h % 24 < 12 ? 'AM' : 'PM'}`
 
-const DAY_PERIODS = [
-  { label: 'Morning', emoji: '🌅', from: 0, to: 12 * 60, tint: 'rgba(251, 146, 60, 0.07)' },
-  { label: 'Afternoon', emoji: '☀️', from: 12 * 60, to: 17 * 60, tint: 'rgba(56, 189, 248, 0.07)' },
-  { label: 'Evening', emoji: '🌙', from: 17 * 60, to: 24 * 60, tint: 'rgba(99, 102, 241, 0.09)' },
-]
+const isWeekendDay = (isoDateStr: string) => {
+  const d = new Date(isoDateStr + 'T12:00:00')
+  const day = d.getDay()
+  return day === 0 || day === 6
+}
 
 interface PlacedEvent {
   ev: CalEvent
@@ -537,22 +537,6 @@ export default function Home() {
 
           {/* the timeline itself */}
           <div className="relative mt-2 min-h-[24rem] flex-1 lg:min-h-0">
-            {/* morning / afternoon / evening bands */}
-            {DAY_PERIODS.map((p) => {
-              const from = Math.max(p.from, timeline.axis.start)
-              const to = Math.min(p.to, timeline.axis.end)
-              if (to <= from) return null
-              return (
-                <div
-                  key={p.label}
-                  className="absolute inset-x-0"
-                  style={{ top: `${axisPct(from)}%`, height: `${axisPct(to) - axisPct(from)}%` }}
-                >
-                  <div className="absolute inset-y-0 right-0 rounded-lg" style={{ left: AXIS_GUTTER, background: p.tint }} />
-                </div>
-              )
-            })}
-
             {/* hour gridlines + labels */}
             {timeline.hours.map((h) => (
               <div key={h} className="absolute inset-x-0" style={{ top: `${axisPct(h * 60)}%` }}>
@@ -569,42 +553,75 @@ export default function Home() {
                 const placed = timeline.timedByDay.get(dayIso) ?? []
                 return (
                   <div key={dayIso} className="relative">
-                    {/* today's column gets a soft highlight; dividers separate the days */}
-                    {dayIso === today && (
+                    {/* today's column gets a soft highlight; weekend gets weekend tint; dividers separate the days */}
+                    {dayIso === today ? (
                       <div
                         className="pointer-events-none absolute inset-y-0 -inset-x-1 rounded-lg"
                         style={{ background: 'color-mix(in srgb, var(--primary) 7%, transparent)' }}
                       />
-                    )}
+                    ) : isWeekendDay(dayIso) ? (
+                      <div
+                        className="pointer-events-none absolute inset-y-0 -inset-x-1 rounded-lg"
+                        style={{ background: 'color-mix(in srgb, var(--primary) 9%, transparent)' }}
+                      />
+                    ) : null}
                     {idx > 0 && (
                       <div className="pointer-events-none absolute inset-y-0 -left-2 w-px" style={{ background: 'var(--outline)', opacity: 0.35 }} />
                     )}
                     {placed.map((it) => {
                       const heightPct = ((it.e - it.s) / timeline.spanMin) * 100
+                      const isShort = it.e - it.s <= 35
+                      const cardColor = it.ev.color || 'var(--primary)'
+
+                      // For 1-2 overlapping events, divide evenly. For 3+ events, cascade with 60% min width
+                      let leftStyle = `calc(${(it.lane / it.cols) * 100}% + 2px)`
+                      let widthStyle = `calc(${100 / it.cols}% - 4px)`
+                      if (it.cols > 2) {
+                        const maxShift = 40
+                        const shiftPerLane = maxShift / (it.cols - 1)
+                        leftStyle = `calc(${it.lane * shiftPerLane}% + 2px)`
+                        widthStyle = `calc(${100 - maxShift}% - 4px)`
+                      }
+
                       return (
                         <div
                           key={it.ev.id}
-                          className="vivid-dim absolute z-[5] flex flex-col overflow-hidden rounded-lg px-2.5 py-1.5 text-white shadow-md transition-transform hover:z-10 hover:scale-[1.02] cursor-pointer"
+                          className="absolute z-[5] flex flex-col overflow-hidden rounded-lg px-2 py-1 text-white shadow-md transition-transform hover:z-20 hover:scale-[1.02] cursor-pointer"
                           style={{
                             top: `${axisPct(it.s)}%`,
                             height: `max(${heightPct}%, 2.75rem)`,
-                            left: `calc(${(it.lane / it.cols) * 100}% + 2px)`,
-                            width: `calc(${100 / it.cols}% - 4px)`,
-                            background: eventBg(it.ev),
+                            left: leftStyle,
+                            width: widthStyle,
+                            background: `color-mix(in srgb, ${cardColor} 24%, rgba(24, 24, 27, 0.88))`,
+                            borderLeft: `4px solid ${cardColor}`,
                           }}
                           onClick={() => setSelectedEvent(it.ev)}
                         >
-                          <div className="hidden lg:block text-[0.7rem] font-bold leading-tight tracking-tight opacity-95 tabular-nums">
-                            {fmtTime(it.ev.start)} – {fmtTime(it.ev.end)}
-                          </div>
-                          <div className="truncate text-sm font-semibold leading-snug tracking-tight">
-                            {it.ev.title}
-                          </div>
-                          {it.ev.location && (it.e - it.s > 60) && (
-                            <div className="flex items-center gap-1 truncate text-[0.7rem] opacity-85">
-                              <Icon name="location_on" className="text-[0.75rem] shrink-0" />
-                              <span className="truncate">{it.ev.location}</span>
+                          {isShort ? (
+                            <div className="flex items-center gap-1.5 min-w-0 w-full my-auto">
+                              <span className="hidden lg:inline text-[0.7rem] font-medium opacity-90 tabular-nums shrink-0">
+                                {fmtTime(it.ev.start)}
+                              </span>
+                              <span className="hidden lg:inline text-[0.7rem] opacity-60">•</span>
+                              <div className="truncate text-sm font-medium leading-snug tracking-tight">
+                                {it.ev.title}
+                              </div>
                             </div>
+                          ) : (
+                            <>
+                              <div className="hidden lg:block text-[0.7rem] font-medium leading-tight tracking-tight opacity-90 tabular-nums">
+                                {fmtTime(it.ev.start)} – {fmtTime(it.ev.end)}
+                              </div>
+                              <div className="truncate text-sm font-medium leading-snug tracking-tight">
+                                {it.ev.title}
+                              </div>
+                              {it.ev.location && (it.e - it.s > 60) && (
+                                <div className="flex items-center gap-1 truncate text-[0.7rem] opacity-80 mt-0.5">
+                                  <Icon name="location_on" className="text-[0.75rem] shrink-0" />
+                                  <span className="truncate">{it.ev.location}</span>
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
                       )

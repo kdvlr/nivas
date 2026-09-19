@@ -491,12 +491,14 @@ export default function Calendar() {
         ok(
           evs.map((e) => ({
             id: String(e.id),
-            title: isMobile && e.person_name ? `${e.person_name}: ${e.title}` : e.title,
+            title: e.title,
             start: e.start,
             end: e.end,
             allDay: e.all_day,
             backgroundColor: e.color,
+            borderColor: e.color,
             extendedProps: {
+              rawTitle: e.title,
               person: e.person_name,
               selection_id: e.selection_id,
               location: e.location || '',
@@ -508,7 +510,7 @@ export default function Calendar() {
         fail(e as Error)
       }
     },
-    [isMobile],
+    [],
   )
 
   const moveEvent = async (arg: EventDropArg | EventResizeDoneArg) => {
@@ -556,7 +558,7 @@ export default function Calendar() {
     setDraft({
       id: Number(ev.id),
       selection_id: ev.extendedProps.selection_id,
-      title: ev.title,
+      title: ev.extendedProps.rawTitle || ev.title,
       start: ev.start ? toLocalInput(ev.start) : '',
       end: ev.end ? toLocalInput(ev.end) : (ev.start ? toLocalInput(ev.start) : ''),
       all_day: ev.allDay,
@@ -888,6 +890,37 @@ export default function Calendar() {
               eventsSet={onEventsSet}
               allDaySlot
               fixedWeekCount={false}
+              eventMinHeight={38}
+              eventContent={(eventInfo) => {
+                const start = eventInfo.event.start
+                const end = eventInfo.event.end
+                const durationMin = start && end ? Math.round((end.getTime() - start.getTime()) / 60000) : 60
+                const isShort = durationMin <= 35
+
+                if (isShort) {
+                  return (
+                    <div className="flex items-center gap-1.5 px-1 py-0.5 w-full h-full overflow-hidden leading-tight">
+                      {eventInfo.timeText && (
+                        <span className="text-[0.7rem] font-medium opacity-90 shrink-0 tabular-nums">{eventInfo.timeText}</span>
+                      )}
+                      {eventInfo.timeText && <span className="text-[0.7rem] opacity-60">•</span>}
+                      <span className="text-xs font-medium truncate">{eventInfo.event.title}</span>
+                    </div>
+                  )
+                }
+
+                return (
+                  <div className="flex flex-col gap-0.5 px-1 py-0.5 w-full h-full overflow-hidden leading-tight">
+                    {eventInfo.timeText && (
+                      <span className="text-[0.7rem] font-medium opacity-90 tabular-nums">{eventInfo.timeText}</span>
+                    )}
+                    <span className="text-xs font-medium line-clamp-2">{eventInfo.event.title}</span>
+                    {eventInfo.event.extendedProps.location && (
+                      <span className="text-[0.65rem] opacity-75 truncate">{eventInfo.event.extendedProps.location}</span>
+                    )}
+                  </div>
+                )
+              }}
               dayHeaderContent={(arg) => {
                 const dateStr = isoUtcDate(arg.date)
                 const w = weatherByDate.get(dateStr)
@@ -897,11 +930,10 @@ export default function Calendar() {
 
                 const containerStyle = arg.isToday
                   ? {
-                      backgroundColor: 'var(--primary)',
-                      color: 'var(--on-primary)',
+                      border: '2px solid var(--primary)',
+                      backgroundColor: 'color-mix(in srgb, var(--primary) 14%, transparent)',
                       borderRadius: '8px',
                       padding: '4px 2px',
-                      boxShadow: 'var(--shadow-1)',
                     }
                   : {
                       padding: '4px 2px',
@@ -913,22 +945,22 @@ export default function Calendar() {
                     style={containerStyle}
                   >
                     <span className={`text-[0.65rem] sm:text-xs font-semibold uppercase tracking-wider ${
-                      arg.isToday ? 'text-[var(--on-primary)] opacity-90 font-extrabold' : 'text-ink-soft'
+                      arg.isToday ? 'text-[var(--primary)] font-semibold' : 'text-ink-soft'
                     }`}>
                       {weekday}
                     </span>
                     {arg.view.type !== 'dayGridMonth' && (
-                      <span className={`text-sm sm:text-base ${arg.isToday ? 'font-extrabold' : 'font-bold text-ink'}`}>
+                      <span className={`text-sm sm:text-base ${arg.isToday ? 'font-bold text-[var(--primary)]' : 'font-bold text-ink'}`}>
                         {dayNum}
                       </span>
                     )}
                     {w && arg.view.type !== 'dayGridMonth' && (
                       <span className={`flex flex-wrap justify-center items-center gap-x-1 gap-y-0 text-[0.6rem] sm:text-[0.7rem] font-semibold ${
-                        arg.isToday ? 'text-[var(--on-primary)] opacity-95' : 'text-ink-soft'
+                        arg.isToday ? 'text-ink' : 'text-ink-soft'
                       }`}>
                         <span className="text-xs sm:text-sm leading-none">{w.icon}</span>
                         <span className="hidden sm:inline">
-                          {isDayView ? `${w.label} · ` : ''}{w.tmax}°<span className={arg.isToday ? 'text-[var(--on-primary)] opacity-70' : 'text-ink-faint'}>/{w.tmin}°</span>
+                          {isDayView ? `${w.label} · ` : ''}{w.tmax}°<span className={arg.isToday ? 'text-[var(--primary)] opacity-70' : 'text-ink-faint'}>/{w.tmin}°</span>
                         </span>
                       </span>
                     )}
