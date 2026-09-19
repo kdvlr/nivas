@@ -448,7 +448,7 @@ body {
 }
 
 .fc {
-  --fc-border-color: var(--outline-var);
+  --fc-border-color: color-mix(in srgb, var(--outline-var) 40%, transparent);
   --fc-page-bg-color: transparent;
   --fc-today-bg-color: transparent;
   --fc-neutral-text-color: var(--on-surface-var);
@@ -526,7 +526,21 @@ body {
 }
 .fc th,
 .fc td {
-  border-color: var(--outline-var) !important;
+  border-color: var(--fc-border-color) !important;
+}
+.fc .fc-scrollgrid {
+  border-color: var(--fc-border-color) !important;
+}
+.fc .fc-cell-shaded {
+  background: transparent !important;
+}
+.fc .fc-timegrid-divider {
+  padding: 0 !important;
+  background: transparent !important;
+}
+.fc .fc-timegrid-slot-minor {
+  border-top-style: dashed;
+  border-top-color: color-mix(in srgb, var(--outline-var) 25%, transparent) !important;
 }
 .fc .fc-day-other .fc-daygrid-day-top {
   opacity: 0.4;
@@ -635,7 +649,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 /* MultiMonth view styling */
 .fc .fc-multimonth {
-  border: 1px solid var(--outline-var) !important;
+  border: 1px solid var(--fc-border-color) !important;
   background: transparent !important;
 }
 
@@ -658,7 +672,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .fc .fc-multimonth-daygrid-table td,
 .fc .fc-multimonth-header-table th,
 .fc .fc-multimonth-header-table td {
-  border-color: var(--outline-var) !important;
+  border-color: var(--fc-border-color) !important;
 }
 
 .fc .fc-multimonth-daygrid-table .fc-daygrid-day-number {
