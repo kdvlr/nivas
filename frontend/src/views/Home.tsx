@@ -576,14 +576,13 @@ export default function Home() {
                       return (
                         <div
                           key={it.ev.id}
-                          className="absolute z-[5] flex flex-col overflow-hidden rounded-lg px-2 py-1 text-white shadow-md transition-transform hover:z-20 hover:scale-[1.02] cursor-pointer"
+                          className="absolute z-[5] flex flex-col overflow-hidden rounded-lg px-2.5 py-1 text-white shadow-md transition-transform hover:z-20 hover:scale-[1.02] cursor-pointer"
                           style={{
                             top: `${axisPct(it.s)}%`,
                             height: `max(${heightPct}%, 2.75rem)`,
                             left: leftStyle,
                             width: widthStyle,
                             background: `color-mix(in srgb, ${cardColor} 24%, rgba(24, 24, 27, 0.88))`,
-                            borderLeft: `4px solid ${cardColor}`,
                           }}
                           onClick={() => setSelectedEvent(it.ev)}
                         >
