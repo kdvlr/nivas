@@ -39,7 +39,6 @@ const getDayLabel = (isoDate: string, _index: number) => {
 /** left gutter: period strip + hour labels */
 const AXIS_GUTTER = 56
 const FAMILY_GRADIENT = 'linear-gradient(115deg, #ef4444, #f97316, #eab308, #22c55e, #3b82f6, #a855f7)'
-const MIN_SPAN_MIN = 12 * 60
 
 /** Only a calendar explicitly assigned to Family/Shared gets the rainbow. */
 const isFamilyName = (name?: string | null) => {
@@ -113,28 +112,19 @@ function layoutDayEvents(events: CalEvent[]): PlacedEvent[] {
   return items
 }
 
-/** Axis range fitted to the events, min 8h, snapped to whole hours within one day. */
+/** Axis range responsive to events in the 3-day window: 1h before earliest, 1h after latest. */
 function computeAxis(timed: PlacedEvent[]): { start: number; end: number } {
-  if (!timed.length) return { start: 8 * 60, end: 16 * 60 }
-  let start = Math.floor((Math.min(...timed.map((t) => t.s)) - 30) / 60) * 60
-  let end = Math.ceil((Math.max(...timed.map((t) => t.e)) + 30) / 60) * 60
-  start = Math.max(start, 0)
-  end = Math.min(end, 24 * 60)
-  const deficit = MIN_SPAN_MIN - (end - start)
-  if (deficit > 0) {
-    const earliest = Math.min(...timed.map((t) => t.s))
-    if (earliest < 12 * 60) {
-      // morning: keep the top edge, grow downward
-      end = Math.min(24 * 60, start + MIN_SPAN_MIN)
-      if (end - start < MIN_SPAN_MIN) start = Math.max(0, end - MIN_SPAN_MIN)
-    } else {
-      // afternoon / evening: keep the bottom edge, grow upward
-      start = Math.max(0, end - MIN_SPAN_MIN)
-      if (end - start < MIN_SPAN_MIN) end = Math.min(24 * 60, start + MIN_SPAN_MIN)
-    }
+  if (!timed.length) return { start: 8 * 60, end: 17 * 60 }
+  const earliestMin = Math.min(...timed.map((t) => t.s))
+  const latestMin = Math.max(...timed.map((t) => t.e))
+
+  let start = Math.max(0, Math.floor(earliestMin / 60) * 60 - 60)
+  let end = Math.min(24 * 60, Math.ceil(latestMin / 60) * 60 + 60)
+
+  if (end <= start) {
+    end = Math.min(24 * 60, start + 2 * 60)
   }
-  start = Math.floor(start / 60) * 60
-  end = Math.ceil(end / 60) * 60
+
   return { start, end }
 }
 
