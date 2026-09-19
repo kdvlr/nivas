@@ -1118,7 +1118,7 @@ export default function Calendar() {
     const todayKey = isoDate(new Date())
 
     return (
-      <div className="flex-1 min-h-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 lg:grid-rows-3 gap-2 lg:gap-2.5 p-0.5 overflow-y-auto lg:overflow-hidden">
+      <div className="flex-1 min-h-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-2.5 p-0.5 overflow-y-auto content-start auto-rows-max">
         {yearMonths.map((mDate) => {
           const year = mDate.getFullYear()
           const month = mDate.getMonth()
@@ -1129,7 +1129,7 @@ export default function Calendar() {
           return (
             <div
               key={mDate.toISOString()}
-              className="flex flex-col justify-between rounded-xl p-2 border border-white/10 bg-white/[0.02] shadow-sm min-h-0"
+              className="flex flex-col rounded-xl p-2 border border-white/10 bg-white/[0.02] shadow-sm shrink-0"
             >
               <div className="text-center font-bold text-ink text-xs lg:text-sm tracking-tight mb-1 truncate">
                 {mDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
@@ -1148,10 +1148,10 @@ export default function Calendar() {
                 ))}
               </div>
 
-              <div className="grid grid-cols-7 gap-y-0.5 flex-1 min-h-0">
+              <div className="grid grid-cols-7 gap-y-0.5">
                 {Array.from({ length: totalCells }, (_, idx) => {
                   if (idx < firstDayOfWeek || idx >= firstDayOfWeek + daysInMonth) {
-                    return <div key={`empty-${idx}`} className="h-full min-h-[22px]" />
+                    return <div key={`empty-${idx}`} className="h-full min-h-[20px]" />
                   }
 
                   const dayNum = idx - firstDayOfWeek + 1
@@ -1174,7 +1174,7 @@ export default function Calendar() {
                       type="button"
                       key={dateKey}
                       onClick={() => handleDaySelect(new Date(year, month, dayNum))}
-                      className="flex flex-col items-center justify-center rounded py-0.5 transition-all cursor-pointer hover:bg-white/10 active:scale-95 group relative"
+                      className="flex flex-col items-center justify-center rounded py-0.5 transition-all cursor-pointer hover:bg-white/10 active:scale-95 group relative min-h-[20px]"
                       style={{
                         backgroundColor: isToday
                           ? 'color-mix(in srgb, var(--primary) 22%, transparent)'
