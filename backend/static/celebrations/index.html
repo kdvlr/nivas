@@ -1,0 +1,3483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chore Celebration Animation Collection — 20 Standalone Scenes</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    :root {
+      --bg: #090d16;
+      --surface: #121826;
+      --surface-variant: #1e293b;
+      --primary: #38bdf8;
+      --secondary: #f59e0b;
+      --success: #22c55e;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: rgba(255, 255, 255, 0.1);
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    header.app-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 24px;
+      background: rgba(18, 24, 38, 0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #38bdf8, #4ade80, #facc15);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .header-controls { display: flex; align-items: center; gap: 10px; }
+    .child-input-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface-variant);
+      padding: 4px 12px;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+    }
+    .child-input-group label { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; }
+    .child-input-group input {
+      background: transparent; border: none; color: #fff; font-size: 0.85rem; font-weight: 700; width: 90px; outline: none;
+    }
+    .layout-container { display: flex; flex: 1; height: calc(100vh - 54px); max-height: calc(100vh - 54px); overflow: hidden; }
+    aside.sidebar {
+      width: 380px;
+      height: 100%;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+    .sidebar-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+      z-index: 10;
+    }
+    .search-box {
+      width: 100%;
+      background: var(--surface-variant);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: #fff;
+      font-size: 0.85rem;
+      outline: none;
+    }
+    .category-chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+    .category-chip {
+      background: var(--surface-variant);
+      color: var(--text-muted);
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      cursor: pointer;
+      white-space: nowrap;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+    }
+    .category-chip:hover { color: #fff; border-color: var(--border); }
+    .category-chip.active { background: #0284c7; color: #fff; border-color: #38bdf8; }
+    .scene-list { padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+    .scene-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      background: rgba(30, 41, 59, 0.4);
+      border: 1px solid transparent;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .scene-item:hover { background: rgba(30, 41, 59, 0.9); border-color: rgba(56, 189, 248, 0.3); transform: translateX(2px); }
+    .scene-item.active { background: rgba(2, 132, 199, 0.2); border-color: #38bdf8; }
+    .scene-emoji {
+      font-size: 1.5rem;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15, 23, 42, 0.6);
+      border-radius: 10px;
+      flex-shrink: 0;
+    }
+    .scene-info { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .scene-num-title { display: flex; align-items: center; gap: 6px; }
+    .scene-num { font-size: 0.7rem; font-weight: 700; color: var(--primary); }
+    .scene-title { font-size: 0.85rem; font-weight: 700; color: #f1f5f9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .scene-message { font-size: 0.72rem; color: #38bdf8; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    main.viewport {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+    main.viewport {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 24px;
+      overflow-y: auto;
+      gap: 12px;
+      background: #060910;
+      height: 100%;
+    }
+    .stage-card {
+      position: relative;
+      height: min(calc(100vh - 280px), 640px);
+      aspect-ratio: 16 / 9;
+      width: auto;
+      max-width: 100%;
+      background: #000;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    canvas#stageCanvas { width: 100%; height: 100%; display: block; }
+    .fullscreen-btn {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border);
+      color: #fff;
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      opacity: 0.6;
+      transition: opacity 0.2s ease;
+    }
+    .fullscreen-btn:hover { opacity: 1; }
+
+    .controls-panel {
+      width: 100%;
+      max-width: 1100px;
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .timeline-bar { display: flex; align-items: center; gap: 14px; width: 100%; }
+    .time-indicator { font-variant-numeric: tabular-nums; font-size: 0.85rem; font-weight: 600; color: var(--primary); min-width: 72px; }
+    .scrubber-wrap { position: relative; flex: 1; height: 28px; display: flex; align-items: center; cursor: pointer; }
+    .scrubber-rail { position: absolute; width: 100%; height: 6px; background: #334155; border-radius: 3px; overflow: hidden; }
+    .scrubber-fill { position: absolute; left: 0; height: 100%; width: 0%; background: linear-gradient(90deg, #38bdf8, #22c55e, #facc15); border-radius: 3px; }
+    .phase-markers { position: absolute; width: 100%; height: 100%; pointer-events: none; }
+    .p-marker { position: absolute; top: 50%; transform: translateY(-50%); width: 2px; height: 10px; background: rgba(255, 255, 255, 0.35); }
+    .p-label { position: absolute; top: -14px; transform: translateX(-50%); font-size: 0.65rem; color: #64748b; font-weight: 600; white-space: nowrap; }
+    .scrubber-knob { position: absolute; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 0 10px rgba(56, 189, 248, 0.8); top: 50%; transform: translate(-50%, -50%); pointer-events: none; }
+
+    .playback-buttons { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+    .btn-row { display: flex; align-items: center; gap: 8px; }
+    button.btn {
+      background: #1e293b;
+      color: #f1f5f9;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+    button.btn:hover { background: #334155; border-color: rgba(255, 255, 255, 0.3); transform: translateY(-1px); }
+    button.btn.primary { background: linear-gradient(135deg, #0284c7, #2563eb); border-color: #38bdf8; color: #fff; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35); }
+    .speed-selector { display: flex; background: #0f172a; border-radius: 8px; padding: 2px; border: 1px solid var(--border); }
+    .s-btn { background: transparent; border: none; padding: 4px 8px; font-size: 0.75rem; border-radius: 6px; color: #94a3b8; cursor: pointer; }
+    .s-btn.active { background: #3b82f6; color: #fff; }
+
+    .scene-meta-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 8px;
+    }
+    .symbol-preview { display: inline-flex; align-items: center; gap: 6px; font-family: monospace; font-size: 1rem; color: #facc15; }
+
+    @media (max-width: 900px) {
+      .layout-container { flex-direction: column-reverse; height: auto; }
+      aside.sidebar { width: 100%; height: 320px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="app-bar">
+    <div class="brand-title">
+      <span>✨</span>
+      <span>Chore Celebration Animation Collection</span>
+    </div>
+    <div class="header-controls">
+      <div class="child-input-group">
+        <label for="childNameInput">Child:</label>
+        <input type="text" id="childNameInput" value="Leo" maxlength="16" />
+      </div>
+      <button class="btn" id="randomSceneBtn">🎲 Random</button>
+      <button class="btn" id="nextSceneBtn">Next ❯</button>
+    </div>
+  </header>
+
+  <div class="layout-container">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <input type="text" class="search-box" id="searchBox" placeholder="Search 20 celebrations..." />
+        <div class="category-chips">
+          <div class="category-chip active" data-cat="all">All (20)</div>
+          <div class="category-chip" data-cat="action">Action</div>
+          <div class="category-chip" data-cat="animals">Animals</div>
+          <div class="category-chip" data-cat="fantasy">Fantasy</div>
+          <div class="category-chip" data-cat="tech">Tech & Space</div>
+        </div>
+      </div>
+      <div class="scene-list" id="sceneList"></div>
+    </aside>
+
+    <main class="viewport">
+      <div class="stage-card" id="stageCard">
+        <canvas id="stageCanvas"></canvas>
+        <button class="fullscreen-btn" id="fsBtn">⛶ Fullscreen</button>
+      </div>
+
+      <div class="controls-panel">
+        <div class="timeline-bar">
+          <div class="time-indicator" id="timeDisplay">0.00s / 7.60s</div>
+          <div class="scrubber-wrap" id="scrubberWrap">
+            <div class="scrubber-rail">
+              <div class="scrubber-fill" id="scrubberFill"></div>
+            </div>
+            <div class="phase-markers">
+              <div class="p-marker" style="left: 0%;"><span class="p-label">Setup (0.0s)</span></div>
+              <div class="p-marker" style="left: 15.78%;"><span class="p-label">Action (1.2s)</span></div>
+              <div class="p-marker" style="left: 56.57%;"><span class="p-label">Celebration (4.3s)</span></div>
+              <div class="p-marker" style="left: 89.47%;"><span class="p-label">Reset (6.8s)</span></div>
+            </div>
+            <div class="scrubber-knob" id="scrubberKnob"></div>
+          </div>
+        </div>
+
+        <div class="playback-buttons">
+          <div class="btn-row">
+            <button class="btn primary" id="playBtn">
+              <span id="playIcon">⏸</span> <span id="playText">Pause</span>
+            </button>
+            <button class="btn" id="restartBtn">↺ Replay</button>
+            <button class="btn" id="stepBackBtn">⏮ -0.25s</button>
+            <button class="btn" id="stepFwdBtn">⏭ +0.25s</button>
+          </div>
+
+          <div class="btn-row">
+            <div class="speed-selector">
+              <button class="s-btn" data-speed="0.25">0.25x</button>
+              <button class="s-btn" data-speed="0.5">0.5x</button>
+              <button class="s-btn active" data-speed="1.0">1.0x</button>
+              <button class="s-btn" data-speed="1.5">1.5x</button>
+            </div>
+            <button class="btn" id="soundBtn">🔊 Sound: ON</button>
+            <button class="btn" id="motionBtn">⚡ Reduced Motion: OFF</button>
+          </div>
+        </div>
+
+        <div class="scene-meta-bar">
+          <div id="sceneDesc">Active Scene Details</div>
+          <div class="symbol-preview">
+            <span>Symbol Progress:</span>
+            <span id="symbolState">✓  ✓  ✓  □</span>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. WEB AUDIO PROCEDURAL SYNTHESIS ENGINE
+    // =========================================================================
+    class SoundFX {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+        this.lastTriggers = {};
+      }
+      init() {
+        if (!this.ctx) {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (AC) this.ctx = new AC();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      tone(freq, dur = 0.15, type = 'sine', gainVal = 0.3) {
+        if (!this.enabled || !this.ctx) return;
+        try {
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const g = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, now);
+          g.gain.setValueAtTime(gainVal, now);
+          g.gain.exponentialRampToValueAtTime(0.001, now + dur);
+          osc.connect(g);
+          g.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + dur);
+        } catch (e) {}
+      }
+      chord(freqs, dur = 0.6) {
+        if (!this.enabled || !this.ctx) return;
+        freqs.forEach(f => this.tone(f, dur, 'triangle', 0.25 / freqs.length));
+      }
+      noise(dur = 0.2, gainVal = 0.3, highpass = 400) {
+        if (!this.enabled || !this.ctx) return;
+        try {
+          const now = this.ctx.currentTime;
+          const bufferSize = this.ctx.sampleRate * dur;
+          const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.4));
+          const src = this.ctx.createBufferSource();
+          src.buffer = buffer;
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'highpass';
+          filter.frequency.value = highpass;
+          const g = this.ctx.createGain();
+          g.gain.setValueAtTime(gainVal, now);
+          g.gain.exponentialRampToValueAtTime(0.001, now + dur);
+          src.connect(filter);
+          filter.connect(g);
+          g.connect(this.ctx.destination);
+          src.start(now);
+        } catch (e) {}
+      }
+      playImpact() {
+        this.tone(110, 0.28, 'sine', 0.6);
+        this.noise(0.12, 0.4, 250);
+      }
+      playSuccess() {
+        this.chord([523.25, 659.25, 783.99, 1046.50], 0.8);
+      }
+      playWhoosh() {
+        this.tone(280, 0.35, 'sawtooth', 0.15);
+      }
+      sync(t, prevT) {
+        if (t < prevT) this.lastTriggers = {};
+        if (t >= 1.2 && !this.lastTriggers['action']) {
+          this.lastTriggers['action'] = true;
+          this.tone(440, 0.1, 'triangle', 0.2);
+        }
+        if (t >= 4.25 && !this.lastTriggers['success']) {
+          this.lastTriggers['success'] = true;
+          this.playImpact();
+          setTimeout(() => this.playSuccess(), 80);
+        }
+        if (t >= 6.78 && !this.lastTriggers['wipe']) {
+          this.lastTriggers['wipe'] = true;
+          this.playWhoosh();
+        }
+      }
+    }
+    const sound = new SoundFX();
+
+    // =========================================================================
+    // 2. CANVAS COORDINATES & MATH UTILS
+    // =========================================================================
+    const V_W = 1280;
+    const V_H = 720;
+    const DURATION = 7.6;
+
+    const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const easeOutQuad = t => t * (2 - t);
+    const easeInOutCubic = t => t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
+    const easeOutBack = (t, s = 1.7) => {
+      const t1 = t - 1;
+      return t1 * t1 * ((s + 1) * t1 + s) + 1;
+    };
+    const easeOutBounce = t => {
+      const n1 = 7.5625, d1 = 2.75;
+      if (t < 1 / d1) return n1 * t * t;
+      if (t < 2 / d1) return n1 * (t -= 1.5 / d1) * t + 0.75;
+      if (t < 2.5 / d1) return n1 * (t -= 2.25 / d1) * t + 0.9375;
+      return n1 * (t -= 2.625 / d1) * t + 0.984375;
+    };
+
+    function drawCheckmark(ctx, x, y, size, color, strokeW = 4) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = strokeW;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-size * 0.38, 0);
+      ctx.lineTo(-size * 0.08, size * 0.35);
+      ctx.lineTo(size * 0.45, -size * 0.38);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Strict Chore Symbol Invariant: Render ONLY neutral task tiles (✓ ✓ ✓ □ -> ✓ ✓ ✓ ✓)
+    function drawTaskTiles(ctx, x, y, t, theme = {}) {
+      const isComplete = t >= 4.3;
+      const flipAnim = (t >= 3.8 && t < 4.3) ? (t - 3.8) / 0.5 : (isComplete ? 1 : 0);
+      const tiles = ['✓', '✓', '✓', isComplete ? '✓' : '□'];
+
+      ctx.save();
+      ctx.translate(x, y);
+
+      const tileW = 54;
+      const tileGap = 16;
+      const totalW = 4 * tileW + 3 * tileGap;
+      const startX = -totalW / 2 + tileW / 2;
+
+      ctx.fillStyle = theme.cardBg || 'rgba(15, 23, 42, 0.85)';
+      ctx.strokeStyle = theme.border || 'rgba(255, 255, 255, 0.18)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(-totalW / 2 - 14, -tileW / 2 - 10, totalW + 28, tileW + 20, 16);
+      ctx.fill();
+      ctx.stroke();
+
+      tiles.forEach((sym, idx) => {
+        const tx = startX + idx * (tileW + tileGap);
+        ctx.save();
+        ctx.translate(tx, 0);
+
+        if (idx === 3 && flipAnim > 0 && flipAnim < 1) {
+          ctx.scale(1, Math.cos(flipAnim * Math.PI));
+        }
+
+        if (idx === 3 && !isComplete) {
+          const pulse = Math.sin(t * 8) * 0.25 + 0.75;
+          ctx.fillStyle = `rgba(239, 68, 68, ${0.15 * pulse})`;
+          ctx.strokeStyle = `rgba(239, 68, 68, ${0.85 * pulse})`;
+          ctx.lineWidth = 2.5;
+        } else {
+          ctx.fillStyle = 'rgba(34, 197, 94, 0.18)';
+          ctx.strokeStyle = '#22c55e';
+          ctx.lineWidth = 2;
+        }
+
+        ctx.beginPath();
+        ctx.roundRect(-tileW / 2, -tileW / 2, tileW, tileW, 10);
+        ctx.fill();
+        ctx.stroke();
+
+        if (sym === '✓') {
+          drawCheckmark(ctx, 0, 0, 24, '#22c55e', 3.5);
+        } else {
+          ctx.fillStyle = '#ef4444';
+          ctx.font = 'bold 22px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('□', 0, -1);
+        }
+        ctx.restore();
+      });
+
+      ctx.restore();
+    }
+
+    // High-contrast, room-readable final celebration banner
+    function drawCelebrationMessage(ctx, t, mainText, subText, childName, colorTheme = {}) {
+      if (t < 4.3 || t >= 6.8) return;
+
+      const enterProg = clamp((t - 4.3) / 0.5, 0, 1);
+      const scale = easeOutBack(enterProg, 1.8);
+
+      ctx.save();
+      ctx.translate(V_W / 2, 280);
+      ctx.scale(scale, scale);
+
+      const ribbonGrad = ctx.createLinearGradient(-460, 0, 460, 0);
+      ribbonGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+      ribbonGrad.addColorStop(0.15, colorTheme.ribbonBg || 'rgba(10, 15, 29, 0.95)');
+      ribbonGrad.addColorStop(0.85, colorTheme.ribbonBg || 'rgba(10, 15, 29, 0.95)');
+      ribbonGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+      ctx.fillStyle = ribbonGrad;
+      ctx.beginPath();
+      ctx.roundRect(-460, -95, 920, 190, 28);
+      ctx.fill();
+
+      // Bold contrast outline
+      ctx.font = '900 68px -apple-system, Impact, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.strokeStyle = '#020617';
+      ctx.lineWidth = 14;
+      ctx.strokeText(mainText, 0, -22);
+
+      const grad = ctx.createLinearGradient(0, -60, 0, 20);
+      grad.addColorStop(0, colorTheme.textGrad1 || '#ffffff');
+      grad.addColorStop(0.5, colorTheme.textGrad2 || '#fde047');
+      grad.addColorStop(1, colorTheme.textGrad3 || '#ea580c');
+      ctx.fillStyle = grad;
+      ctx.fillText(mainText, 0, -22);
+
+      if (t >= 4.7) {
+        const subProg = clamp((t - 4.7) / 0.4, 0, 1);
+        const subScale = easeOutBounce(subProg);
+
+        ctx.save();
+        ctx.translate(0, 48);
+        ctx.scale(subScale, subScale);
+
+        const fullSub = childName ? `${childName.toUpperCase()} — ${subText}` : `★ ${subText} ★`;
+        ctx.font = '900 28px sans-serif';
+        ctx.strokeStyle = '#020617';
+        ctx.lineWidth = 8;
+        ctx.strokeText(fullSub, 0, 0);
+
+        ctx.fillStyle = colorTheme.subColor || '#22c55e';
+        ctx.fillText(fullSub, 0, 0);
+        ctx.restore();
+      }
+
+      ctx.restore();
+    }
+
+    // Confetti burst
+    function drawConfetti(ctx, t, startT, count = 50, colors = ['#facc15', '#38bdf8', '#22c55e', '#ec4899', '#ffffff']) {
+      if (t < startT || t >= 6.8) return;
+      const elapsed = t - startT;
+      ctx.save();
+      for (let i = 0; i < count; i++) {
+        const fromLeft = i % 2 === 0;
+        const originX = fromLeft ? 60 : V_W - 60;
+        const originY = V_H - 80;
+        const angle = fromLeft ? -(0.35 + (i * 0.04) % 0.4) * Math.PI : -(0.65 - (i * 0.04) % 0.4) * Math.PI;
+        const speed = 420 + (i * 27) % 320;
+        const x = originX + Math.cos(angle) * (speed * elapsed);
+        const y = originY + Math.sin(angle) * (speed * elapsed) + 0.5 * 380 * elapsed * elapsed;
+        const rot = elapsed * (4 + (i % 6));
+
+        if (y < V_H + 40) {
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(rot);
+          ctx.fillStyle = colors[i % colors.length];
+          ctx.fillRect(-6, -6, 12, 12);
+          ctx.restore();
+        }
+      }
+      ctx.restore();
+    }
+
+    // Scene-specific wipe transitions
+    function drawWipe(ctx, t, type = 'circle', color = '#0f172a') {
+      if (t < 6.8) return;
+      const wipeProg = clamp((t - 6.8) / 0.8, 0, 1);
+      const scale = easeInOutCubic(wipeProg);
+
+      ctx.save();
+      if (type === 'smoke') {
+        const r = scale * 1050;
+        ctx.fillStyle = '#334155';
+        ctx.beginPath();
+        ctx.arc(V_W / 2, V_H / 2, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.arc(V_W / 2, V_H / 2, r * 0.7, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (type === 'ball') {
+        const gx = 1350 - scale * (1350 - V_W / 2);
+        const gy = 760 - scale * (760 - V_H / 2);
+        const r = 40 + scale * 1150;
+        ctx.beginPath();
+        ctx.arc(gx, gy, r, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath();
+        ctx.arc(gx, gy, r * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (type === 'tire') {
+        const r = scale * 1000;
+        ctx.beginPath();
+        ctx.arc(V_W / 2, V_H / 2, r, 0, Math.PI * 2);
+        ctx.fillStyle = '#090d16';
+        ctx.fill();
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 20 * scale;
+        ctx.stroke();
+      } else if (type === 'iris') {
+        const maxR = Math.hypot(V_W, V_H);
+        ctx.beginPath();
+        ctx.arc(V_W / 2, V_H / 2, scale * maxR, 0, Math.PI * 2);
+        ctx.fillStyle = '#0369a1';
+        ctx.fill();
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 15;
+        ctx.stroke();
+      } else if (type === 'parchment') {
+        const h = V_H * scale;
+        ctx.fillStyle = '#d97706';
+        ctx.fillRect(0, 0, V_W, h);
+        ctx.fillStyle = '#78350f';
+        ctx.fillRect(0, h - 16, V_W, 16);
+      } else if (type === 'wave') {
+        const wx = V_W * (1 - scale);
+        ctx.fillStyle = '#0284c7';
+        ctx.beginPath();
+        ctx.moveTo(wx, 0);
+        ctx.lineTo(V_W, 0);
+        ctx.lineTo(V_W, V_H);
+        ctx.lineTo(wx - 90, V_H);
+        ctx.closePath();
+        ctx.fill();
+      } else if (type === 'firework') {
+        const r = scale * 1100;
+        ctx.beginPath();
+        ctx.arc(V_W / 2, V_H / 2, r, 0, Math.PI * 2);
+        ctx.fillStyle = '#581c87';
+        ctx.fill();
+        ctx.strokeStyle = '#f97316';
+        ctx.lineWidth = 24 * scale;
+        ctx.stroke();
+      } else if (type === 'warp') {
+        ctx.fillStyle = `rgba(15, 23, 42, ${scale})`;
+        ctx.fillRect(0, 0, V_W, V_H);
+        for (let i = 0; i < 40; i++) {
+          const ang = (i / 40) * Math.PI * 2;
+          const len = scale * 800;
+          ctx.strokeStyle = '#a855f7';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(V_W / 2, V_H / 2);
+          ctx.lineTo(V_W / 2 + Math.cos(ang) * len, V_H / 2 + Math.sin(ang) * len);
+          ctx.stroke();
+        }
+      } else if (type === 'blueprint') {
+        const h = V_H * scale;
+        ctx.fillStyle = '#1e3a8a';
+        ctx.fillRect(0, 0, V_W, h);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.lineWidth = 1;
+        for (let x = 0; x < V_W; x += 40) {
+          ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+        }
+      } else if (type === 'cape') {
+        const cx = scale * (V_W + 300);
+        ctx.fillStyle = '#dc2626';
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(cx, 0);
+        ctx.lineTo(cx - 200, V_H);
+        ctx.lineTo(0, V_H);
+        ctx.closePath();
+        ctx.fill();
+      } else if (type === 'cloud') {
+        const cx = -300 + scale * (V_W + 600);
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.arc(cx, V_H / 2, 600, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (type === 'curtain') {
+        const w = (V_W / 2) * scale;
+        ctx.fillStyle = '#831843';
+        ctx.fillRect(0, 0, w, V_H);
+        ctx.fillRect(V_W - w, 0, w, V_H);
+      } else if (type === 'bubbles') {
+        const r = scale * 1050;
+        ctx.beginPath();
+        ctx.arc(V_W / 2, V_H / 2, r, 0, Math.PI * 2);
+        ctx.fillStyle = '#0d9488';
+        ctx.fill();
+      } else if (type === 'spotlight') {
+        const r = (1 - scale) * 900;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, V_W, V_H);
+        if (scale > 0.6) {
+          ctx.fillStyle = '#090d16';
+          ctx.fillRect(0, 0, V_W, V_H);
+        }
+      } else if (type === 'petals') {
+        const r = scale * 1050;
+        ctx.fillStyle = '#15803d';
+        ctx.beginPath();
+        ctx.arc(V_W / 2, V_H / 2, r, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (type === 'wings') {
+        const w = (V_W / 2) * scale;
+        ctx.fillStyle = '#0284c7';
+        ctx.fillRect(0, 0, w, V_H);
+        ctx.fillRect(V_W - w, 0, w, V_H);
+      } else if (type === 'laser') {
+        const r = scale * 1050;
+        ctx.fillStyle = '#be185d';
+        ctx.beginPath();
+        ctx.arc(V_W / 2, V_H / 2, r, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (type === 'blossom') {
+        const cx = -300 + scale * (V_W + 600);
+        ctx.fillStyle = '#fbcfe8';
+        ctx.beginPath();
+        ctx.arc(cx, V_H / 2, 600, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (type === 'starlight') {
+        const r = scale * 1100;
+        ctx.beginPath();
+        ctx.arc(V_W / 2, V_H / 2, r, 0, Math.PI * 2);
+        ctx.fillStyle = '#6d28d9';
+        ctx.fill();
+      } else if (type === 'frosting') {
+        const r = scale * 1050;
+        ctx.fillStyle = '#d97706';
+        ctx.beginPath();
+        ctx.arc(V_W / 2, V_H / 2, r, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        const maxR = Math.hypot(V_W, V_H);
+        ctx.beginPath();
+        ctx.arc(V_W / 2, V_H / 2, scale * maxR, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // =========================================================================
+    // 3. SCENES REGISTRY (BATCH 1: 1 - 5)
+    // =========================================================================
+    const CELEBRATIONS = [
+      // 1. NINJA CHORE CHOP
+      {
+        id: 'ninja',
+        num: 1,
+        name: 'Ninja Chore Chop',
+        emoji: '🥷',
+        category: 'action',
+        finalMsg: 'HI-YAH! ALL TASKS COMPLETE!',
+        subMsg: 'Master Of Focus & Precision',
+        wipe: 'smoke',
+        draw: (ctx, t, childName, reducedMotion) => {
+          // Background: Dojo at night with moon
+          const bgGrad = ctx.createLinearGradient(0, 0, 0, V_H);
+          bgGrad.addColorStop(0, '#090d16');
+          bgGrad.addColorStop(1, '#1e1b4b');
+          ctx.fillStyle = bgGrad;
+          ctx.fillRect(0, 0, V_W, V_H);
+
+          // Giant moon
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(V_W / 2 + 180, 180, 110, 0, Math.PI * 2);
+          ctx.fillStyle = '#fef08a';
+          ctx.shadowColor = '#fef08a';
+          ctx.shadowBlur = 35;
+          ctx.fill();
+          ctx.restore();
+
+          // Dojo wooden floor and columns
+          ctx.fillStyle = '#1c1917';
+          ctx.fillRect(0, V_H - 120, V_W, 120);
+          ctx.fillStyle = '#7f1d1d';
+          ctx.fillRect(80, 0, 36, V_H - 120);
+          ctx.fillRect(V_W - 116, 0, 36, V_H - 120);
+
+          // Bamboo stalks
+          const bambooCut = (t >= 2.4);
+          const cutShift = bambooCut ? Math.min((t - 2.4) * 80, 40) : 0;
+          
+          ctx.fillStyle = '#15803d';
+          // Left bamboo
+          ctx.fillRect(280, bambooCut ? 240 + cutShift : 180, 24, bambooCut ? 360 - cutShift : 420);
+          if (bambooCut) {
+            ctx.save();
+            ctx.translate(280 - cutShift * 0.8, 180 - cutShift * 0.3);
+            ctx.rotate(-cutShift * 0.015);
+            ctx.fillRect(0, 0, 24, 60);
+            ctx.restore();
+          }
+
+          // Right bamboo
+          ctx.fillRect(V_W - 304, bambooCut ? 240 + cutShift : 180, 24, bambooCut ? 360 - cutShift : 420);
+          if (bambooCut) {
+            ctx.save();
+            ctx.translate(V_W - 304 + cutShift * 0.8, 180 - cutShift * 0.3);
+            ctx.rotate(cutShift * 0.015);
+            ctx.fillRect(0, 0, 24, 60);
+            ctx.restore();
+          }
+
+          // Hanging parchment with task checklist
+          drawTaskTiles(ctx, V_W / 2, 80, t, { cardBg: 'rgba(28, 25, 23, 0.95)', border: '#f59e0b' });
+
+          // Ninja character
+          ctx.save();
+          let ninjaX = V_W / 2;
+          let ninjaY = 460;
+          let slashProgress = 0;
+
+          if (t < 1.2) {
+            // Perched crouch
+            ninjaX = V_W / 2 - 280;
+            ninjaY = 220;
+          } else if (t < 2.5) {
+            // Leaping down
+            const leapP = (t - 1.2) / 1.3;
+            ninjaX = lerp(V_W / 2 - 280, V_W / 2, leapP);
+            ninjaY = lerp(220, 480, easeOutQuad(leapP));
+          } else if (t < 4.3) {
+            // Katana slash pose
+            ninjaX = V_W / 2;
+            ninjaY = 480;
+            slashProgress = (t - 2.5) / 1.8;
+          } else {
+            // Sheath pose & victory stance
+            ninjaX = V_W / 2;
+            ninjaY = 480;
+          }
+
+          // Draw Ninja Body (Silhouette with red sash & glowing eyes)
+          ctx.translate(ninjaX, ninjaY);
+          ctx.fillStyle = '#0f172a';
+          ctx.beginPath();
+          ctx.arc(0, -60, 22, 0, Math.PI * 2); // Head
+          ctx.fill();
+          ctx.fillRect(-18, -40, 36, 50); // Torso
+          ctx.fillRect(-22, 10, 16, 45); // Left leg
+          ctx.fillRect(6, 10, 16, 45); // Right leg
+
+          // Red Ninja Scarf / Headband fluttering
+          ctx.fillStyle = '#dc2626';
+          ctx.beginPath();
+          ctx.moveTo(-18, -60);
+          ctx.lineTo(-50 - Math.sin(t * 12) * 12, -65 + Math.cos(t * 8) * 8);
+          ctx.lineTo(-44, -52);
+          ctx.lineTo(-18, -54);
+          ctx.fill();
+
+          // Ninja eyes (glowing white)
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(-8, -63, 6, 3);
+          ctx.fillRect(2, -63, 6, 3);
+
+          // Katana & Slash Arc
+          if (t >= 2.0 && t < 4.3) {
+            ctx.save();
+            ctx.strokeStyle = '#38bdf8';
+            ctx.shadowColor = '#38bdf8';
+            ctx.shadowBlur = 18;
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.arc(0, -30, 90, -Math.PI * 0.8, Math.PI * 0.2);
+            ctx.stroke();
+            ctx.restore();
+          }
+
+          ctx.restore();
+
+          // Confetti & Celebration
+          drawConfetti(ctx, t, 4.3, 60, ['#10b981', '#f59e0b', '#38bdf8', '#dc2626', '#ffffff']);
+          drawCelebrationMessage(ctx, t, 'HI-YAH! ALL TASKS COMPLETE!', 'Master Of Focus & Precision', childName, {
+            ribbonBg: 'rgba(15, 23, 42, 0.95)',
+            textGrad1: '#ffffff',
+            textGrad2: '#34d399',
+            textGrad3: '#059669',
+            subColor: '#34d399'
+          });
+
+          // Scene wipe
+          drawWipe(ctx, t, 'smoke', '#0f172a');
+        }
+      },
+
+      // 2. SOCCER CHAMPIONSHIP GOAL
+      {
+        id: 'soccer',
+        num: 2,
+        name: 'Soccer Championship Goal',
+        emoji: '⚽',
+        category: 'action',
+        finalMsg: 'GOAL! CHORES CHAMPION!',
+        subMsg: 'Championship Winning Strike',
+        wipe: 'ball',
+        draw: (ctx, t, childName, reducedMotion) => {
+          // Stadium night turf
+          const turfGrad = ctx.createLinearGradient(0, 0, 0, V_H);
+          turfGrad.addColorStop(0, '#022c22');
+          turfGrad.addColorStop(1, '#064e3b');
+          ctx.fillStyle = turfGrad;
+          ctx.fillRect(0, 0, V_W, V_H);
+
+          // Pitch stripes
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+          for (let x = 0; x < V_W; x += 160) {
+            ctx.fillRect(x, 0, 80, V_H);
+          }
+
+          // Floodlight beams
+          ctx.save();
+          ctx.fillStyle = 'rgba(254, 240, 138, 0.08)';
+          ctx.beginPath();
+          ctx.moveTo(80, 0); ctx.lineTo(0, V_H); ctx.lineTo(600, V_H); ctx.closePath(); ctx.fill();
+          ctx.beginPath();
+          ctx.moveTo(V_W - 80, 0); ctx.lineTo(V_W, V_H); ctx.lineTo(V_W - 600, V_H); ctx.closePath(); ctx.fill();
+          ctx.restore();
+
+          // Goal Net on right
+          const goalX = V_W - 220;
+          const goalY = 280;
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 6;
+          ctx.strokeRect(goalX, goalY, 180, 320);
+
+          // Scoreboard at top
+          drawTaskTiles(ctx, V_W / 2, 70, t, { cardBg: 'rgba(6, 78, 59, 0.95)', border: '#38bdf8' });
+
+          // Score text
+          ctx.font = '900 20px monospace';
+          ctx.fillStyle = '#facc15';
+          ctx.textAlign = 'center';
+          ctx.fillText(t >= 4.3 ? 'SCORE: CHORES 1  —  FUN 0' : 'SCORE: CHORES 0  —  FUN 0', V_W / 2, 130);
+
+          // Goalkeeper in purple
+          const goalieDive = (t >= 2.5 && t < 4.3);
+          const gY = goalieDive ? 420 + Math.sin((t - 2.5) * 2) * 60 : 440;
+          ctx.fillStyle = '#a855f7';
+          ctx.beginPath();
+          ctx.arc(goalX - 30, gY - 40, 16, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillRect(goalX - 42, gY - 20, 24, 45);
+
+          // Player
+          ctx.save();
+          let pX = 220;
+          if (t < 1.2) {
+            pX = 180;
+          } else if (t < 2.5) {
+            pX = lerp(180, 480, (t - 1.2) / 1.3);
+          } else {
+            pX = t >= 4.3 ? 560 : 480;
+          }
+
+          ctx.translate(pX, 480);
+          // Knee slide celebration or running
+          if (t >= 4.3) {
+            // Knee slide
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(-20, -10, 40, 25);
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(0, -30, 18, 0, Math.PI * 2);
+            ctx.fill();
+            // Raised arms
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.moveTo(-16, -15); ctx.lineTo(-32, -50);
+            ctx.moveTo(16, -15); ctx.lineTo(32, -50);
+            ctx.stroke();
+          } else {
+            // Running / kicking
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(-15, -30, 30, 40);
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(0, -48, 16, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillRect(-14, 10, 12, 40);
+            ctx.fillRect(2, 10, 12, 40);
+          }
+          ctx.restore();
+
+          // Soccer Ball
+          let ballX = 520;
+          let ballY = 520;
+          if (t < 2.3) {
+            ballX = 520; ballY = 520;
+          } else if (t < 3.8) {
+            const bp = (t - 2.3) / 1.5;
+            ballX = lerp(520, goalX + 60, bp);
+            ballY = 520 - Math.sin(bp * Math.PI) * 220;
+            // Ribbon trail
+            ctx.strokeStyle = '#facc15';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(520, 520);
+            ctx.quadraticCurveTo((520 + ballX) / 2, ballY - 60, ballX, ballY);
+            ctx.stroke();
+          } else {
+            ballX = goalX + 60;
+            ballY = 400;
+          }
+
+          ctx.save();
+          ctx.translate(ballX, ballY);
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(0, 0, 18, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#0f172a';
+          ctx.beginPath();
+          ctx.arc(0, 0, 8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+
+          // Celebration
+          drawConfetti(ctx, t, 4.3, 70, ['#facc15', '#38bdf8', '#22c55e', '#ef4444', '#ffffff']);
+          drawCelebrationMessage(ctx, t, 'GOAL! CHORES CHAMPION!', 'Championship Winning Strike', childName, {
+            ribbonBg: 'rgba(6, 78, 59, 0.95)',
+            textGrad1: '#ffffff',
+            textGrad2: '#facc15',
+            textGrad3: '#ea580c',
+            subColor: '#facc15'
+          });
+
+          drawWipe(ctx, t, 'ball', '#ffffff');
+        }
+      },
+
+      // 3. MONSTER TRUCK SMASH
+      {
+        id: 'monster-truck',
+        num: 3,
+        name: 'Monster Truck Smash',
+        emoji: '🛻',
+        category: 'action',
+        finalMsg: 'CRUSHED IT! CHORES DEMOLISHED!',
+        subMsg: 'Heavyweight Task Master',
+        wipe: 'tire',
+        draw: (ctx, t, childName, reducedMotion) => {
+          // Dirt arena
+          const arenaGrad = ctx.createLinearGradient(0, 0, 0, V_H);
+          arenaGrad.addColorStop(0, '#1c1005');
+          arenaGrad.addColorStop(1, '#451a03');
+          ctx.fillStyle = arenaGrad;
+          ctx.fillRect(0, 0, V_W, V_H);
+
+          // Stadium lights & mud ramps
+          ctx.fillStyle = '#78350f';
+          ctx.beginPath();
+          ctx.moveTo(200, V_H - 100);
+          ctx.lineTo(460, V_H - 180);
+          ctx.lineTo(460, V_H);
+          ctx.lineTo(200, V_H);
+          ctx.fill();
+
+          // Arena Floor
+          ctx.fillStyle = '#271202';
+          ctx.fillRect(0, V_H - 100, V_W, 100);
+
+          // Task Banner
+          drawTaskTiles(ctx, V_W / 2, 70, t, { cardBg: 'rgba(69, 26, 3, 0.95)', border: '#f59e0b' });
+
+          // The Obstacle Crate
+          const crateX = 760;
+          const isCrushed = t >= 3.8;
+          ctx.save();
+          ctx.translate(crateX, isCrushed ? V_H - 110 : V_H - 140);
+          if (isCrushed) {
+            ctx.scale(1.4, 0.25);
+            ctx.fillStyle = '#f59e0b';
+            ctx.fillRect(-35, -35, 70, 70);
+            drawCheckmark(ctx, 0, 0, 36, '#ffffff', 5);
+          } else {
+            ctx.fillStyle = '#b45309';
+            ctx.fillRect(-35, -35, 70, 70);
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(-35, -35, 70, 70);
+            ctx.fillStyle = '#ef4444';
+            ctx.font = 'bold 36px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('□', 0, -2);
+          }
+          ctx.restore();
+
+          // Monster Truck
+          ctx.save();
+          let truckX = 140;
+          let truckY = V_H - 160;
+          let truckRot = 0;
+
+          if (t < 1.2) {
+            truckX = 140;
+            truckY = V_H - 160 + Math.sin(t * 20) * 4;
+          } else if (t < 2.6) {
+            const p = (t - 1.2) / 1.4;
+            truckX = lerp(140, 440, p);
+            truckY = lerp(V_H - 160, V_H - 240, p);
+            truckRot = -0.15;
+          } else if (t < 3.8) {
+            // Soaring jump
+            const jp = (t - 2.6) / 1.2;
+            truckX = lerp(440, 760, jp);
+            truckY = V_H - 240 - Math.sin(jp * Math.PI) * 220;
+            truckRot = lerp(-0.25, 0.2, jp);
+          } else {
+            // Landing impact & victory donut
+            truckX = 760;
+            truckY = V_H - 160;
+            truckRot = 0;
+          }
+
+          ctx.translate(truckX, truckY);
+          ctx.rotate(truckRot);
+
+          // Giant Knobby Tires
+          ctx.fillStyle = '#0f172a';
+          ctx.beginPath(); ctx.arc(-55, 30, 36, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(55, 30, 36, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#f59e0b';
+          ctx.beginPath(); ctx.arc(-55, 30, 14, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(55, 30, 14, 0, Math.PI * 2); ctx.fill();
+
+          // Heavy chassis & flame body
+          ctx.fillStyle = '#0284c7';
+          ctx.beginPath();
+          ctx.roundRect(-75, -45, 150, 55, 12);
+          ctx.fill();
+          // Flame graphics
+          ctx.fillStyle = '#f59e0b';
+          ctx.beginPath();
+          ctx.moveTo(-60, -20); ctx.lineTo(-10, -35); ctx.lineTo(10, -20); ctx.lineTo(60, -40); ctx.lineTo(20, -10); ctx.closePath();
+          ctx.fill();
+
+          // Exhaust pipes with fire puffs
+          ctx.fillStyle = '#94a3b8';
+          ctx.fillRect(-70, -65, 10, 24);
+          if (t >= 1.2 && t < 4.3) {
+            ctx.fillStyle = '#ea580c';
+            ctx.beginPath();
+            ctx.arc(-65, -75, 12 + Math.random() * 8, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          ctx.restore();
+
+          // Celebration
+          drawConfetti(ctx, t, 4.3, 60, ['#f59e0b', '#dc2626', '#facc15', '#ffffff']);
+          drawCelebrationMessage(ctx, t, 'CRUSHED IT! CHORES DEMOLISHED!', 'Heavyweight Task Master', childName, {
+            ribbonBg: 'rgba(69, 26, 3, 0.95)',
+            textGrad1: '#ffffff',
+            textGrad2: '#f59e0b',
+            textGrad3: '#dc2626',
+            subColor: '#f59e0b'
+          });
+
+          drawWipe(ctx, t, 'tire', '#090d16');
+        }
+      },
+
+      // 4. ROBOT ASSEMBLY LINE
+      {
+        id: 'robot',
+        num: 4,
+        name: 'Robot Assembly Line',
+        emoji: '🤖',
+        category: 'tech',
+        finalMsg: 'SYSTEM 100% OPERATIONAL!',
+        subMsg: 'Optimal Efficiency Achieved',
+        wipe: 'iris',
+        draw: (ctx, t, childName, reducedMotion) => {
+          // Cyberpunk futuristic lab
+          const labGrad = ctx.createLinearGradient(0, 0, 0, V_H);
+          labGrad.addColorStop(0, '#030712');
+          labGrad.addColorStop(1, '#082f49');
+          ctx.fillStyle = labGrad;
+          ctx.fillRect(0, 0, V_W, V_H);
+
+          // Grid lines
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.12)';
+          ctx.lineWidth = 1;
+          for (let x = 0; x < V_W; x += 60) {
+            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, V_H); ctx.stroke();
+          }
+          for (let y = 0; y < V_H; y += 60) {
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(V_W, y); ctx.stroke();
+          }
+
+          // Hologram Checklist
+          drawTaskTiles(ctx, V_W / 2, 70, t, { cardBg: 'rgba(8, 47, 73, 0.95)', border: '#06b6d4' });
+
+          // Diagnostic HUD
+          ctx.font = '900 20px monospace';
+          ctx.fillStyle = '#06b6d4';
+          ctx.textAlign = 'center';
+          ctx.fillText(t >= 4.3 ? 'DIAGNOSTIC STATUS: 100% OPTIMAL' : 'DIAGNOSTIC STATUS: 99% IN PROGRESS', V_W / 2, 130);
+
+          // Assembly Chamber
+          const centerBayX = V_W / 2;
+          const centerBayY = 460;
+
+          // Conveyor belt
+          ctx.fillStyle = '#1e293b';
+          ctx.fillRect(200, V_H - 120, V_W - 400, 30);
+          ctx.fillStyle = '#0f172a';
+          ctx.fillRect(200, V_H - 90, V_W - 400, 90);
+
+          // Robot Body
+          ctx.save();
+          ctx.translate(centerBayX, centerBayY);
+
+          // Dance / wave animation during celebration
+          let danceRot = 0;
+          let waveArm = 0;
+          if (t >= 4.3) {
+            danceRot = Math.sin(t * 12) * 0.08;
+            waveArm = Math.sin(t * 14) * 0.6;
+          }
+          ctx.rotate(danceRot);
+
+          // Body frame
+          ctx.fillStyle = '#334155';
+          ctx.beginPath();
+          ctx.roundRect(-50, -60, 100, 100, 18);
+          ctx.fill();
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 3;
+          ctx.stroke();
+
+          // Chest core socket
+          const coreInserted = t >= 3.8;
+          ctx.fillStyle = coreInserted ? '#22c55e' : '#ef4444';
+          ctx.beginPath();
+          ctx.arc(0, -10, 24, 0, Math.PI * 2);
+          ctx.fill();
+          if (coreInserted) {
+            drawCheckmark(ctx, 0, -10, 24, '#ffffff', 4);
+          } else {
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 22px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('□', 0, -11);
+          }
+
+          // Head
+          ctx.fillStyle = '#475569';
+          ctx.beginPath();
+          ctx.roundRect(-40, -135, 80, 60, 14);
+          ctx.fill();
+          ctx.stroke();
+
+          // LED Eye Visor
+          ctx.fillStyle = '#0f172a';
+          ctx.fillRect(-30, -120, 60, 26);
+          if (t >= 4.3) {
+            // Heart eyes
+            ctx.fillStyle = '#ec4899';
+            ctx.font = '20px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('❤️', -15, -106);
+            ctx.fillText('❤️', 15, -106);
+          } else {
+            // Cyan scan line visor
+            ctx.fillStyle = '#06b6d4';
+            ctx.fillRect(-26, -110, 52, 6);
+          }
+
+          // Arms
+          ctx.fillStyle = '#64748b';
+          // Left arm
+          ctx.fillRect(-70, -50, 16, 60);
+          // Right arm (waving if celebration)
+          ctx.save();
+          ctx.translate(62, -50);
+          ctx.rotate(waveArm);
+          ctx.fillRect(0, 0, 16, 60);
+          ctx.restore();
+
+          ctx.restore();
+
+          // Laser Mechanical Arm
+          if (t >= 1.2 && t < 3.8) {
+            const armP = (t - 1.2) / 2.6;
+            const armY = lerp(80, 360, armP);
+            ctx.save();
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 12;
+            ctx.beginPath();
+            ctx.moveTo(centerBayX, 0);
+            ctx.lineTo(centerBayX, armY);
+            ctx.stroke();
+            // Cyan laser targeting beam
+            ctx.strokeStyle = '#06b6d4';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(centerBayX, armY);
+            ctx.lineTo(centerBayX, centerBayY - 10);
+            ctx.stroke();
+            ctx.restore();
+          }
+
+          // Celebration
+          drawConfetti(ctx, t, 4.3, 60, ['#06b6d4', '#38bdf8', '#22c55e', '#ec4899', '#ffffff']);
+          drawCelebrationMessage(ctx, t, 'SYSTEM 100% OPERATIONAL!', 'Optimal Efficiency Achieved', childName, {
+            ribbonBg: 'rgba(8, 47, 73, 0.95)',
+            textGrad1: '#ffffff',
+            textGrad2: '#22d3ee',
+            textGrad3: '#0284c7',
+            subColor: '#38bdf8'
+          });
+
+          drawWipe(ctx, t, 'iris', '#0369a1');
+        }
+      },
+
+      // 5. PIRATE TREASURE MAP
+      {
+        id: 'pirate',
+        num: 5,
+        name: 'Pirate Treasure Map',
+        emoji: '🏴‍☠️',
+        category: 'fantasy',
+        finalMsg: 'TREASURE UNLOCKED! ALL CHORES WON!',
+        subMsg: 'The Golden Doubloon Is Yours',
+        wipe: 'parchment',
+        draw: (ctx, t, childName, reducedMotion) => {
+          // Island sunset sky
+          const skyGrad = ctx.createLinearGradient(0, 0, 0, V_H);
+          skyGrad.addColorStop(0, '#451a03');
+          skyGrad.addColorStop(0.5, '#b45309');
+          skyGrad.addColorStop(1, '#1e3a8a');
+          ctx.fillStyle = skyGrad;
+          ctx.fillRect(0, 0, V_W, V_H);
+
+          // Ocean and sand beach
+          ctx.fillStyle = '#0284c7';
+          ctx.fillRect(0, V_H - 220, V_W, 80);
+          ctx.fillStyle = '#fbbf24';
+          ctx.fillRect(0, V_H - 140, V_W, 140);
+
+          // Palm tree
+          ctx.fillStyle = '#78350f';
+          ctx.beginPath();
+          ctx.moveTo(120, V_H - 140);
+          ctx.quadraticCurveTo(180, 260, 160, 160);
+          ctx.lineTo(190, 160);
+          ctx.quadraticCurveTo(200, 260, 140, V_H - 140);
+          ctx.fill();
+          // Palm fronds
+          ctx.fillStyle = '#15803d';
+          for (let a = 0; a < 6; a++) {
+            ctx.beginPath();
+            ctx.arc(175, 160, 90, (a / 3) * Math.PI, (a / 3 + 0.4) * Math.PI);
+            ctx.fill();
+          }
+
+          // Parchment task checklist
+          drawTaskTiles(ctx, V_W / 2, 70, t, { cardBg: 'rgba(67, 34, 11, 0.95)', border: '#fbbf24' });
+
+          // Treasure X mark
+          const xMarkX = 720;
+          const xMarkY = V_H - 80;
+          ctx.strokeStyle = '#dc2626';
+          ctx.lineWidth = 8;
+          ctx.beginPath();
+          ctx.moveTo(xMarkX - 25, xMarkY - 25); ctx.lineTo(xMarkX + 25, xMarkY + 25);
+          ctx.moveTo(xMarkX + 25, xMarkY - 25); ctx.lineTo(xMarkX - 25, xMarkY + 25);
+          ctx.stroke();
+
+          // Treasure Chest
+          const chestOpened = t >= 3.8;
+          ctx.save();
+          ctx.translate(xMarkX, V_H - 120);
+
+          // Base
+          ctx.fillStyle = '#78350f';
+          ctx.fillRect(-45, -10, 90, 50);
+          ctx.strokeStyle = '#facc15';
+          ctx.lineWidth = 4;
+          ctx.strokeRect(-45, -10, 90, 50);
+
+          // Lid
+          if (chestOpened) {
+            ctx.save();
+            ctx.translate(-45, -10);
+            ctx.rotate(-0.8);
+            ctx.fillStyle = '#92400e';
+            ctx.fillRect(0, -30, 90, 30);
+            ctx.strokeRect(0, -30, 90, 30);
+            ctx.restore();
+
+            // Glowing treasure doubloons & giant checkmark
+            ctx.fillStyle = '#fde047';
+            ctx.beginPath();
+            ctx.arc(0, -25, 45, 0, Math.PI * 2);
+            ctx.shadowColor = '#fde047';
+            ctx.shadowBlur = 30;
+            ctx.fill();
+            drawCheckmark(ctx, 0, -25, 44, '#b45309', 6);
+          } else {
+            ctx.fillStyle = '#92400e';
+            ctx.beginPath();
+            ctx.roundRect(-45, -35, 90, 25, [14, 14, 0, 0]);
+            ctx.fill();
+            ctx.stroke();
+            // Iron lock
+            ctx.fillStyle = '#facc15';
+            ctx.fillRect(-10, -15, 20, 16);
+          }
+          ctx.restore();
+
+          // Pirate Captain
+          ctx.save();
+          ctx.translate(480, V_H - 130);
+          // Torso
+          ctx.fillStyle = '#991b1b';
+          ctx.fillRect(-20, -50, 40, 50);
+          // Legs
+          ctx.fillStyle = '#1e293b';
+          ctx.fillRect(-18, 0, 14, 40);
+          ctx.fillRect(4, 0, 14, 40);
+          // Head
+          ctx.fillStyle = '#fcd34d';
+          ctx.beginPath(); ctx.arc(0, -68, 18, 0, Math.PI * 2); ctx.fill();
+          // Tricorn Hat
+          ctx.fillStyle = '#0f172a';
+          ctx.beginPath();
+          ctx.moveTo(-35, -75); ctx.lineTo(35, -75); ctx.lineTo(0, -105); ctx.closePath();
+          ctx.fill();
+
+          // Shovel / Cutlass victory pose
+          ctx.strokeStyle = '#94a3b8';
+          ctx.lineWidth = 5;
+          if (t >= 4.3) {
+            ctx.beginPath(); ctx.moveTo(18, -35); ctx.lineTo(45, -85); ctx.stroke();
+          } else {
+            ctx.beginPath(); ctx.moveTo(18, -35); ctx.lineTo(35, 0); ctx.stroke();
+          }
+          ctx.restore();
+
+          // Celebration
+          drawConfetti(ctx, t, 4.3, 60, ['#fbbf24', '#f59e0b', '#dc2626', '#ffffff']);
+          drawCelebrationMessage(ctx, t, 'TREASURE UNLOCKED! ALL CHORES WON!', 'The Golden Doubloon Is Yours', childName, {
+            ribbonBg: 'rgba(67, 34, 11, 0.95)',
+            textGrad1: '#ffffff',
+            textGrad2: '#fbbf24',
+            textGrad3: '#b45309',
+            subColor: '#fbbf24'
+          });
+
+          drawWipe(ctx, t, 'parchment', '#78350f');
+        }
+      }
+    ];
+
+    // =========================================================================
+    // 4. SCENES REGISTRY (BATCH 2: 6 - 10)
+    // =========================================================================
+    CELEBRATIONS.push(
+      // 6. SHARK LAGOON BREACH
+      {
+        id: 'shark',
+        num: 6,
+        name: 'Shark Lagoon Breach',
+        emoji: '🦈',
+        category: 'animals',
+        finalMsg: 'SPLASH-TACULAR JOB!',
+        subMsg: 'Ocean-Deep Focus & Drive',
+        wipe: 'wave',
+        draw: (ctx, t, childName, reducedMotion) => {
+          // Coral reef water background
+          const oceanGrad = ctx.createLinearGradient(0, 0, 0, V_H);
+          oceanGrad.addColorStop(0, '#0284c7');
+          oceanGrad.addColorStop(0.35, '#0369a1');
+          oceanGrad.addColorStop(1, '#082f49');
+          ctx.fillStyle = oceanGrad;
+          ctx.fillRect(0, 0, V_W, V_H);
+
+          // Sunlight caustics
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+          ctx.lineWidth = 2;
+          for (let x = 40; x < V_W; x += 180) {
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.quadraticCurveTo(x + 40, V_H * 0.4, x - 20, V_H);
+            ctx.stroke();
+          }
+
+          // Seafloor corals
+          ctx.fillStyle = '#db2777';
+          ctx.beginPath(); ctx.arc(140, V_H, 100, Math.PI, 0); ctx.fill();
+          ctx.fillStyle = '#9333ea';
+          ctx.beginPath(); ctx.arc(V_W - 140, V_H, 110, Math.PI, 0); ctx.fill();
+
+          // Bubble chain with task tiles
+          drawTaskTiles(ctx, V_W / 2, 70, t, { cardBg: 'rgba(12, 74, 110, 0.95)', border: '#38bdf8' });
+
+          // Giant Clam on seafloor
+          const clamOpen = t >= 3.8;
+          ctx.save();
+          ctx.translate(V_W / 2 + 180, V_H - 120);
+          ctx.fillStyle = '#be185d';
+          // Lower shell
+          ctx.beginPath(); ctx.ellipse(0, 10, 60, 30, 0, 0, Math.PI); ctx.fill();
+          // Upper shell
+          if (clamOpen) {
+            ctx.beginPath(); ctx.ellipse(0, -35, 60, 30, 0, Math.PI, 0); ctx.fill();
+            // Golden pearl with checkmark
+            ctx.fillStyle = '#fde047';
+            ctx.beginPath(); ctx.arc(0, -10, 26, 0, Math.PI * 2); ctx.fill();
+            drawCheckmark(ctx, 0, -10, 24, '#78350f', 4);
+          } else {
+            ctx.beginPath(); ctx.ellipse(0, -10, 60, 30, 0, Math.PI, 0); ctx.fill();
+          }
+          ctx.restore();
+
+          // Shark
+          ctx.save();
+          let sX = 180;
+          let sY = 380;
+          let sRot = 0;
+
+          if (t < 1.2) {
+            sX = 220; sY = 380 + Math.sin(t * 4) * 15;
+          } else if (t < 3.8) {
+            const p = (t - 1.2) / 2.6;
+            sX = lerp(220, V_W / 2 + 180, p);
+            sY = 380 - Math.sin(p * Math.PI) * 90;
+            sRot = Math.sin(p * Math.PI * 2) * 0.15;
+          } else {
+            // Breach upward through surface
+            const bp = (t - 3.8) / 0.8;
+            sX = V_W / 2 + 180;
+            sY = lerp(380, 140, easeOutQuad(Math.min(bp, 1)));
+            sRot = -0.55;
+          }
+
+          ctx.translate(sX, sY);
+          ctx.rotate(sRot);
+
+          // Shark body
+          ctx.fillStyle = '#38bdf8';
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 85, 36, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          // White belly
+          ctx.fillStyle = '#f0f9ff';
+          ctx.beginPath();
+          ctx.ellipse(0, 14, 65, 18, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Dorsal fin
+          ctx.fillStyle = '#0284c7';
+          ctx.beginPath();
+          ctx.moveTo(-10, -32); ctx.lineTo(15, -70); ctx.lineTo(35, -30); ctx.closePath();
+          ctx.fill();
+
+          // Tail fin
+          ctx.beginPath();
+          ctx.moveTo(-80, 0); ctx.lineTo(-115, -40); ctx.lineTo(-100, 0); ctx.lineTo(-120, 35); ctx.closePath();
+          ctx.fill();
+
+          // Eye
+          ctx.fillStyle = '#0f172a';
+          ctx.beginPath(); ctx.arc(45, -8, 5, 0, Math.PI * 2); ctx.fill();
+
+          ctx.restore();
+
+          // Water splash breach effect
+          if (t >= 3.8 && t < 4.8) {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            for (let i = 0; i < 16; i++) {
+              ctx.beginPath();
+              ctx.arc(V_W / 2 + 180 + (i - 8) * 18, 140 + Math.sin(i) * 30, 8 + Math.random() * 8, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+
+          // Celebration
+          drawConfetti(ctx, t, 4.3, 60, ['#38bdf8', '#0284c7', '#facc15', '#ffffff']);
+          drawCelebrationMessage(ctx, t, 'SPLASH-TACULAR JOB!', 'Ocean-Deep Focus & Drive', childName, {
+            ribbonBg: 'rgba(12, 74, 110, 0.95)',
+            textGrad1: '#ffffff',
+            textGrad2: '#38bdf8',
+            textGrad3: '#0284c7',
+            subColor: '#38bdf8'
+          });
+
+          drawWipe(ctx, t, 'wave', '#0284c7');
+        }
+      },
+
+      // 7. FIRE-BREATHING DRAGON
+      {
+        id: 'dragon',
+        num: 7,
+        name: 'Fire-Breathing Dragon',
+        emoji: '🐉',
+        category: 'fantasy',
+        finalMsg: 'BLAZING SUCCESS! TASK COMPLETE!',
+        subMsg: 'Legendary Dragon Tamer',
+        wipe: 'firework',
+        draw: (ctx, t, childName, reducedMotion) => {
+          // Twilight fantasy mountain
+          const skyGrad = ctx.createLinearGradient(0, 0, 0, V_H);
+          skyGrad.addColorStop(0, '#1e1b4b');
+          skyGrad.addColorStop(0.6, '#4c1d95');
+          skyGrad.addColorStop(1, '#180828');
+          ctx.fillStyle = skyGrad;
+          ctx.fillRect(0, 0, V_W, V_H);
+
+          // Stars
+          ctx.fillStyle = '#ffffff';
+          for (let i = 0; i < 30; i++) {
+            ctx.fillRect((i * 47) % V_W, (i * 29) % 360, 2, 2);
+          }
+
+          // Rocky peak
+          ctx.fillStyle = '#1e1b4b';
+          ctx.beginPath();
+          ctx.moveTo(100, V_H); ctx.lineTo(340, 360); ctx.lineTo(600, V_H); ctx.fill();
+
+          // Ancient stone tablet with task tiles
+          drawTaskTiles(ctx, V_W / 2, 70, t, { cardBg: 'rgba(76, 29, 149, 0.95)', border: '#f97316' });
+
+          // Dragon Character
+          const dX = 340;
+          const dY = 380;
+          ctx.save();
+          ctx.translate(dX, dY);
+
+          // Dragon Body (Purple with golden belly)
+          ctx.fillStyle = '#7e22ce';
+          ctx.beginPath(); ctx.ellipse(0, 20, 55, 45, 0, 0, Math.PI * 2); ctx.fill();
+
+          // Golden chest (pulsing flame glow at t 2.0 to 3.2)
+          const chestGlow = (t >= 2.0 && t < 3.2) ? (Math.sin(t * 14) * 0.4 + 0.6) : 0.2;
+          ctx.fillStyle = `rgba(249, 115, 22, ${chestGlow})`;
+          ctx.beginPath(); ctx.ellipse(15, 20, 35, 30, 0, 0, Math.PI * 2); ctx.fill();
+
+          // Head & Golden Horns
+          ctx.fillStyle = '#9333ea';
+          ctx.beginPath(); ctx.arc(45, -20, 30, 0, Math.PI * 2); ctx.fill();
+          // Horns
+          ctx.fillStyle = '#f59e0b';
+          ctx.beginPath();
+          ctx.moveTo(35, -45); ctx.lineTo(25, -75); ctx.lineTo(45, -50); ctx.closePath(); ctx.fill();
+          ctx.beginPath();
+          ctx.moveTo(55, -45); ctx.lineTo(65, -75); ctx.lineTo(65, -50); ctx.closePath(); ctx.fill();
+
+          // Wings (flapping if t >= 4.3)
+          const wingFlap = t >= 4.3 ? Math.sin(t * 16) * 25 : 0;
+          ctx.fillStyle = '#6b21a8';
+          ctx.beginPath();
+          ctx.moveTo(-20, 0); ctx.lineTo(-80, -60 + wingFlap); ctx.lineTo(-30, 20); ctx.closePath();
+          ctx.fill();
+
+          // Snout & friendly eye
+          ctx.fillStyle = '#a855f7';
+          ctx.beginPath(); ctx.arc(70, -15, 18, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath(); ctx.arc(52, -26, 7, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#0f172a';
+          ctx.beginPath(); ctx.arc(54, -26, 4, 0, Math.PI * 2); ctx.fill();
+
+          ctx.restore();
+
+          // Magical Rainbow Flame Arc sketching the final checkmark
+          if (t >= 2.8 && t < 4.8) {
+            const flameP = clamp((t - 2.8) / 1.2, 0, 1);
+            ctx.save();
+            ctx.strokeStyle = '#f97316';
+            ctx.lineWidth = 14;
+            ctx.lineCap = 'round';
+            ctx.shadowColor = '#fbbf24';
+            ctx.shadowBlur = 30;
+            ctx.beginPath();
+            ctx.moveTo(dX + 85, dY - 15);
+            ctx.quadraticCurveTo(620, 240, lerp(620, 840, flameP), lerp(240, 320, flameP));
+            ctx.stroke();
+
+            // Checkmark in the sky formed by magical flame
+            if (flameP > 0.4) {
+              const chkP = (flameP - 0.4) / 0.6;
+              ctx.strokeStyle = '#facc15';
+              ctx.lineWidth = 10;
+              ctx.beginPath();
+              ctx.moveTo(760, 340);
+              ctx.lineTo(lerp(760, 800, Math.min(chkP * 2, 1)), lerp(340, 390, Math.min(chkP * 2, 1)));
+              if (chkP > 0.5) {
+                const chkP2 = (chkP - 0.5) * 2;
+                ctx.lineTo(lerp(800, 880, chkP2), lerp(390, 270, chkP2));
+              }
+              ctx.stroke();
+            }
+            ctx.restore();
+          }
+
+          // Celebration
+          drawConfetti(ctx, t, 4.3, 70, ['#f97316', '#c026d3', '#facc15', '#ffffff']);
+          drawCelebrationMessage(ctx, t, 'BLAZING SUCCESS! TASK COMPLETE!', 'Legendary Dragon Tamer', childName, {
+            ribbonBg: 'rgba(76, 29, 149, 0.95)',
+            textGrad1: '#ffffff',
+            textGrad2: '#f97316',
+            textGrad3: '#c026d3',
+            subColor: '#f97316'
+          });
+
+          drawWipe(ctx, t, 'firework', '#4c1d95');
+        }
+      },
+
+      // 8. SPACE ROVER ODYSSEY
+      {
+        id: 'space-rover',
+        num: 8,
+        name: 'Space Rover Odyssey',
+        emoji: '🚀',
+        category: 'tech',
+        finalMsg: 'MISSION ACCOMPLISHED! ALL CHORES DONE!',
+        subMsg: 'Cosmic Pioneer Excellence',
+        wipe: 'warp',
+        draw: (ctx, t, childName, reducedMotion) => {
+          // Purple exoplanet night sky
+          const skyGrad = ctx.createLinearGradient(0, 0, 0, V_H);
+          skyGrad.addColorStop(0, '#0c051f');
+          skyGrad.addColorStop(0.6, '#2e1065');
+          skyGrad.addColorStop(1, '#581c87');
+          ctx.fillStyle = skyGrad;
+          ctx.fillRect(0, 0, V_W, V_H);
+
+          // Moons & Earth in cosmos
+          ctx.fillStyle = '#67e8f9';
+          ctx.beginPath(); ctx.arc(180, 160, 34, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#f472b6';
+          ctx.beginPath(); ctx.arc(280, 210, 18, 0, Math.PI * 2); ctx.fill();
+
+          // Alien crater terrain
+          ctx.fillStyle = '#3b0764';
+          ctx.beginPath();
+          ctx.moveTo(0, V_H - 120);
+          ctx.quadraticCurveTo(400, V_H - 240, 800, V_H - 160);
+          ctx.lineTo(V_W, V_H - 180);
+          ctx.lineTo(V_W, V_H); ctx.lineTo(0, V_H);
+          ctx.fill();
+
+          // Mission HUD
+          drawTaskTiles(ctx, V_W / 2, 70, t, { cardBg: 'rgba(46, 16, 101, 0.95)', border: '#a855f7' });
+
+          // Planetary relay station socket on ridge
+          const socketX = 780;
+          const socketY = V_H - 200;
+          const relayActivated = t >= 3.8;
+          ctx.save();
+          ctx.translate(socketX, socketY);
+          ctx.fillStyle = '#1e1b4b';
+          ctx.fillRect(-20, -10, 40, 50);
+          // Socket core
+          ctx.fillStyle = relayActivated ? '#22c55e' : '#ef4444';
+          ctx.beginPath(); ctx.arc(0, 0, 16, 0, Math.PI * 2); ctx.fill();
+          if (relayActivated) {
+            drawCheckmark(ctx, 0, 0, 18, '#ffffff', 3);
+            // Emerald laser pulse beam shooting into cosmos
+            ctx.strokeStyle = '#4ade80';
+            ctx.lineWidth = 6;
+            ctx.shadowColor = '#4ade80';
+            ctx.shadowBlur = 25;
+            ctx.beginPath();
+            ctx.moveTo(0, 0); ctx.lineTo(0, -socketY); ctx.stroke();
+          } else {
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 16px sans-serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText('□', 0, -1);
+          }
+          ctx.restore();
+
+          // Space Rover
+          ctx.save();
+          let rX = 260;
+          let rY = V_H - 180;
+          if (t < 1.2) {
+            rX = 260;
+          } else if (t < 3.2) {
+            rX = lerp(260, 680, (t - 1.2) / 2.0);
+          } else {
+            rX = 680;
+          }
+
+          ctx.translate(rX, rY);
+
+          // 6 Rover Wheels
+          ctx.fillStyle = '#0f172a';
+          for (let w = -40; w <= 40; w += 20) {
+            ctx.beginPath(); ctx.arc(w, 24, 12, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#cbd5e1';
+            ctx.beginPath(); ctx.arc(w, 24, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#0f172a';
+          }
+
+          // Chassis & Solar Panels
+          ctx.fillStyle = '#e2e8f0';
+          ctx.beginPath(); ctx.roundRect(-50, -20, 100, 36, 8); ctx.fill();
+          // Blue solar panel wings
+          ctx.fillStyle = '#0284c7';
+          ctx.fillRect(-65, -14, 20, 14);
+          ctx.fillRect(45, -14, 20, 14);
+
+          // Camera Mast
+          ctx.strokeStyle = '#94a3b8';
+          ctx.lineWidth = 4;
+          ctx.beginPath(); ctx.moveTo(-20, -20); ctx.lineTo(-20, -50); ctx.stroke();
+          ctx.fillStyle = '#38bdf8';
+          ctx.beginPath(); ctx.arc(-20, -52, 8, 0, Math.PI * 2); ctx.fill();
+
+          // Articulated Arm
+          if (t >= 2.8 && t < 4.2) {
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(35, -10);
+            ctx.lineTo(65, -30);
+            ctx.lineTo(95, -socketY + rY);
+            ctx.stroke();
+          }
+
+          ctx.restore();
+
+          // Celebration
+          drawConfetti(ctx, t, 4.3, 60, ['#a855f7', '#38bdf8', '#4ade80', '#ffffff']);
+          drawCelebrationMessage(ctx, t, 'MISSION ACCOMPLISHED! ALL CHORES DONE!', 'Cosmic Pioneer Excellence', childName, {
+            ribbonBg: 'rgba(46, 16, 101, 0.95)',
+            textGrad1: '#ffffff',
+            textGrad2: '#c084fc',
+            textGrad3: '#6366f1',
+            subColor: '#c084fc'
+          });
+
+          drawWipe(ctx, t, 'warp', '#2e1065');
+        }
+      },
+
+      // 9. CONSTRUCTION SITE CRANE
+      {
+        id: 'construction',
+        num: 9,
+        name: 'Construction Site Crane',
+        emoji: '🏗️',
+        category: 'action',
+        finalMsg: 'BUILT TO PERFECTION! WORK COMPLETE!',
+        subMsg: 'Master Architect Of The Day',
+        wipe: 'blueprint',
+        draw: (ctx, t, childName, reducedMotion) => {
+          // City construction skyline
+          const cityGrad = ctx.createLinearGradient(0, 0, 0, V_H);
+          cityGrad.addColorStop(0, '#1c1917');
+          cityGrad.addColorStop(0.6, '#44403c');
+          cityGrad.addColorStop(1, '#78716c');
+          ctx.fillStyle = cityGrad;
+          ctx.fillRect(0, 0, V_W, V_H);
+
+          // Towering crane tower on left
+          ctx.fillStyle = '#eab308';
+          ctx.fillRect(160, 100, 24, V_H - 100);
+          ctx.fillRect(120, 100, 500, 20); // Horizontal crane jib
+
+          // Blueprint banner
+          drawTaskTiles(ctx, V_W / 2, 70, t, { cardBg: 'rgba(41, 37, 36, 0.95)', border: '#eab308' });
+
+          // Foundation Slot
+          const slotX = 720;
+          const slotY = V_H - 140;
+          const beamLocked = t >= 3.8;
+          ctx.save();
+          ctx.translate(slotX, slotY);
+          ctx.fillStyle = '#292524';
+          ctx.fillRect(-60, 0, 120, 60);
+
+          if (beamLocked) {
+            // Golden checkmark structural girder
+            ctx.fillStyle = '#facc15';
+            ctx.beginPath();
+            ctx.roundRect(-45, -50, 90, 45, 8); ctx.fill();
+            drawCheckmark(ctx, 0, -28, 40, '#0f172a', 6);
+          } else {
+            ctx.strokeStyle = '#eab308';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(-45, -50, 90, 45);
+            ctx.fillStyle = '#ef4444';
+            ctx.font = 'bold 28px sans-serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText('□', 0, -28);
+          }
+          ctx.restore();
+
+          // Crane Cable & Lowering Beam
+          if (t >= 1.2 && t < 3.8) {
+            const hookP = (t - 1.2) / 2.6;
+            const cableY = lerp(120, slotY - 45, hookP);
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 4;
+            ctx.beginPath(); ctx.moveTo(slotX, 120); ctx.lineTo(slotX, cableY); ctx.stroke();
+
+            // Lowering Girder
+            ctx.fillStyle = '#facc15';
+            ctx.beginPath();
+            ctx.roundRect(slotX - 45, cableY - 20, 90, 40, 8);
+            ctx.fill();
+            drawCheckmark(ctx, slotX, cableY, 32, '#0f172a', 5);
+          }
+
+          // Construction Worker
+          ctx.save();
+          ctx.translate(520, V_H - 140);
+          // Hardhat & body
+          ctx.fillStyle = '#f97316'; // High-vis vest
+          ctx.fillRect(-18, -40, 36, 45);
+          ctx.fillStyle = '#facc15'; // Hardhat
+          ctx.beginPath(); ctx.arc(0, -56, 16, Math.PI, 0); ctx.fill();
+          ctx.fillRect(-22, -56, 44, 6);
+
+          // Thumbs up celebration pose
+          if (t >= 4.3) {
+            ctx.strokeStyle = '#facc15';
+            ctx.lineWidth = 6;
+            ctx.beginPath(); ctx.moveTo(-16, -20); ctx.lineTo(-35, -55); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(16, -20); ctx.lineTo(35, -55); ctx.stroke();
+          }
+          ctx.restore();
+
+          // Celebration
+          drawConfetti(ctx, t, 4.3, 60, ['#facc15', '#eab308', '#f97316', '#ffffff']);
+          drawCelebrationMessage(ctx, t, 'BUILT TO PERFECTION! WORK COMPLETE!', 'Master Architect Of The Day', childName, {
+            ribbonBg: 'rgba(41, 37, 36, 0.95)',
+            textGrad1: '#ffffff',
+            textGrad2: '#facc15',
+            textGrad3: '#ca8a04',
+            subColor: '#facc15'
+          });
+
+          drawWipe(ctx, t, 'blueprint', '#1e3a8a');
+        }
+      },
+
+      // 10. SUPER PUP HERO
+      {
+        id: 'super-pup',
+        num: 10,
+        name: 'Super Pup Hero',
+        emoji: '🐶',
+        category: 'animals',
+        finalMsg: 'SUPER HEROIC EFFORT!',
+        subMsg: 'The City Is Safe & Clean',
+        wipe: 'cape',
+        draw: (ctx, t, childName, reducedMotion) => {
+          // Comic sunset metropolis
+          const comicGrad = ctx.createLinearGradient(0, 0, 0, V_H);
+          comicGrad.addColorStop(0, '#581c87');
+          comicGrad.addColorStop(0.5, '#be185d');
+          comicGrad.addColorStop(1, '#f97316');
+          ctx.fillStyle = comicGrad;
+          ctx.fillRect(0, 0, V_W, V_H);
+
+          // Skyscraper silhouettes
+          ctx.fillStyle = '#0f172a';
+          ctx.fillRect(80, 260, 180, V_H - 260);
+          ctx.fillRect(320, 360, 220, V_H - 360);
+          ctx.fillRect(600, 220, 200, V_H - 220);
+          ctx.fillRect(860, 320, 240, V_H - 320);
+
+          // Comic Searchlights
+          ctx.save();
+          ctx.fillStyle = 'rgba(254, 240, 138, 0.12)';
+          ctx.beginPath();
+          ctx.moveTo(200, V_H); ctx.lineTo(600, 0); ctx.lineTo(720, 0); ctx.closePath(); ctx.fill();
+          ctx.beginPath();
+          ctx.moveTo(800, V_H); ctx.lineTo(400, 0); ctx.lineTo(280, 0); ctx.closePath(); ctx.fill();
+          ctx.restore();
+
+          // Comic badge checklist
+          drawTaskTiles(ctx, V_W / 2, 70, t, { cardBg: 'rgba(88, 28, 50, 0.95)', border: '#ef4444' });
+
+          // Heroic Golden Retriever Pup
+          ctx.save();
+          let pupX = 220;
+          let pupY = 240;
+          let pupRot = 0;
+
+          if (t < 1.2) {
+            pupX = 220; pupY = 240;
+          } else if (t < 3.8) {
+            // Heroic leap arc
+            const lp = (t - 1.2) / 2.6;
+            pupX = lerp(220, 700, lp);
+            pupY = 240 - Math.sin(lp * Math.PI) * 160;
+            pupRot = -0.15;
+          } else {
+            // Rooftop hero stance
+            pupX = 700; pupY = 200;
+            pupRot = 0;
+          }
+
+          ctx.translate(pupX, pupY);
+          ctx.rotate(pupRot);
+
+          // Red Fluttering Superhero Cape
+          ctx.fillStyle = '#dc2626';
+          ctx.beginPath();
+          ctx.moveTo(-20, -10);
+          ctx.lineTo(-75 - Math.sin(t * 12) * 15, -20 + Math.cos(t * 8) * 15);
+          ctx.lineTo(-65, 10);
+          ctx.lineTo(-15, 15);
+          ctx.closePath();
+          ctx.fill();
+
+          // Pup Body (Golden yellow fur)
+          ctx.fillStyle = '#f59e0b';
+          ctx.beginPath(); ctx.ellipse(0, 0, 36, 24, 0, 0, Math.PI * 2); ctx.fill();
+
+          // Pup Head & floppy ears
+          ctx.fillStyle = '#fbbf24';
+          ctx.beginPath(); ctx.arc(26, -16, 20, 0, Math.PI * 2); ctx.fill();
+          // Floppy ears
+          ctx.fillStyle = '#d97706';
+          ctx.beginPath(); ctx.ellipse(14, -14, 10, 18, -0.4, 0, Math.PI * 2); ctx.fill();
+
+          // Eye & cute black nose
+          ctx.fillStyle = '#0f172a';
+          ctx.beginPath(); ctx.arc(32, -18, 4, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(44, -12, 5, 0, Math.PI * 2); ctx.fill();
+
+          ctx.restore();
+
+          // Celebration
+          drawConfetti(ctx, t, 4.3, 70, ['#ef4444', '#f59e0b', '#38bdf8', '#ffffff']);
+          drawCelebrationMessage(ctx, t, 'SUPER HEROIC EFFORT!', 'The City Is Safe & Clean', childName, {
+            ribbonBg: 'rgba(88, 28, 50, 0.95)',
+            textGrad1: '#ffffff',
+            textGrad2: '#f87171',
+            textGrad3: '#dc2626',
+            subColor: '#f87171'
+          });
+
+          drawWipe(ctx, t, 'cape', '#dc2626');
+        }
+      }
+    );
+
+    // =========================================================================
+    // 5. SCENES REGISTRY (BATCH 3: 11 - 15)
+    // =========================================================================
+    CELEBRATIONS.push(
+      // 11. BAA BAA WOOLLY MEADOW
+      {
+        id: 'baa-baa',
+        num: 11,
+        name: 'Baa Baa Woolly Meadow',
+        emoji: '🐑',
+        category: 'animals',
+        finalMsg: 'NEAT & TIDY CHAMPION!',
+        subMsg: 'Soft, Fluffy & Thorough',
+        wipe: 'cloud',
+        draw: (ctx, t, childName, reducedMotion) => {
+          // Sunny pastel blue sky
+          const skyGrad = ctx.createLinearGradient(0, 0, 0, V_H);
+          skyGrad.addColorStop(0, '#bae6fd');
+          skyGrad.addColorStop(0.6, '#e0f2fe');
+          skyGrad.addColorStop(1, '#dcfce7');
+          ctx.fillStyle = skyGrad;
+          ctx.fillRect(0, 0, V_W, V_H);
+
+          // Rolling green hills
+          ctx.fillStyle = '#4ade80';
+          ctx.beginPath();
+          ctx.arc(300, V_H + 200, 480, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#22c55e';
+          ctx.beginPath();
+          ctx.arc(V_W - 200, V_H + 180, 520, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Rainbow in celebration
+          if (t >= 4.3) {
+            ctx.save();
+            ctx.lineWidth = 10;
+            const rColors = ['#f87171', '#fb923c', '#facc15', '#4ade80', '#38bdf8', '#c084fc'];
+            rColors.forEach((rc, rIdx) => {
+              ctx.strokeStyle = rc;
+              ctx.beginPath();
+              ctx.arc(V_W / 2, V_H + 80, 420 + rIdx * 12, Math.PI, 0);
+              ctx.stroke();
+            });
+            ctx.restore();
+          }
+
+          // Rustic wooden sign with task tiles
+          drawTaskTiles(ctx, V_W / 2, 70, t, { cardBg: 'rgba(20, 83, 45, 0.95)', border: '#4ade80' });
+
+          // Sheep Character
+          ctx.save();
+          let sX = V_W / 2;
+          let sY = V_H - 180;
+          let isRolling = (t >= 1.8 && t < 3.8);
+
+          if (isRolling) {
+            // Rapid woolly tumbleweed rolling around
+            const rollP = (t - 1.8) / 2.0;
+            sX = V_W / 2 + Math.sin(rollP * Math.PI * 4) * 260;
+            sY = V_H - 180 + Math.abs(Math.sin(rollP * Math.PI * 6)) * 40;
+            ctx.translate(sX, sY);
+            ctx.rotate(t * 18);
+          } else {
+            ctx.translate(sX, sY);
+          }
+
+          // Fluffy sheep body (cloud puffs)
+          ctx.fillStyle = '#f8fafc';
+          for (let a = 0; a < 8; a++) {
+            const ang = (a / 8) * Math.PI * 2;
+            ctx.beginPath();
+            ctx.arc(Math.cos(ang) * 35, Math.sin(ang) * 28, 26, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.beginPath(); ctx.arc(0, 0, 36, 0, Math.PI * 2); ctx.fill();
+
+          // If not rolling, draw cute sheep face & little black legs
+          if (!isRolling) {
+            // Little black hooves
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(-24, 38, 12, 24);
+            ctx.fillRect(12, 38, 12, 24);
+
+            // Head with pink cheeks
+            ctx.fillStyle = '#1e293b';
+            ctx.beginPath(); ctx.ellipse(42, -6, 20, 16, 0, 0, Math.PI * 2); ctx.fill();
+            // Woolly tuft on head
+            ctx.fillStyle = '#f8fafc';
+            ctx.beginPath(); ctx.arc(38, -24, 12, 0, Math.PI * 2); ctx.fill();
+            // Pink cheek
+            ctx.fillStyle = '#f472b6';
+            ctx.beginPath(); ctx.arc(46, -2, 6, 0, Math.PI * 2); ctx.fill();
+            // Friendly eye
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath(); ctx.arc(44, -10, 4, 0, Math.PI * 2); ctx.fill();
+
+            // Knitted wool checkmark held proudly
+            if (t >= 3.8) {
+              drawCheckmark(ctx, -50, -20, 36, '#22c55e', 6);
+            }
+          }
+
+          ctx.restore();
+
+          // Celebration
+          drawConfetti(ctx, t, 4.3, 60, ['#4ade80', '#facc15', '#f472b6', '#38bdf8', '#ffffff']);
+          drawCelebrationMessage(ctx, t, 'NEAT & TIDY CHAMPION!', 'Soft, Fluffy & Thorough', childName, {
+            ribbonBg: 'rgba(20, 83, 45, 0.95)',
+            textGrad1: '#ffffff',
+            textGrad2: '#86efac',
+            textGrad3: '#16a34a',
+            subColor: '#86efac'
+          });
+
+          drawWipe(ctx, t, 'cloud', '#f8fafc');
+        }
+      },
+
+      // 12. PRINCESS ROYAL CORONATION
+      {
+        id: 'princess',
+        num: 12,
+        name: 'Princess Royal Coronation',
+        emoji: '👑',
+        category: 'fantasy',
+        finalMsg: 'ROYAL TRIUMPH! FIT FOR ROYALTY!',
+        subMsg: 'Crowned In Cleanliness',
+        wipe: 'curtain',
+        draw: (ctx, t, childName, reducedMotion) => {
+          // Palace Grand Hall
+          const hallGrad = ctx.createLinearGradient(0, 0, 0, V_H);
+          hallGrad.addColorStop(0, '#3b0764');
+          hallGrad.addColorStop(0.5, '#701a75');
+          hallGrad.addColorStop(1, '#4a044e');
+          ctx.fillStyle = hallGrad;
+          ctx.fillRect(0, 0, V_W, V_H);
+
+          // Marble pillars
+          ctx.fillStyle = '#fdf4ff';
+          ctx.fillRect(100, 0, 45, V_H);
+          ctx.fillRect(V_W - 145, 0, 45, V_H);
+
+          // Velvet carpet
+          ctx.fillStyle = '#be185d';
+          ctx.beginPath();
+          ctx.moveTo(380, V_H); ctx.lineTo(V_W - 380, V_H);
+          ctx.lineTo(V_W / 2 + 100, 380); ctx.lineTo(V_W / 2 - 100, 380);
+          ctx.closePath();
+          ctx.fill();
+
+          // Tiara Cushion Pedestal
+          drawTaskTiles(ctx, V_W / 2, 70, t, { cardBg: 'rgba(112, 26, 85, 0.95)', border: '#ec4899' });
+
+          // Royal Tiara with Gem Slots
+          const tiaraX = V_W / 2 + 180;
+          const tiaraY = 440;
+          const gemSeated = t >= 3.8;
+          ctx.save();
+          ctx.translate(tiaraX, tiaraY);
+
+          // Velvet cushion
+          ctx.fillStyle = '#831843';
+          ctx.beginPath(); ctx.roundRect(-70, 20, 140, 40, 14); ctx.fill();
+
+          // Golden Tiara
+          ctx.fillStyle = '#facc15';
+          ctx.beginPath();
+          ctx.moveTo(-60, 20); ctx.lineTo(-45, -30); ctx.lineTo(-20, 0); ctx.lineTo(0, -50);
+          ctx.lineTo(20, 0); ctx.lineTo(45, -30); ctx.lineTo(60, 20); ctx.closePath();
+          ctx.fill();
+
+          // Crown Centerpiece Gem
+          if (gemSeated) {
+            ctx.fillStyle = '#38bdf8';
+            ctx.beginPath(); ctx.arc(0, -20, 18, 0, Math.PI * 2); ctx.fill();
+            drawCheckmark(ctx, 0, -20, 20, '#ffffff', 4);
+          } else {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.beginPath(); ctx.arc(0, -20, 16, 0, Math.PI * 2); ctx.fill();
+          }
+          ctx.restore();
+
+          // Princess Character
+          ctx.save();
+          ctx.translate(420, 420);
+
+          // Gown (Lilac & pink)
+          ctx.fillStyle = '#e879f9';
+          ctx.beginPath();
+          ctx.moveTo(0, -30); ctx.lineTo(-45, 90); ctx.lineTo(45, 90); ctx.closePath();
+          ctx.fill();
+
+          // Torso & head
+          ctx.fillStyle = '#f0abfc';
+          ctx.fillRect(-14, -60, 28, 35);
+          ctx.fillStyle = '#fde047'; // Golden hair
+          ctx.beginPath(); ctx.arc(0, -80, 24, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#fed7aa'; // Face
+          ctx.beginPath(); ctx.arc(0, -78, 16, 0, Math.PI * 2); ctx.fill();
+
+          // Crystal wand
+          ctx.strokeStyle = '#facc15';
+          ctx.lineWidth = 4;
+          ctx.beginPath(); ctx.moveTo(12, -45); ctx.lineTo(45, -85); ctx.stroke();
+          ctx.fillStyle = '#67e8f9';
+          ctx.beginPath(); ctx.arc(46, -86, 8, 0, Math.PI * 2); ctx.fill();
+
+          ctx.restore();
+
+          // Magic Starlight Trail lifting the floating diamond checkmark
+          if (t >= 1.4 && t < 3.8) {
+            const wandP = (t - 1.4) / 2.4;
+            const gemX = lerp(465, tiaraX, wandP);
+            const gemY = lerp(335, tiaraY - 20, wandP) - Math.sin(wandP * Math.PI) * 120;
+            ctx.save();
+            ctx.fillStyle = '#67e8f9';
+            ctx.beginPath(); ctx.arc(gemX, gemY, 18, 0, Math.PI * 2); ctx.fill();
+            drawCheckmark(ctx, gemX, gemY, 20, '#ffffff', 3.5);
+            ctx.restore();
+          }
+
+          // Celebration
+          drawConfetti(ctx, t, 4.3, 70, ['#ec4899', '#facc15', '#e879f9', '#ffffff']);
+          drawCelebrationMessage(ctx, t, 'ROYAL TRIUMPH! FIT FOR ROYALTY!', 'Crowned In Cleanliness', childName, {
+            ribbonBg: 'rgba(112, 26, 85, 0.95)',
+            textGrad1: '#ffffff',
+            textGrad2: '#f472b6',
+            textGrad3: '#be185d',
+            subColor: '#f472b6'
+          });
+
+          drawWipe(ctx, t, 'curtain', '#831843');
+        }
+      },
+
+      // 13. MERMAID UNDERSEA PALACE
+      {
+        id: 'mermaid',
+        num: 13,
+        name: 'Mermaid Undersea Palace',
+        emoji: '🧜‍♀️',
+        category: 'fantasy',
+        finalMsg: 'OCEAN OF SUCCESS! SPLENDID WORK!',
+        subMsg: 'The Pearl Of Diligence',
+        wipe: 'bubbles',
+        draw: (ctx, t, childName, reducedMotion) => {
+          // Deep ocean turquoise
+          const seaGrad = ctx.createLinearGradient(0, 0, 0, V_H);
+          seaGrad.addColorStop(0, '#042f2e');
+          seaGrad.addColorStop(0.5, '#0f766e');
+          seaGrad.addColorStop(1, '#115e59');
+          ctx.fillStyle = seaGrad;
+          ctx.fillRect(0, 0, V_W, V_H);
+
+          // Bioluminescent columns & floating particles
+          ctx.fillStyle = '#2dd4bf';
+          for (let i = 0; i < 20; i++) {
+            ctx.beginPath();
+            ctx.arc((i * 68) % V_W, (i * 43) % V_H, 3, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          // Task shell display
+          drawTaskTiles(ctx, V_W / 2, 70, t, { cardBg: 'rgba(19, 78, 74, 0.95)', border: '#2dd4bf' });
+
+          // Sunken Royal Clam with Pearl
+          const pearlSeated = t >= 3.8;
+          ctx.save();
+          ctx.translate(V_W / 2 + 160, 440);
+          ctx.fillStyle = '#0f766e';
+          ctx.beginPath(); ctx.ellipse(0, 20, 70, 35, 0, 0, Math.PI); ctx.fill();
+          if (pearlSeated) {
+            ctx.beginPath(); ctx.ellipse(0, -35, 70, 35, 0, Math.PI, 0); ctx.fill();
+            // Radiant black pearl checkmark
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath(); ctx.arc(0, -10, 28, 0, Math.PI * 2); ctx.fill();
+            drawCheckmark(ctx, 0, -10, 28, '#2dd4bf', 4.5);
+          } else {
+            ctx.beginPath(); ctx.ellipse(0, -10, 70, 35, 0, Math.PI, 0); ctx.fill();
+          }
+          ctx.restore();
+
+          // Mermaid
+          ctx.save();
+          let mX = 360;
+          let mY = 400;
+          if (t < 1.2) {
+            mY = 400 + Math.sin(t * 4) * 12;
+          } else if (t < 3.8) {
+            mX = lerp(360, 520, (t - 1.2) / 2.6);
+            mY = 400 + Math.sin(t * 6) * 18;
+          } else {
+            mX = 520; mY = 380;
+          }
+
+          ctx.translate(mX, mY);
+
+          // Iridescent tail
+          ctx.fillStyle = '#14b8a6';
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.quadraticCurveTo(-30, 45, -50 + Math.sin(t * 8) * 15, 80);
+          ctx.lineTo(-20, 80);
+          ctx.quadraticCurveTo(10, 45, 15, 0);
+          ctx.closePath();
+          ctx.fill();
+
+          // Torso & Flowing Red Hair
+          ctx.fillStyle = '#fed7aa';
+          ctx.fillRect(-12, -40, 24, 42);
+          ctx.fillStyle = '#ef4444'; // Red hair
+          ctx.beginPath(); ctx.arc(0, -56, 22, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#fed7aa'; // Face
+          ctx.beginPath(); ctx.arc(4, -54, 14, 0, Math.PI * 2); ctx.fill();
+
+          ctx.restore();
+
+          // Celebration
+          drawConfetti(ctx, t, 4.3, 60, ['#2dd4bf', '#38bdf8', '#facc15', '#ffffff']);
+          drawCelebrationMessage(ctx, t, 'OCEAN OF SUCCESS! SPLENDID WORK!', 'The Pearl Of Diligence', childName, {
+            ribbonBg: 'rgba(19, 78, 74, 0.95)',
+            textGrad1: '#ffffff',
+            textGrad2: '#5eead4',
+            textGrad3: '#0f766e',
+            subColor: '#2dd4bf'
+          });
+
+          drawWipe(ctx, t, 'bubbles', '#0d9488');
+        }
+      },
+
+      // 14. ROCK STAR STADIUM CONCERT
+      {
+        id: 'pop-star',
+        num: 14,
+        name: 'Rock Star Stadium Concert',
+        emoji: '🎸',
+        category: 'action',
+        finalMsg: 'ROCK STAR PERFORMANCE! CHORES ACED!',
+        subMsg: 'Encore! The Stadium Roars!',
+        wipe: 'spotlight',
+        draw: (ctx, t, childName, reducedMotion) => {
+          // Concert stage & laser beams
+          const rockGrad = ctx.createLinearGradient(0, 0, 0, V_H);
+          rockGrad.addColorStop(0, '#18061f');
+          rockGrad.addColorStop(0.6, '#581c87');
+          rockGrad.addColorStop(1, '#090d16');
+          ctx.fillStyle = rockGrad;
+          ctx.fillRect(0, 0, V_W, V_H);
+
+          // Tower amplifier stacks on sides
+          ctx.fillStyle = '#1e293b';
+          ctx.fillRect(80, 220, 110, V_H - 220);
+          ctx.fillRect(V_W - 190, 220, 110, V_H - 220);
+          // Speaker cones
+          ctx.fillStyle = '#0f172a';
+          for (let y = 250; y < V_H - 60; y += 70) {
+            ctx.beginPath(); ctx.arc(135, y, 24, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(V_W - 135, y, 24, 0, Math.PI * 2); ctx.fill();
+          }
+
+          // Laser lights crisscrossing
+          ctx.save();
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = '#d946ef';
+          ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(V_W, V_H - 120); ctx.stroke();
+          ctx.strokeStyle = '#38bdf8';
+          ctx.beginPath(); ctx.moveTo(V_W, 0); ctx.lineTo(0, V_H - 120); ctx.stroke();
+          ctx.restore();
+
+          // Stage LED setlist
+          drawTaskTiles(ctx, V_W / 2, 70, t, { cardBg: 'rgba(88, 28, 135, 0.95)', border: '#d946ef' });
+
+          // Center Stage Amp Stack
+          const ampLocked = t >= 3.8;
+          ctx.save();
+          ctx.translate(V_W / 2 + 180, V_H - 140);
+          ctx.fillStyle = '#334155';
+          ctx.fillRect(-50, -40, 100, 80);
+          ctx.fillStyle = ampLocked ? '#22c55e' : '#ec4899';
+          ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI * 2); ctx.fill();
+          if (ampLocked) {
+            drawCheckmark(ctx, 0, 0, 30, '#ffffff', 5);
+          } else {
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 28px sans-serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText('□', 0, -2);
+          }
+          ctx.restore();
+
+          // Rocker Guitarist
+          ctx.save();
+          let rX = 400;
+          let rY = 460;
+          if (t >= 2.4 && t < 3.8) {
+            // Knee slide across stage
+            rX = lerp(400, 560, (t - 2.4) / 1.4);
+          } else if (t >= 3.8) {
+            rX = 560;
+          }
+
+          ctx.translate(rX, rY);
+
+          // Head & Shades
+          ctx.fillStyle = '#fcd34d';
+          ctx.beginPath(); ctx.arc(0, -60, 18, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#0f172a'; // Sunglasses
+          ctx.fillRect(-12, -64, 24, 7);
+
+          // Leather jacket & body
+          ctx.fillStyle = '#0f172a';
+          ctx.fillRect(-18, -42, 36, 46);
+
+          // Electric Guitar (Red & angled)
+          ctx.fillStyle = '#ef4444';
+          ctx.beginPath();
+          ctx.moveTo(-35, -20); ctx.lineTo(-10, -50); ctx.lineTo(40, -10); ctx.lineTo(15, 20); ctx.closePath();
+          ctx.fill();
+
+          ctx.restore();
+
+          // Pyrotechnic flame burst
+          if (t >= 3.8 && t < 4.8) {
+            ctx.fillStyle = '#ea580c';
+            ctx.beginPath();
+            ctx.arc(220, V_H - 120, 40 + Math.random() * 20, 0, Math.PI * 2);
+            ctx.arc(V_W - 220, V_H - 120, 40 + Math.random() * 20, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          // Celebration
+          drawConfetti(ctx, t, 4.3, 70, ['#d946ef', '#f0abfc', '#38bdf8', '#facc15', '#ffffff']);
+          drawCelebrationMessage(ctx, t, 'ROCK STAR PERFORMANCE! CHORES ACED!', 'Encore! The Stadium Roars!', childName, {
+            ribbonBg: 'rgba(88, 28, 135, 0.95)',
+            textGrad1: '#ffffff',
+            textGrad2: '#f0abfc',
+            textGrad3: '#9333ea',
+            subColor: '#d946ef'
+          });
+
+          drawWipe(ctx, t, 'spotlight', '#090d16');
+        }
+      },
+
+      // 15. FAIRY ENCHANTED GARDEN
+      {
+        id: 'fairy',
+        num: 15,
+        name: 'Fairy Enchanted Garden',
+        emoji: '🧚',
+        category: 'fantasy',
+        finalMsg: 'PURE MAGIC! BEAUTIFULLY DONE!',
+        subMsg: 'The Enchanted Forest Blooms',
+        wipe: 'petals',
+        draw: (ctx, t, childName, reducedMotion) => {
+          // Twilight enchanted grove
+          const groveGrad = ctx.createLinearGradient(0, 0, 0, V_H);
+          groveGrad.addColorStop(0, '#064e3b');
+          groveGrad.addColorStop(0.6, '#065f46');
+          groveGrad.addColorStop(1, '#022c22');
+          ctx.fillStyle = groveGrad;
+          ctx.fillRect(0, 0, V_W, V_H);
+
+          // Giant glowing mushrooms on sides
+          ctx.fillStyle = '#a3e635';
+          ctx.beginPath(); ctx.ellipse(180, V_H - 80, 70, 40, 0, Math.PI, 0); ctx.fill();
+          ctx.fillStyle = '#f8fafc';
+          ctx.fillRect(165, V_H - 80, 30, 80);
+
+          // Ancient rune stone checklist
+          drawTaskTiles(ctx, V_W / 2, 70, t, { cardBg: 'rgba(6, 78, 59, 0.95)', border: '#a3e635' });
+
+          // Night Lily Flower
+          const flowerOpen = t >= 3.8;
+          ctx.save();
+          ctx.translate(V_W / 2 + 180, V_H - 140);
+          ctx.strokeStyle = '#15803d';
+          ctx.lineWidth = 8;
+          ctx.beginPath(); ctx.moveTo(0, 60); ctx.lineTo(0, 0); ctx.stroke();
+
+          if (flowerOpen) {
+            // Blooming petals
+            ctx.fillStyle = '#f472b6';
+            for (let a = 0; a < 6; a++) {
+              ctx.beginPath();
+              ctx.ellipse(0, 0, 45, 18, (a / 6) * Math.PI, 0, Math.PI * 2);
+              ctx.fill();
+            }
+            // Golden checkmark stamen
+            ctx.fillStyle = '#facc15';
+            ctx.beginPath(); ctx.arc(0, 0, 22, 0, Math.PI * 2); ctx.fill();
+            drawCheckmark(ctx, 0, 0, 22, '#15803d', 4);
+          } else {
+            // Closed bud
+            ctx.fillStyle = '#f472b6';
+            ctx.beginPath(); ctx.ellipse(0, 0, 20, 36, 0, 0, Math.PI * 2); ctx.fill();
+          }
+          ctx.restore();
+
+          // Winged Fairy
+          ctx.save();
+          let fX = 380;
+          let fY = 360;
+          if (t < 1.2) {
+            fY = 360 + Math.sin(t * 8) * 12;
+          } else if (t < 3.8) {
+            fX = lerp(380, V_W / 2 + 120, (t - 1.2) / 2.6);
+            fY = 360 - Math.sin((t - 1.2) * 4) * 40;
+          } else {
+            fX = V_W / 2 + 120; fY = 320;
+          }
+
+          ctx.translate(fX, fY);
+
+          // Translucent Wings
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+          const wingSpread = Math.sin(t * 22) * 15;
+          ctx.beginPath(); ctx.ellipse(-20, -10, 28, 14 + wingSpread, -0.4, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.ellipse(20, -10, 28, 14 + wingSpread, 0.4, 0, Math.PI * 2); ctx.fill();
+
+          // Dress & Head
+          ctx.fillStyle = '#a3e635';
+          ctx.beginPath();
+          ctx.moveTo(0, -15); ctx.lineTo(-14, 25); ctx.lineTo(14, 25); ctx.closePath();
+          ctx.fill();
+          ctx.fillStyle = '#fed7aa';
+          ctx.beginPath(); ctx.arc(0, -25, 12, 0, Math.PI * 2); ctx.fill();
+
+          // Star wand
+          ctx.strokeStyle = '#facc15';
+          ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(24, -20); ctx.stroke();
+          ctx.fillStyle = '#facc15';
+          ctx.beginPath(); ctx.arc(24, -20, 5, 0, Math.PI * 2); ctx.fill();
+
+          ctx.restore();
+
+          // Celebration
+          drawConfetti(ctx, t, 4.3, 60, ['#a3e635', '#f472b6', '#facc15', '#ffffff']);
+          drawCelebrationMessage(ctx, t, 'PURE MAGIC! BEAUTIFULLY DONE!', 'The Enchanted Forest Blooms', childName, {
+            ribbonBg: 'rgba(6, 78, 59, 0.95)',
+            textGrad1: '#ffffff',
+            textGrad2: '#bef264',
+            textGrad3: '#65a30d',
+            subColor: '#a3e635'
+          });
+
+          drawWipe(ctx, t, 'petals', '#15803d');
+        }
+      }
+    );
+
+    // =========================================================================
+    // 6. SCENES REGISTRY (BATCH 4: 16 - 20)
+    // =========================================================================
+    CELEBRATIONS.push(
+      // 16. BUTTERFLY METAMORPHOSIS
+      {
+        id: 'butterfly',
+        num: 16,
+        name: 'Butterfly Metamorphosis',
+        emoji: '🦋',
+        category: 'animals',
+        finalMsg: 'TRANSFORMATION COMPLETE! WONDERFUL!',
+        subMsg: 'Wings Unfurled In Glory',
+        wipe: 'wings',
+        draw: (ctx, t, childName, reducedMotion) => {
+          // Botanical conservatory background
+          const gardenGrad = ctx.createLinearGradient(0, 0, 0, V_H);
+          gardenGrad.addColorStop(0, '#0c4a6e');
+          gardenGrad.addColorStop(0.6, '#0284c7');
+          gardenGrad.addColorStop(1, '#0369a1');
+          ctx.fillStyle = gardenGrad;
+          ctx.fillRect(0, 0, V_W, V_H);
+
+          // Sunlight beams
+          ctx.fillStyle = 'rgba(254, 240, 138, 0.12)';
+          ctx.beginPath();
+          ctx.moveTo(V_W / 2 + 100, 0); ctx.lineTo(V_W / 2 + 300, V_H); ctx.lineTo(V_W / 2 + 100, V_H); ctx.closePath();
+          ctx.fill();
+
+          // Wooden garden trellis branch
+          ctx.fillStyle = '#78350f';
+          ctx.fillRect(180, 360, V_W - 360, 24);
+
+          // Task checklist
+          drawTaskTiles(ctx, V_W / 2, 70, t, { cardBg: 'rgba(14, 116, 144, 0.95)', border: '#0ea5e9' });
+
+          // Chrysalis on branch
+          const bEmerged = t >= 3.8;
+          ctx.save();
+          ctx.translate(V_W / 2 + 180, 384);
+
+          if (!bEmerged) {
+            // Hanging silk chrysalis wiggling
+            const wiggle = (t >= 2.0) ? Math.sin(t * 18) * 8 : 0;
+            ctx.fillStyle = '#15803d';
+            ctx.beginPath();
+            ctx.ellipse(wiggle, 30, 18, 32, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#facc15';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          } else {
+            // Split shell
+            ctx.fillStyle = '#166534';
+            ctx.beginPath();
+            ctx.ellipse(-10, 20, 8, 22, -0.2, 0, Math.PI * 2);
+            ctx.ellipse(10, 20, 8, 22, 0.2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+
+          // Monarch / Blue Morpho Butterfly
+          if (bEmerged) {
+            ctx.save();
+            const flyP = (t - 3.8) / 3.0;
+            const bX = V_W / 2 + 180 - flyP * 80;
+            const bY = 360 - flyP * 180;
+            ctx.translate(bX, bY);
+
+            // Wing flap animation
+            const wingScale = Math.cos((t - 3.8) * 16);
+            ctx.scale(wingScale, 1);
+
+            // Left & Right Wings (Electric cyan & gold)
+            ctx.fillStyle = '#38bdf8';
+            ctx.beginPath();
+            ctx.ellipse(-45, -15, 45, 28, -0.3, 0, Math.PI * 2);
+            ctx.ellipse(45, -15, 45, 28, 0.3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#facc15';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+
+            // Checkmark patterns on wings
+            drawCheckmark(ctx, -45, -15, 24, '#ffffff', 3.5);
+            drawCheckmark(ctx, 45, -15, 24, '#ffffff', 3.5);
+
+            // Butterfly body
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath(); ctx.ellipse(0, 0, 8, 26, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+          }
+
+          // Celebration
+          drawConfetti(ctx, t, 4.3, 60, ['#38bdf8', '#0ea5e9', '#facc15', '#ffffff']);
+          drawCelebrationMessage(ctx, t, 'TRANSFORMATION COMPLETE! WONDERFUL!', 'Wings Unfurled In Glory', childName, {
+            ribbonBg: 'rgba(14, 116, 144, 0.95)',
+            textGrad1: '#ffffff',
+            textGrad2: '#38bdf8',
+            textGrad3: '#0284c7',
+            subColor: '#38bdf8'
+          });
+
+          drawWipe(ctx, t, 'wings', '#0284c7');
+        }
+      },
+
+      // 17. ROLLER SKATE NEON DISCO
+      {
+        id: 'roller-skate',
+        num: 17,
+        name: 'Roller Skate Neon Disco',
+        emoji: '🛼',
+        category: 'action',
+        finalMsg: 'GROOVY! CHORES ROLLED AWAY!',
+        subMsg: 'Smooth Gliding To Victory',
+        wipe: 'laser',
+        draw: (ctx, t, childName, reducedMotion) => {
+          // Retro synthwave rink
+          const rinkGrad = ctx.createLinearGradient(0, 0, 0, V_H);
+          rinkGrad.addColorStop(0, '#1f0a1c');
+          rinkGrad.addColorStop(0.6, '#831843');
+          rinkGrad.addColorStop(1, '#090d16');
+          ctx.fillStyle = rinkGrad;
+          ctx.fillRect(0, 0, V_W, V_H);
+
+          // Neon grid floor
+          ctx.strokeStyle = 'rgba(244, 63, 94, 0.25)';
+          ctx.lineWidth = 1;
+          for (let x = 0; x < V_W; x += 60) {
+            ctx.beginPath(); ctx.moveTo(x, V_H - 140); ctx.lineTo(x, V_H); ctx.stroke();
+          }
+          ctx.beginPath(); ctx.moveTo(0, V_H - 140); ctx.lineTo(V_W, V_H - 140); ctx.stroke();
+
+          // Giant disco ball at top
+          ctx.fillStyle = '#94a3b8';
+          ctx.beginPath(); ctx.arc(V_W / 2 + 280, 100, 45, 0, Math.PI * 2); ctx.fill();
+
+          // Arcade task scoreboard
+          drawTaskTiles(ctx, V_W / 2, 70, t, { cardBg: 'rgba(131, 24, 67, 0.95)', border: '#f43f5e' });
+
+          // Neon Ramp & Finish Checkpoint
+          const checkX = 760;
+          const checkY = V_H - 140;
+          const rampHit = t >= 3.8;
+          ctx.save();
+          ctx.translate(checkX, checkY);
+          ctx.fillStyle = rampHit ? '#22c55e' : '#f43f5e';
+          ctx.beginPath(); ctx.roundRect(-45, -30, 90, 30, 8); ctx.fill();
+          if (rampHit) {
+            drawCheckmark(ctx, 0, -15, 26, '#ffffff', 4.5);
+          } else {
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 22px sans-serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText('□', 0, -15);
+          }
+          ctx.restore();
+
+          // Roller Skater
+          ctx.save();
+          let sX = 220;
+          let sY = V_H - 180;
+          let sRot = 0;
+
+          if (t < 1.2) {
+            sX = 220;
+          } else if (t < 3.8) {
+            const p = (t - 1.2) / 2.6;
+            sX = lerp(220, checkX, p);
+            // 360 aerial spin over checkpoint
+            if (p > 0.6) {
+              const spinP = (p - 0.6) / 0.4;
+              sY = V_H - 180 - Math.sin(spinP * Math.PI) * 140;
+              sRot = spinP * Math.PI * 2;
+            }
+          } else {
+            sX = checkX; sY = V_H - 180;
+          }
+
+          ctx.translate(sX, sY);
+          ctx.rotate(sRot);
+
+          // Skater body
+          ctx.fillStyle = '#06b6d4';
+          ctx.fillRect(-16, -45, 32, 45);
+          ctx.fillStyle = '#fcd34d';
+          ctx.beginPath(); ctx.arc(0, -62, 16, 0, Math.PI * 2); ctx.fill();
+
+          // Neon Roller Skates
+          ctx.fillStyle = '#ec4899';
+          ctx.fillRect(-22, 0, 18, 16);
+          ctx.fillRect(4, 0, 18, 16);
+          // Light up wheels
+          ctx.fillStyle = '#facc15';
+          ctx.beginPath(); ctx.arc(-18, 16, 6, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(-8, 16, 6, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(8, 16, 6, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(18, 16, 6, 0, Math.PI * 2); ctx.fill();
+
+          ctx.restore();
+
+          // Celebration
+          drawConfetti(ctx, t, 4.3, 70, ['#f43f5e', '#ec4899', '#06b6d4', '#facc15', '#ffffff']);
+          drawCelebrationMessage(ctx, t, 'GROOVY! CHORES ROLLED AWAY!', 'Smooth Gliding To Victory', childName, {
+            ribbonBg: 'rgba(131, 24, 67, 0.95)',
+            textGrad1: '#ffffff',
+            textGrad2: '#fb7185',
+            textGrad3: '#e11d48',
+            subColor: '#fb7185'
+          });
+
+          drawWipe(ctx, t, 'laser', '#be185d');
+        }
+      },
+
+      // 18. PANDA COZY TEA GARDEN
+      {
+        id: 'panda',
+        num: 18,
+        name: 'Panda Cozy Tea Garden',
+        emoji: '🐼',
+        category: 'animals',
+        finalMsg: 'PEACEFUL & COMPLETE! DELIGHTFUL JOB!',
+        subMsg: 'Harmony, Serenity & Order',
+        wipe: 'blossom',
+        draw: (ctx, t, childName, reducedMotion) => {
+          // Zen bamboo garden sunset
+          const zenGrad = ctx.createLinearGradient(0, 0, 0, V_H);
+          zenGrad.addColorStop(0, '#14532d');
+          zenGrad.addColorStop(0.5, '#166534');
+          zenGrad.addColorStop(1, '#052e16');
+          ctx.fillStyle = zenGrad;
+          ctx.fillRect(0, 0, V_W, V_H);
+
+          // Cherry blossom tree branch
+          ctx.fillStyle = '#78350f';
+          ctx.fillRect(0, 180, 360, 20);
+          // Pink blossoms
+          ctx.fillStyle = '#fbcfe8';
+          for (let b = 0; b < 18; b++) {
+            ctx.beginPath();
+            ctx.arc((b * 22) % 360, 170 + Math.sin(b) * 14, 10, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          // Wooden tea table
+          ctx.fillStyle = '#78350f';
+          ctx.fillRect(V_W / 2 - 120, V_H - 160, 240, 26);
+          ctx.fillRect(V_W / 2 - 100, V_H - 134, 18, 70);
+          ctx.fillRect(V_W / 2 + 82, V_H - 134, 18, 70);
+
+          // Bamboo tea menu checklist
+          drawTaskTiles(ctx, V_W / 2, 70, t, { cardBg: 'rgba(22, 101, 52, 0.95)', border: '#86efac' });
+
+          // Tea Bowl on table
+          const teaPoured = t >= 3.8;
+          ctx.save();
+          ctx.translate(V_W / 2 + 40, V_H - 175);
+          ctx.fillStyle = '#f8fafc';
+          ctx.beginPath(); ctx.ellipse(0, 0, 26, 16, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#22c55e';
+          ctx.beginPath(); ctx.ellipse(0, -3, 20, 10, 0, 0, Math.PI * 2); ctx.fill();
+
+          // Green tea steam forming checkmark
+          if (teaPoured) {
+            ctx.strokeStyle = '#86efac';
+            ctx.lineWidth = 4;
+            drawCheckmark(ctx, 0, -40, 26, '#86efac', 4);
+          }
+          ctx.restore();
+
+          // Giant Panda Tea Master
+          ctx.save();
+          ctx.translate(V_W / 2 - 160, V_H - 190);
+
+          // Body (White fur with black vest)
+          ctx.fillStyle = '#f8fafc';
+          ctx.beginPath(); ctx.ellipse(0, 20, 50, 42, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#0f172a';
+          ctx.beginPath(); ctx.ellipse(0, 20, 30, 42, 0, 0, Math.PI * 2); ctx.fill();
+
+          // Head & cute black ears
+          ctx.fillStyle = '#f8fafc';
+          ctx.beginPath(); ctx.arc(20, -30, 32, 0, Math.PI * 2); ctx.fill();
+          // Ears
+          ctx.fillStyle = '#0f172a';
+          ctx.beginPath(); ctx.arc(-5, -55, 14, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(45, -55, 14, 0, Math.PI * 2); ctx.fill();
+          // Eye patches
+          ctx.beginPath(); ctx.ellipse(12, -30, 8, 12, -0.2, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.ellipse(30, -30, 8, 12, 0.2, 0, Math.PI * 2); ctx.fill();
+
+          // Ceramic teapot in paws
+          ctx.fillStyle = '#0284c7';
+          ctx.beginPath(); ctx.arc(50, 10, 18, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.moveTo(65, 5); ctx.lineTo(82, 0); ctx.stroke();
+
+          ctx.restore();
+
+          // Celebration
+          drawConfetti(ctx, t, 4.3, 60, ['#86efac', '#fbcfe8', '#facc15', '#ffffff']);
+          drawCelebrationMessage(ctx, t, 'PEACEFUL & COMPLETE! DELIGHTFUL JOB!', 'Harmony, Serenity & Order', childName, {
+            ribbonBg: 'rgba(22, 101, 52, 0.95)',
+            textGrad1: '#ffffff',
+            textGrad2: '#fbcfe8',
+            textGrad3: '#15803d',
+            subColor: '#86efac'
+          });
+
+          drawWipe(ctx, t, 'blossom', '#fbcfe8');
+        }
+      },
+
+      // 19. PEGASUS CELESTIAL FLIGHT
+      {
+        id: 'pegasus',
+        num: 19,
+        name: 'Pegasus Celestial Flight',
+        emoji: '🪽',
+        category: 'fantasy',
+        finalMsg: 'SOARING SUCCESS! CHORES CONQUERED!',
+        subMsg: 'Higher Than The Clouds',
+        wipe: 'starlight',
+        draw: (ctx, t, childName, reducedMotion) => {
+          // Sunset celestial cloudscape
+          const skyGrad = ctx.createLinearGradient(0, 0, 0, V_H);
+          skyGrad.addColorStop(0, '#312e81');
+          skyGrad.addColorStop(0.5, '#7c3aed');
+          skyGrad.addColorStop(1, '#db2777');
+          ctx.fillStyle = skyGrad;
+          ctx.fillRect(0, 0, V_W, V_H);
+
+          // Golden cloud tops
+          ctx.fillStyle = '#fbcfe8';
+          for (let c = 0; c < 8; c++) {
+            ctx.beginPath();
+            ctx.arc(c * 180, V_H - 60, 130, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          // Celestial star ring target
+          const ringX = 760;
+          const ringY = 320;
+          const ringPassed = t >= 3.8;
+          ctx.save();
+          ctx.translate(ringX, ringY);
+          ctx.strokeStyle = ringPassed ? '#facc15' : '#c084fc';
+          ctx.lineWidth = 8;
+          ctx.beginPath(); ctx.ellipse(0, 0, 45, 80, 0, 0, Math.PI * 2); ctx.stroke();
+          if (ringPassed) {
+            drawCheckmark(ctx, 0, 0, 38, '#facc15', 6);
+          }
+          ctx.restore();
+
+          // Constellation task checklist
+          drawTaskTiles(ctx, V_W / 2, 70, t, { cardBg: 'rgba(79, 70, 229, 0.95)', border: '#c084fc' });
+
+          // Pegasus
+          ctx.save();
+          let pX = 240;
+          let pY = 400;
+          let pRot = 0;
+
+          if (t < 1.2) {
+            pX = 240;
+          } else if (t < 3.8) {
+            const p = (t - 1.2) / 2.6;
+            pX = lerp(240, ringX + 80, p);
+            pY = 400 - Math.sin(p * Math.PI) * 120;
+            pRot = -0.15;
+          } else {
+            pX = ringX + 80; pY = 280;
+            pRot = 0;
+          }
+
+          ctx.translate(pX, pY);
+          ctx.rotate(pRot);
+
+          // Pegasus white horse body
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath(); ctx.ellipse(0, 0, 52, 28, 0, 0, Math.PI * 2); ctx.fill();
+
+          // Head & Golden Mane
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath(); ctx.ellipse(45, -20, 20, 14, -0.3, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#facc15';
+          ctx.beginPath(); ctx.ellipse(36, -34, 10, 18, 0.3, 0, Math.PI * 2); ctx.fill();
+
+          // Feathered Wings (Flapping)
+          const wingAngle = Math.sin(t * 14) * 35;
+          ctx.fillStyle = '#e0e7ff';
+          ctx.beginPath();
+          ctx.moveTo(-15, -10);
+          ctx.lineTo(-45, -80 + wingAngle);
+          ctx.lineTo(25, -50 + wingAngle * 0.5);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.restore();
+
+          // Celebration
+          drawConfetti(ctx, t, 4.3, 70, ['#c084fc', '#facc15', '#f472b6', '#ffffff']);
+          drawCelebrationMessage(ctx, t, 'SOARING SUCCESS! CHORES CONQUERED!', 'Higher Than The Clouds', childName, {
+            ribbonBg: 'rgba(79, 70, 229, 0.95)',
+            textGrad1: '#ffffff',
+            textGrad2: '#e879f9',
+            textGrad3: '#7c3aed',
+            subColor: '#c084fc'
+          });
+
+          drawWipe(ctx, t, 'starlight', '#6d28d9');
+        }
+      },
+
+      // 20. ANIMAL BAKERY CHAMPIONSHIP
+      {
+        id: 'bake-off',
+        num: 20,
+        name: 'Animal Bakery Championship',
+        emoji: '🧁',
+        category: 'animals',
+        finalMsg: 'SWEET VICTORY! BAKED TO PERFECTION!',
+        subMsg: 'The Grand Prize Confection',
+        wipe: 'frosting',
+        draw: (ctx, t, childName, reducedMotion) => {
+          // Warm French bakery kitchen
+          const bakeGrad = ctx.createLinearGradient(0, 0, 0, V_H);
+          bakeGrad.addColorStop(0, '#451a03');
+          bakeGrad.addColorStop(0.5, '#78350f');
+          bakeGrad.addColorStop(1, '#92400e');
+          ctx.fillStyle = bakeGrad;
+          ctx.fillRect(0, 0, V_W, V_H);
+
+          // Wooden pastry prep counter
+          ctx.fillStyle = '#b45309';
+          ctx.fillRect(200, V_H - 180, V_W - 400, 30);
+          ctx.fillStyle = '#78350f';
+          ctx.fillRect(220, V_H - 150, V_W - 440, 150);
+
+          // Blackboard recipe card checklist
+          drawTaskTiles(ctx, V_W / 2, 70, t, { cardBg: 'rgba(120, 53, 15, 0.95)', border: '#f59e0b' });
+
+          // 3-Tier Celebration Cake on marble turntable
+          const cakeX = V_W / 2 + 160;
+          const cakeY = V_H - 180;
+          const topperPlaced = t >= 3.8;
+          ctx.save();
+          ctx.translate(cakeX, cakeY);
+
+          // Tier 1 (Base)
+          ctx.fillStyle = '#fde68a';
+          ctx.fillRect(-65, -40, 130, 40);
+          // Tier 2 (Middle)
+          ctx.fillStyle = '#fbcfe8';
+          ctx.fillRect(-45, -75, 90, 35);
+          // Tier 3 (Top)
+          ctx.fillStyle = '#38bdf8';
+          ctx.fillRect(-25, -105, 50, 30);
+
+          // Crown checkmark chocolate topper
+          if (topperPlaced) {
+            ctx.fillStyle = '#78350f';
+            ctx.beginPath(); ctx.arc(0, -125, 20, 0, Math.PI * 2); ctx.fill();
+            drawCheckmark(ctx, 0, -125, 20, '#facc15', 4);
+          }
+          ctx.restore();
+
+          // Bear Baker Chef
+          ctx.save();
+          ctx.translate(V_W / 2 - 120, V_H - 200);
+
+          // Brown fur body
+          ctx.fillStyle = '#78350f';
+          ctx.beginPath(); ctx.ellipse(0, 20, 48, 42, 0, 0, Math.PI * 2); ctx.fill();
+          // White apron
+          ctx.fillStyle = '#f8fafc';
+          ctx.fillRect(-24, 0, 48, 55);
+
+          // Head & round ears
+          ctx.fillStyle = '#92400e';
+          ctx.beginPath(); ctx.arc(20, -35, 30, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(0, -60, 12, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(40, -60, 12, 0, Math.PI * 2); ctx.fill();
+
+          // Tall white chef's toque hat
+          ctx.fillStyle = '#f8fafc';
+          ctx.beginPath(); ctx.roundRect(5, -95, 30, 40, [12, 12, 0, 0]); ctx.fill();
+
+          // Piping bag in paws
+          ctx.fillStyle = '#f43f5e';
+          ctx.beginPath();
+          ctx.moveTo(35, -5); ctx.lineTo(65, -15); ctx.lineTo(60, 15); ctx.closePath();
+          ctx.fill();
+
+          ctx.restore();
+
+          // Celebration
+          drawConfetti(ctx, t, 4.3, 70, ['#f59e0b', '#fbcfe8', '#38bdf8', '#ffffff']);
+          drawCelebrationMessage(ctx, t, 'SWEET VICTORY! BAKED TO PERFECTION!', 'The Grand Prize Confection', childName, {
+            ribbonBg: 'rgba(120, 53, 15, 0.95)',
+            textGrad1: '#ffffff',
+            textGrad2: '#fde68a',
+            textGrad3: '#d97706',
+            subColor: '#fde68a'
+          });
+
+          drawWipe(ctx, t, 'frosting', '#d97706');
+        }
+      }
+    );
+
+    // =========================================================================
+    // 7. MASTER PLAYER CONTROLLER & UI BINDINGS
+    // =========================================================================
+    class CelebrationPlayer {
+      constructor() {
+        this.canvas = document.getElementById('stageCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.activeIdx = 0;
+        this.t = 0;
+        this.prevT = 0;
+        this.isPlaying = true;
+        this.speed = 1.0;
+        this.reducedMotion = false;
+        this.soundEnabled = true;
+        this.childName = 'Leo';
+        this.isDragging = false;
+        this.activeCategory = 'all';
+        this.searchQuery = '';
+        this.lastFrameTime = performance.now();
+
+        this.initDOM();
+        this.initCanvasResize();
+        this.renderSceneList();
+        this.selectScene(0);
+        this.bindEvents();
+        this.loop = this.loop.bind(this);
+        requestAnimationFrame(this.loop);
+      }
+
+      initDOM() {
+        this.playBtn = document.getElementById('playBtn');
+        this.playIcon = document.getElementById('playIcon');
+        this.playText = document.getElementById('playText');
+        this.restartBtn = document.getElementById('restartBtn');
+        this.stepBackBtn = document.getElementById('stepBackBtn');
+        this.stepFwdBtn = document.getElementById('stepFwdBtn');
+        this.timeDisplay = document.getElementById('timeDisplay');
+        this.scrubberWrap = document.getElementById('scrubberWrap');
+        this.scrubberFill = document.getElementById('scrubberFill');
+        this.scrubberKnob = document.getElementById('scrubberKnob');
+        this.soundBtn = document.getElementById('soundBtn');
+        this.motionBtn = document.getElementById('motionBtn');
+        this.childInput = document.getElementById('childNameInput');
+        this.sceneDesc = document.getElementById('sceneDesc');
+        this.symbolState = document.getElementById('symbolState');
+        this.sceneList = document.getElementById('sceneList');
+        this.searchBox = document.getElementById('searchBox');
+        this.fsBtn = document.getElementById('fsBtn');
+        this.nextSceneBtn = document.getElementById('nextSceneBtn');
+        this.randomSceneBtn = document.getElementById('randomSceneBtn');
+      }
+
+      initCanvasResize() {
+        const resize = () => {
+          const rect = this.canvas.getBoundingClientRect();
+          const dpr = window.devicePixelRatio || 1;
+          this.canvas.width = rect.width * dpr;
+          this.canvas.height = rect.height * dpr;
+          this.scaleX = this.canvas.width / V_W;
+          this.scaleY = this.canvas.height / V_H;
+        };
+        window.addEventListener('resize', resize);
+        resize();
+      }
+
+      renderSceneList() {
+        this.sceneList.innerHTML = '';
+        const q = this.searchQuery.toLowerCase().trim();
+        const filtered = CELEBRATIONS.filter(s => {
+          const matchesCat = (this.activeCategory === 'all' || s.category === this.activeCategory);
+          const matchesQuery = (!q || s.name.toLowerCase().includes(q) || s.finalMsg.toLowerCase().includes(q));
+          return matchesCat && matchesQuery;
+        });
+
+        filtered.forEach(s => {
+          const item = document.createElement('div');
+          item.className = `scene-item ${s.num - 1 === this.activeIdx ? 'active' : ''}`;
+          item.dataset.index = s.num - 1;
+          item.innerHTML = `
+            <div class="scene-emoji">${s.emoji}</div>
+            <div class="scene-info">
+              <div class="scene-num-title">
+                <span class="scene-num">#${s.num}</span>
+                <span class="scene-title">${s.name}</span>
+              </div>
+              <span class="scene-message">${s.finalMsg}</span>
+            </div>
+          `;
+          item.addEventListener('click', () => {
+            this.selectScene(s.num - 1);
+          });
+          this.sceneList.appendChild(item);
+        });
+      }
+
+      selectScene(idx) {
+        this.activeIdx = idx;
+        this.t = 0;
+        this.prevT = 0;
+        sound.lastTriggers = {};
+        const scene = CELEBRATIONS[this.activeIdx];
+        this.sceneDesc.innerHTML = `<strong>#${scene.num} ${scene.name}</strong> (${scene.category.toUpperCase()}) — <em>${scene.finalMsg}</em>`;
+        document.querySelectorAll('.scene-item').forEach(el => {
+          el.classList.toggle('active', parseInt(el.dataset.index) === idx);
+        });
+      }
+
+      play() {
+        this.isPlaying = true;
+        this.playIcon.textContent = '⏸';
+        this.playText.textContent = 'Pause';
+        this.lastFrameTime = performance.now();
+      }
+
+      pause() {
+        this.isPlaying = false;
+        this.playIcon.textContent = '▶';
+        this.playText.textContent = 'Play';
+      }
+
+      togglePlay() {
+        if (this.isPlaying) this.pause();
+        else {
+          sound.init();
+          this.play();
+        }
+      }
+
+      replay() {
+        this.t = 0;
+        this.prevT = 0;
+        sound.lastTriggers = {};
+        this.play();
+      }
+
+      step(delta) {
+        this.pause();
+        this.t = clamp(this.t + delta, 0, DURATION);
+      }
+
+      setSpeed(spd) {
+        this.speed = spd;
+        document.querySelectorAll('.s-btn').forEach(btn => {
+          btn.classList.toggle('active', parseFloat(btn.dataset.speed) === spd);
+        });
+      }
+
+      toggleSound() {
+        this.soundEnabled = !this.soundEnabled;
+        sound.enabled = this.soundEnabled;
+        this.soundBtn.textContent = this.soundEnabled ? '🔊 Sound: ON' : '🔇 Sound: OFF';
+      }
+
+      toggleReducedMotion() {
+        this.reducedMotion = !this.reducedMotion;
+        this.motionBtn.textContent = this.reducedMotion ? '⚡ Reduced Motion: ON' : '⚡ Reduced Motion: OFF';
+      }
+
+      seekAtPoint(e) {
+        const rect = this.scrubberWrap.getBoundingClientRect();
+        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+        const ratio = clamp((clientX - rect.left) / rect.width, 0, 1);
+        this.t = ratio * DURATION;
+      }
+
+      bindEvents() {
+        this.playBtn.addEventListener('click', () => this.togglePlay());
+        this.restartBtn.addEventListener('click', () => this.replay());
+        this.stepBackBtn.addEventListener('click', () => this.step(-0.25));
+        this.stepFwdBtn.addEventListener('click', () => this.step(0.25));
+
+        document.querySelectorAll('.s-btn').forEach(btn => {
+          btn.addEventListener('click', () => this.setSpeed(parseFloat(btn.dataset.speed)));
+        });
+
+        this.soundBtn.addEventListener('click', () => this.toggleSound());
+        this.motionBtn.addEventListener('click', () => this.toggleReducedMotion());
+
+        this.childInput.addEventListener('input', e => {
+          this.childName = e.target.value.trim() || 'Leo';
+        });
+
+        // Scrubber drag / click
+        const onDown = e => {
+          this.isDragging = true;
+          this.seekAtPoint(e);
+        };
+        const onMove = e => {
+          if (this.isDragging) this.seekAtPoint(e);
+        };
+        const onUp = () => {
+          this.isDragging = false;
+        };
+
+        this.scrubberWrap.addEventListener('mousedown', onDown);
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+
+        this.scrubberWrap.addEventListener('touchstart', onDown, { passive: true });
+        window.addEventListener('touchmove', onMove, { passive: true });
+        window.addEventListener('touchend', onUp);
+
+        // Category filter chips
+        document.querySelectorAll('.category-chip').forEach(chip => {
+          chip.addEventListener('click', () => {
+            document.querySelectorAll('.category-chip').forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            this.activeCategory = chip.dataset.cat;
+            this.renderSceneList();
+          });
+        });
+
+        // Search box
+        this.searchBox.addEventListener('input', e => {
+          this.searchQuery = e.target.value;
+          this.renderSceneList();
+        });
+
+        // Navigation
+        this.nextSceneBtn.addEventListener('click', () => {
+          this.selectScene((this.activeIdx + 1) % CELEBRATIONS.length);
+        });
+        this.randomSceneBtn.addEventListener('click', () => {
+          const rand = Math.floor(Math.random() * CELEBRATIONS.length);
+          this.selectScene(rand);
+        });
+
+        // Fullscreen
+        this.fsBtn.addEventListener('click', () => {
+          const stage = document.getElementById('stageCard');
+          if (!document.fullscreenElement) {
+            if (stage.requestFullscreen) stage.requestFullscreen();
+          } else {
+            if (document.exitFullscreen) document.exitFullscreen();
+          }
+        });
+
+        // Keyboard navigation
+        window.addEventListener('keydown', e => {
+          if (document.activeElement === this.childInput || document.activeElement === this.searchBox) return;
+          if (e.code === 'Space') {
+            e.preventDefault();
+            this.togglePlay();
+          } else if (e.code === 'ArrowLeft') {
+            this.step(-0.25);
+          } else if (e.code === 'ArrowRight') {
+            this.step(0.25);
+          } else if (e.key === 'r' || e.key === 'R') {
+            this.replay();
+          } else if (e.key === 'n' || e.key === 'N') {
+            this.selectScene((this.activeIdx + 1) % CELEBRATIONS.length);
+          }
+        });
+      }
+
+      loop(now) {
+        const dt = (now - this.lastFrameTime) / 1000;
+        this.lastFrameTime = now;
+
+        if (this.isPlaying && !this.isDragging) {
+          this.prevT = this.t;
+          this.t += dt * this.speed;
+          if (this.t >= DURATION) {
+            this.t = 0;
+            sound.lastTriggers = {};
+          }
+          sound.sync(this.t, this.prevT);
+        }
+
+        // Render Canvas
+        this.ctx.save();
+        this.ctx.scale(this.scaleX, this.scaleY);
+        this.ctx.clearRect(0, 0, V_W, V_H);
+
+        const currentScene = CELEBRATIONS[this.activeIdx];
+        if (currentScene && typeof currentScene.draw === 'function') {
+          currentScene.draw(this.ctx, this.t, this.childName, this.reducedMotion);
+        }
+        this.ctx.restore();
+
+        // Update Scrubber & Readout
+        const pct = (this.t / DURATION) * 100;
+        this.scrubberFill.style.width = `${pct}%`;
+        this.scrubberKnob.style.left = `${pct}%`;
+        this.timeDisplay.textContent = `${this.t.toFixed(2)}s / ${DURATION.toFixed(2)}s`;
+
+        // Update Neutral Symbol Status Readout
+        if (this.t >= 4.3) {
+          this.symbolState.textContent = '✓  ✓  ✓  ✓  (COMPLETE)';
+          this.symbolState.style.color = '#22c55e';
+        } else {
+          this.symbolState.textContent = '✓  ✓  ✓  □  (IN PROGRESS)';
+          this.symbolState.style.color = '#facc15';
+        }
+
+        requestAnimationFrame(this.loop);
+      }
+    }
+
+    // Auto-boot on load
+    window.addEventListener('DOMContentLoaded', () => {
+      window.player = new CelebrationPlayer();
+    });
+  </script>
+</body>
+</html>

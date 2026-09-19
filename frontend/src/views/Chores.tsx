@@ -441,8 +441,15 @@ export default function Chores() {
 
   const orderedPeople = useMemo(() => {
     const list = (people ?? []).filter((p) => p.chores_enabled !== false).map((p) => p.name)
-    return ['Family', ...list]
-  }, [people])
+    // Sort members by coin balance descending (#1 to #3)
+    list.sort((a, b) => {
+      const balA = balances?.find((sb) => sb.person_name.toLowerCase() === a.toLowerCase())?.balance ?? -Infinity
+      const balB = balances?.find((sb) => sb.person_name.toLowerCase() === b.toLowerCase())?.balance ?? -Infinity
+      if (balB !== balA) return balB - balA
+      return a.localeCompare(b)
+    })
+    return [...list, 'Family']
+  }, [people, balances])
 
   const [showUpcoming, setShowUpcoming] = useState(() => {
     try {
@@ -504,14 +511,25 @@ export default function Chores() {
     }
 
     const result = new Map<string, { todayList: ChoreItem[]; upcomingList: ChoreItem[] }>()
-    for (const [key, group] of map.entries()) {
+    // Order keys based on medal rank (balances descending #1 to #3, with Family last)
+    const sortedKeys = Array.from(map.keys()).sort((a, b) => {
+      const balA = balances?.find((sb) => sb.person_name.toLowerCase() === a.toLowerCase())?.balance ?? -Infinity
+      const balB = balances?.find((sb) => sb.person_name.toLowerCase() === b.toLowerCase())?.balance ?? -Infinity
+      if (balB !== balA) return balB - balA
+      if (a === 'Family') return 1
+      if (b === 'Family') return -1
+      return a.localeCompare(b)
+    })
+
+    for (const key of sortedKeys) {
+      const group = map.get(key)!
       const hasChores = group.todayList.length > 0 || group.upcomingList.length > 0
       if (hasChores || filterPerson === key) {
         result.set(key, group)
       }
     }
     return result
-  }, [orderedPeople, filtered, today, filterPerson])
+  }, [orderedPeople, filtered, today, filterPerson, balances])
 
   const totalUpcomingCount = useMemo(() => {
     let count = 0
@@ -628,7 +646,7 @@ export default function Chores() {
                           title={isFiltered ? 'Show all members' : `Filter to ${person}`}
                         >
                           {medal && (
-                            <span className="text-xl lg:text-2xl select-none shrink-0" aria-label={`Medal ${medal}`}>
+                            <span className="text-3xl lg:text-4xl leading-none select-none shrink-0" aria-label={`Medal ${medal}`}>
                               {medal}
                             </span>
                           )}
