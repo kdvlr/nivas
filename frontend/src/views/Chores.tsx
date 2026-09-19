@@ -39,6 +39,27 @@ function formatRecurrence(rec: string): string {
   return ''
 }
 
+function formatRelativeDueDate(dateStr: string): { label: string; subLabel: string } {
+  const today = todayISO()
+  if (dateStr === today) {
+    return { label: 'Today', subLabel: fmtDate(dateStr) }
+  }
+  const t = new Date(today + 'T12:00:00').getTime()
+  const d = new Date(dateStr + 'T12:00:00').getTime()
+  const diffDays = Math.round((d - t) / (1000 * 60 * 60 * 24))
+
+  if (diffDays === 1) {
+    return { label: 'Tomorrow', subLabel: fmtDate(dateStr) }
+  }
+  if (diffDays > 1 && diffDays < 7) {
+    return { label: `In ${diffDays} days`, subLabel: fmtDate(dateStr) }
+  }
+  if (diffDays === 7) {
+    return { label: 'In 1 week', subLabel: fmtDate(dateStr) }
+  }
+  return { label: fmtDate(dateStr), subLabel: `in ${diffDays} days` }
+}
+
 interface Draft {
   id?: number
   title: string
@@ -93,12 +114,16 @@ function ChoreCard({
   onToggle,
   onEdit,
   onDelete,
+  showPerson,
+  personColor,
 }: {
   chore: ChoreItem
   isCompleting?: boolean
   onToggle: (c: ChoreItem) => void
   onEdit: (c: ChoreItem) => void
   onDelete: (c: ChoreItem) => void
+  showPerson?: boolean
+  personColor?: string
 }) {
   const x = useMotionValue(0)
   // action hints fade in as the card slides
@@ -199,7 +224,15 @@ function ChoreCard({
           >
             {chore.title}
           </span>
-          <span className="flex flex-wrap items-center gap-x-2 text-[0.7rem] text-ink-soft">
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.7rem] text-ink-soft mt-0.5">
+            {showPerson && chore.assigned_to && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-bold text-white shadow-xs"
+                style={{ backgroundColor: personColor || '#64748b' }}
+              >
+                {chore.assigned_to}
+              </span>
+            )}
             {chore.due_date && <span>due {fmtDate(chore.due_date)}</span>}
             {chore.recurrence && (
               <span className="font-medium text-sky-600 dark:text-sky-400">
@@ -364,6 +397,25 @@ export default function Chores() {
     return ['Family', ...list]
   }, [people])
 
+  const [showUpcoming, setShowUpcoming] = useState(() => {
+    try {
+      const saved = localStorage.getItem('nivas:chores:show-upcoming')
+      return saved !== null ? saved === 'true' : true
+    } catch {
+      return true
+    }
+  })
+
+  const handleToggleUpcoming = () => {
+    setShowUpcoming((prev) => {
+      const next = !prev
+      try {
+        localStorage.setItem('nivas:chores:show-upcoming', String(next))
+      } catch {}
+      return next
+    })
+  }
+
   const allChores = chores ?? []
   const filtered = useMemo(() => {
     return filterPerson
@@ -371,12 +423,29 @@ export default function Chores() {
       : allChores
   }, [allChores, filterPerson])
 
-  const groups = useMemo(() => {
+  const today = todayISO()
+
+  // Partition into Today vs Upcoming
+  const { todayChores, upcomingChores } = useMemo(() => {
+    const todayList: ChoreItem[] = []
+    const upcomingList: ChoreItem[] = []
+    for (const c of filtered) {
+      if (!c.due_date || c.due_date <= today) {
+        todayList.push(c)
+      } else {
+        upcomingList.push(c)
+      }
+    }
+    return { todayChores: todayList, upcomingChores: upcomingList }
+  }, [filtered, today])
+
+  // Today's chores grouped by person
+  const todayGroups = useMemo(() => {
     const map = new Map<string, ChoreItem[]>()
     for (const p of orderedPeople) {
       map.set(p, [])
     }
-    for (const c of filtered) {
+    for (const c of todayChores) {
       const key = c.assigned_to || 'Family'
       if (!map.has(key)) {
         map.set(key, [])
@@ -385,12 +454,38 @@ export default function Chores() {
     }
     const result = new Map<string, ChoreItem[]>()
     for (const [key, items] of map.entries()) {
-      if (items.length > 0) {
+      if (items.length > 0 || (filterPerson === key)) {
         result.set(key, items)
       }
     }
     return result
-  }, [orderedPeople, filtered])
+  }, [orderedPeople, todayChores, filterPerson])
+
+  // Upcoming chores ordered by earliest to latest date, then title
+  const sortedUpcoming = useMemo(() => {
+    return [...upcomingChores].sort((a, b) => {
+      if (a.due_date !== b.due_date) {
+        return a.due_date.localeCompare(b.due_date)
+      }
+      if (a.completed !== b.completed) {
+        return a.completed ? 1 : -1
+      }
+      return a.title.localeCompare(b.title)
+    })
+  }, [upcomingChores])
+
+  // Group upcoming chores by date
+  const upcomingByDate = useMemo(() => {
+    const map = new Map<string, ChoreItem[]>()
+    for (const c of sortedUpcoming) {
+      const d = c.due_date
+      if (!map.has(d)) {
+        map.set(d, [])
+      }
+      map.get(d)!.push(c)
+    }
+    return [...map.entries()]
+  }, [sortedUpcoming])
 
   const sortedBalances = [...(balances ?? [])].sort((a, b) => b.balance - a.balance)
 
@@ -399,7 +494,7 @@ export default function Chores() {
       {/* Header */}
       <div className="mb-4 lg:mb-6 flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink">Chores</h1>
             {filterPerson && (
               <motion.button
@@ -408,9 +503,26 @@ export default function Chores() {
                 exit={{ scale: 0.9, opacity: 0 }}
                 transition={EXPRESSIVE_ENTER}
                 onClick={() => setFilterPerson('')}
-                className="btn-glass flex items-center gap-1 rounded-full px-4 py-2 text-base cursor-pointer"
+                className="btn-glass flex items-center gap-1 rounded-full px-3 py-1.5 text-sm cursor-pointer"
               >
-                {filterPerson} <Icon name="close" className="text-lg" />
+                {filterPerson} <Icon name="close" className="text-base" />
+              </motion.button>
+            )}
+            {upcomingChores.length > 0 && (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                transition={PRESS_SPRING}
+                onClick={handleToggleUpcoming}
+                className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs lg:text-sm font-medium transition-all cursor-pointer ${
+                  showUpcoming
+                    ? 'bg-sky-500/15 text-sky-600 dark:text-sky-300 border border-sky-500/30 shadow-xs'
+                    : 'btn-glass !text-ink-soft'
+                }`}
+                title={showUpcoming ? 'Hide upcoming chores' : 'Show upcoming chores'}
+              >
+                <Icon name={showUpcoming ? 'visibility' : 'visibility_off'} className="text-base" />
+                <span>Upcoming ({upcomingChores.length})</span>
               </motion.button>
             )}
           </div>
@@ -433,7 +545,7 @@ export default function Chores() {
       <div className="flex flex-1 flex-col min-h-0 min-w-0">
         {/* Leaderboard — tap a card to filter that person's chores */}
         {sortedBalances.length > 0 && (
-          <div className="mb-5 grid grid-cols-4 gap-2 md:flex md:shrink-0 md:gap-4 md:overflow-x-auto pb-1">
+          <div className="mb-4 grid grid-cols-4 gap-2 md:flex md:shrink-0 md:gap-4 md:overflow-x-auto pb-1">
             {sortedBalances.map((b, i) => {
               const active = filterPerson === b.person_name
               return (
@@ -463,49 +575,158 @@ export default function Chores() {
           </div>
         )}
 
-        {/* Chore cards */}
-        {filtered.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={EXPRESSIVE_ENTER}
-            className="flex flex-1 flex-col items-center justify-center gap-4 text-ink-soft"
-          >
-            <span className="text-7xl">✨</span>
-            <p className="text-2xl font-medium">No chores here — time to assign some!</p>
-          </motion.div>
-        ) : (
-          <div className="grid min-h-0 flex-1 auto-rows-min grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-x-4 gap-y-3 lg:gap-x-6 lg:gap-y-4 overflow-y-auto pb-4 pr-1">
-            <AnimatePresence initial={false}>
-              {[...groups.entries()].map(([person, list]) => (
-                <section key={person} className="mb-4">
-                  <h2
-                    className="mb-1.5 flex items-center gap-2 text-lg font-semibold"
-                    style={{ color: personColor(person) }}
-                  >
-                    <span className="h-4 w-4 rounded-full" style={{ background: personColor(person) }} />
-                    {person}
-                    <span className="text-sm font-medium text-ink-soft">
-                      {list.filter((c) => !c.completed).length}
-                    </span>
-                  </h2>
-                  <div className="grid gap-2 grid-cols-[repeat(auto-fill,minmax(270px,1fr))]">
-                    {list.map((chore) => (
-                      <ChoreCard
-                        key={chore.id}
-                        chore={chore}
-                        isCompleting={completingId === chore.id}
-                        onToggle={toggle}
-                        onEdit={(c) => setDraft(draftFrom(c))}
-                        onDelete={deleteChore}
-                      />
+        {/* Scrollable chore area containing Today's tasks + Upcoming section */}
+        <div className="flex-1 overflow-y-auto pr-1 pb-8 min-h-0">
+          {/* Entirely Empty State */}
+          {filtered.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={EXPRESSIVE_ENTER}
+              className="flex flex-1 flex-col items-center justify-center gap-4 text-ink-soft my-12"
+            >
+              <span className="text-7xl">✨</span>
+              <p className="text-2xl font-medium">No chores here — time to assign some!</p>
+            </motion.div>
+          ) : (
+            <>
+              {/* Today's Chores Section */}
+              {todayChores.length === 0 ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={EXPRESSIVE_ENTER}
+                  className="flex flex-col items-center justify-center gap-2 rounded-2xl glass-inset p-6 text-center text-ink-soft mb-6"
+                >
+                  <span className="text-4xl">🎉</span>
+                  <p className="text-lg font-semibold text-ink">All caught up for today!</p>
+                  <p className="text-sm text-ink-soft">
+                    {upcomingChores.length > 0
+                      ? 'No tasks due today. Check upcoming chores scheduled below!'
+                      : 'No chores due today. Great job!'}
+                  </p>
+                </motion.div>
+              ) : (
+                <div className="grid auto-rows-min grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-x-4 gap-y-4 lg:gap-x-6 lg:gap-y-6 mb-6">
+                  <AnimatePresence initial={false}>
+                    {[...todayGroups.entries()].map(([person, list]) => (
+                      <section key={person} className="flex flex-col">
+                        <h2
+                          className="mb-2 flex items-center justify-between text-lg font-semibold"
+                          style={{ color: personColor(person) }}
+                        >
+                          <span className="flex items-center gap-2">
+                            <span className="h-3.5 w-3.5 rounded-full" style={{ background: personColor(person) }} />
+                            {person}
+                          </span>
+                          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-surface-variant text-ink-soft">
+                            {list.filter((c) => !c.completed).length} left
+                          </span>
+                        </h2>
+                        {list.length === 0 ? (
+                          <div className="rounded-xl glass-inset p-4 text-center text-sm text-ink-soft">
+                            All done for today! 🎉
+                          </div>
+                        ) : (
+                          <div className="grid gap-2 grid-cols-[repeat(auto-fill,minmax(270px,1fr))]">
+                            {list.map((chore) => (
+                              <ChoreCard
+                                key={chore.id}
+                                chore={chore}
+                                isCompleting={completingId === chore.id}
+                                onToggle={toggle}
+                                onEdit={(c) => setDraft(draftFrom(c))}
+                                onDelete={deleteChore}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </section>
                     ))}
+                  </AnimatePresence>
+                </div>
+              )}
+
+              {/* Upcoming Chores Section */}
+              {upcomingChores.length > 0 && (
+                <div className="mt-4 pt-5 border-t border-slate-200/60 dark:border-slate-800/60">
+                  {/* Upcoming Section Header with toggle */}
+                  <div className="mb-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-500/15 text-sky-600 dark:text-sky-400">
+                        <Icon name="event" className="text-lg" />
+                      </span>
+                      <h2 className="text-lg lg:text-xl font-bold tracking-tight text-ink flex items-center gap-2">
+                        Upcoming
+                        <span className="rounded-full bg-sky-500/15 px-2 py-0.2 text-xs font-bold text-sky-600 dark:text-sky-300">
+                          {upcomingChores.length}
+                        </span>
+                      </h2>
+                    </div>
+
+                    <motion.button
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      transition={PRESS_SPRING}
+                      onClick={handleToggleUpcoming}
+                      className="btn-glass flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium cursor-pointer"
+                    >
+                      <Icon name={showUpcoming ? 'visibility_off' : 'visibility'} className="text-base" />
+                      <span>{showUpcoming ? 'Hide Upcoming' : 'Show Upcoming'}</span>
+                      <Icon name={showUpcoming ? 'expand_less' : 'expand_more'} className="text-base" />
+                    </motion.button>
                   </div>
-                </section>
-              ))}
-            </AnimatePresence>
-          </div>
-        )}
+
+                  {/* Collapsible Upcoming Chores by Date (Earliest to Latest) */}
+                  <AnimatePresence>
+                    {showUpcoming && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.25, ease: 'easeInOut' }}
+                        className="overflow-hidden flex flex-col gap-5"
+                      >
+                        {upcomingByDate.map(([dateStr, items]) => {
+                          const rel = formatRelativeDueDate(dateStr)
+                          return (
+                            <div key={dateStr} className="flex flex-col">
+                              <div className="mb-2 flex items-center gap-2">
+                                <span className="text-sm font-bold text-sky-600 dark:text-sky-400 uppercase tracking-wider">
+                                  {rel.label}
+                                </span>
+                                <span className="text-xs text-ink-soft">
+                                  · {rel.subLabel}
+                                </span>
+                                <span className="rounded-full bg-slate-200/60 dark:bg-slate-800/60 px-2 py-0.2 text-[0.7rem] font-bold text-ink-soft">
+                                  {items.length}
+                                </span>
+                              </div>
+                              <div className="grid gap-2 grid-cols-[repeat(auto-fill,minmax(270px,1fr))]">
+                                {items.map((chore) => (
+                                  <ChoreCard
+                                    key={chore.id}
+                                    chore={chore}
+                                    isCompleting={completingId === chore.id}
+                                    onToggle={toggle}
+                                    onEdit={(c) => setDraft(draftFrom(c))}
+                                    onDelete={deleteChore}
+                                    showPerson={!filterPerson}
+                                    personColor={personColor(chore.assigned_to || 'Family')}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {/* Add / Edit Chore Modal */}

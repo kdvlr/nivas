@@ -80,11 +80,17 @@ def list_chores(
 async def create_chore(body: ChoreCreate, db: Session = Depends(get_db)):
     if not body.title.strip():
         raise HTTPException(400, "title required")
+    due_date = body.due_date
+    if body.recurrence:
+        today = datetime.now(ZoneInfo(get_settings().tz)).date()
+        orig_due = date.fromisoformat(due_date) if due_date else None
+        ref = max(orig_due, today) if orig_due else today
+        due_date = next_due_date(ref, body.recurrence, ref_date=orig_due).isoformat()
     row = Chore(
         title=body.title.strip(),
         assigned_to=body.assigned_to,
         coins=body.coins,
-        due_date=body.due_date,
+        due_date=due_date,
         notes=body.notes,
         recurrence=body.recurrence,
     )
@@ -111,6 +117,12 @@ async def patch_chore(chore_id: int, body: ChorePatch, db: Session = Depends(get
         row.notes = body.notes
     if body.recurrence is not None:
         row.recurrence = body.recurrence
+        if body.recurrence:
+            today = datetime.now(ZoneInfo(get_settings().tz)).date()
+            cur_due = row.due_date
+            orig_due = date.fromisoformat(cur_due) if cur_due else None
+            ref = max(orig_due, today) if orig_due else today
+            row.due_date = next_due_date(ref, body.recurrence, ref_date=orig_due).isoformat()
     if body.completed is not None and body.completed != row.completed:
         row.completed = body.completed
         if body.completed:

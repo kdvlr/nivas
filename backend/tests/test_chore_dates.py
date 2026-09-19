@@ -121,3 +121,33 @@ def test_reset_chore_dates_endpoint(client_and_db):
     assert d1.weekday() == 5
     # Completed status for recurring chore was reset
     assert c1.completed is False
+
+
+def test_create_and_patch_recurring_chore_due_date_alignment(client_and_db):
+    client, db = client_and_db
+
+    # Create weekly Saturday chore without due_date or with today's date
+    resp = client.post("/api/chores", json={
+        "title": "Clean Room Saturday",
+        "assigned_to": "Swara",
+        "coins": 10,
+        "recurrence": "weekly:5",
+        "due_date": "",
+    })
+    assert resp.status_code == 200
+    chore = resp.json()
+    chore_id = chore["id"]
+    due_d = date.fromisoformat(chore["due_date"])
+    assert due_d.weekday() == 5  # Must be Saturday!
+    assert due_d >= date.today()
+
+    # Patch recurrence to weekly Sunday (6)
+    patch_resp = client.patch(f"/api/chores/{chore_id}", json={
+        "recurrence": "weekly:6",
+    })
+    assert patch_resp.status_code == 200
+    patched = patch_resp.json()
+    patched_d = date.fromisoformat(patched["due_date"])
+    assert patched_d.weekday() == 6  # Must be Sunday!
+    assert patched_d >= date.today()
+
