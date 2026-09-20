@@ -35,6 +35,10 @@ const YTMusic = lazy(() => import('./views/YTMusic'))
 import MiniPlayerBar, { Track } from './components/ytmusic/MiniPlayerBar'
 import FloatingActionButton from './components/FloatingActionButton'
 import Slideshow, { hasSkyOverride } from './components/Slideshow'
+import { TimerProvider, useTimer } from './context/TimerContext'
+import CreateTimerModal from './components/timer/CreateTimerModal'
+import FullScreenTimer from './components/timer/FullScreenTimer'
+import MiniTimerCapsule from './components/timer/MiniTimerCapsule'
 
 const NAV = [
   { id: 'home', label: 'Home', icon: 'home', view: Home, active: 'bg-sky-200 text-sky-950 dark:bg-sky-900 dark:text-sky-100', activeText: 'text-sky-600 dark:text-sky-400' },
@@ -145,7 +149,11 @@ import { playChime } from './lib/useAudioChime'
 import TopClockHeader from './components/TopClockHeader'
 import AmbientCalendarOverlay, { type ReminderPayload } from './components/AmbientCalendarOverlay'
 
-export default function App() {
+function AppContent() {
+  const { isTimerActive, timer } = useTimer()
+  const isTimerActiveRef = useRef(isTimerActive)
+  isTimerActiveRef.current = isTimerActive
+
   const [route, setRoute] = useState(currentRoute)
   const [appearance, setAppearanceState] = useState<Appearance>(getAppearance)
   const [style, setStyleState] = useState<ThemeStyle>(getStyle)
@@ -396,12 +404,19 @@ function isWithinQuietHours(now: Date, startStr = '22:00', endStr = '06:00'): bo
     }
   }, [])
 
+  // When a timer becomes active, immediately dismiss any active slideshow
+  useEffect(() => {
+    if (isTimerActive && slideshowActive) {
+      setSlideshowActive(false)
+    }
+  }, [isTimerActive, slideshowActive])
+
   // "#/photos?sky=night&skyfx=stormy" jumps straight into the slideshow so the
   // sky preview is one URL away. Keyed on the route, so dismissing it stays
   // dismissed until you navigate again.
   useEffect(() => {
-    if (route === 'photos' && hasSkyOverride()) setSlideshowActive(true)
-  }, [route])
+    if (route === 'photos' && hasSkyOverride() && !isTimerActive) setSlideshowActive(true)
+  }, [route, isTimerActive])
 
   // Fetch the photo list for the screensaver.
   //
@@ -556,6 +571,7 @@ function isWithinQuietHours(now: Date, startStr = '22:00', endStr = '06:00'): bo
     }
 
     function startSlideshow() {
+      if (isTimerActiveRef.current) return
       setSlideshowActive(true)
       if (currentRoute() !== 'home') location.hash = '#/home'
     }
@@ -598,9 +614,14 @@ function isWithinQuietHours(now: Date, startStr = '22:00', endStr = '06:00'): bo
       }
 
       // Waking up from an active screensaver:
+      // If a timer is active, dismiss slideshow immediately
+      lastMotionTimeRef.current = nowMs
+      if (isTimerActiveRef.current) {
+        setSlideshowActive(false)
+        return
+      }
       // Over 2 hours of inactivity -> Home Page
       // Under 2 hours of inactivity -> Keep Photos Slideshow active
-      lastMotionTimeRef.current = nowMs
       if (elapsedMs > TWO_HOURS_MS) {
         setSlideshowActive(false)
         if (currentRoute() !== 'home') location.hash = '#/home'
@@ -718,9 +739,8 @@ function isWithinQuietHours(now: Date, startStr = '22:00', endStr = '06:00'): bo
 
 
   return (
-    <CelebrationProvider>
-      <RewardCelebrationProvider>
-        {/* While the screensaver covers the screen, stop painting the dashboard
+    <>
+      {/* While the screensaver covers the screen, stop painting the dashboard
             underneath it. `visibility: hidden` keeps the tree mounted (so
             FullCalendar keeps its measured layout) but skips paint and
             compositing for the whole app — the slideshow gets the GPU. */}
@@ -1006,7 +1026,7 @@ function isWithinQuietHours(now: Date, startStr = '22:00', endStr = '06:00'): bo
             </div>
           </div>
         </motion.div>
-        {slideshowActive && photosList.length > 0 && !isScreenOff && (
+        {slideshowActive && photosList.length > 0 && !isScreenOff && !isTimerActive && (
           <Slideshow
             photos={photosList}
             onDismiss={() => setSlideshowActive(false)}
@@ -1026,6 +1046,20 @@ function isWithinQuietHours(now: Date, startStr = '22:00', endStr = '06:00'): bo
             onClose={handleStopPlayer}
           />
         )}
+        <CreateTimerModal />
+        <FullScreenTimer />
+        <MiniTimerCapsule />
+      </>
+  )
+}
+
+export default function App() {
+  return (
+    <CelebrationProvider>
+      <RewardCelebrationProvider>
+        <TimerProvider>
+          <AppContent />
+        </TimerProvider>
       </RewardCelebrationProvider>
     </CelebrationProvider>
   )

@@ -801,12 +801,21 @@ export default function Slideshow({
       <style>{'@keyframes sky-cloud { from { transform: translateX(-60vmin); } to { transform: translateX(110vw); } }'}</style>
 
       {/* Clock & Date Ambient Glass Overlay */}
-      <div className="absolute top-6 right-6 z-40 flex flex-col items-end pointer-events-none select-none">
-        <div className="bg-black/30 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/15 text-white shadow-2xl flex flex-col items-end">
-          <div className="text-3xl sm:text-4xl lg:text-5xl font-normal tabular-nums tracking-tight text-white leading-none drop-shadow-md">
+      <div className="absolute top-6 right-6 z-40 flex flex-col items-end select-none">
+        <div className="bg-black/30 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/15 text-white shadow-2xl flex flex-col items-end pointer-events-auto">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onDismiss()
+              window.dispatchEvent(new CustomEvent('open-create-timer'))
+            }}
+            className="text-3xl sm:text-4xl lg:text-5xl font-normal tabular-nums tracking-tight text-white leading-none drop-shadow-md cursor-pointer hover:opacity-85 active:scale-95 transition-all text-right"
+            title="Click to set a timer"
+          >
             {now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
-          </div>
-          <div className="text-sm sm:text-base font-medium text-white/80 mt-2 leading-none drop-shadow-sm">
+          </button>
+          <div className="text-sm sm:text-base font-medium text-white/80 mt-2 leading-none drop-shadow-sm pointer-events-none">
             {now.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
           </div>
           {secondaryFormatted && (

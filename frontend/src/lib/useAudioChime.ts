@@ -1,13 +1,16 @@
 /**
- * Web Audio API synthesizer for soft notification chimes.
+ * Web Audio API synthesizer for soft notification chimes and timer alarms.
  * Works without external MP3 files and across mobile/tablet browsers.
  */
 
 let audioCtx: AudioContext | null = null
+let alarmInterval: ReturnType<typeof setInterval> | null = null
 
 function getAudioContext(): AudioContext {
   if (!audioCtx) {
-    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+    const AudioContextClass =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
     audioCtx = new AudioContextClass()
   }
   if (audioCtx.state === 'suspended') {
@@ -16,10 +19,36 @@ function getAudioContext(): AudioContext {
   return audioCtx
 }
 
-export function playChime(type: 'gentle' | 'reminder' = 'reminder') {
+export function playChime(type: 'gentle' | 'reminder' | 'alarm' = 'reminder') {
   try {
     const ctx = getAudioContext()
     const now = ctx.currentTime
+
+    if (type === 'alarm') {
+      // Upbeat 4-pulse timer alarm: (A5 -> A5 -> C6 -> C6)
+      const alarmBeeps = [880, 880, 1046.5, 1046.5]
+      const beepDuration = 0.08
+      const beepGap = 0.12
+
+      alarmBeeps.forEach((freq, index) => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+
+        osc.type = 'sine'
+        osc.frequency.setValueAtTime(freq, now + index * beepGap)
+
+        gain.gain.setValueAtTime(0, now + index * beepGap)
+        gain.gain.linearRampToValueAtTime(0.4, now + index * beepGap + 0.01)
+        gain.gain.exponentialRampToValueAtTime(0.001, now + index * beepGap + beepDuration)
+
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+
+        osc.start(now + index * beepGap)
+        osc.stop(now + index * beepGap + beepDuration + 0.05)
+      })
+      return
+    }
 
     const masterGain = ctx.createGain()
     masterGain.gain.setValueAtTime(0.2, now)
@@ -49,5 +78,20 @@ export function playChime(type: 'gentle' | 'reminder' = 'reminder') {
     })
   } catch (e) {
     console.warn('[AudioChime] Unable to play chime:', e)
+  }
+}
+
+export function startAlarmSound() {
+  stopAlarmSound()
+  playChime('alarm')
+  alarmInterval = setInterval(() => {
+    playChime('alarm')
+  }, 1800)
+}
+
+export function stopAlarmSound() {
+  if (alarmInterval) {
+    clearInterval(alarmInterval)
+    alarmInterval = null
   }
 }

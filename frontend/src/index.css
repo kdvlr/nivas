@@ -703,3 +703,44 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   color: var(--primary) !important;
   font-weight: 800 !important;
 }
+
+/* Timer Animations */
+@keyframes timer-flash {
+  0%, 100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 30px rgba(239, 68, 68, 0.9));
+  }
+  50% {
+    opacity: 0.35;
+    filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.2));
+  }
+}
+
+@keyframes timer-ambient-flash {
+  0%, 100% {
+    background-color: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.8);
+  }
+  50% {
+    background-color: rgba(239, 68, 68, 0.04);
+    border-color: rgba(239, 68, 68, 0.2);
+  }
+}
+
+@keyframes timer-alarm-shake {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.animate-timer-flash {
+  animation: timer-flash 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-timer-ambient-flash {
+  animation: timer-ambient-flash 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-timer-alarm {
+  animation: timer-alarm-shake 0.7s ease-in-out infinite;
+}
+
