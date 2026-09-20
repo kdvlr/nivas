@@ -897,7 +897,11 @@ function isWithinQuietHours(now: Date, startStr = '22:00', endStr = '06:00'): bo
           </main>
 
           {/* Floating Dock: MiniPlayerBar (left of FAB on both mobile & desktop) + Themed FAB */}
-          <div className="fixed bottom-[calc(4.25rem+env(safe-area-inset-bottom,0px)+8px)] right-4 sm:bottom-6 sm:right-6 z-40 flex flex-row items-end gap-3 pointer-events-none">
+          <div
+            className={`fixed bottom-[calc(5rem+env(safe-area-inset-bottom,0px)+env(safe-area-inset-bottom,0px))] right-4 lg:bottom-6 lg:right-6 z-30 flex flex-row items-end gap-3 pointer-events-none transition-opacity duration-200 ${
+              moreOpen ? 'opacity-0' : 'opacity-100'
+            }`}
+          >
             {route !== 'ytmusic' && currentTrack && (
               <MiniPlayerBar
                 docked

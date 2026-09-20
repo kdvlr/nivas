@@ -116,7 +116,7 @@ function RecipeDetail({ id, onBack }: { id: number; onBack: () => void }) {
   }
 
   return (
-    <div className="h-full overflow-y-auto px-4 py-3 lg:px-8 lg:py-4">
+    <div className="h-full overflow-y-auto px-4 py-3 pb-32 lg:px-8 lg:py-4 lg:pb-8">
       <button
         onClick={onBack}
         className="mb-3 btn-glass px-4 py-2 text-sm lg:text-base"
@@ -521,7 +521,7 @@ export default function Recipes() {
           </button>
         </div>
       ) : (
-        <div className="grid min-h-0 flex-1 auto-rows-min grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-5 overflow-y-auto pb-6 xl:grid-cols-5">
+        <div className="grid min-h-0 flex-1 auto-rows-min grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-5 overflow-y-auto pb-32 lg:pb-6 xl:grid-cols-5">
           {filteredRecipes.map((r) => (
             <a
               key={r.id}
