@@ -80,3 +80,25 @@ def test_timer_api_endpoints(client):
     res = client.get("/api/timer/state")
     assert res.status_code == 200
     assert res.json()["active"] is False
+
+
+def test_timer_ringing_auto_dismiss():
+    import time
+
+    # Start 1 second timer
+    timer_service.start_timer(1, label="Short Timer")
+    # Simulate completion
+    now_ms = int(time.time() * 1000)
+    timer_service._state["endTimestamp"] = now_ms - 1000
+
+    # Getting state should mark it as ringing (within 15m)
+    state = timer_service.get_state()
+    assert state is not None
+    assert state["status"] == "ringing"
+    assert state["remainingSeconds"] == 0
+
+    # Simulate 16 minutes having elapsed
+    timer_service._state["endTimestamp"] = now_ms - (16 * 60 * 1000)
+    state_expired = timer_service.get_state()
+    assert state_expired is None
+

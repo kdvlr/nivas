@@ -8,7 +8,6 @@ import {
   type ReactNode,
 } from 'react'
 import { getTimerStage, type TimerStage } from '../lib/timer'
-import { startAlarmSound, stopAlarmSound } from '../lib/useAudioChime'
 import { api } from '../lib/api'
 import { onWsMessage } from '../lib/ws'
 
@@ -97,8 +96,8 @@ export function TimerProvider({ children }: { children: ReactNode }) {
             stage: getTimerStage(remaining),
           }
         }
-        // If it ended less than 2 minutes ago, restore as ringing
-        if (now - stored.endTimestamp < 120_000) {
+        // If it ended less than 15 minutes ago, restore as ringing
+        if (now - stored.endTimestamp < 15 * 60 * 1000) {
           return {
             id: stored.id,
             label: stored.label,
@@ -107,6 +106,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
             status: 'ringing',
             endTimestamp: stored.endTimestamp,
             stage: 'flashing-red',
+            source: stored.source,
           }
         }
       }
@@ -139,18 +139,6 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
   }, [timer])
-
-  // Handle active ringing alarm sounds
-  useEffect(() => {
-    if (timer?.status === 'ringing') {
-      startAlarmSound()
-    } else {
-      stopAlarmSound()
-    }
-    return () => {
-      stopAlarmSound()
-    }
-  }, [timer?.status])
 
   // Ticker loop for running timers
   useEffect(() => {
@@ -191,7 +179,6 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     if (!serverTimer) {
       setTimer((prev) => {
         if (prev?.source === 'school_schedule') {
-          stopAlarmSound()
           setIsFullScreen(false)
           localStorage.removeItem(STORAGE_KEY)
           return null
@@ -211,6 +198,17 @@ export function TimerProvider({ children }: { children: ReactNode }) {
       if (remaining <= 0) {
         status = 'ringing'
       }
+    }
+
+    // Auto-dismiss if timer ended >= 15 minutes ago
+    if (status === 'ringing' && now - endTimestamp >= 15 * 60 * 1000) {
+      setTimer(null)
+      setIsFullScreen(false)
+      localStorage.removeItem(STORAGE_KEY)
+      if (window.location.hash !== '#/' && window.location.hash !== '#/home' && window.location.hash !== '') {
+        window.location.hash = '#/home'
+      }
+      return
     }
 
     const stage = getTimerStage(remaining)
@@ -274,7 +272,6 @@ export function TimerProvider({ children }: { children: ReactNode }) {
       const endTimestamp = now + safeTotal * 1000
       const stage = getTimerStage(safeTotal)
 
-      stopAlarmSound()
       setTimer({
         id: `timer_${now}`,
         label,
@@ -325,7 +322,6 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     const current = timerRef.current
     if (!current) return
 
-    stopAlarmSound()
     const now = Date.now()
     const endTimestamp = now + current.totalSeconds * 1000
     setTimer({
@@ -364,7 +360,6 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const cancelTimer = useCallback(() => {
-    stopAlarmSound()
     setTimer(null)
     setIsFullScreen(false)
     localStorage.removeItem(STORAGE_KEY)
@@ -372,12 +367,29 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const dismissAlarm = useCallback(() => {
-    stopAlarmSound()
     setTimer(null)
     setIsFullScreen(false)
     localStorage.removeItem(STORAGE_KEY)
     api.post('/api/timer/dismiss').catch(() => {})
+    if (window.location.hash !== '#/' && window.location.hash !== '#/home' && window.location.hash !== '') {
+      window.location.hash = '#/home'
+    }
   }, [])
+
+  // Auto-dismiss 15 minutes after timer completes and return to home page
+  useEffect(() => {
+    if (!timer || timer.status !== 'ringing') return
+
+    const FIFTEEN_MINS_MS = 15 * 60 * 1000
+    const elapsed = Date.now() - timer.endTimestamp
+    const remainingWaitMs = Math.max(0, FIFTEEN_MINS_MS - elapsed)
+
+    const timeout = setTimeout(() => {
+      dismissAlarm()
+    }, remainingWaitMs)
+
+    return () => clearTimeout(timeout)
+  }, [timer?.status, timer?.endTimestamp, dismissAlarm])
 
   // Listen to window event 'open-create-timer'
   useEffect(() => {

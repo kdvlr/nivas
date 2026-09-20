@@ -82,11 +82,7 @@ export function playChime(type: 'gentle' | 'reminder' | 'alarm' = 'reminder') {
 }
 
 export function startAlarmSound() {
-  stopAlarmSound()
-  playChime('alarm')
-  alarmInterval = setInterval(() => {
-    playChime('alarm')
-  }, 1800)
+  // Audio alarm removed per user request
 }
 
 export function stopAlarmSound() {

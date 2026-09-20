@@ -44,10 +44,15 @@ class TimerService:
                 if status == "running":
                     if end_ms > now_ms:
                         self._state = data
-                    elif now_ms - end_ms < 180_000:  # ended < 3 mins ago
+                    elif now_ms - end_ms < 15 * 60 * 1000:  # ended < 15 mins ago
                         data["status"] = "ringing"
                         data["remainingSeconds"] = 0
                         data["stage"] = "flashing-red"
+                        self._state = data
+                    else:
+                        self._clear_persisted()
+                elif status == "ringing":
+                    if now_ms - end_ms < 15 * 60 * 1000:
                         self._state = data
                     else:
                         self._clear_persisted()
@@ -98,6 +103,13 @@ class TimerService:
             else:
                 self._state["remainingSeconds"] = remaining
                 self._state["stage"] = _get_stage(remaining)
+
+        if self._state.get("status") == "ringing":
+            end_ms = self._state.get("endTimestamp", 0)
+            if now_ms - end_ms >= 15 * 60 * 1000:
+                self._state = None
+                self._clear_persisted()
+                return None
 
         return dict(self._state)
 

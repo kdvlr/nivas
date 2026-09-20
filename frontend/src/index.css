@@ -718,11 +718,9 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 @keyframes timer-ambient-flash {
   0%, 100% {
-    background-color: rgba(239, 68, 68, 0.08);
     border-color: rgba(239, 68, 68, 0.4);
   }
   50% {
-    background-color: rgba(239, 68, 68, 0.02);
     border-color: rgba(239, 68, 68, 0.1);
   }
 }

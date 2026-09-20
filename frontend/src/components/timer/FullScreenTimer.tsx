@@ -41,9 +41,7 @@ export default function FullScreenTimer() {
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         transition={SPATIAL_EXPRESSIVE_DEFAULT}
-        className={`fixed inset-0 z-[95] flex flex-col justify-between p-6 sm:p-10 select-none overflow-hidden bg-slate-950/96 backdrop-blur-2xl text-white ${
-          styles.isFlashing ? 'animate-timer-ambient-flash border-4 border-red-500/50' : ''
-        }`}
+        className="fixed inset-0 z-[95] flex flex-col justify-between p-6 sm:p-10 select-none overflow-hidden bg-slate-950/96 backdrop-blur-2xl text-white"
       >
         {/* Top Bar / Header */}
         <div className="flex items-center justify-between w-full max-w-5xl mx-auto z-10 shrink-0">
