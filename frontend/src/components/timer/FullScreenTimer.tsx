@@ -30,7 +30,7 @@ export default function FullScreenTimer() {
   // Progress computation (1.0 at start down to 0.0 at completion)
   const progress = timer.totalSeconds > 0 ? Math.max(0, Math.min(1, timer.remainingSeconds / timer.totalSeconds)) : 0
 
-  const radius = 164
+  const radius = 185
   const circumference = 2 * Math.PI * radius
   const strokeDashoffset = circumference * (1 - progress)
 
@@ -112,28 +112,29 @@ export default function FullScreenTimer() {
         </div>
 
         {/* Center: Animated Circular Gauge & Digits */}
-        <div className="flex flex-col items-center justify-center flex-1 my-1 sm:my-2 z-10 min-h-0 w-full overflow-hidden">
-          <div className="relative flex items-center justify-center w-[min(58vh,80vw,550px)] h-[min(58vh,80vw,550px)] max-w-[550px] max-h-[550px] aspect-square shrink-0">
+        <div className="flex flex-col items-center justify-center flex-1 my-1 sm:my-2 z-10 min-h-0 w-full overflow-visible">
+          <div className="relative flex items-center justify-center w-[min(60vh,82vw,580px)] h-[min(60vh,82vw,580px)] max-w-[580px] max-h-[580px] aspect-square shrink-0">
             {/* Ambient Radial Color Glow */}
             <div
-              className={`absolute -inset-8 sm:-inset-12 rounded-full transition-all duration-700 pointer-events-none ${
+              className={`absolute -inset-10 sm:-inset-16 rounded-full transition-all duration-700 pointer-events-none ${
                 styles.isFlashing ? 'animate-timer-flash' : ''
               }`}
               style={{
-                background: `radial-gradient(circle, ${styles.bgGlow} 0%, transparent 68%)`,
-                filter: 'blur(20px)',
+                background: `radial-gradient(circle, ${styles.bgGlow} 0%, ${styles.bgGlow} 30%, transparent 70%)`,
+                filter: 'blur(28px)',
               }}
             />
 
             {/* SVG Circular Progress Ring */}
             <svg
-              className="w-full h-full transform -rotate-90 pointer-events-none drop-shadow-md"
-              viewBox="0 0 380 380"
+              className="w-full h-full transform -rotate-90 pointer-events-none overflow-visible"
+              style={{ overflow: 'visible' }}
+              viewBox="0 0 440 440"
             >
               {/* Track */}
               <circle
-                cx="190"
-                cy="190"
+                cx="220"
+                cy="220"
                 r={radius}
                 stroke="rgba(255, 255, 255, 0.08)"
                 strokeWidth="15"
@@ -141,8 +142,8 @@ export default function FullScreenTimer() {
               />
               {/* Active Animated Ring */}
               <circle
-                cx="190"
-                cy="190"
+                cx="220"
+                cy="220"
                 r={radius}
                 stroke={styles.strokeColor}
                 strokeWidth="15"
@@ -152,7 +153,7 @@ export default function FullScreenTimer() {
                 fill="none"
                 className="transition-[stroke-dashoffset,stroke] duration-300 ease-out"
                 style={{
-                  filter: `drop-shadow(0 0 12px ${styles.strokeColor}) drop-shadow(0 0 24px ${styles.strokeColor}66)`,
+                  filter: `drop-shadow(0 0 10px ${styles.strokeColor}) drop-shadow(0 0 20px ${styles.strokeColor}88)`,
                 }}
               />
             </svg>
@@ -175,10 +176,10 @@ export default function FullScreenTimer() {
                     className="font-black tabular-nums tracking-tight leading-none select-text"
                     style={{
                       fontSize: timeInfo.hasHours
-                        ? 'clamp(2.75rem, 7.5vw, 5.25rem)'
-                        : 'clamp(4.25rem, 13vw, 8.5rem)',
+                        ? 'clamp(2.5rem, 6.5vw, 4.5rem)'
+                        : 'clamp(3.75rem, 11vw, 7.25rem)',
                       color: styles.strokeColor,
-                      filter: `drop-shadow(0 0 16px ${styles.strokeColor}88)`,
+                      filter: `drop-shadow(0 0 14px ${styles.strokeColor}66)`,
                     }}
                   >
                     {timeInfo.formatted}
