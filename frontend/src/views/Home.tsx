@@ -11,6 +11,7 @@ import { useCelebration } from '../components/celebrations/CelebrationContext'
 import { useClock, useData, todayISO, addDaysISO } from '../lib/hooks'
 import { useSwipeNavigation } from '../lib/useSwipeNavigation'
 import type { CalendarStatus, CalEvent, ChoreItem, CoinBalance, ShoppingItem, Task, WeatherData } from '../lib/types'
+import { isEventComplete } from '../lib/calendar'
 
 const fmtTime = (iso: string) =>
   new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
@@ -507,18 +508,23 @@ export default function Home() {
                 const single = allDay.length === 1
                 return (
                   <div key={dayIso} className="flex w-full items-center gap-1.5">
-                    {allDay.map((e) => (
-                      <button
-                        type="button"
-                        key={e.id}
-                        className="vivid-dim relative min-h-11 flex-1 min-w-0 truncate rounded-xl px-3 py-2 text-center text-[0.7rem] font-bold text-white shadow active:scale-[0.98]"
-                        style={{ background: eventBg(e) }}
-                        title={e.title}
-                        onClick={() => setSelectedEvent(e)}
-                      >
-                        {e.title}
-                      </button>
-                    ))}
+                    {allDay.map((e) => {
+                      const isComplete = isEventComplete(e, now)
+                      return (
+                        <button
+                          type="button"
+                          key={e.id}
+                          className={`vivid-dim relative min-h-11 flex-1 min-w-0 truncate rounded-xl px-3 py-2 text-center text-[0.7rem] font-bold text-white shadow active:scale-[0.98] transition-all ${
+                            isComplete ? 'fc-event-completed' : ''
+                          }`}
+                          style={{ background: eventBg(e) }}
+                          title={e.title}
+                          onClick={() => setSelectedEvent(e)}
+                        >
+                          {e.title}
+                        </button>
+                      )
+                    })}
                   </div>
                 )
               })}
@@ -573,10 +579,13 @@ export default function Home() {
                         widthStyle = `calc(${100 - maxShift}% - 4px)`
                       }
 
+                      const isComplete = isEventComplete(it.ev, now)
                       return (
                         <div
                           key={it.ev.id}
-                          className="absolute z-[5] flex flex-col overflow-hidden rounded-lg px-2.5 py-1 text-white shadow-md transition-transform hover:z-20 hover:scale-[1.02] cursor-pointer"
+                          className={`absolute z-[5] flex flex-col overflow-hidden rounded-lg px-2.5 py-1 text-white shadow-md transition-all hover:z-20 hover:scale-[1.02] cursor-pointer ${
+                            isComplete ? 'fc-event-completed' : ''
+                          }`}
                           style={{
                             top: `${axisPct(it.s)}%`,
                             height: `max(${heightPct}%, 2.75rem)`,

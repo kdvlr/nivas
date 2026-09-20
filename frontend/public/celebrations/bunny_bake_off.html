@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bunny Bake-Off · Sweet Success</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f7eee4;color:#50372e;font-family:ui-rounded,'Avenir Next',system-ui,sans-serif;min-height:100vh;display:grid;place-items:center;padding:30px}main{width:min(1200px,100%)}header{display:flex;align-items:center;justify-content:space-between;margin:0 3px 22px}.eyebrow{font-size:11px;font-weight:800;letter-spacing:3px;text-transform:uppercase;color:#997965}h1{font-size:clamp(23px,3vw,35px);letter-spacing:-1px;margin:7px 0 0;font-weight:850}.badge{border:1px solid #d8c6b6;padding:10px 15px;border-radius:30px;font-size:12px;font-weight:650}.stage{overflow:hidden;border-radius:26px;background:#ffe9d5;box-shadow:0 25px 65px #6a3f2520;border:6px solid #fffbf5}svg{display:block;width:100%;height:auto;aspect-ratio:16/9}footer{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:22px 3px 0}footer p{font-size:13px;color:#8e7261;margin:0}.buttons{display:flex;gap:9px}button{border:1px solid #d9c3b3;background:#fffaf3;color:#573a30;padding:12px 20px;border-radius:30px;font:700 13px inherit;cursor:pointer}button.primary{background:#67463c;color:#fff7ee;border-color:#67463c}button:focus-visible{outline:3px solid #cf754e;outline-offset:4px}button:hover{filter:brightness(.96)}.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}@media(max-width:600px){body{padding:16px 8px}header{padding:0 6px}.badge{display:none}.stage{border-width:3px;border-radius:16px}footer{align-items:flex-start;padding:17px 6px}footer p{max-width:145px;font-size:11px}button{padding:10px 14px}}
+</style>
+</head>
+<body><main><header><div><div class="eyebrow">A little celebration · No. 20</div><h1>Bunny Bake-Off</h1></div><div class="badge">Made with a little magic ✧</div></header>
+<div class="stage" id="stage"><svg id="scene" viewBox="0 0 1200 675" role="img" aria-labelledby="scene-title scene-desc"></svg></div>
+<footer><p>A pinch of magic. A whole lot of proud.</p><div class="buttons"><button id="pause" aria-label="Pause animation">Pause</button><button class="primary" id="replay">↻ Replay</button></div></footer><p id="announcement" class="sr" role="status" aria-live="polite"></p></main>
+<script>
+'use strict';
+const NS='http://www.w3.org/2000/svg';
+const clamp=x=>Math.max(0,Math.min(1,x));
+const phase=(t,a,b)=>clamp((t-a)/(b-a));
+const ease=x=>1-Math.pow(1-clamp(x),3);
+const mix=(a,b,p)=>a+(b-a)*p;
+const palettes={strawberry:{accent:'#e98999',dark:'#ba596e',soft:'#ffd5db'},blueberry:{accent:'#a89bd5',dark:'#7967ad',soft:'#e5def7'},mint:{accent:'#82baa6',dark:'#478c76',soft:'#cef0df'}};
+const check=(x,y,s=1,color='#fff')=>`<path d="M ${x-10*s} ${y} l ${7*s} ${8*s} l ${15*s} ${-19*s}" fill="none" stroke="${color}" stroke-width="${5*s}" stroke-linecap="round" stroke-linejoin="round"/>`;
+const star=(x,y,s,c)=>`<path d="M0 -14 Q3 -3 14 0 Q3 3 0 14 Q-3 3 -14 0 Q-3 -3 0 -14" transform="translate(${x} ${y}) scale(${s})" fill="${c}"/>`;
+const heart='<path d="M0 8 C-28 -9 -16 -28 0 -14 C16 -28 28 -9 0 8" fill="#ef9aa9"/>';
+function cupcake(x){return `<g data-cup="${x}"><ellipse cx="0" cy="19" rx="27" ry="6" fill="#7e514a" opacity=".12"/><path d="M-23 -10 L-16 18 Q0 25 16 18 L23 -10" fill="#e9b659" stroke="#ca9441" stroke-width="2"/><path d="M-12 -7 L-9 15 M0 -7 V18 M12 -7 L9 15" stroke="#ffe0a0" stroke-width="3"/><path d="M-28 -10 Q-31 -22 -18 -25 Q-21 -38 -7 -39 Q-10 -49 2 -54 Q9 -42 14 -38 Q29 -37 23 -25 Q36 -17 26 -9Z" fill="var(--accent)"/><path d="M-20 -22 Q-2 -13 20 -23 M-10 -36 Q0 -30 11 -36" stroke="#fff5eb" stroke-width="3" opacity=".5" fill="none"/><circle cy="-53" r="5" fill="#c85c61"/></g>`}
+function bunnyArt(){return `<g id="bunny"><ellipse cx="0" cy="112" rx="78" ry="12" fill="#82533c" opacity=".12"/><g id="body"><ellipse cx="0" cy="37" rx="66" ry="86" fill="#fff9ee" stroke="#e8cfb8" stroke-width="3"/><ellipse cx="-42" cy="108" rx="28" ry="14" fill="#fff9ee"/><ellipse cx="42" cy="108" rx="28" ry="14" fill="#fff9ee"/><g id="apron"><path d="M-33 -15 L33 -15 L48 91 Q0 112 -48 91Z" fill="var(--accent)"/><path d="M-28 -11 Q0 -36 28 -11 M-29 45 Q0 59 29 45 L25 71 Q0 85 -25 71Z" fill="none" stroke="#fff1e7" stroke-width="5"/><path id="bow" d="M-46 21 Q-84 -7 -69 34 Q-83 58 -47 36 L-35 55 L-39 27Z" fill="var(--dark)"/></g></g><g id="head"><g id="ears"><ellipse cx="-32" cy="-142" rx="21" ry="65" transform="rotate(-13 -32 -142)" fill="#fff9ee" stroke="#e8cfb8" stroke-width="3"/><ellipse cx="-32" cy="-143" rx="10" ry="47" transform="rotate(-13 -32 -143)" fill="#efb1b6"/><ellipse cx="31" cy="-145" rx="20" ry="65" transform="rotate(12 31 -145)" fill="#fff9ee" stroke="#e8cfb8" stroke-width="3"/><ellipse cx="31" cy="-146" rx="9" ry="47" transform="rotate(12 31 -146)" fill="#efb1b6"/></g><ellipse cy="-71" rx="68" ry="60" fill="#fff9ee" stroke="#e8cfb8" stroke-width="3"/><ellipse cx="-42" cy="-59" rx="15" ry="9" fill="#f4bdba"/><ellipse cx="42" cy="-59" rx="15" ry="9" fill="#f4bdba"/><g id="eyes"><ellipse cx="-24" cy="-79" rx="6" ry="9" fill="#533e36"/><ellipse cx="24" cy="-79" rx="6" ry="9" fill="#533e36"/><circle cx="-22" cy="-82" r="2" fill="white"/><circle cx="26" cy="-82" r="2" fill="white"/></g><path d="M-7 -63 Q0 -69 7 -63 L0 -56Z" fill="#b57a79"/><path id="mouth" d="M-12 -49 Q0 -36 12 -49" fill="none" stroke="#7e554b" stroke-width="3" stroke-linecap="round"/><g fill="#fffdf6" stroke="#e8cfb8" stroke-width="2"><path d="M-42 -117 L-45 -143 Q-65 -162 -42 -174 Q-28 -192 -8 -177 Q12 -194 29 -176 Q58 -177 52 -151 L40 -119Z"/><path d="M-43 -137 Q0 -146 43 -137 L40 -117 Q0 -125 -40 -117Z"/></g></g><g id="left-arm"><path d="M-46 -1 Q-83 5 -71 34" fill="none" stroke="#e8cfb8" stroke-width="28" stroke-linecap="round"/><path d="M-46 -1 Q-83 5 -71 34" fill="none" stroke="#fff9ee" stroke-width="24" stroke-linecap="round"/></g><g id="right-arm"><path d="M48 0 Q89 -1 85 32" fill="none" stroke="#e8cfb8" stroke-width="28" stroke-linecap="round"/><path d="M48 0 Q89 -1 85 32" fill="none" stroke="#fff9ee" stroke-width="24" stroke-linecap="round"/></g></g>`}
+function cakeArt(){return `<g id="cake"><ellipse cy="59" rx="83" ry="12" fill="#b3606b" opacity=".16"/><path d="M-72 -30 L-72 46 Q0 75 72 46 L72 -30Z" fill="#efbb68"/><path d="M-72 -13 Q0 12 72 -13 M-72 16 Q0 40 72 16" stroke="#ffe8b7" stroke-width="12" fill="none"/><g id="icing"><path d="M-73 -31 L-73 -3 Q-64 12 -54 -1 Q-45 -11 -36 4 Q-25 24 -14 6 Q-4 -5 8 8 Q22 27 34 5 Q43 -9 51 1 Q65 14 73 -5 L73 -31Z" fill="var(--accent)"/><ellipse cy="-31" rx="73" ry="23" fill="var(--soft)"/><path d="M-65 40 Q0 65 65 40" fill="none" stroke="#fff4dd" stroke-width="10" stroke-linecap="round" stroke-dasharray="1 11"/></g><g id="berries">${[-44,0,44].map((x,i)=>`<g data-berry="${i}" transform="translate(${x} ${i===1?-29:-20})"><path d="M-10 -9 Q-15 -24 0 -25 Q15 -24 10 -9 L0 4Z" fill="#d95865"/><path d="M-10 -23 L0 -18 L10 -23 L3 -25 L0 -31 L-4 -25Z" fill="#679973"/><path d="M-5 -16 l2 2 M4 -12 l2 2 M0 -6 l1 2" stroke="#ffe5a1" stroke-width="2"/></g>`).join('')}</g><g id="sprinkles">${Array.from({length:15},(_,i)=>`<path d="M${-58+(i*31)%116} ${-33+(i*7)%23} l4 -3" stroke="${['#fdf9dc','#779c94','#e78879','#b298cc'][i%4]}" stroke-width="3" stroke-linecap="round"/>`).join('')}</g><g id="topper"><path d="M0 -30 V-84" stroke="#b98a48" stroke-width="4"/><circle cy="-94" r="26" fill="#ffdc7e" stroke="#fff1b4" stroke-width="4"/>${check(0,-94,1.25,'#97682e')}</g></g>`}
+const scenes={
+'bunny-bake-off':{
+ duration:7.6,
+ description:'Sweet success! A bunny baker completes the last symbol, bakes and catches a magical cake, adds berries and a glowing checkmark, then shares a rainbow slice as cupcakes dance.',
+ mount(svg){svg.innerHTML=`<title id="scene-title">Bunny Bake-Off</title><desc id="scene-desc">${this.description}</desc>
+<defs><linearGradient id="wall" x2="0" y2="1"><stop stop-color="#fff2df"/><stop offset="1" stop-color="#f5d7bd"/></linearGradient><linearGradient id="glass" x2="0" y2="1"><stop stop-color="#a5cecb"/><stop offset="1" stop-color="#e4f3df"/></linearGradient><linearGradient id="ovenGlass" x2="0" y2="1"><stop stop-color="#785347"/><stop offset="1" stop-color="#443c37"/></linearGradient><radialGradient id="glow"><stop stop-color="#ffec9f" stop-opacity=".9"/><stop offset="1" stop-color="#ffec9f" stop-opacity="0"/></radialGradient><pattern id="tile" width="72" height="54" patternUnits="userSpaceOnUse"><rect width="72" height="54" fill="#faf0df"/><path d="M0 54 V0 H72" fill="none" stroke="#e7d6c2" stroke-width="2"/></pattern></defs>
+<rect width="1200" height="675" fill="url(#wall)"/><path d="M0 0 H1200 V26 Q1160 57 1120 26 Q1080 57 1040 26 Q1000 57 960 26 Q920 57 880 26 Q840 57 800 26 Q760 57 720 26 Q680 57 640 26 Q600 57 560 26 Q520 57 480 26 Q440 57 400 26 Q360 57 320 26 Q280 57 240 26 Q200 57 160 26 Q120 57 80 26 Q40 57 0 26Z" fill="#b97565"/>
+<rect y="300" width="1200" height="210" fill="url(#tile)"/>
+<g transform="translate(86 132)"><rect width="174" height="209" rx="85" fill="#dfba94"/><rect x="10" y="10" width="154" height="189" rx="76" fill="url(#glass)"/><circle cx="116" cy="57" r="25" fill="#fff3ba"/><path d="M17 152 Q55 108 86 157 Q130 100 158 151 V196 H17" fill="#a9c5a0"/><path d="M87 14 V197 M12 116 H161" stroke="#fff7e6" stroke-width="9"/><rect x="-13" y="199" width="200" height="13" rx="6" fill="#bd8963"/></g>
+<g id="cupboard" transform="translate(802 91)"><rect width="217" height="171" rx="18" fill="#bd8870"/><rect x="12" y="12" width="193" height="147" rx="10" fill="#77564c"/><path d="M12 96 H205" stroke="#bc8e75" stroke-width="8"/><g id="cupboard-door"><rect width="217" height="171" rx="18" fill="#94b7a3" stroke="#779985" stroke-width="4"/><rect x="18" y="18" width="181" height="135" rx="11" fill="none" stroke="#bcd4bc" stroke-width="3"/><circle cx="188" cy="91" r="6" fill="#fff0c8"/></g></g>
+<g transform="translate(329 121)"><path d="M0 0 H367" stroke="#b18368" stroke-width="11" stroke-linecap="round"/><path d="M26 -7 V-47 M52 -7 V-34" stroke="#c29574" stroke-width="12" stroke-linecap="round"/><rect x="7" y="-30" width="65" height="28" rx="8" fill="#bdc9a8"/><path d="M242 -44 Q244 0 281 0 Q318 0 320 -44Z" fill="var(--accent)"/><ellipse cx="281" cy="-44" rx="39" ry="8" fill="var(--soft)"/><path d="M98 -36 Q100 0 129 0 Q159 0 161 -36Z" fill="#e5bd70"/><ellipse cx="129" cy="-36" rx="32" ry="7" fill="#ffe3a1"/></g>
+<g id="recipe" transform="translate(305 212) rotate(-5)"><rect x="-74" y="-53" width="164" height="211" rx="12" fill="#b38463" opacity=".14"/><rect x="-80" y="-60" width="164" height="211" rx="12" fill="#fffcf1" stroke="#dfc7a5" stroke-width="2"/><rect x="-22" y="-68" width="49" height="19" rx="6" fill="#c4926c"/>${[0,1,2,3].map((i)=>`<g transform="translate(-47 ${-27+i*46})"><rect x="-16" y="-16" width="32" height="32" rx="7" fill="${i===3?'#fff0d8':'#e4eddd'}" stroke="${i===3?'#c99a5b':'#9cb59a'}" stroke-width="2"/>${i<3?check(0,0,.7,'#678c6f'):'<g id="last-check">'+check(0,0,.7,'#678c6f')+'</g><rect id="empty-box" x="-7" y="-7" width="14" height="14" rx="2" fill="none" stroke="#c49962" stroke-width="2"/>'}<path d="M28 -5 q8 -7 16 0 t16 0 t16 0 M28 7 q7 -5 14 0 t14 0" fill="none" stroke="#c7b79d" stroke-width="3" stroke-linecap="round"/></g>`).join('')}</g>
+<ellipse cx="520" cy="500" rx="113" ry="20" fill="#b18467" opacity=".13"/>
+${bunnyArt()}
+<g id="oven" transform="translate(881 352)"><rect x="-99" y="-40" width="198" height="194" rx="23" fill="#f3c697" stroke="#c88f68" stroke-width="4"/><rect x="-83" y="-26" width="166" height="32" rx="11" fill="#ffe4be"/>${[-51,0,51].map(x=>`<circle cx="${x}" cy="-10" r="9" fill="#a27358"/><path d="M${x} -16 v7" stroke="#ffe6b8" stroke-width="2"/>`).join('')}<rect x="-79" y="23" width="158" height="113" rx="17" fill="url(#ovenGlass)"/><ellipse id="oven-light" cy="85" rx="72" ry="42" fill="url(#glow)"/><path d="M-58 111 H58" stroke="#ba9c7c" stroke-width="4"/><g id="oven-door"><rect x="-80" y="22" width="160" height="116" rx="17" fill="#9d7362" fill-opacity=".27" stroke="#a4755a" stroke-width="5"/><path d="M-44 36 H44" stroke="#ffebc7" stroke-width="9" stroke-linecap="round"/><path d="M-60 57 L-21 116 M-42 55 L-1 116" stroke="#fff4dc" stroke-width="10" opacity=".08"/></g></g>
+<g id="steam">${[-1,0,1].map((n)=>`<g data-steam="${n}">${heart}</g>`).join('')}</g>
+<rect x="0" y="505" width="1200" height="170" fill="#98b7a1"/><path d="M0 526 H1200" stroke="#719b86" stroke-width="7"/><path d="M55 544 H310 V675 M335 675 V544 H600 V675 M625 675 V544 H887 V675 M912 675 V544 H1153 V675" fill="none" stroke="#bad0b3" stroke-width="3"/><path d="M156 568 H205 M441 568 H490 M729 568 H778 M1019 568 H1068" stroke="#eed9ad" stroke-width="8" stroke-linecap="round"/><rect y="484" width="1200" height="26" rx="9" fill="#c28c67"/><rect y="481" width="1200" height="11" rx="5" fill="#e9bc8f"/>
+<g id="bowl" transform="translate(534 445)"><ellipse cy="36" rx="74" ry="9" fill="#8d6650" opacity=".15"/><path d="M-63 -5 Q-59 41 0 41 Q59 41 63 -5" fill="var(--accent)"/><ellipse cy="-5" rx="63" ry="17" fill="var(--dark)"/><ellipse cy="-5" rx="53" ry="11" fill="#f5d28e"/><path d="M-42 13 Q-35 27 -20 29" fill="none" stroke="var(--soft)" stroke-width="6" stroke-linecap="round"/><g id="spoon"><path d="M4 -6 L31 -89" stroke="#a9734f" stroke-width="10" stroke-linecap="round"/><ellipse cx="5" cy="-9" rx="12" ry="18" fill="#bc875e" transform="rotate(18 5 -9)"/></g></g>
+<g id="magic"><circle r="67" fill="url(#glow)"/>${check(0,0,1.7,'#b58031')}${star(-34,-23,.7,'#fff3b9')}${star(34,16,.6,'#fff3b9')}</g>
+<g id="batter"><path d="M-47 0 Q-57 -25 -23 -17 Q-8 -50 15 -22 Q49 -28 51 -4 Q23 17 -47 0" fill="#f6ce82"/><circle cx="-57" cy="-19" r="7" fill="#f6ce82"/><circle cx="44" cy="-34" r="5" fill="#f6ce82"/></g>
+<g id="pan"><path d="M-61 -5 L-53 18 H53 L61 -5" fill="#8e9a99" stroke="#657c78" stroke-width="3"/><ellipse cy="-5" rx="61" ry="10" fill="#c7d1c5"/><ellipse cy="-4" rx="49" ry="6" fill="#f3c879"/></g>
+<g id="stand" transform="translate(737 471)"><ellipse cy="7" rx="80" ry="9" fill="#bc8c70" opacity=".18"/><path d="M-10 -25 L-14 1 Q-52 3 -40 8 H40 Q52 3 14 1 L10 -25" fill="#fcf6e6" stroke="#cfc5ad" stroke-width="2"/><ellipse cy="-27" rx="87" ry="13" fill="#fffbed" stroke="#d5cbb4" stroke-width="2"/></g>
+${cakeArt()}
+<g id="piping"><path d="M-9 28 L-33 -27 Q0 -49 33 -27 L9 28Z" fill="#fff9ee" stroke="#e6c8ac" stroke-width="2"/><path d="M-9 28 H9 L0 47Z" fill="#a5b7ae"/><path d="M-29 -27 Q0 -13 29 -27" fill="none" stroke="var(--accent)" stroke-width="6"/></g>
+<g id="cupcakes">${[237,300,363].map(cupcake).join('')}</g>
+<g id="utensils">${[0,1].map(i=>`<g data-utensil="${i}"><path d="M0 0 L-16 -55" stroke="#b68861" stroke-width="7" stroke-linecap="round"/><ellipse cx="-19" cy="-65" rx="10" ry="17" fill="#cba079"/><path d="M-23 0 Q-20 30 17 28 Q47 26 49 0Z" fill="${i?'#e9bd69':'#aeb9cb'}"/><ellipse cx="13" rx="36" ry="7" fill="${i?'#ffe3a1':'#d9deeb'}"/></g>`).join('')}</g>
+<g id="sparkles">${Array.from({length:24},(_,i)=>`<g data-spark="${i}">${star(0,0,.5+(i%3)*.2,['#e5af50','#d98b8b','#92ae94'][i%3])}</g>`).join('')}</g>
+<g id="message"><g fill="#fff8e9" opacity=".95"><ellipse cx="600" cy="142" rx="267" ry="60"/><circle cx="359" cy="141" r="37"/><circle cx="840" cy="140" r="37"/><circle cx="431" cy="97" r="25"/><circle cx="764" cy="98" r="25"/></g><text x="600" y="155" text-anchor="middle" fill="#744338" font-family="ui-rounded, 'Arial Rounded MT Bold', system-ui, sans-serif" font-size="57" font-weight="900" letter-spacing="-2">SWEET SUCCESS!</text><text id="child-label" x="600" y="205" text-anchor="middle" fill="#785743" font-family="system-ui,sans-serif" font-size="20" font-weight="700"></text></g>
+<g id="knife"><path d="M0 0 L-4 -50 Q11 -55 13 -43 L13 0Z" fill="#dbe4de" stroke="#9eaaa3" stroke-width="2"/><path d="M2 0 V25" stroke="#b78568" stroke-width="10" stroke-linecap="round"/></g><g id="slice"><ellipse cy="43" rx="55" ry="9" fill="#fdf8ec" stroke="#dbc9af" stroke-width="2"/><path d="M-42 -15 L35 -2 V35 L-42 22Z" fill="#eaa694"/>${['#e49aad','#efc16d','#b7c88c','#93bec6','#b1a0cd'].map((c,i)=>`<path d="M-42 ${-11+i*7} L35 ${2+i*7} V${8+i*7} L-42 ${-5+i*7}Z" fill="${c}"/>`).join('')}<path d="M-44 -17 L-8 -38 L38 -4 L-42 -13Z" fill="#ffe3e4" stroke="#fff5e6" stroke-width="4"/><path d="M-43 -12 L36 1" stroke="#fff5e6" stroke-width="5"/><path d="M-54 49 Q-34 38 -17 46" fill="none" stroke="#fff9ee" stroke-width="18" stroke-linecap="round"/></g>
+<g id="wipe"><circle r="1" fill="var(--soft)"/><path d="M-1 0 Q0 -1 1 0" fill="none" stroke="#fff2e5" stroke-width=".12"/></g>`;
+const nodes={};svg.querySelectorAll('[id]').forEach(n=>nodes[n.id]=n);return nodes;},
+ render(n,t,svg){
+ const show=(id,v)=>n[id].setAttribute('opacity',v);const tr=(id,v)=>n[id].setAttribute('transform',v);
+ const done=t>=1.52,celebrate=phase(t,5.1,5.4);
+ show('last-check',done?1:0);show('empty-box',done?0:1);
+ tr('cupboard-door',`translate(${t<.65?190* Math.sin(t/.65*Math.PI):0} 0) scale(${t<.65?1-.82*Math.sin(t/.65*Math.PI):1} 1)`);
+ let by=369+(t>.45&&t<1.12?Math.sin(phase(t,.45,1.12)*Math.PI)*57:0);
+ if(t>=1.8&&t<2.6)by+=Math.sin(t*28)*3;
+ if(t>5.1&&t<6.9)by-=Math.max(0,Math.sin((t-5.1)*8))*7;
+ tr('bunny',`translate(480 ${by})`);tr('head',`rotate(${t<1.1?Math.sin(t*7)*7:t<2? -5:Math.sin(t*3)*2} 0 -62)`);
+ tr('ears',`rotate(${t>3.5?Math.sin(t*9)*3:0} 0 -120)`);
+ show('apron',ease(phase(t,1.58,1.82)));show('bow',ease(phase(t,1.68,1.9)));
+ n.mouth.setAttribute('d',t>1.1&&t<1.8?'M-7 -47 a7 9 0 1 0 14 0 a7 9 0 1 0 -14 0':'M-12 -49 Q0 -36 12 -49');
+ const stir=t>1.8&&t<2.6?Math.sin(t*24):0;
+ tr('left-arm',`rotate(${t<1.1?-30:stir*17-22} -46 0)`);
+ tr('right-arm',`rotate(${t>=3.75&&t<4.22?-95:t>=5.5?-62:stir*24+25} 48 0)`);
+ const drop=ease(phase(t,1.1,1.55));tr('magic',`translate(${mix(590,534,drop)} ${mix(15,440,drop)}) scale(${t>1.55?1-phase(t,1.55,1.8):1})`);show('magic',t>=1.1&&t<1.8?1:0);
+ show('bowl',1-ease(phase(t,2.62,2.84)));tr('spoon',`rotate(${stir*24} 5 -9)`);
+ const bp=phase(t,2.45,2.85);show('batter',t>=2.45&&t<2.87?1:0);tr('batter',`translate(${mix(534,683,bp)} ${440-Math.sin(bp*Math.PI)*145}) scale(${1-bp*.2}) rotate(${bp*140})`);
+ let pp=ease(phase(t,2.85,3.2));show('pan',t>=2.62&&t<3.28?1:0);tr('pan',`translate(${mix(683,881,pp)} ${mix(456,440,pp)}) scale(${1-pp*.35})`);
+ const shake=t>3.2&&t<3.65?Math.sin(t*65)*3:0;tr('oven',`translate(${881+shake} 352)`);
+ show('oven-light',t>=3.15&&t<3.85?1:.12);
+ let door=t>2.86&&t<3.3?Math.sin(phase(t,2.86,3.3)*Math.PI):t>3.6&&t<4.1?Math.sin(phase(t,3.6,4.1)*Math.PI):0;tr('oven-door',`translate(0 ${138*door*.65}) scale(1 ${1-door*.65})`);
+ show('steam',t>3.22&&t<4.1?1:0);svg.querySelectorAll('[data-steam]').forEach((s,i)=>{let p=phase(t,3.22+i*.08,3.95+i*.08);s.setAttribute('transform',`translate(${852+i*30} ${315-p*100}) scale(${.5+p*.5})`);s.setAttribute('opacity',Math.sin(p*Math.PI));});
+ show('stand',ease(phase(t,4.05,4.25)));
+ let cx=737,cy=390,cs=1,rot=0;
+ if(t<3.99){let p=phase(t,3.62,3.99);cx=mix(881,566,p);cy=mix(425,270,p)-Math.sin(p*Math.PI)*154;cs=.7+.3*p;rot=-15*Math.sin(p*Math.PI);}
+ else if(t<4.24){let p=ease(phase(t,3.99,4.24));cx=mix(566,737,p);cy=mix(270,390,p);rot=Math.sin(p*Math.PI)*8;}
+ show('cake',t>=3.62?1:0);tr('cake',`translate(${cx} ${cy}) rotate(${rot}) scale(${cs})`);
+ show('icing',ease(phase(t,4.22,4.55)));show('berries',phase(t,4.5,4.55));show('sprinkles',phase(t,4.72,4.9));show('topper',ease(phase(t,4.88,5.1)));tr('topper',`translate(0 ${-35*(1-ease(phase(t,4.88,5.1)))})`);
+ svg.querySelectorAll('[data-berry]').forEach((b,i)=>b.setAttribute('transform',`translate(${[-44,0,44][i]} ${(i===1?-29:-20)-65*(1-ease(phase(t,4.5+i*.07,4.72+i*.07)))})`));
+ const pipe=phase(t,4.2,4.58);show('piping',t>=4.2&&t<4.6?1:0);tr('piping',`translate(${737+Math.sin(pipe*Math.PI*2)*65} ${314+Math.cos(pipe*Math.PI*2)*15}) rotate(-20)`);
+ svg.querySelectorAll('[data-cup]').forEach((c,i)=>{const x=Number(c.dataset.cup);let p=ease(phase(t,4.95+i*.06,5.3+i*.06));c.setAttribute('opacity',p);c.setAttribute('transform',`translate(${x} ${463-Math.abs(Math.sin((t-5.15)*9+i*.65))*12*p}) rotate(${Math.sin(t*9+i)*7*p}) scale(${p})`);});
+ svg.querySelectorAll('[data-utensil]').forEach((u,i)=>u.setAttribute('transform',`translate(${966+i*89} 461) rotate(${t>5.1?Math.sin(t*14+i*2)*8:0})`));
+ show('message',celebrate);tr('message',`translate(600 140) scale(${1+Math.sin(celebrate*Math.PI)*.045}) translate(-600 -140)`);
+ svg.querySelectorAll('[data-spark]').forEach((s,i)=>{let p=phase(t,5.05+(i%5)*.04,6.95);let side=i%2?-1:1;s.setAttribute('transform',`translate(${600+side*(185+(i%6)*38)+Math.sin(p*4+i)*15} ${200+p*220+(i%4)*33}) rotate(${p*150})`);s.setAttribute('opacity',Math.sin(p*Math.PI)*.75);});
+ show('knife',t>=5.3&&t<5.7?1:0);tr('knife',`translate(763 ${365+Math.sin(phase(t,5.3,5.7)*Math.PI)*40}) rotate(-30)`);
+ let sp=ease(phase(t,5.55,6.25));show('slice',sp);tr('slice',`translate(${mix(737,588,sp)} ${mix(383,414,sp)}) scale(${.7+sp*.55})`);
+ if(t>6.95){let z=phase(t,6.95,7.6);tr('cake',`translate(${mix(737,600,z)} ${mix(390,490,z)}) rotate(${z*45}) scale(${1+z*z*22})`);}
+ let wp=ease(phase(t,7.36,7.6));show('wipe',wp>0?1:0);tr('wipe',`translate(737 390) rotate(${wp*100}) scale(${wp*1400})`);
+ }
+}};
+/** Shared, lifecycle-aware player. Scenes own only vector artwork and their timeline. */
+class CelebrationPlayer{
+ constructor(svg,{sceneId='bunny-bake-off',colorVariation='strawberry',childName='',loop=true,onStateChange=()=>{}}={}){
+  if(!scenes[sceneId])throw new Error('Unknown celebration scene');
+  this.svg=svg;this.scene=scenes[sceneId];this.loop=loop;this.onStateChange=onStateChange;this.time=0;this.running=false;this.destroyed=false;this.visible=true;this.frame=0;this.last=null;this.announced=false;
+  const p=palettes[colorVariation]||palettes.strawberry;Object.entries(p).forEach(([k,v])=>svg.style.setProperty('--'+k,v));this.nodes=this.scene.mount(svg);this.nodes['child-label'].textContent=childName?`Well done, ${String(childName).slice(0,32)}!`:'';
+  this.motion=matchMedia('(prefers-reduced-motion: reduce)');
+  this.tick=now=>{this.frame=0;if(!this.canRun()){this.last=null;return}if(this.last!==null)this.time+=(now-this.last)/1000;this.last=now;if(this.time>=this.scene.duration){if(this.loop){this.time%=this.scene.duration;this.announced=false}else{this.time=6.6;this.running=false;this.onStateChange(false)}}this.render();this.schedule();};
+  this.onVisibility=()=>{this.cancel();this.schedule()};this.onMotion=()=>{this.cancel();if(this.motion.matches){this.time=6.4;this.render()}else if(this.running){this.time=0;this.render();this.schedule()}this.onStateChange(this.running&&!this.motion.matches)};
+  document.addEventListener('visibilitychange',this.onVisibility);this.motion.addEventListener('change',this.onMotion);
+  this.observer=new IntersectionObserver(entries=>{this.visible=entries[0].isIntersecting;this.cancel();this.schedule()});this.observer.observe(svg);
+  this.onPageHide=()=>this.destroy();window.addEventListener('pagehide',this.onPageHide,{once:true});this.render();this.play();
+ }
+ canRun(){return this.running&&!this.destroyed&&this.visible&&!document.hidden&&!this.motion.matches}
+ schedule(){if(this.canRun()&&!this.frame)this.frame=requestAnimationFrame(this.tick)}
+ cancel(){cancelAnimationFrame(this.frame);this.frame=0;this.last=null}
+ render(){this.scene.render(this.nodes,this.time,this.svg);if(this.time>=5.4&&!this.announced){document.getElementById('announcement').textContent=this.scene.description;this.announced=true}}
+ play(){if(this.destroyed)return;this.running=true;if(this.motion.matches){this.time=6.4;this.render()}this.onStateChange(!this.motion.matches);this.schedule()}
+ pause(){if(this.destroyed)return;this.running=false;this.cancel();this.onStateChange(false)}
+ replay(){if(this.destroyed)return;this.cancel();this.time=this.motion.matches?6.4:0;this.announced=false;this.render();this.play()}
+ destroy(){if(this.destroyed)return;this.pause();this.destroyed=true;this.observer.disconnect();document.removeEventListener('visibilitychange',this.onVisibility);this.motion.removeEventListener('change',this.onMotion);window.removeEventListener('pagehide',this.onPageHide);this.onDestroy?.()}
+}
+window.CelebrationPlayer=CelebrationPlayer;window.celebrationScenes=scenes;
+const pauseButton=document.getElementById('pause');
+const player=new CelebrationPlayer(document.getElementById('scene'),{onStateChange:playing=>{pauseButton.textContent=playing?'Pause':'Play';pauseButton.setAttribute('aria-label',playing?'Pause animation':'Play animation')}});
+window.bunnyPlayer=player;
+const toggle=()=>player.running&&!player.motion.matches?player.pause():player.play();const replay=()=>player.replay();
+pauseButton.addEventListener('click',toggle);document.getElementById('replay').addEventListener('click',replay);player.onDestroy=()=>{pauseButton.removeEventListener('click',toggle);document.getElementById('replay').removeEventListener('click',replay)};
+</script></body></html>

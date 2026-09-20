@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rainbow Roller-Skate Victory · Rolling With Awesome</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f2eef7;color:#574667;font-family:ui-rounded,'Avenir Next',system-ui,sans-serif;min-height:100vh;display:grid;place-items:center;padding:30px}main{width:min(1200px,100%)}header{display:flex;align-items:center;justify-content:space-between;margin:0 3px 22px}.eyebrow{font-size:11px;font-weight:800;letter-spacing:3px;text-transform:uppercase;color:#997965}h1{font-size:clamp(23px,3vw,35px);letter-spacing:-1px;margin:7px 0 0;font-weight:850}.badge{border:1px solid #d8c6b6;padding:10px 15px;border-radius:30px;font-size:12px;font-weight:650}.stage{overflow:hidden;border-radius:26px;background:#ffe9d5;box-shadow:0 25px 65px #6a3f2520;border:6px solid #fffbf5}svg{display:block;width:100%;height:auto;aspect-ratio:16/9}footer{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:22px 3px 0}footer p{font-size:13px;color:#8e7261;margin:0}.buttons{display:flex;gap:9px}button{border:1px solid #d9c3b3;background:#fffaf3;color:#573a30;padding:12px 20px;border-radius:30px;font:700 13px inherit;cursor:pointer}button.primary{background:#776089;color:#fff7ee;border-color:#776089}button:focus-visible{outline:3px solid #cf754e;outline-offset:4px}button:hover{filter:brightness(.96)}.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}@media(max-width:600px){body{padding:16px 8px}header{padding:0 6px}.badge{display:none}.stage{border-width:3px;border-radius:16px}footer{align-items:flex-start;padding:17px 6px}footer p{max-width:145px;font-size:11px}button{padding:10px 14px}}
+</style>
+</head>
+<body><main><header><div><div class="eyebrow">A little celebration · No. 17</div><h1>Rainbow Roller-Skate Victory</h1></div><div class="badge">Let the good times roll ✧</div></header>
+<div class="stage" id="stage"><svg id="scene" viewBox="0 0 1200 675" role="img" aria-labelledby="scene-title scene-desc"></svg></div>
+<footer><p>Big smiles. Bright wheels. Your victory lap.</p><div class="buttons"><button id="pause" aria-label="Pause animation">Pause</button><button class="primary" id="replay">↻ Replay</button></div></footer><p id="announcement" class="sr" role="status" aria-live="polite"></p></main>
+<script>
+'use strict';
+const NS='http://www.w3.org/2000/svg';
+const clamp=x=>Math.max(0,Math.min(1,x));
+const phase=(t,a,b)=>clamp((t-a)/(b-a));
+const ease=x=>1-Math.pow(1-clamp(x),3);
+const mix=(a,b,p)=>a+(b-a)*p;
+const palettes={strawberry:{accent:'#d3a5cd',dark:'#b88fbd',soft:'#ecd9ef'},blueberry:{accent:'#a89bd5',dark:'#7967ad',soft:'#e5def7'},mint:{accent:'#82baa6',dark:'#478c76',soft:'#cef0df'}};
+const check=(x,y,s=1,color='#fff')=>`<path d="M ${x-10*s} ${y} l ${7*s} ${8*s} l ${15*s} ${-19*s}" fill="none" stroke="${color}" stroke-width="${5*s}" stroke-linecap="round" stroke-linejoin="round"/>`;
+const star=(x,y,s,c)=>`<path d="M0 -14 Q3 -3 14 0 Q3 3 0 14 Q-3 3 -14 0 Q-3 -3 0 -14" transform="translate(${x} ${y}) scale(${s})" fill="${c}"/>`;
+const heart='<path d="M0 8 C-28 -9 -16 -28 0 -14 C16 -28 28 -9 0 8" fill="#ef9aa9"/>';
+const scenes={
+'rainbow-roller-skate':{
+ duration:7.6,
+ description:'Rolling with awesome! A young skater lights up her wheels, weaves through a pastel rink, completes the last task tile on a ramp, spins through a rainbow, and lands beneath a sparkling disco ball.',
+ mount(svg){svg.innerHTML=`<title id="scene-title">Rainbow Roller-Skate Victory</title><desc id="scene-desc">${this.description}</desc>
+<defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#39315c"/><stop offset="1" stop-color="#82618c"/></linearGradient><linearGradient id="floor" x2="0" y2="1"><stop stop-color="#b497c6"/><stop offset="1" stop-color="#65577c"/></linearGradient><radialGradient id="halo"><stop stop-color="#fff0b2" stop-opacity=".9"/><stop offset="1" stop-color="#fff0b2" stop-opacity="0"/></radialGradient><pattern id="mirror" width="16" height="16" patternUnits="userSpaceOnUse"><rect width="16" height="16" fill="#d4d4e8"/><rect x="2" y="2" width="11" height="11" rx="1" fill="#f8f1ff"/><rect x="2" y="2" width="5" height="5" fill="#fff"/></pattern><clipPath id="ball-clip"><circle r="37"/></clipPath></defs>
+<rect width="1200" height="675" fill="url(#sky)"/>
+<path d="M67 326 V136 Q67 73 133 73 H1067 Q1133 73 1133 136 V326" fill="none" stroke="#ce9dcc" stroke-width="5" opacity=".65"/><path d="M86 326 V139 Q86 93 137 93 H1063 Q1114 93 1114 139 V326" fill="none" stroke="#8facc8" stroke-width="3" opacity=".55"/>
+${Array.from({length:28},(_,i)=>star(95+(i*137)%1010,115+(i*61)%180,.2+(i%3)*.13,['#e5c3e8','#ffdda5','#a8d6d7'][i%3])).join('')}
+<g id="beams" opacity=".13"><path d="M600 45 L63 400 H396Z" fill="#f8b4d7"/><path d="M600 45 L804 400 H1137Z" fill="#a6e2dd"/></g>
+<path d="M0 338 Q600 268 1200 338 V675 H0Z" fill="url(#floor)"/><ellipse cx="600" cy="489" rx="518" ry="149" fill="#bda2cd" stroke="#edc4e2" stroke-width="6"/><ellipse cx="600" cy="489" rx="458" ry="115" fill="#9c8db7" stroke="#d9bddc" stroke-width="3"/>
+<path d="M0 337 Q600 267 1200 337" fill="none" stroke="#e3bada" stroke-width="13"/><path d="M0 346 Q600 276 1200 346" fill="none" stroke="#806884" stroke-width="7"/>
+<g opacity=".23" fill="none" stroke="#f0d7eb" stroke-width="2"><path d="M145 675 L450 340 M1055 675 L750 340 M0 551 H1200 M0 612 H1200"/></g>
+<g id="rainbow-path" fill="none" stroke-width="7" stroke-linecap="round">${['#f6a6c6','#f6c28f','#f6dfa1','#a4d6c0','#a7c9e9'].map((c,i)=>`<path data-trail="${i}" stroke="${c}"/>`).join('')}</g>
+<g id="markers">${[[316,441],[435,394],[521,438]].map(([x,y],i)=>`<g data-marker="${i}" transform="translate(${x} ${y})"><ellipse cy="27" rx="20" ry="7" fill="#675977" opacity=".2"/>${i%2?star(0,0,1.15,'#efc77e'):'<path d="M0 -24 L18 0 L0 24 L-18 0Z" fill="#c8b6e7" stroke="#eee0fc" stroke-width="3"/>'}</g>`).join('')}</g>
+<g id="hoops">${[[358,338],[546,317],[843,356]].map(([x,y],i)=>`<g transform="translate(${x} ${y})"><ellipse rx="39" ry="64" fill="none" stroke="${i===2?'#b3a1bf':'#b0d5d6'}" stroke-width="8"/><ellipse rx="39" ry="64" fill="none" stroke="#f3dbeb" stroke-width="2"/><circle cy="-79" r="19" fill="#f8eedf"/>${i<2?check(0,-79,.72,'#71a393'):'<rect id="hoop-empty" x="-7" y="-86" width="14" height="14" rx="2" fill="none" stroke="#a38da4" stroke-width="2"/><g id="hoop-check">'+check(0,-79,.72,'#71a393')+'</g>'}</g>`).join('')}</g>
+<g id="ramp"><path d="M565 487 Q658 475 711 377 L773 401 L763 492Z" fill="#b18ebd" stroke="#e1bcd7" stroke-width="3"/><path d="M565 487 Q658 475 711 377 L733 389 Q682 485 585 499Z" fill="#e8bfd8"/><path d="M711 377 L773 401 L763 492 L717 477Z" fill="#84658d"/><path d="M585 482 Q660 462 710 396" fill="none" stroke="#fae1bc" stroke-width="5"/>
+${[0,1,2,3].map(i=>`<g transform="translate(${613+i*27} ${470-i*18}) rotate(-32)"><rect x="-13" y="-13" width="26" height="26" rx="6" fill="#fff2df"/>${i<3?check(0,0,.59,'#82aaa0'):'<rect id="empty-box" x="-6" y="-6" width="12" height="12" rx="2" fill="none" stroke="#af89a2" stroke-width="2"/><g id="last-check">'+check(0,0,.59,'#82aaa0')+'</g>'}</g>`).join('')}</g>
+<g id="air-rainbow" fill="none" stroke-linecap="round" stroke-width="8">${['#f7a9c5','#f4c992','#f8dfa7','#a9d8c4','#b5ccec'].map((c,i)=>`<path data-arc="${i}" stroke="${c}"/>`).join('')}</g>
+<g id="landing"><ellipse rx="63" ry="14" fill="none" stroke="#ffe6ba" stroke-width="5"/></g>
+<g id="victory-check"><path d="M255 484 L420 572 L974 388" fill="none" stroke="#e8b3d4" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/><path d="M255 484 L420 572 L974 388" fill="none" stroke="#ffe7ab" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g id="skater"><ellipse cx="0" cy="83" rx="48" ry="9" fill="#4c3d69" opacity=".18"/><g id="hair-back"><path d="M-18 -118 Q-62 -145 -69 -105 Q-64 -75 -84 -67 Q-43 -47 -36 -88 L-14 -86Z" fill="#71506b" stroke="#533d5b" stroke-width="3"/></g><g id="leg-back"><path d="M14 14 L36 49 L58 57" fill="none" stroke="#ac7790" stroke-width="14" stroke-linecap="round"/><path d="M44 55 L60 61" stroke="#f7edee" stroke-width="16" stroke-linecap="round"/><path d="M48 58 L71 64 Q79 71 72 74 H42 L41 61Z" fill="#eab6ce" stroke="#9e729f" stroke-width="2"/><circle cx="47" cy="79" r="6" fill="#ffd68b"/><circle cx="69" cy="79" r="6" fill="#ffd68b"/></g>
+<g id="leg-front"><path d="M-13 12 L-19 49 L-10 68" fill="none" stroke="#bf8aa0" stroke-width="15" stroke-linecap="round"/><path d="M-17 53 L-10 69" stroke="#fff3ed" stroke-width="17" stroke-linecap="round"/><path d="M-20 66 L-2 67 L12 75 Q17 84 7 84 H-24Z" fill="#a6d1d0" stroke="#6d9dba" stroke-width="2"/><path d="M-15 70 L-2 72 M-14 75 L1 77" stroke="#fff4e5" stroke-width="2"/><circle cx="-17" cy="89" r="7" fill="#ffdda0"/><circle cx="6" cy="89" r="7" fill="#ffdda0"/></g>
+<path d="M-23 -54 Q0 -65 24 -51 L27 -5 L-27 -4Z" fill="var(--accent)" stroke="var(--dark)" stroke-width="2"/><path d="M-27 -6 L27 -6 L38 20 Q0 38 -38 20Z" fill="#ac9ccc" stroke="#8978ab" stroke-width="2"/><path d="M-19 1 L-22 22 M0 3 V26 M19 1 L22 22" stroke="#d9c4e8" stroke-width="3"/>
+<g id="arm-back"><path d="M21 -41 L49 -18 L68 -31" fill="none" stroke="#bb869e" stroke-width="12" stroke-linecap="round"/><circle cx="49" cy="-18" r="8" fill="#b3d5d0"/></g><g id="arm-front"><path d="M-22 -42 L-50 -15 L-66 -33" fill="none" stroke="#c995a8" stroke-width="13" stroke-linecap="round"/><circle cx="-50" cy="-15" r="8" fill="#b3d5d0"/></g>
+<path d="M-10 -66 V-53 Q0 -44 10 -54 V-66" fill="#c18b9f"/><ellipse cy="-91" rx="35" ry="38" fill="#d9a4b3" stroke="#ae7e98" stroke-width="2"/><path d="M-35 -94 Q-43 -142 4 -140 Q40 -136 36 -96 L27 -96 Q8 -98 -6 -119 Q-13 -100 -35 -94Z" fill="#a9cfcf" stroke="#7fabb7" stroke-width="3"/><path d="M-29 -111 Q-10 -138 21 -119" fill="none" stroke="#d9ebe2" stroke-width="6" stroke-linecap="round"/><path d="M-26 -88 Q-27 -62 0 -59 Q26 -60 28 -88" fill="none" stroke="#82aaaf" stroke-width="3"/><circle cx="-12" cy="-90" r="3.5" fill="#533a52"/><circle cx="13" cy="-90" r="3.5" fill="#533a52"/><ellipse cx="-23" cy="-80" rx="7" ry="4" fill="#edb5be"/><ellipse cx="23" cy="-80" rx="7" ry="4" fill="#edb5be"/><path d="M-8 -75 Q1 -66 10 -76" fill="none" stroke="#885268" stroke-width="2.5" stroke-linecap="round"/>
+<g id="wheel-glow"><circle cx="-17" cy="89" r="16" fill="url(#halo)"/><circle cx="6" cy="89" r="16" fill="url(#halo)"/><circle cx="47" cy="79" r="15" fill="url(#halo)"/><circle cx="69" cy="79" r="15" fill="url(#halo)"/></g></g>
+<g id="disco"><path d="M0 -130 V-37" stroke="#cdbfd9" stroke-width="3"/><circle r="44" fill="url(#halo)"/><g clip-path="url(#ball-clip)"><circle r="37" fill="url(#mirror)"/><ellipse cx="-13" cy="-13" rx="18" ry="29" fill="#fff" opacity=".2"/><path d="M14 -39 Q46 0 14 39" stroke="#9a92b9" stroke-width="17" fill="none" opacity=".3"/></g>${star(-37,-18,.7,'#fff5d5')}${star(33,22,.5,'#fff5d5')}</g>
+<g id="sparkles">${Array.from({length:30},(_,i)=>`<g data-spark="${i}">${star(0,0,.3+(i%3)*.16,['#f5d7a3','#f2c3df','#b6dfdd'][i%3])}</g>`).join('')}</g>
+
+<g id="message"><rect x="254" y="116" width="692" height="131" rx="38" fill="#fff3e3" stroke="#e8bfda" stroke-width="4"/><text x="600" y="173" text-anchor="middle" fill="#674777" font-family="ui-rounded,'Arial Rounded MT Bold',system-ui,sans-serif" font-size="42" font-weight="900" letter-spacing="1">ROLLING WITH</text><text x="600" y="223" text-anchor="middle" fill="#995778" font-family="ui-rounded,'Arial Rounded MT Bold',system-ui,sans-serif" font-size="53" font-weight="900" letter-spacing="1">AWESOME!</text><text id="child-label" x="600" y="278" text-anchor="middle" fill="#fff1dc" font-family="system-ui,sans-serif" font-size="21" font-weight="700"></text></g>
+<g id="notes">${[0,1,2,3].map(i=>`<g data-note="${i}" fill="${i%2?'#a9d7d8':'#edbfda'}"><ellipse rx="9" ry="6" transform="rotate(-20)"/><path d="M7 0 V-36 L28 -42 V-7 H23 V-30 L12 -26 V0Z"/><ellipse cx="20" cy="-7" rx="9" ry="6"/></g>`).join('')}</g>
+<g id="wipe">${['#edb1d0','#f2c59f','#f4dfa9','#b9dfca','#b6d7e9','#cfbce6'].map((c,i)=>`<rect x="-1400" y="${i*190-570}" width="2800" height="193" fill="${c}"/>`).join('')}</g>`;
+ const nodes={};svg.querySelectorAll('[id]').forEach(n=>nodes[n.id]=n);return nodes;},
+ render(n,t,svg){const show=(id,v)=>n[id].setAttribute('opacity',v),tr=(id,v)=>n[id].setAttribute('transform',v);
+ const done=t>=4.22,final=phase(t,5.42,5.58);show('last-check',done?1:0);show('empty-box',done?0:1);show('hoop-check',done?1:0);show('hoop-empty',done?0:1);
+ let x=225,y=408,rot=0,sx=1,scale=1;
+ if(t<.7){y+=Math.sin(phase(t,0,.7)*Math.PI)*19;rot=Math.sin(phase(t,0,.7)*Math.PI)*15;}
+ else if(t>=1.1&&t<3.8){let p=phase(t,1.1,3.8);x=mix(225,584,p);y=408-55*Math.sin(p*Math.PI*3)**2;rot=Math.sin(p*Math.PI*6)*8;scale=1-.12*Math.sin(p*Math.PI);}
+ else if(t>=3.8&&t<4.65){let p=phase(t,3.8,4.65);x=mix(584,727,p);y=408-110*p*p;rot=-17*p;}
+ else if(t>=4.65&&t<5.35){let p=phase(t,4.65,5.35);x=mix(727,891,p);y=mix(298,404,p)-Math.sin(p*Math.PI)*115;sx=Math.cos(p*Math.PI*2);rot=Math.sin(p*Math.PI)*-9;}
+ else if(t>=5.35&&t<6.9){let p=phase(t,5.35,6.9);x=891-95*Math.sin(p*Math.PI);y=404+18*Math.sin(p*Math.PI);rot=Math.sin(phase(t,5.35,5.58)*Math.PI)*10;}
+ tr('skater',`translate(${x} ${y}) rotate(${rot}) scale(${sx*scale} ${scale})`);
+ let stride=t>=1.1&&t<3.8?Math.sin(t*15)*15:0;tr('leg-front',`rotate(${stride} -13 12)`);tr('leg-back',`rotate(${-stride} 14 14)`);
+ tr('arm-front',`rotate(${t<.7?-65*Math.sin(phase(t,0,.7)*Math.PI):t>5.35?27:stride*.7} -22 -42)`);tr('arm-back',`rotate(${t>5.35?-28:-stride*.7} 21 -41)`);tr('hair-back',`rotate(${Math.sin(t*9)*7} -18 -118)`);
+ show('wheel-glow',ease(phase(t,.75,1.1)));show('rainbow-path',t>=1.1?1:0);
+ svg.querySelectorAll('[data-trail]').forEach((a,i)=>{let path='';for(let j=0;j<=48;j++){let u=1.1+(Math.min(Math.max(t,1.1),4.65)-1.1)*j/48,px,py;if(u<3.8){let q=phase(u,1.1,3.8);px=mix(225,584,q);py=499-55*Math.sin(q*Math.PI*3)**2;}else{let q=phase(u,3.8,4.65);px=mix(584,727,q);py=499-110*q*q;}path+=(j?'L':'M')+px+' '+(py+i*5)+' ';}a.setAttribute('d',path);});
+ svg.querySelectorAll('[data-marker]').forEach((a,i)=>{let p=ease(phase(t,2.2+i*.45,2.7+i*.45));a.setAttribute('transform',`translate(${mix([316,435,521][i],333+i*54,p)} ${mix([441,394,438][i],524,p)}) scale(${1-p*.25})`);});
+ let jump=phase(t,4.65,5.35);show('air-rainbow',t>=4.65?1:0);svg.querySelectorAll('[data-arc]').forEach((a,i)=>{let path='';for(let j=0;j<=40;j++){let q=jump*j/40;path+=(j?'L':'M')+mix(727,891,q)+' '+(mix(387,493,q)-Math.sin(q*Math.PI)*115+i*6)+' ';}a.setAttribute('d',path);});
+ let land=phase(t,5.35,5.8);show('landing',Math.sin(land*Math.PI));tr('landing',`translate(891 493) scale(${.5+land*1.6})`);
+ show('disco',ease(phase(t,5.2,5.6)));tr('disco',`translate(600 ${mix(-55,64,ease(phase(t,5.2,5.6)))})`);show('beams',final*.16);tr('beams',`rotate(${Math.sin(t*2)*7} 600 45)`);
+ show('message',final);tr('message',`translate(0 ${-18*(1-ease(final))})`);
+ show('victory-check',ease(phase(t,5.75,6.6)));n['victory-check'].setAttribute('stroke-dasharray',`${ease(phase(t,5.75,6.6))*1000} 1000`);
+ svg.querySelectorAll('[data-spark]').forEach((a,i)=>{let p=phase(t,5.4+(i%4)*.04,7.05);a.setAttribute('opacity',Math.sin(p*Math.PI)*.8);a.setAttribute('transform',`translate(${210+(i*127)%780} ${284+(i%5)*26+p*70}) rotate(${p*110})`);});
+ show('notes',final);svg.querySelectorAll('[data-note]').forEach((a,i)=>a.setAttribute('transform',`translate(${[224,335,946,1010][i]} ${300+i%2*54+Math.sin(t*4+i)*8}) rotate(${Math.sin(t*3+i)*12})`));
+ let wipe=ease(phase(t,7,7.6));show('wipe',wipe?1:0);tr('wipe',`translate(${mix(-2100,600,wipe)} 337) rotate(-20)`);
+ }
+}};
+/** Shared, lifecycle-aware player. Scenes own only vector artwork and their timeline. */
+class CelebrationPlayer{
+ constructor(svg,{sceneId='rainbow-roller-skate',colorVariation='strawberry',childName='',loop=true,onStateChange=()=>{}}={}){
+  if(!scenes[sceneId])throw new Error('Unknown celebration scene');
+  this.svg=svg;this.scene=scenes[sceneId];this.loop=loop;this.onStateChange=onStateChange;this.time=0;this.running=false;this.destroyed=false;this.visible=true;this.frame=0;this.last=null;this.announced=false;
+  const p=palettes[colorVariation]||palettes.strawberry;Object.entries(p).forEach(([k,v])=>svg.style.setProperty('--'+k,v));this.nodes=this.scene.mount(svg);this.nodes['child-label'].textContent=childName?`Well done, ${String(childName).slice(0,32)}!`:'';
+  this.motion=matchMedia('(prefers-reduced-motion: reduce)');
+  this.tick=now=>{this.frame=0;if(!this.canRun()){this.last=null;return}if(this.last!==null)this.time+=(now-this.last)/1000;this.last=now;if(this.time>=this.scene.duration){if(this.loop){this.time%=this.scene.duration;this.announced=false}else{this.time=6.6;this.running=false;this.onStateChange(false)}}this.render();this.schedule();};
+  this.onVisibility=()=>{this.cancel();this.schedule()};this.onMotion=()=>{this.cancel();if(this.motion.matches){this.time=6.4;this.render()}else if(this.running){this.time=0;this.render();this.schedule()}this.onStateChange(this.running&&!this.motion.matches)};
+  document.addEventListener('visibilitychange',this.onVisibility);this.motion.addEventListener('change',this.onMotion);
+  this.observer=new IntersectionObserver(entries=>{this.visible=entries[0].isIntersecting;this.cancel();this.schedule()});this.observer.observe(svg);
+  this.onPageHide=()=>this.destroy();window.addEventListener('pagehide',this.onPageHide,{once:true});this.render();this.play();
+ }
+ canRun(){return this.running&&!this.destroyed&&this.visible&&!document.hidden&&!this.motion.matches}
+ schedule(){if(this.canRun()&&!this.frame)this.frame=requestAnimationFrame(this.tick)}
+ cancel(){cancelAnimationFrame(this.frame);this.frame=0;this.last=null}
+ render(){this.scene.render(this.nodes,this.time,this.svg);if(this.time>=5.4&&!this.announced){document.getElementById('announcement').textContent=this.scene.description;this.announced=true}}
+ play(){if(this.destroyed)return;this.running=true;if(this.motion.matches){this.time=6.4;this.render()}this.onStateChange(!this.motion.matches);this.schedule()}
+ pause(){if(this.destroyed)return;this.running=false;this.cancel();this.onStateChange(false)}
+ replay(){if(this.destroyed)return;this.cancel();this.time=this.motion.matches?6.4:0;this.announced=false;this.render();this.play()}
+ destroy(){if(this.destroyed)return;this.pause();this.destroyed=true;this.observer.disconnect();document.removeEventListener('visibilitychange',this.onVisibility);this.motion.removeEventListener('change',this.onMotion);window.removeEventListener('pagehide',this.onPageHide);this.onDestroy?.()}
+}
+window.CelebrationPlayer=CelebrationPlayer;window.celebrationScenes=scenes;
+const pauseButton=document.getElementById('pause');
+const player=new CelebrationPlayer(document.getElementById('scene'),{onStateChange:playing=>{pauseButton.textContent=playing?'Pause':'Play';pauseButton.setAttribute('aria-label',playing?'Pause animation':'Play animation')}});
+window.skaterPlayer=player;
+const toggle=()=>player.running&&!player.motion.matches?player.pause():player.play();const replay=()=>player.replay();
+pauseButton.addEventListener('click',toggle);document.getElementById('replay').addEventListener('click',replay);player.onDestroy=()=>{pauseButton.removeEventListener('click',toggle);document.getElementById('replay').removeEventListener('click',replay)};
+</script></body></html>

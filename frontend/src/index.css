@@ -475,11 +475,29 @@ body {
   box-shadow: 0 2px 6px rgb(0 0 0 / 0.25) !important;
   color: #ffffff !important;
   overflow: hidden;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease, opacity 0.15s ease;
 }
 .fc .fc-event:hover {
   transform: scale(1.015);
   box-shadow: 0 4px 12px rgb(0 0 0 / 0.35) !important;
+  z-index: 20 !important;
+}
+
+/* Completed / past calendar events: darker and greyed out while retaining original color */
+.fc-event-completed,
+.fc .fc-event.fc-event-past,
+.fc .fc-event.fc-event-completed {
+  filter: brightness(0.68) saturate(0.6);
+  opacity: 0.85;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.12) !important;
+}
+
+.fc-event-completed:hover,
+.fc .fc-event.fc-event-past:hover,
+.fc .fc-event.fc-event-completed:hover {
+  filter: brightness(0.82) saturate(0.75);
+  opacity: 1;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.25) !important;
   z-index: 20 !important;
 }
 .fc-timegrid-event .fc-event-main {

@@ -59,9 +59,10 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!active || !canvasRef.current) return
     cleanupRef.current = active.run(canvasRef.current)
+    const duration = active.durationMs || DURATION_MS
     timersRef.current = [
-      setTimeout(() => setFading(true), DURATION_MS - 500),
-      setTimeout(stop, DURATION_MS),
+      setTimeout(() => setFading(true), Math.max(duration - 600, 0)),
+      setTimeout(stop, duration),
     ]
     return () => {
       timersRef.current.forEach(clearTimeout)
@@ -80,14 +81,16 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
           onClick={stop}
         >
           <canvas ref={canvasRef} className="h-full w-full" />
-          <div className="pointer-events-none absolute inset-x-0 top-[12%] text-center">
-            <span
-              className="inline-block animate-bounce text-7xl font-black tracking-tight text-white"
-              style={{ textShadow: '0 4px 24px rgba(0,0,0,0.45)' }}
-            >
-              {praise}
-            </span>
-          </div>
+          {!active.durationMs && !active.hideHtmlPraise && (
+            <div className="pointer-events-none absolute inset-x-0 top-[12%] text-center">
+              <span
+                className="inline-block animate-bounce text-7xl font-black tracking-tight text-white"
+                style={{ textShadow: '0 4px 24px rgba(0,0,0,0.45)' }}
+              >
+                {praise}
+              </span>
+            </div>
+          )}
         </div>
       )}
     </CelebrationContext.Provider>

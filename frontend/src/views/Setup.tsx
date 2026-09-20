@@ -269,6 +269,9 @@ function SetupInner() {
   const [section, setSection] = useState<SectionId>('integrations')
   const [colorEditing, setColorEditing] = useState<number | null>(null)
   const [accentColor, setAccentColorState] = useState(localStorage.getItem('accentColor') || '')
+  const [celebrationSound, setCelebrationSound] = useState(
+    () => localStorage.getItem('nivas_celebration_sound') === 'true',
+  )
   
   const [confirmDisconnectGoogle, setConfirmDisconnectGoogle] = useState<{ id: number; email: string } | null>(null)
   const [confirmRemovePerson, setConfirmRemovePerson] = useState<Person | null>(null)
@@ -990,6 +993,21 @@ function SetupInner() {
           <p className="mb-2 text-sm text-ink-soft">
             One of these {CELEBRATIONS.length} plays whenever a chore or to-do is completed. Every theme is available to every child. Tap to try.
           </p>
+          <div className="mb-4 flex items-center justify-between rounded-xl border border-[var(--outline-var)] bg-[var(--surface-container-low)] p-3">
+            <div>
+              <div className="text-sm font-semibold text-ink-base">Celebration sound effects (SFX)</div>
+              <div className="text-xs text-ink-soft">Procedural fanfares, swooshes, and impact tones during celebrations</div>
+            </div>
+            <input
+              type="checkbox"
+              checked={celebrationSound}
+              onChange={(e) => {
+                setCelebrationSound(e.target.checked)
+                localStorage.setItem('nivas_celebration_sound', e.target.checked ? 'true' : 'false')
+              }}
+              className="h-6 w-6 rounded accent-teal-500 shrink-0 cursor-pointer"
+            />
+          </div>
           <div className="space-y-3">
             {choreAnimationGroups.map((group) => (
               <section key={group.label}>

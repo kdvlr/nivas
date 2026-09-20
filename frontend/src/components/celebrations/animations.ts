@@ -1,6 +1,7 @@
 /** Fullscreen canvas celebrations. Each returns a cleanup function. */
 
 import confetti from 'canvas-confetti'
+import { CHORE_STORY_CELEBRATIONS } from './chore-story-animations'
 
 export type CelebrationName =
   | 'confetti'
@@ -15,6 +16,7 @@ export type CelebrationName =
   | 'baa-chores'
   | 'monster-truck'
   | 'ninja'
+  | 'ninja-classic'
   | 'robot'
   | 'pirate'
   | 'shark'
@@ -33,6 +35,8 @@ export interface Celebration {
   /** backdrop css for the overlay while it plays */
   backdrop: string
   praise: string[]
+  durationMs?: number
+  hideHtmlPraise?: boolean
   run: (canvas: HTMLCanvasElement) => () => void
 }
 
@@ -1402,9 +1406,9 @@ export const CELEBRATIONS: Celebration[] = [
     run: monsterTruckRun,
   },
   {
-    name: 'ninja',
+    name: 'ninja-classic',
     emoji: '🥷',
-    label: 'Ninja Chop',
+    label: 'Ninja Chop (Classic)',
     backdrop: '#111827',
     praise: ['Swift work!', 'Legendary focus!', 'Sneaky good!'],
     run: ninjaRun,
@@ -1481,4 +1485,5 @@ export const CELEBRATIONS: Celebration[] = [
     praise: ['Warp speed ahead!', 'Light-speed legend!', 'To infinity… and DONE!'],
     run: hyperspaceRun,
   },
+  ...CHORE_STORY_CELEBRATIONS,
 ]

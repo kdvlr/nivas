@@ -1,0 +1,1482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Baa Baa Woolly Meadow — Chore Celebration</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+    body {
+      background: #090d16;
+      color: #e2e8f0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow-x: hidden;
+      padding: 16px;
+    }
+    .container {
+      width: 100%;
+      max-width: 1120px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+    header {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 0 4px;
+    }
+    .brand-title {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #4ade80, #f472b6, #38bdf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    p.subtitle {
+      font-size: 0.88rem;
+      color: #94a3b8;
+    }
+    .child-input-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(30, 41, 59, 0.8);
+      backdrop-filter: blur(8px);
+      padding: 6px 14px;
+      border-radius: 9999px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    .child-input-group label {
+      font-size: 0.78rem;
+      color: #94a3b8;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .child-input-group input {
+      background: transparent;
+      border: none;
+      color: #4ade80;
+      font-size: 0.95rem;
+      font-weight: 800;
+      width: 110px;
+      outline: none;
+    }
+    .stage-wrapper {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #020617;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1);
+      cursor: pointer;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .fullscreen-btn {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #fff;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      opacity: 0.7;
+      transition: all 0.2s ease;
+      z-index: 10;
+    }
+    .fullscreen-btn:hover {
+      opacity: 1;
+      background: rgba(30, 41, 59, 0.9);
+      border-color: #4ade80;
+      color: #4ade80;
+    }
+    .controls-card {
+      width: 100%;
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 18px;
+      padding: 16px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.4);
+    }
+    .timeline-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      width: 100%;
+    }
+    .time-badge {
+      font-variant-numeric: tabular-nums;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #4ade80;
+      min-width: 80px;
+    }
+    .scrubber-container {
+      position: relative;
+      flex: 1;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+    }
+    .scrubber-track {
+      position: absolute;
+      width: 100%;
+      height: 7px;
+      background: #334155;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .scrubber-progress {
+      position: absolute;
+      left: 0;
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #38bdf8, #4ade80, #facc15);
+      border-radius: 4px;
+    }
+    .scrubber-markers {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .marker {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 2px;
+      height: 12px;
+      background: rgba(255, 255, 255, 0.35);
+    }
+    .marker-label {
+      position: absolute;
+      top: -15px;
+      transform: translateX(-50%);
+      font-size: 0.62rem;
+      color: #94a3b8;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+    .marker:first-child .marker-label {
+      transform: translateX(0);
+    }
+    .scrubber-thumb {
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 0 12px rgba(74, 222, 128, 0.9);
+      top: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      transition: transform 0.05s ease;
+    }
+    .buttons-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .btn-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    button {
+      background: #1e293b;
+      color: #f1f5f9;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+    button:hover {
+      background: #334155;
+      border-color: rgba(255, 255, 255, 0.3);
+      transform: translateY(-1px);
+    }
+    button:active {
+      transform: translateY(1px);
+    }
+    button.primary {
+      background: linear-gradient(135deg, #16a34a, #22c55e);
+      border-color: #4ade80;
+      color: #fff;
+      font-weight: 700;
+      box-shadow: 0 4px 12px rgba(34, 197, 94, 0.35);
+    }
+    button.primary:hover {
+      background: linear-gradient(135deg, #15803d, #16a34a);
+    }
+    .speed-pills {
+      display: flex;
+      background: #0f172a;
+      border-radius: 8px;
+      padding: 2px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .speed-btn {
+      background: transparent;
+      border: none;
+      padding: 4px 8px;
+      font-size: 0.75rem;
+      border-radius: 6px;
+      color: #94a3b8;
+    }
+    .speed-btn.active {
+      background: #22c55e;
+      color: #0f172a;
+      font-weight: 700;
+    }
+    .script-steps {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      width: 100%;
+      margin-top: 4px;
+    }
+    .step-card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .step-card:hover {
+      border-color: rgba(74, 222, 128, 0.5);
+      background: rgba(30, 41, 59, 0.75);
+    }
+    .step-card.active {
+      border-color: #4ade80;
+      background: rgba(34, 197, 94, 0.15);
+    }
+    .step-title {
+      font-weight: 700;
+      color: #4ade80;
+      margin-bottom: 3px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .step-desc {
+      color: #94a3b8;
+      font-size: 0.7rem;
+      line-height: 1.25;
+    }
+    @media (max-width: 768px) {
+      .script-steps {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div class="brand-title">
+        <h1>🐑 Baa Baa Woolly Meadow</h1>
+        <p class="subtitle">Theme: Fluffy sheep tumbles across the pasture to tidy the meadow (7.5s Loop)</p>
+      </div>
+
+      <div class="child-input-group">
+        <label for="childNameInput">Child:</label>
+        <input type="text" id="childNameInput" value="Leo" maxlength="16" />
+      </div>
+    </header>
+
+    <div class="stage-wrapper" id="stageWrapper">
+      <canvas id="animCanvas"></canvas>
+      <button class="fullscreen-btn" id="fsBtn">⛶ Fullscreen</button>
+    </div>
+
+    <div class="controls-card">
+      <div class="timeline-row">
+        <div class="time-badge" id="timeDisplay">0.00s / 7.50s</div>
+        <div class="scrubber-container" id="scrubberContainer">
+          <div class="scrubber-track">
+            <div class="scrubber-progress" id="scrubberProgress"></div>
+          </div>
+          <div class="scrubber-markers">
+            <div class="marker" style="left: 0%;">
+              <span class="marker-label">Farm</span>
+            </div>
+            <div class="marker" style="left: 20%;">
+              <span class="marker-label">Roll</span>
+            </div>
+            <div class="marker" style="left: 50.66%;">
+              <span class="marker-label">Poof</span>
+            </div>
+            <div class="marker" style="left: 86.66%;">
+              <span class="marker-label">Wipe</span>
+            </div>
+          </div>
+          <div class="scrubber-thumb" id="scrubberThumb"></div>
+        </div>
+      </div>
+
+      <div class="buttons-row">
+        <div class="btn-group">
+          <button class="primary" id="playPauseBtn">
+            <span id="playIcon">⏸</span> <span id="playText">Pause</span>
+          </button>
+          <button id="restartBtn">↺ Restart</button>
+          <button id="stepBackBtn">⏮ -0.25s</button>
+          <button id="stepFwdBtn">⏭ +0.25s</button>
+        </div>
+
+        <div class="btn-group">
+          <div class="speed-pills">
+            <button class="speed-btn" data-speed="0.25">0.25x</button>
+            <button class="speed-btn" data-speed="0.5">0.5x</button>
+            <button class="speed-btn active" data-speed="1.0">1.0x</button>
+            <button class="speed-btn" data-speed="1.5">1.5x</button>
+          </div>
+          <button id="soundToggleBtn">🔊 Sound: ON</button>
+        </div>
+      </div>
+
+      <div class="script-steps">
+        <div class="step-card" data-time="0.0">
+          <div class="step-title"><span>1. Sunny Meadow</span><span>0.0s</span></div>
+          <div class="step-desc">Sunny hills and wildflowers appear; rustic barn checklist ✓ ✓ ✓ □ pulses as Baa Baa prepares to tidy.</div>
+        </div>
+        <div class="step-card" data-time="1.5">
+          <div class="step-title"><span>2. Woolly Tumble</span><span>1.5s</span></div>
+          <div class="step-desc">Baa Baa tucks into a fluffy tumbleweed, rolling and bouncing to gather stray dandelions and dust.</div>
+        </div>
+        <div class="step-card" data-time="3.8">
+          <div class="step-title"><span>3. Rainbow Poof!</span><span>3.8s</span></div>
+          <div class="step-desc">Baa Baa pops open with a happy bleat! Checklist hits 100%, prismatic rainbow spans the sky, flowers burst.</div>
+        </div>
+        <div class="step-card" data-time="6.5">
+          <div class="step-title"><span>4. Cloud Wipe</span><span>6.5s</span></div>
+          <div class="step-desc">A giant ultra-soft cumulus cloud rolls across with 100% TIDY & CLEAN golden seal for seamless loop.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // -------------------------------------------------------------
+    // PROCEDURAL WEB AUDIO SYNTHESIS (Zero External Assets)
+    // -------------------------------------------------------------
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+        this.lastTriggered = {};
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) {
+            this.ctx = new AudioContext();
+          }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      playBirdChirp() {
+        if (!this.enabled || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        // Two sweet pastoral bird chirps
+        [1800, 2400].forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.1);
+          osc.frequency.exponentialRampToValueAtTime(freq + 600, now + idx * 0.1 + 0.06);
+          osc.frequency.exponentialRampToValueAtTime(freq - 200, now + idx * 0.1 + 0.14);
+          gain.gain.setValueAtTime(0.18, now + idx * 0.1);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.18);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + idx * 0.1);
+          osc.stop(now + idx * 0.1 + 0.18);
+        });
+      }
+      playTumbleRoll() {
+        if (!this.enabled || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        // Playful bouncy boing / spring whoosh
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.linearRampToValueAtTime(480, now + 0.4);
+        osc.frequency.linearRampToValueAtTime(240, now + 0.9);
+        osc.frequency.exponentialRampToValueAtTime(160, now + 1.6);
+        gain.gain.setValueAtTime(0.01, now);
+        gain.gain.linearRampToValueAtTime(0.2, now + 0.3);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 1.6);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 1.6);
+
+        // Fluffy grass rustle
+        const dur = 1.4;
+        const bufferSize = Math.floor(this.ctx.sampleRate * dur);
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = (Math.random() * 2 - 1) * Math.sin((i / bufferSize) * Math.PI);
+        }
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(1100, now);
+        const nGain = this.ctx.createGain();
+        nGain.gain.setValueAtTime(0.12, now);
+        nGain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+        noise.connect(filter);
+        filter.connect(nGain);
+        nGain.connect(this.ctx.destination);
+        noise.start(now);
+      }
+      playFluffyPoof() {
+        if (!this.enabled || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        // Soft bass poof
+        const boom = this.ctx.createOscillator();
+        const bGain = this.ctx.createGain();
+        boom.type = 'sine';
+        boom.frequency.setValueAtTime(180, now);
+        boom.frequency.exponentialRampToValueAtTime(45, now + 0.35);
+        bGain.gain.setValueAtTime(0.7, now);
+        bGain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+        boom.connect(bGain);
+        bGain.connect(this.ctx.destination);
+        boom.start(now);
+        boom.stop(now + 0.4);
+
+        // Cheerful cute sheep bleat ("Baa-aa!")
+        setTimeout(() => {
+          if (!this.enabled || !this.ctx) return;
+          const bleatNow = this.ctx.currentTime;
+          const bOsc = this.ctx.createOscillator();
+          const bg = this.ctx.createGain();
+          bOsc.type = 'sawtooth';
+          bOsc.frequency.setValueAtTime(320, bleatNow);
+          // Characteristic vibrato bleat
+          bOsc.frequency.linearRampToValueAtTime(360, bleatNow + 0.08);
+          bOsc.frequency.linearRampToValueAtTime(340, bleatNow + 0.16);
+          bOsc.frequency.linearRampToValueAtTime(360, bleatNow + 0.24);
+          bOsc.frequency.exponentialRampToValueAtTime(260, bleatNow + 0.45);
+
+          bg.gain.setValueAtTime(0.01, bleatNow);
+          bg.gain.linearRampToValueAtTime(0.32, bleatNow + 0.06);
+          bg.gain.exponentialRampToValueAtTime(0.001, bleatNow + 0.45);
+
+          // Formant vowel filter for "Baa" sound
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'bandpass';
+          filter.frequency.setValueAtTime(950, bleatNow);
+          filter.Q.setValueAtTime(3.5, bleatNow);
+
+          bOsc.connect(filter);
+          filter.connect(bg);
+          bg.connect(this.ctx.destination);
+          bOsc.start(bleatNow);
+          bOsc.stop(bleatNow + 0.45);
+        }, 80);
+      }
+      playTriumphFanfare() {
+        if (!this.enabled || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        // Pastoral music-box / glockenspiel fanfare (C5 - E5 - G5 - C6)
+        const freqs = [523.25, 659.25, 783.99, 1046.50];
+        freqs.forEach((f, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(f, now + idx * 0.07);
+          gain.gain.setValueAtTime(0.01, now + idx * 0.07);
+          gain.gain.linearRampToValueAtTime(0.28 / freqs.length, now + idx * 0.07 + 0.06);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 1.8);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + idx * 0.07);
+          osc.stop(now + 1.8);
+        });
+
+        // Cheerful meadow applause / gentle chime bed
+        const dur = 2.2;
+        const bufferSize = Math.floor(this.ctx.sampleRate * dur);
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        let b0 = 0, b1 = 0;
+        for (let i = 0; i < bufferSize; i++) {
+          const white = Math.random() * 2 - 1;
+          b0 = 0.96 * b0 + white * 0.04;
+          b1 = 0.92 * b1 + white * 0.06;
+          data[i] = (b0 + b1) * 0.5;
+        }
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(900, now);
+        filter.frequency.linearRampToValueAtTime(1600, now + 0.5);
+        filter.frequency.exponentialRampToValueAtTime(700, now + dur);
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.05, now);
+        gain.gain.linearRampToValueAtTime(0.28, now + 0.3);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + dur);
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+        noise.start(now);
+      }
+      playCloudWhoosh() {
+        if (!this.enabled || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(140, now);
+        osc.frequency.exponentialRampToValueAtTime(380, now + 0.4);
+        gain.gain.setValueAtTime(0.01, now);
+        gain.gain.linearRampToValueAtTime(0.25, now + 0.2);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.6);
+      }
+      syncTime(t, prevT) {
+        if (t < prevT) {
+          this.lastTriggered = {};
+        }
+        if (t >= 0.15 && !this.lastTriggered['chirp']) {
+          this.lastTriggered['chirp'] = true;
+          this.playBirdChirp();
+        }
+        if (t >= 1.6 && !this.lastTriggered['tumble']) {
+          this.lastTriggered['tumble'] = true;
+          this.playTumbleRoll();
+        }
+        if (t >= 3.8 && !this.lastTriggered['poof']) {
+          this.lastTriggered['poof'] = true;
+          this.playFluffyPoof();
+        }
+        if (t >= 4.15 && !this.lastTriggered['fanfare']) {
+          this.lastTriggered['fanfare'] = true;
+          this.playTriumphFanfare();
+        }
+        if (t >= 6.48 && !this.lastTriggered['cloud']) {
+          this.lastTriggered['cloud'] = true;
+          this.playCloudWhoosh();
+        }
+      }
+    }
+
+    const sound = new SoundEngine();
+
+    // -------------------------------------------------------------
+    // CANVAS RESOLUTION & CACHING (Layout-Thrashing Prevention)
+    // -------------------------------------------------------------
+    const canvas = document.getElementById('animCanvas');
+    const ctx = canvas.getContext('2d');
+    const DURATION = 7.50; // seconds
+
+    let currentTime = 0;
+    let isPlaying = true;
+    let speed = 1.0;
+    let lastTimestamp = performance.now();
+
+    const V_W = 1280;
+    const V_H = 720;
+    let cachedDpr = 1;
+    let cachedW = 1280;
+    let cachedH = 720;
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      cachedDpr = window.devicePixelRatio || 1;
+      cachedW = rect.width * cachedDpr;
+      cachedH = rect.height * cachedDpr;
+      canvas.width = cachedW;
+      canvas.height = cachedH;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Loop Pausing when hidden
+    let isTabVisible = true;
+    document.addEventListener('visibilitychange', () => {
+      isTabVisible = !document.hidden;
+      if (isTabVisible) {
+        lastTimestamp = performance.now();
+      }
+    });
+
+    // -------------------------------------------------------------
+    // MATH & EASING UTILITIES
+    // -------------------------------------------------------------
+    const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const easeOutQuad = t => t * (2 - t);
+    const easeInOutCubic = t => t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
+    const easeOutBack = (t, s = 1.70158) => {
+      const t1 = t - 1;
+      return t1 * t1 * ((s + 1) * t1 + s) + 1;
+    };
+    const easeOutBounce = t => {
+      const n1 = 7.5625;
+      const d1 = 2.75;
+      if (t < 1 / d1) return n1 * t * t;
+      if (t < 2 / d1) return n1 * (t -= 1.5 / d1) * t + 0.75;
+      if (t < 2.5 / d1) return n1 * (t -= 2.25 / d1) * t + 0.9375;
+      return n1 * (t -= 2.625 / d1) * t + 0.984375;
+    };
+
+    // -------------------------------------------------------------
+    // PARTICLE SYSTEMS (Pastel Confetti, Woolly Puffs, Petals)
+    // -------------------------------------------------------------
+    const confettiParticles = [];
+    const CONFETTI_COLORS = ['#4ade80', '#f472b6', '#facc15', '#38bdf8', '#c084fc', '#ffffff'];
+    for (let i = 0; i < 90; i++) {
+      const fromLeft = i % 2 === 0;
+      confettiParticles.push({
+        originX: fromLeft ? 80 : 1200,
+        originY: 660,
+        angle: fromLeft ? -(0.3 + Math.random() * 0.45) * Math.PI : -(0.7 - Math.random() * 0.45) * Math.PI,
+        speed: 400 + Math.random() * 380,
+        color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+        size: 6 + Math.random() * 7,
+        rotSpeed: (Math.random() - 0.5) * 10,
+        shape: i % 3 // 0: petal, 1: wool puff, 2: heart/check
+      });
+    }
+
+    // Meadow Wildflowers (Daisies & Buttercups)
+    const meadowFlowers = [];
+    for (let i = 0; i < 28; i++) {
+      meadowFlowers.push({
+        x: 40 + i * 44 + Math.random() * 16,
+        y: 530 + Math.sin(i * 0.6) * 45 + Math.random() * 40,
+        size: 7 + Math.random() * 5,
+        color: i % 3 === 0 ? '#f472b6' : (i % 3 === 1 ? '#facc15' : '#ffffff')
+      });
+    }
+
+    // Sky Cumulus Clouds
+    const skyClouds = [
+      { x: 140, y: 110, scale: 0.9, speed: 12 },
+      { x: 520, y: 80, scale: 1.2, speed: 18 },
+      { x: 940, y: 130, scale: 0.8, speed: 10 }
+    ];
+
+    // -------------------------------------------------------------
+    // DRAWING HELPERS
+    // -------------------------------------------------------------
+    function drawCheckmark(ctx, x, y, size, color, strokeW = 4) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = strokeW;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-size * 0.38, 0);
+      ctx.lineTo(-size * 0.08, size * 0.35);
+      ctx.lineTo(size * 0.45, -size * 0.38);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawCloudShape(ctx, x, y, size, color = '#ffffff') {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(-size * 0.4, 0, size * 0.35, 0, Math.PI * 2);
+      ctx.arc(0, -size * 0.25, size * 0.45, 0, Math.PI * 2);
+      ctx.arc(size * 0.45, 0, size * 0.32, 0, Math.PI * 2);
+      ctx.arc(0, size * 0.1, size * 0.35, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawFlower(ctx, x, y, size, petalColor) {
+      ctx.save();
+      ctx.translate(x, y);
+      // Petals
+      ctx.fillStyle = petalColor;
+      for (let p = 0; p < 5; p++) {
+        const ang = (p / 5) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.arc(Math.cos(ang) * size * 0.6, Math.sin(ang) * size * 0.6, size * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // Center
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath();
+      ctx.arc(0, 0, size * 0.35, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // -------------------------------------------------------------
+    // MAIN RENDER FUNCTION (1280 x 720 Virtual Canvas)
+    // -------------------------------------------------------------
+    function render(t) {
+      ctx.save();
+      ctx.scale(canvas.width / V_W, canvas.height / V_H);
+      ctx.clearRect(0, 0, V_W, V_H);
+
+      const childName = (document.getElementById('childNameInput').value || 'Leo').trim();
+
+      // ===========================================================
+      // 0. SUNNY PASTEL SKY & CLOUDS
+      // ===========================================================
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, V_H);
+      skyGrad.addColorStop(0, '#7dd3fc'); // Crisp sky blue
+      skyGrad.addColorStop(0.5, '#bae6fd');
+      skyGrad.addColorStop(0.85, '#e0f2fe');
+      skyGrad.addColorStop(1, '#dcfce7'); // Soft pasture horizon
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, V_W, V_H);
+
+      // Golden Warm Sun in Upper Left
+      ctx.save();
+      ctx.translate(140, 90);
+      const sunPulse = Math.sin(t * 3) * 3;
+      ctx.fillStyle = 'rgba(254, 240, 138, 0.35)';
+      ctx.beginPath(); ctx.arc(0, 0, 65 + sunPulse, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath(); ctx.arc(0, 0, 42, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+
+      // Floating Sky Clouds
+      skyClouds.forEach((sc, idx) => {
+        const cloudX = (sc.x + t * sc.speed) % (V_W + 200) - 100;
+        drawCloudShape(ctx, cloudX, sc.y, 70 * sc.scale, 'rgba(255, 255, 255, 0.9)');
+      });
+
+      // ===========================================================
+      // 1. PRISMATIC CELEBRATION RAINBOW (t >= 3.8s)
+      // ===========================================================
+      if (t >= 3.8) {
+        const rainbowAlpha = clamp((t - 3.8) / 0.8, 0, 1);
+        ctx.save();
+        ctx.globalAlpha = rainbowAlpha * 0.85;
+        const rainbowColors = ['#f87171', '#fb923c', '#facc15', '#4ade80', '#38bdf8', '#c084fc'];
+        rainbowColors.forEach((rc, rIdx) => {
+          ctx.strokeStyle = rc;
+          ctx.lineWidth = 10;
+          ctx.beginPath();
+          ctx.arc(V_W / 2, 680, 480 + rIdx * 11, Math.PI, 0);
+          ctx.stroke();
+        });
+        ctx.restore();
+      }
+
+      // ===========================================================
+      // 2. ROLLING MEADOW HILLS & PASTURE
+      // ===========================================================
+      // Distant rolling hills
+      ctx.fillStyle = '#86efac';
+      ctx.beginPath();
+      ctx.arc(280, 880, 620, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#4ade80';
+      ctx.beginPath();
+      ctx.arc(1020, 860, 580, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Foreground lush green hill
+      const hillGrad = ctx.createLinearGradient(0, 460, 0, V_H);
+      hillGrad.addColorStop(0, '#22c55e');
+      hillGrad.addColorStop(1, '#15803d');
+      ctx.fillStyle = hillGrad;
+      ctx.beginPath();
+      ctx.arc(V_W / 2, 1060, 800, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Rustic Split-Rail Wooden Farm Fence on Left
+      ctx.strokeStyle = '#78350f';
+      ctx.lineWidth = 4.5;
+      ctx.beginPath();
+      // Horizontal fence rails
+      ctx.moveTo(40, 470); ctx.lineTo(340, 495);
+      ctx.moveTo(40, 490); ctx.lineTo(340, 515);
+      // Vertical fence posts
+      [60, 150, 240, 330].forEach(px => {
+        const py = 460 + (px - 60) * 0.08;
+        ctx.moveTo(px, py); ctx.lineTo(px, py + 55);
+      });
+      ctx.stroke();
+
+      // Red Barn Silhouette in Distant Left
+      ctx.fillStyle = '#b91c1c';
+      ctx.fillRect(80, 410, 55, 35);
+      ctx.beginPath();
+      ctx.moveTo(75, 410); ctx.lineTo(140, 410); ctx.lineTo(107, 390); ctx.closePath();
+      ctx.fill();
+      // Barn white trim
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(95, 418); ctx.lineTo(120, 445);
+      ctx.moveTo(120, 418); ctx.lineTo(95, 445);
+      ctx.stroke();
+
+      // Meadow Wildflowers on foreground turf
+      meadowFlowers.forEach(mf => {
+        drawFlower(ctx, mf.x, mf.y, mf.size, mf.color);
+      });
+
+      // ===========================================================
+      // 3. BAA BAA THE WOOLLY SHEEP (Character Animation)
+      // ===========================================================
+      let sheepX = 640;
+      let sheepY = 480;
+      let sheepRot = 0;
+      let isTumbling = false;
+      let isLanded = t >= 3.8;
+
+      if (t < 1.4) {
+        // Peaceful meadow stance, gentle breathing & tail wag
+        sheepX = 480;
+        sheepY = 485 + Math.sin(t * 5) * 3;
+        sheepRot = 0;
+      } else if (t >= 1.4 && t < 3.8) {
+        // PLAYFUL WOOLLY TUMBLEWEED ROLL!
+        isTumbling = true;
+        const rollProg = (t - 1.4) / 2.4;
+        const curve = easeInOutCubic(rollProg);
+
+        // Figure-eight loop-de-loop across the pasture
+        sheepX = 480 + Math.sin(rollProg * Math.PI * 4) * 280 + rollProg * 160;
+        sheepY = 475 - Math.abs(Math.sin(rollProg * Math.PI * 5)) * 65;
+        sheepRot = rollProg * Math.PI * 14; // rapid joyful roll!
+
+        // Puff trail behind rolling fluffball
+        ctx.save();
+        for (let p = 0; p < 4; p++) {
+          const pt = (t * 8 + p * 0.25) % 1.0;
+          const px = sheepX - Math.cos(sheepRot) * (pt * 45) - 30;
+          const py = sheepY + 20 + Math.sin(pt * Math.PI) * 10;
+          drawCloudShape(ctx, px, py, 14 * (1 - pt), 'rgba(255, 255, 255, 0.7)');
+        }
+        ctx.restore();
+
+      } else {
+        // SUPER FLUFFY POOFED MEADOW STAR POSE!
+        sheepX = 640;
+        sheepY = 470;
+        sheepRot = 0;
+
+        const landT = t - 3.8;
+        if (landT < 0.3) {
+          // Bouncy landing squish
+          sheepY += Math.sin(landT / 0.3 * Math.PI) * 12;
+        } else {
+          // Cheerful victory dance bobbing
+          sheepY -= Math.sin((landT - 0.3) * 7) * 6;
+        }
+      }
+
+      // Draw Baa Baa at (sheepX, sheepY)
+      ctx.save();
+      ctx.translate(sheepX, sheepY);
+      ctx.rotate(sheepRot);
+
+      // Shadow on green grass
+      if (!isTumbling) {
+        ctx.beginPath();
+        ctx.ellipse(0, 42, 48, 12, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(21, 128, 61, 0.45)';
+        ctx.fill();
+      }
+
+      // -----------------------------------------------------------
+      // FLUFFY WOOLLY BODY (Cloud-puff geometry)
+      // -----------------------------------------------------------
+      // Base body wool puffs
+      ctx.fillStyle = '#f8fafc';
+      const bodyPuffs = 10;
+      for (let bp = 0; bp < bodyPuffs; bp++) {
+        const ang = (bp / bodyPuffs) * Math.PI * 2;
+        const bx = Math.cos(ang) * 44;
+        const by = Math.sin(ang) * 34;
+        ctx.beginPath();
+        ctx.arc(bx, by, isLanded ? 32 : 28, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.beginPath();
+      ctx.arc(0, 0, isLanded ? 48 : 42, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Soft subtle wool cloud shading
+      ctx.fillStyle = 'rgba(226, 232, 240, 0.6)';
+      ctx.beginPath();
+      ctx.arc(0, 12, 38, 0, Math.PI);
+      ctx.fill();
+
+      // -----------------------------------------------------------
+      // SHEEP LEGS, FACE & DETAILS (Drawn when not rapidly tumbling)
+      // -----------------------------------------------------------
+      if (!isTumbling) {
+        // Little black hooves / legs
+        ctx.fillStyle = '#1e293b';
+        // Back legs
+        ctx.fillRect(-26, 28, 12, 24);
+        ctx.fillRect(14, 28, 12, 24);
+
+        // Cute Sheep Head
+        ctx.save();
+        ctx.translate(48, -12);
+
+        // Head shape
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 22, 18, 0.1, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Fluffy woolly cap on head
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.arc(-4, -18, 14, 0, Math.PI * 2);
+        ctx.arc(8, -16, 12, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Floppy dark ears with pink interior
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath();
+        ctx.ellipse(-14, -6, 8, 18, -0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#f472b6';
+        ctx.beginPath();
+        ctx.ellipse(-14, -6, 4, 12, -0.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Rosy pink blushing cheek
+        ctx.fillStyle = '#f472b6';
+        ctx.beginPath();
+        ctx.arc(4, 4, 7, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Sparkling friendly eye
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(8, -4, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.arc(9, -4, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(10, -5, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Cute smiling mouth
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(12, 7, 4, 0, Math.PI * 0.85);
+        ctx.stroke();
+
+        ctx.restore(); // restore head
+
+        // Festive Red Ribbon Bow on Sheep Collar
+        ctx.save();
+        ctx.translate(34, 12);
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.moveTo(0, 0); ctx.lineTo(-12, -8); ctx.lineTo(-12, 8); ctx.closePath();
+        ctx.moveTo(0, 0); ctx.lineTo(12, -8); ctx.lineTo(12, 8); ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#facc15';
+        ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+
+        // Knitted Wool Glowing Checkmark Held Proudly in Celebration
+        if (isLanded) {
+          ctx.save();
+          ctx.translate(-54, -20);
+          const medalPulse = Math.sin(t * 8) * 0.1 + 1.0;
+          ctx.scale(medalPulse, medalPulse);
+
+          // Golden circle badge
+          ctx.fillStyle = '#facc15';
+          ctx.beginPath(); ctx.arc(0, 0, 22, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = '#22c55e';
+          ctx.lineWidth = 3;
+          ctx.stroke();
+
+          drawCheckmark(ctx, 0, 0, 20, '#22c55e', 4.5);
+          ctx.restore();
+        }
+      }
+
+      ctx.restore(); // restore sheep
+
+      // ===========================================================
+      // 4. TOP RUSTIC WOODEN SIGN CHECKLIST TILES
+      // ===========================================================
+      ctx.save();
+      ctx.translate(V_W / 2, 70);
+
+      const isComplete = t >= 3.8;
+      const flipAnim = t >= 3.4 && t < 3.9 ? (t - 3.4) / 0.5 : isComplete ? 1 : 0;
+      const tiles = ['✓', '✓', '✓', isComplete ? '✓' : '□'];
+
+      const tileW = 56;
+      const tileGap = 16;
+      const totalW = 4 * tileW + 3 * tileGap;
+      const startX = -totalW / 2 + tileW / 2;
+
+      // Wooden Signboard Plaque
+      ctx.fillStyle = 'rgba(20, 83, 45, 0.95)';
+      ctx.strokeStyle = isComplete ? '#4ade80' : '#facc15';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.roundRect(-totalW / 2 - 20, -tileW / 2 - 12, totalW + 40, tileW + 24, 16);
+      ctx.fill();
+      ctx.stroke();
+
+      // Sign header label
+      ctx.font = 'bold 12px monospace';
+      ctx.fillStyle = '#86efac';
+      ctx.textAlign = 'center';
+      ctx.fillText('PASTURE CHORE CHECKLIST // WOOLLY MEADOW', 0, -tileW / 2 - 18);
+
+      tiles.forEach((sym, idx) => {
+        const tx = startX + idx * (tileW + tileGap);
+        ctx.save();
+        ctx.translate(tx, 0);
+
+        if (idx === 3 && flipAnim > 0 && flipAnim < 1) {
+          ctx.scale(1, Math.cos(flipAnim * Math.PI));
+        }
+
+        if (idx === 3 && !isComplete) {
+          const pulse = Math.sin(t * 8) * 0.25 + 0.75;
+          ctx.fillStyle = `rgba(239, 68, 68, ${0.18 * pulse})`;
+          ctx.strokeStyle = `rgba(239, 68, 68, ${0.85 * pulse})`;
+          ctx.lineWidth = 2.5;
+        } else {
+          ctx.fillStyle = 'rgba(74, 222, 128, 0.22)';
+          ctx.strokeStyle = '#4ade80';
+          ctx.lineWidth = 2.5;
+        }
+
+        ctx.beginPath();
+        ctx.roundRect(-tileW / 2, -tileW / 2, tileW, tileW, 10);
+        ctx.fill();
+        ctx.stroke();
+
+        if (sym === '✓') {
+          drawCheckmark(ctx, 0, 0, 24, '#4ade80', 3.8);
+        } else {
+          ctx.fillStyle = '#ef4444';
+          ctx.font = 'bold 24px -apple-system, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('□', 0, -1);
+        }
+        ctx.restore();
+      });
+
+      ctx.restore(); // restore top sign
+
+      // ===========================================================
+      // 5. CELEBRATION EFFECTS & PASTEL BANNER (t >= 3.8s)
+      // ===========================================================
+      if (t >= 3.8 && t < 6.5) {
+        // Confetti & Petals Burst
+        const elapsedConfetti = t - 3.8;
+        ctx.save();
+        confettiParticles.forEach((cp, idx) => {
+          const x = cp.originX + Math.cos(cp.angle) * (cp.speed * elapsedConfetti);
+          const y = cp.originY + Math.sin(cp.angle) * (cp.speed * elapsedConfetti) + 0.5 * 380 * elapsedConfetti * elapsedConfetti;
+          const rot = elapsedConfetti * cp.rotSpeed;
+
+          if (y < V_H + 30) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(rot);
+            if (cp.shape === 0) {
+              drawFlower(ctx, 0, 0, cp.size * 0.8, cp.color);
+            } else if (cp.shape === 1) {
+              drawCloudShape(ctx, 0, 0, cp.size, cp.color);
+            } else {
+              drawCheckmark(ctx, 0, 0, cp.size * 1.2, cp.color, 2.5);
+            }
+            ctx.restore();
+          }
+        });
+        ctx.restore();
+
+        // Room-Readable Celebration Ribbon
+        const enterProg = clamp((t - 3.8) / 0.5, 0, 1);
+        const bannerScale = easeOutBack(enterProg, 1.8);
+
+        ctx.save();
+        ctx.translate(V_W / 2, 270);
+        ctx.scale(bannerScale, bannerScale);
+
+        // Dark Pasture Glass Plaque
+        const ribbonGrad = ctx.createLinearGradient(-480, 0, 480, 0);
+        ribbonGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+        ribbonGrad.addColorStop(0.12, 'rgba(20, 83, 45, 0.96)');
+        ribbonGrad.addColorStop(0.88, 'rgba(20, 83, 45, 0.96)');
+        ribbonGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+        ctx.fillStyle = ribbonGrad;
+        ctx.beginPath();
+        ctx.roundRect(-480, -95, 960, 190, 26);
+        ctx.fill();
+
+        // Emerald Ribbon Borders
+        ctx.strokeStyle = '#4ade80';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.roundRect(-450, -90, 900, 180, 20);
+        ctx.stroke();
+
+        // Bold Primary Title
+        const mainText = 'NEAT & TIDY CHAMPION!';
+        ctx.font = '900 60px -apple-system, Impact, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.strokeStyle = '#020617';
+        ctx.lineWidth = 14;
+        ctx.strokeText(mainText, 0, -22);
+
+        const goldGrad = ctx.createLinearGradient(0, -60, 0, 20);
+        goldGrad.addColorStop(0, '#ffffff');
+        goldGrad.addColorStop(0.4, '#86efac');
+        goldGrad.addColorStop(1, '#22c55e');
+        ctx.fillStyle = goldGrad;
+        ctx.fillText(mainText, 0, -22);
+
+        // Secondary Sub-Badge with Child Name
+        if (t >= 4.2) {
+          const subProg = clamp((t - 4.2) / 0.4, 0, 1);
+          const subScale = easeOutBounce(subProg);
+
+          ctx.save();
+          ctx.translate(0, 46);
+          ctx.scale(subScale, subScale);
+
+          const subText = `${childName.toUpperCase()} — MASTER OF FLUFFY CLEAN`;
+          ctx.font = '900 27px sans-serif';
+          ctx.strokeStyle = '#020617';
+          ctx.lineWidth = 8;
+          ctx.strokeText(subText, 0, 0);
+
+          ctx.fillStyle = '#facc15';
+          ctx.fillText(subText, 0, 0);
+          ctx.restore();
+        }
+
+        ctx.restore(); // restore celebration banner
+      }
+
+      // ===========================================================
+      // 6. FLUFFY CUMULUS CLOUD WIPE TRANSITION (t >= 6.5s)
+      // ===========================================================
+      if (t >= 6.5) {
+        const wipeProg = clamp((t - 6.5) / 1.0, 0, 1);
+        const wipeScale = easeInOutCubic(wipeProg);
+        const cx = -300 + wipeScale * (V_W + 600);
+
+        ctx.save();
+        // Giant cloud puff sweeping across the screen
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.arc(cx, V_H / 2, 620, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Soft cloud billow rings
+        ctx.fillStyle = '#e2e8f0';
+        ctx.beginPath();
+        ctx.arc(cx - 120, V_H / 2 - 80, 420, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.arc(cx - 80, V_H / 2 - 60, 400, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Golden Pasture Daisy Seal in center of cloud
+        if (wipeScale > 0.4) {
+          const stampProg = clamp((wipeScale - 0.4) / 0.4, 0, 1);
+          const stampScale = easeOutBack(stampProg, 2.0);
+
+          ctx.save();
+          ctx.translate(V_W / 2, V_H / 2);
+          ctx.scale(stampScale, stampScale);
+
+          // Golden Seal Circle
+          ctx.fillStyle = '#facc15';
+          ctx.beginPath();
+          ctx.arc(0, 0, 75, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#16a34a';
+          ctx.lineWidth = 6;
+          ctx.stroke();
+
+          // Green checkmark & stars
+          drawCheckmark(ctx, 0, 0, 52, '#16a34a', 8);
+
+          ctx.fillStyle = 'rgba(20, 83, 45, 0.92)';
+          ctx.beginPath();
+          ctx.roundRect(-180, 86, 360, 36, 18);
+          ctx.fill();
+          ctx.strokeStyle = '#facc15';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          ctx.font = '900 16px monospace';
+          ctx.fillStyle = '#86efac';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(`100% TIDY & CLEAN // ${childName.toUpperCase()}`, 0, 104);
+
+          ctx.restore();
+        }
+
+        ctx.restore();
+      }
+
+      ctx.restore(); // restore scale
+    }
+
+    // -------------------------------------------------------------
+    // ANIMATION TICK LOOP
+    // -------------------------------------------------------------
+    function tick(timestamp) {
+      if (isPlaying && isTabVisible) {
+        const dt = Math.min((timestamp - lastTimestamp) / 1000, 0.1);
+        const prevTime = currentTime;
+        currentTime += dt * speed;
+
+        if (currentTime >= DURATION) {
+          currentTime = currentTime % DURATION;
+        }
+
+        sound.syncTime(currentTime, prevTime);
+        updateUI();
+      }
+      lastTimestamp = timestamp;
+      render(currentTime);
+      requestAnimationFrame(tick);
+    }
+
+    // -------------------------------------------------------------
+    // UI CONTROLS & EVENT LISTENERS
+    // -------------------------------------------------------------
+    const scrubberContainer = document.getElementById('scrubberContainer');
+    const scrubberProgress = document.getElementById('scrubberProgress');
+    const scrubberThumb = document.getElementById('scrubberThumb');
+    const timeDisplay = document.getElementById('timeDisplay');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const playIcon = document.getElementById('playIcon');
+    const playText = document.getElementById('playText');
+    const restartBtn = document.getElementById('restartBtn');
+    const stepBackBtn = document.getElementById('stepBackBtn');
+    const stepFwdBtn = document.getElementById('stepFwdBtn');
+    const soundToggleBtn = document.getElementById('soundToggleBtn');
+    const stepCards = document.querySelectorAll('.step-card');
+    const speedButtons = document.querySelectorAll('.speed-btn');
+    const childNameInput = document.getElementById('childNameInput');
+    const fsBtn = document.getElementById('fsBtn');
+
+    function updateUI() {
+      const pct = (currentTime / DURATION) * 100;
+      scrubberProgress.style.width = pct + '%';
+      scrubberThumb.style.left = pct + '%';
+      timeDisplay.textContent = currentTime.toFixed(2) + 's / ' + DURATION.toFixed(2) + 's';
+
+      // Highlight active step
+      stepCards.forEach(card => {
+        const stepTime = parseFloat(card.dataset.time);
+        let nextTime = DURATION;
+        if (stepTime === 0.0) nextTime = 1.5;
+        else if (stepTime === 1.5) nextTime = 3.8;
+        else if (stepTime === 3.8) nextTime = 6.5;
+
+        if (currentTime >= stepTime && currentTime < nextTime) {
+          card.classList.add('active');
+        } else {
+          card.classList.remove('active');
+        }
+      });
+    }
+
+    function setTime(newTime) {
+      currentTime = clamp(newTime, 0, DURATION - 0.01);
+      updateUI();
+      render(currentTime);
+    }
+
+    // Play / Pause
+    playPauseBtn.addEventListener('click', () => {
+      sound.init();
+      isPlaying = !isPlaying;
+      playIcon.textContent = isPlaying ? '⏸' : '▶';
+      playText.textContent = isPlaying ? 'Pause' : 'Play';
+    });
+
+    // Restart
+    restartBtn.addEventListener('click', () => {
+      sound.init();
+      setTime(0);
+      isPlaying = true;
+      playIcon.textContent = '⏸';
+      playText.textContent = 'Pause';
+    });
+
+    // Step forward / backward
+    stepBackBtn.addEventListener('click', () => {
+      sound.init();
+      setTime(currentTime - 0.25);
+    });
+    stepFwdBtn.addEventListener('click', () => {
+      sound.init();
+      setTime(currentTime + 0.25);
+    });
+
+    // Speed buttons
+    speedButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        speedButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        speed = parseFloat(btn.dataset.speed);
+      });
+    });
+
+    // Sound toggle
+    soundToggleBtn.addEventListener('click', () => {
+      sound.init();
+      sound.enabled = !sound.enabled;
+      soundToggleBtn.textContent = sound.enabled ? '🔊 Sound: ON' : '🔇 Sound: OFF';
+    });
+
+    // Scrubber click & drag
+    let isDragging = false;
+    function handleScrub(e) {
+      const rect = scrubberContainer.getBoundingClientRect();
+      const pos = clamp((e.clientX - rect.left) / rect.width, 0, 1);
+      setTime(pos * DURATION);
+    }
+
+    scrubberContainer.addEventListener('mousedown', e => {
+      sound.init();
+      isDragging = true;
+      handleScrub(e);
+    });
+    window.addEventListener('mousemove', e => {
+      if (isDragging) handleScrub(e);
+    });
+    window.addEventListener('mouseup', () => {
+      isDragging = false;
+    });
+
+    // Step cards click
+    stepCards.forEach(card => {
+      card.addEventListener('click', () => {
+        sound.init();
+        setTime(parseFloat(card.dataset.time));
+      });
+    });
+
+    // Stage click to play/pause
+    document.getElementById('stageWrapper').addEventListener('click', (e) => {
+      if (e.target === fsBtn) return;
+      sound.init();
+      isPlaying = !isPlaying;
+      playIcon.textContent = isPlaying ? '⏸' : '▶';
+      playText.textContent = isPlaying ? 'Pause' : 'Play';
+    });
+
+    // Fullscreen toggle
+    fsBtn.addEventListener('click', () => {
+      const stage = document.getElementById('stageWrapper');
+      if (!document.fullscreenElement) {
+        stage.requestFullscreen?.().catch(() => {});
+      } else {
+        document.exitFullscreen?.().catch(() => {});
+      }
+    });
+
+    // Keyboard Spacebar shortcut
+    window.addEventListener('keydown', e => {
+      if (e.target.tagName === 'INPUT') return;
+      if (e.code === 'Space') {
+        e.preventDefault();
+        sound.init();
+        isPlaying = !isPlaying;
+        playIcon.textContent = isPlaying ? '⏸' : '▶';
+        playText.textContent = isPlaying ? 'Pause' : 'Play';
+      }
+    });
+
+    // Child name change
+    childNameInput.addEventListener('input', () => {
+      render(currentTime);
+    });
+
+    // Kick off animation loop
+    requestAnimationFrame(tick);
+  </script>
+</body>
+</html>

@@ -8,9 +8,10 @@ import type { DateSelectArg, EventClickArg, EventDropArg, DatesSetArg } from '@f
 import type { EventResizeDoneArg } from '@fullcalendar/interaction'
 import listPlugin from '@fullcalendar/list'
 import { api } from '../lib/api'
-import { useData } from '../lib/hooks'
+import { useClock, useData } from '../lib/hooks'
 import { onRefresh } from '../lib/ws'
 import type { CalendarStatus, CalEvent, Selection, WeatherData } from '../lib/types'
+import { isEventComplete } from '../lib/calendar'
 import Modal from '../components/Modal'
 import { useEffect } from 'react'
 import Icon from '../components/Icon'
@@ -65,6 +66,7 @@ type YearSubMode = 'calendar' | 'rolling-12'
 export default function Calendar() {
   const { data: status } = useData<CalendarStatus>('/api/calendar/status', ['calendar'])
   const { data: weather } = useData<WeatherData>('/api/weather', [], 15 * 60 * 1000)
+  const now = useClock(10000)
   const calRef = useRef<FullCalendar>(null)
   const [draft, setDraft] = useState<Draft | null>(null)
   const [busy, setBusy] = useState(false)
@@ -1066,16 +1068,19 @@ export default function Calendar() {
                 {dayEvents.map((e) => {
                   const isFamily = !e.person_name || ['family', 'shared'].includes(e.person_name.toLowerCase())
                   const bgStyle = isFamily ? FAMILY_GRADIENT : e.color
+                  const isComplete = isEventComplete(e, now)
                   return (
                     <div
                       key={e.id}
-                      className="rounded-xl p-3.5 text-white shadow flex flex-col gap-1 transition-transform active:scale-[0.98] cursor-pointer"
+                      className={`rounded-xl p-3.5 text-white shadow flex flex-col gap-1 transition-all active:scale-[0.98] cursor-pointer ${
+                        isComplete ? 'fc-event-completed' : ''
+                      }`}
                       style={{ background: bgStyle }}
                       onClick={() => onEventClickMobile(e)}
                     >
                       {e.all_day ? (
                         <div className="text-[0.7rem] font-bold uppercase tracking-wider opacity-90 flex items-center gap-1.5 mb-0.5">
-                          <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                          <span className={`h-1.5 w-1.5 rounded-full bg-white ${isComplete ? 'opacity-50' : 'animate-pulse'}`} />
                           <span>All Day</span>
                         </div>
                       ) : (
@@ -1093,7 +1098,7 @@ export default function Calendar() {
                       <div className="mt-1 flex items-center gap-1.5 rounded-md bg-white/20 px-2 py-0.5 self-start text-[0.65rem] font-bold uppercase tracking-wider backdrop-blur-sm">
                         {isFamily ? (
                           <>
-                            <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                            <span className={`h-1.5 w-1.5 rounded-full bg-white ${isComplete ? 'opacity-50' : 'animate-pulse'}`} />
                             <span>Family</span>
                           </>
                         ) : (
@@ -1240,7 +1245,7 @@ export default function Calendar() {
             </div>
           )}
         </div>
-        <TopClockHeader now={new Date()} />
+        <TopClockHeader now={now} />
       </div>
       {error && (
         <div className="mb-3 flex items-center">
@@ -1458,6 +1463,19 @@ export default function Calendar() {
               eventResize={moveEvent}
               select={onSelect}
               eventClick={onEventClick}
+              eventClassNames={(arg) => {
+                const isComplete =
+                  arg.isPast ||
+                  isEventComplete(
+                    {
+                      start: (arg.event as any).startStr || arg.event.start,
+                      end: (arg.event as any).endStr || arg.event.end,
+                      allDay: arg.event.allDay,
+                    },
+                    now,
+                  )
+                return isComplete ? ['fc-event-completed'] : []
+              }}
             />
           </div>
         </div>
