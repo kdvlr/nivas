@@ -38,7 +38,7 @@ export function getStageStyles(stage: TimerStage): StageStyleConfig {
       return {
         strokeColor: '#22c55e',
         textColor: 'text-emerald-500 dark:text-emerald-400',
-        bgGlow: 'rgba(34, 197, 94, 0.25)',
+        bgGlow: 'rgba(34, 197, 94, 0.10)',
         badgeText: 'More than 15 mins',
         isFlashing: false,
       }
@@ -46,7 +46,7 @@ export function getStageStyles(stage: TimerStage): StageStyleConfig {
       return {
         strokeColor: '#84cc16',
         textColor: 'text-lime-500 dark:text-lime-400',
-        bgGlow: 'rgba(132, 204, 22, 0.28)',
+        bgGlow: 'rgba(132, 204, 22, 0.11)',
         badgeText: 'Under 15 mins',
         isFlashing: false,
       }
@@ -54,7 +54,7 @@ export function getStageStyles(stage: TimerStage): StageStyleConfig {
       return {
         strokeColor: '#eab308',
         textColor: 'text-amber-500 dark:text-yellow-400',
-        bgGlow: 'rgba(234, 179, 8, 0.3)',
+        bgGlow: 'rgba(234, 179, 8, 0.12)',
         badgeText: 'Under 10 mins',
         isFlashing: false,
       }
@@ -62,7 +62,7 @@ export function getStageStyles(stage: TimerStage): StageStyleConfig {
       return {
         strokeColor: '#ef4444',
         textColor: 'text-red-500 dark:text-red-400',
-        bgGlow: 'rgba(239, 68, 68, 0.35)',
+        bgGlow: 'rgba(239, 68, 68, 0.14)',
         badgeText: 'Under 5 mins',
         isFlashing: false,
       }
@@ -70,7 +70,7 @@ export function getStageStyles(stage: TimerStage): StageStyleConfig {
       return {
         strokeColor: '#ef4444',
         textColor: 'text-red-500 dark:text-red-400',
-        bgGlow: 'rgba(239, 68, 68, 0.6)',
+        bgGlow: 'rgba(239, 68, 68, 0.22)',
         badgeText: 'Final minute!',
         isFlashing: true,
       }

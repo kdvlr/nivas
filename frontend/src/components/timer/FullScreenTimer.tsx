@@ -30,7 +30,7 @@ export default function FullScreenTimer() {
   // Progress computation (1.0 at start down to 0.0 at completion)
   const progress = timer.totalSeconds > 0 ? Math.max(0, Math.min(1, timer.remainingSeconds / timer.totalSeconds)) : 0
 
-  const radius = 176
+  const radius = 156
   const circumference = 2 * Math.PI * radius
   const strokeDashoffset = circumference * (1 - progress)
 
@@ -46,7 +46,7 @@ export default function FullScreenTimer() {
         }`}
       >
         {/* Top Bar / Header */}
-        <div className="flex items-center justify-between w-full max-w-5xl mx-auto z-10">
+        <div className="flex items-center justify-between w-full max-w-5xl mx-auto z-10 shrink-0">
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.92 }}
@@ -112,46 +112,46 @@ export default function FullScreenTimer() {
         </div>
 
         {/* Center: Animated Circular Gauge & Digits */}
-        <div className="flex flex-col items-center justify-center flex-1 my-2 sm:my-4 z-10 min-h-0 w-full">
-          <div className="relative flex items-center justify-center w-[min(84vw,84vh,680px)] h-[min(84vw,84vh,680px)] max-w-[680px] max-h-[680px]">
-            {/* Ambient Radial Color Glow */}
+        <div className="flex flex-col items-center justify-center flex-1 my-1 sm:my-2 z-10 min-h-0 w-full overflow-hidden">
+          <div className="relative flex items-center justify-center w-[min(52vh,78vw,460px)] h-[min(52vh,78vw,460px)] max-w-[460px] max-h-[460px] aspect-square shrink-0">
+            {/* Ambient Radial Color Glow (reduced) */}
             <div
               className={`absolute inset-0 rounded-full transition-all duration-700 pointer-events-none ${
                 styles.isFlashing ? 'animate-timer-flash' : ''
               }`}
               style={{
-                background: `radial-gradient(circle, ${styles.bgGlow} 0%, transparent 72%)`,
+                background: `radial-gradient(circle, ${styles.bgGlow} 0%, transparent 60%)`,
               }}
             />
 
             {/* SVG Circular Progress Ring */}
             <svg
-              className="w-full h-full transform -rotate-90 pointer-events-none drop-shadow-2xl"
-              viewBox="0 0 400 400"
+              className="w-full h-full transform -rotate-90 pointer-events-none drop-shadow-md"
+              viewBox="0 0 360 360"
             >
               {/* Track */}
               <circle
-                cx="200"
-                cy="200"
+                cx="180"
+                cy="180"
                 r={radius}
                 stroke="rgba(255, 255, 255, 0.08)"
-                strokeWidth="16"
+                strokeWidth="14"
                 fill="none"
               />
               {/* Active Animated Ring */}
               <circle
-                cx="200"
-                cy="200"
+                cx="180"
+                cy="180"
                 r={radius}
                 stroke={styles.strokeColor}
-                strokeWidth="16"
+                strokeWidth="14"
                 strokeDasharray={circumference}
                 strokeDashoffset={strokeDashoffset}
                 strokeLinecap="round"
                 fill="none"
                 className="transition-[stroke-dashoffset,stroke] duration-300 ease-out"
                 style={{
-                  filter: `drop-shadow(0 0 20px ${styles.strokeColor})`,
+                  filter: `drop-shadow(0 0 8px ${styles.strokeColor}80)`,
                 }}
               />
             </svg>
@@ -160,11 +160,11 @@ export default function FullScreenTimer() {
             <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
               {isRinging ? (
                 <div className="flex flex-col items-center animate-timer-alarm">
-                  <Icon name="notifications_active" className="text-7xl sm:text-8xl lg:text-9xl text-red-500 animate-bounce mb-3" />
-                  <span className="text-5xl sm:text-6xl lg:text-7xl font-black text-red-400 tracking-tight leading-none drop-shadow-lg">
+                  <Icon name="notifications_active" className="text-6xl sm:text-7xl text-red-500 animate-bounce mb-2" />
+                  <span className="text-4xl sm:text-5xl lg:text-6xl font-black text-red-400 tracking-tight leading-none drop-shadow-md">
                     TIME'S UP!
                   </span>
-                  <span className="text-base sm:text-lg font-semibold text-white/70 mt-3 uppercase tracking-widest">
+                  <span className="text-xs sm:text-sm font-semibold text-white/70 mt-2 uppercase tracking-widest">
                     Timer Completed
                   </span>
                 </div>
@@ -174,15 +174,15 @@ export default function FullScreenTimer() {
                     className="font-black tabular-nums tracking-tight leading-none select-text"
                     style={{
                       fontSize: timeInfo.hasHours
-                        ? 'clamp(3rem, 10vw, 7.5rem)'
-                        : 'clamp(4.5rem, 16vw, 11.5rem)',
+                        ? 'clamp(2.5rem, 6.5vw, 4.75rem)'
+                        : 'clamp(3.75rem, 11vw, 7.25rem)',
                       color: styles.strokeColor,
-                      filter: `drop-shadow(0 0 28px ${styles.strokeColor})`,
+                      filter: `drop-shadow(0 2px 8px ${styles.strokeColor}60)`,
                     }}
                   >
                     {timeInfo.formatted}
                   </div>
-                  <span className="mt-3 sm:mt-5 text-sm sm:text-base lg:text-lg font-bold uppercase tracking-widest text-white/70">
+                  <span className="mt-2 sm:mt-3 text-xs sm:text-sm font-bold uppercase tracking-widest text-white/70">
                     {styles.badgeText}
                   </span>
                 </div>
@@ -192,14 +192,14 @@ export default function FullScreenTimer() {
         </div>
 
         {/* Bottom Bar: Action Controls */}
-        <div className="flex items-center justify-center gap-6 w-full max-w-md mx-auto z-10 pb-4 sm:pb-6">
+        <div className="flex items-center justify-center gap-6 w-full max-w-md mx-auto z-10 shrink-0 pb-2 sm:pb-4">
           {isRinging ? (
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               transition={PRESS_SPRING}
               onClick={dismissAlarm}
-              className="flex-1 py-4 px-8 rounded-2xl bg-red-600 hover:bg-red-500 text-white font-black text-lg sm:text-xl tracking-wide shadow-2xl flex items-center justify-center gap-3 cursor-pointer animate-pulse"
+              className="flex-1 py-4 px-8 rounded-2xl bg-red-600 hover:bg-red-500 text-white font-black text-lg sm:text-xl tracking-wide shadow-xl flex items-center justify-center gap-3 cursor-pointer animate-pulse"
             >
               <Icon name="alarm_off" className="text-2xl" />
               <span>DISMISS ALARM</span>
@@ -224,11 +224,11 @@ export default function FullScreenTimer() {
                 whileTap={{ scale: 0.92 }}
                 transition={PRESS_SPRING}
                 onClick={isRunning ? pauseTimer : resumeTimer}
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl flex items-center justify-center shadow-2xl cursor-pointer transition-all"
+                className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl flex items-center justify-center shadow-xl cursor-pointer transition-all"
                 style={{
                   backgroundColor: styles.strokeColor,
                   color: '#0f172a',
-                  boxShadow: `0 0 32px ${styles.strokeColor}80`,
+                  boxShadow: `0 4px 16px ${styles.strokeColor}40`,
                 }}
                 title={isRunning ? 'Pause timer' : 'Resume timer'}
               >
