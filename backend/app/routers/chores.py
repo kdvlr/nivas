@@ -67,6 +67,33 @@ def list_chores(
     person: str | None = None,
     db: Session = Depends(get_db),
 ):
+    tz_name = get_settings().tz
+    today = datetime.now(ZoneInfo(tz_name)).date()
+    today_iso = today.isoformat()
+
+    # Automatically advance past-due recurring chores so they roll over to their next occurrence
+    recurring = db.query(Chore).filter(Chore.recurrence != "").all()
+    has_changes = False
+    for c in recurring:
+        orig_due = date.fromisoformat(c.due_date) if c.due_date else None
+        completed_on_past_day = False
+        if c.completed and c.completed_at:
+            dt = c.completed_at
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            completed_on_past_day = dt.astimezone(ZoneInfo(tz_name)).date() < today
+
+        if (orig_due and orig_due < today) or completed_on_past_day:
+            new_due = next_due_date(today, c.recurrence, ref_date=orig_due)
+            c.due_date = new_due.isoformat()
+            c.completed = False
+            c.completed_at = None
+            has_changes = True
+
+    if has_changes:
+        db.commit()
+        manager.broadcast_threadsafe("chores")
+
     q = db.query(Chore)
     if completed is not None:
         q = q.filter(Chore.completed == completed)

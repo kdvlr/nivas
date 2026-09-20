@@ -127,3 +127,65 @@ def test_check_missed_chores_does_not_dock_points(db, monkeypatch):
     assert updated_chore.last_reset_date == today
     assert updated_chore.due_date > today
 
+
+def test_list_chores_auto_advances_past_due_recurring_chores(db, monkeypatch):
+    from datetime import date, timedelta
+    from app.routers.chores import list_chores
+
+    # Mock broadcast
+    monkeypatch.setattr("app.routers.chores.manager.broadcast_threadsafe", lambda *args, **kwargs: None)
+
+    yesterday = (date.today() - timedelta(days=2)).isoformat()
+    chore = Chore(
+        title="Homework",
+        assigned_to="Dhruv",
+        coins=5,
+        recurrence="weekly:0,1,2,3,6",
+        due_date=yesterday,
+        completed=True,
+        completed_at=datetime.now(timezone.utc) - timedelta(days=2),
+    )
+    db.add(chore)
+    db.commit()
+
+    results = list_chores(db=db)
+    assert len(results) == 1
+    item = results[0]
+    # Completed should be reset to False, due date advanced to on or after today
+    assert item["completed"] is False
+    assert item["due_date"] >= date.today().isoformat()
+
+    # DB state verified
+    db.expire_all()
+    c = db.get(Chore, chore.id)
+    assert c.completed is False
+    assert c.completed_at is None
+    assert c.due_date >= date.today().isoformat()
+
+
+def test_list_chores_preserves_today_completed_chore(db, monkeypatch):
+    from datetime import date
+    from app.routers.chores import list_chores
+
+    monkeypatch.setattr("app.routers.chores.manager.broadcast_threadsafe", lambda *args, **kwargs: None)
+
+    today = date.today().isoformat()
+    chore = Chore(
+        title="Make Bed",
+        assigned_to="Swara",
+        coins=2,
+        recurrence="daily",
+        due_date=today,
+        completed=True,
+        completed_at=datetime.now(timezone.utc),
+    )
+    db.add(chore)
+    db.commit()
+
+    results = list_chores(db=db)
+    assert len(results) == 1
+    item = results[0]
+    # Chore completed today should remain completed today
+    assert item["completed"] is True
+    assert item["due_date"] == today
+

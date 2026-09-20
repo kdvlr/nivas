@@ -356,7 +356,11 @@ def check_missed_chores() -> None:
         chores = db.query(Chore).filter(Chore.recurrence != "").all()
 
         for chore in chores:
-            if not _is_due_today(chore, today):
+            orig_due = date.fromisoformat(chore.due_date) if chore.due_date else None
+            is_past = orig_due is not None and orig_due < today
+            due_today = _is_due_today(chore, today) or (chore.due_date == today_iso)
+
+            if not (is_past or due_today):
                 continue
             # Already processed today (reset already happened)
             if chore.last_reset_date == today_iso:
@@ -367,7 +371,6 @@ def check_missed_chores() -> None:
             chore.completed_at = None
             chore.last_reset_date = today_iso
             tomorrow = today + timedelta(days=1)
-            orig_due = date.fromisoformat(chore.due_date) if chore.due_date else None
             chore.due_date = next_due_date(tomorrow, chore.recurrence, ref_date=orig_due).isoformat()
 
         db.commit()
