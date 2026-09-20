@@ -9,6 +9,8 @@ import {
 } from 'react'
 import { getTimerStage, type TimerStage } from '../lib/timer'
 import { startAlarmSound, stopAlarmSound } from '../lib/useAudioChime'
+import { api } from '../lib/api'
+import { onWsMessage } from '../lib/ws'
 
 export interface ActiveTimer {
   id: string
@@ -18,6 +20,7 @@ export interface ActiveTimer {
   status: 'running' | 'paused' | 'ringing'
   endTimestamp: number
   stage: TimerStage
+  source?: 'school_schedule' | 'manual'
 }
 
 interface StoredTimer {
@@ -28,6 +31,7 @@ interface StoredTimer {
   endTimestamp: number
   remainingSeconds: number
   savedAt: number
+  source?: 'school_schedule' | 'manual'
 }
 
 export interface TimerContextValue {
@@ -39,7 +43,7 @@ export interface TimerContextValue {
   closeCreateModal: () => void
   openFullScreen: () => void
   closeFullScreen: () => void
-  startTimer: (totalSeconds: number, label?: string) => void
+  startTimer: (totalSeconds: number, label?: string, source?: 'school_schedule' | 'manual') => void
   pauseTimer: () => void
   resumeTimer: () => void
   resetTimer: () => void
@@ -131,6 +135,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
       endTimestamp: timer.endTimestamp,
       remainingSeconds: timer.remainingSeconds,
       savedAt: Date.now(),
+      source: timer.source,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
   }, [timer])
@@ -182,6 +187,70 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(interval)
   }, [timer?.status, timer?.endTimestamp])
 
+  const applyServerTimer = useCallback((serverTimer: any) => {
+    if (!serverTimer) {
+      setTimer((prev) => {
+        if (prev?.source === 'school_schedule') {
+          stopAlarmSound()
+          setIsFullScreen(false)
+          localStorage.removeItem(STORAGE_KEY)
+          return null
+        }
+        return prev
+      })
+      return
+    }
+
+    const now = Date.now()
+    const endTimestamp = serverTimer.endTimestamp || now + (serverTimer.remainingSeconds || 0) * 1000
+    let remaining = serverTimer.remainingSeconds ?? Math.max(0, Math.ceil((endTimestamp - now) / 1000))
+    let status: 'running' | 'paused' | 'ringing' = serverTimer.status || 'running'
+
+    if (status === 'running') {
+      remaining = Math.max(0, Math.ceil((endTimestamp - now) / 1000))
+      if (remaining <= 0) {
+        status = 'ringing'
+      }
+    }
+
+    const stage = getTimerStage(remaining)
+
+    setTimer({
+      id: serverTimer.id,
+      label: serverTimer.label || 'Timer',
+      totalSeconds: serverTimer.totalSeconds,
+      remainingSeconds: remaining,
+      status,
+      endTimestamp,
+      stage,
+      source: serverTimer.source || 'manual',
+    })
+
+    if (status === 'running' || status === 'ringing') {
+      setIsFullScreen(true)
+    }
+  }, [])
+
+  // Sync with backend timer API and WebSocket broadcasts
+  useEffect(() => {
+    api
+      .get<{ active: boolean; timer?: any }>('/api/timer/state')
+      .then((res) => {
+        if (res?.active && res.timer) {
+          applyServerTimer(res.timer)
+        }
+      })
+      .catch(() => {})
+
+    const unsub = onWsMessage((msg) => {
+      if (msg.type === 'timer_sync') {
+        applyServerTimer(msg.timer)
+      }
+    })
+
+    return () => unsub()
+  }, [applyServerTimer])
+
   const openCreateModal = useCallback(() => {
     setIsCreateModalOpen(true)
   }, [])
@@ -198,25 +267,30 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     setIsFullScreen(false)
   }, [])
 
-  const startTimer = useCallback((totalSeconds: number, label = 'Timer') => {
-    const safeTotal = Math.max(1, Math.floor(totalSeconds))
-    const now = Date.now()
-    const endTimestamp = now + safeTotal * 1000
-    const stage = getTimerStage(safeTotal)
+  const startTimer = useCallback(
+    (totalSeconds: number, label = 'Timer', source: 'school_schedule' | 'manual' = 'manual') => {
+      const safeTotal = Math.max(1, Math.floor(totalSeconds))
+      const now = Date.now()
+      const endTimestamp = now + safeTotal * 1000
+      const stage = getTimerStage(safeTotal)
 
-    stopAlarmSound()
-    setTimer({
-      id: `timer_${now}`,
-      label,
-      totalSeconds: safeTotal,
-      remainingSeconds: safeTotal,
-      status: 'running',
-      endTimestamp,
-      stage,
-    })
-    setIsCreateModalOpen(false)
-    setIsFullScreen(true)
-  }, [])
+      stopAlarmSound()
+      setTimer({
+        id: `timer_${now}`,
+        label,
+        totalSeconds: safeTotal,
+        remainingSeconds: safeTotal,
+        status: 'running',
+        endTimestamp,
+        stage,
+        source,
+      })
+      setIsCreateModalOpen(false)
+      setIsFullScreen(true)
+      api.post('/api/timer/start', { total_seconds: safeTotal, label, source }).catch(() => {})
+    },
+    []
+  )
 
   const pauseTimer = useCallback(() => {
     const current = timerRef.current
@@ -229,6 +303,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
       status: 'paused',
       stage: getTimerStage(remaining),
     })
+    api.post('/api/timer/pause').catch(() => {})
   }, [])
 
   const resumeTimer = useCallback(() => {
@@ -243,6 +318,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
       endTimestamp,
       stage: getTimerStage(current.remainingSeconds),
     })
+    api.post('/api/timer/resume').catch(() => {})
   }, [])
 
   const resetTimer = useCallback(() => {
@@ -259,6 +335,13 @@ export function TimerProvider({ children }: { children: ReactNode }) {
       endTimestamp,
       stage: getTimerStage(current.totalSeconds),
     })
+    api
+      .post('/api/timer/start', {
+        total_seconds: current.totalSeconds,
+        label: current.label,
+        source: current.source || 'manual',
+      })
+      .catch(() => {})
   }, [])
 
   const addSeconds = useCallback((extraSeconds: number) => {
@@ -285,6 +368,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     setTimer(null)
     setIsFullScreen(false)
     localStorage.removeItem(STORAGE_KEY)
+    api.post('/api/timer/cancel').catch(() => {})
   }, [])
 
   const dismissAlarm = useCallback(() => {
@@ -292,6 +376,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     setTimer(null)
     setIsFullScreen(false)
     localStorage.removeItem(STORAGE_KEY)
+    api.post('/api/timer/dismiss').catch(() => {})
   }, [])
 
   // Listen to window event 'open-create-timer'

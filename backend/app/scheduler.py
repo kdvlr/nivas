@@ -30,10 +30,46 @@ def _scan_photos() -> None:
 
     sync_photos_dir_background(SessionLocal)
 
+
+def check_and_trigger_school_timer() -> None:
+    """Every school day at 7:00 AM, automatically start a 30-minute timer."""
+    from zoneinfo import ZoneInfo
+    from .config import get_settings
+    from .db import SessionLocal
+    from .services.school_calendar import is_school_day
+    from .services.timer_service import timer_service
+
+    try:
+        tz = ZoneInfo(get_settings().tz)
+    except Exception:
+        tz = ZoneInfo("America/Chicago")
+    today = datetime.now(tz).date()
+
+    with SessionLocal() as db:
+        school_day, reason = is_school_day(db, today)
+        if school_day:
+            log.info("Triggering 30-minute school morning timer for %s (reason: %s)", today, reason)
+            timer_service.start_timer(
+                total_seconds=1800,  # 30 mins
+                label="School Morning Timer",
+                source="school_schedule",
+            )
+        else:
+            log.info("7:00 AM school timer skipped for %s: %s", today, reason)
+
+
 scheduler = AsyncIOScheduler()
 
 
 def start() -> None:
+    from zoneinfo import ZoneInfo
+    from .config import get_settings
+
+    try:
+        app_tz = ZoneInfo(get_settings().tz)
+    except Exception:
+        app_tz = ZoneInfo("America/Chicago")
+
     scheduler.add_job(sync.job_calendar, "interval", minutes=2, id="calendar", coalesce=True)
     scheduler.add_job(sync.job_icloud, "interval", minutes=5, id="icloud", coalesce=True)
     scheduler.add_job(sync.job_alexa, "interval", minutes=5, id="alexa", coalesce=True)
@@ -47,6 +83,15 @@ def start() -> None:
     # skips anything already cached, so a repeat pass is cheap.
     scheduler.add_job(_kick_derivatives, "interval", hours=1, id="derivatives", coalesce=True)
     scheduler.add_job(_scan_photos, "interval", minutes=30, id="photo_index", coalesce=True)
+    scheduler.add_job(
+        check_and_trigger_school_timer,
+        "cron",
+        hour=7,
+        minute=0,
+        timezone=app_tz,
+        id="school_timer",
+        coalesce=True,
+    )
     scheduler.start()
     # kick off an initial pull shortly after boot (staggered)
     for i, job_id in enumerate(("calendar", "icloud", "alexa")):
