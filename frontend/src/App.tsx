@@ -334,20 +334,6 @@ function AppContent() {
   const [pullY, setPullY] = useState(0)
   const [isPulling, setIsPulling] = useState(false)
 
-function isWithinQuietHours(now: Date, startStr = '22:00', endStr = '06:00'): boolean {
-  const [startH, startM] = (startStr || '22:00').split(':').map(Number)
-  const [endH, endM] = (endStr || '06:00').split(':').map(Number)
-  const currentMinutes = now.getHours() * 60 + now.getMinutes()
-  const startMinutes = (isNaN(startH) ? 22 : startH) * 60 + (isNaN(startM) ? 0 : startM)
-  const endMinutes = (isNaN(endH) ? 6 : endH) * 60 + (isNaN(endM) ? 0 : endM)
-
-  if (startMinutes <= endMinutes) {
-    return currentMinutes >= startMinutes && currentMinutes < endMinutes
-  } else {
-    return currentMinutes >= startMinutes || currentMinutes < endMinutes
-  }
-}
-
   const { data: config, reload: reloadConfig } = useData<{
     family_name: string
     secondary_tz: string
@@ -532,43 +518,13 @@ function isWithinQuietHours(now: Date, startStr = '22:00', endStr = '06:00'): bo
   }, [])
 
   const lastMotionTimeRef = useRef<number>(Date.now())
-  const wasQuietHoursRef = useRef<boolean>(false)
-  const [isScreenOff, setIsScreenOff] = useState<boolean>(false)
 
-  // Screensaver + kiosk return to home + Fully Kiosk screen-off & motion wake logic
+  // Screensaver + kiosk return to home logic (display power on/off is managed externally by Home Assistant)
   useEffect(() => {
     const SLIDESHOW_TRIGGER_MS = 3 * 60 * 1000 // 3 minutes of inactivity to start slideshow
     const TWO_HOURS_MS = 2 * 60 * 60 * 1000 // 2 hours threshold for wake destination
 
-    const getNoMotionTimeoutMs = () => {
-      const mins = configRef.current?.kiosk_daytime_screen_off_mins ?? 15
-      return Math.max(1, mins) * 60 * 1000
-    }
-
     let slideshowTimer = setTimeout(startSlideshow, SLIDESHOW_TRIGGER_MS)
-    let screenOffTimer = setTimeout(turnScreenOff, getNoMotionTimeoutMs())
-
-    function turnScreenOff() {
-      setIsScreenOff(true)
-      if (typeof (window as any).fully !== 'undefined' && (window as any).fully.turnScreenOff) {
-        try {
-          ;(window as any).fully.turnScreenOff()
-        } catch (e) {
-          console.warn('[Fully Kiosk] turnScreenOff error:', e)
-        }
-      }
-    }
-
-    function turnScreenOn() {
-      setIsScreenOff(false)
-      if (typeof (window as any).fully !== 'undefined' && (window as any).fully.turnScreenOn) {
-        try {
-          ;(window as any).fully.turnScreenOn()
-        } catch (e) {
-          console.warn('[Fully Kiosk] turnScreenOn error:', e)
-        }
-      }
-    }
 
     function startSlideshow() {
       if (isTimerActiveRef.current) return
@@ -578,49 +534,28 @@ function isWithinQuietHours(now: Date, startStr = '22:00', endStr = '06:00'): bo
 
     function reset() {
       lastMotionTimeRef.current = Date.now()
-      turnScreenOn()
-      clearTimeout(screenOffTimer)
-      screenOffTimer = setTimeout(turnScreenOff, getNoMotionTimeoutMs())
-
       clearTimeout(slideshowTimer)
       slideshowTimer = setTimeout(startSlideshow, SLIDESHOW_TRIGGER_MS)
     }
 
     function handleKioskMotion() {
-      const cfg = configRef.current
-      const inQuiet =
-        cfg?.kiosk_sleep_enabled !== false &&
-        isWithinQuietHours(new Date(), cfg?.kiosk_sleep_start ?? '22:00', cfg?.kiosk_sleep_end ?? '06:00')
-
-      // Quiet hours motion suppression: ignore ambient camera motion / shadows at night
-      if (inQuiet && (cfg?.kiosk_suppress_night_motion ?? true)) {
-        return
-      }
-
       const nowMs = Date.now()
       const elapsedMs = nowMs - lastMotionTimeRef.current
-
-      // Turn screen back on via Fully Kiosk if off
-      turnScreenOn()
-
-      // Reset the daytime screen off timer whenever motion is detected
-      clearTimeout(screenOffTimer)
-      screenOffTimer = setTimeout(turnScreenOff, getNoMotionTimeoutMs())
+      lastMotionTimeRef.current = nowMs
 
       // If the user is actively interacting with the app (slideshow is NOT active),
-      // DO NOT let camera motion interrupt their search, typing, or view with the slideshow!
+      // DO NOT let motion interrupt their search, typing, or view with the slideshow!
       if (!slideshowActiveRef.current) {
         return
       }
 
       // Waking up from an active screensaver:
       // If a timer is active, dismiss slideshow immediately
-      lastMotionTimeRef.current = nowMs
       if (isTimerActiveRef.current) {
         setSlideshowActive(false)
         return
       }
-      // Over 2 hours of inactivity -> Home Page
+      // Over 2 hours of inactivity (e.g. overnight sleep managed by Home Assistant) -> Home Page
       // Under 2 hours of inactivity -> Keep Photos Slideshow active
       if (elapsedMs > TWO_HOURS_MS) {
         setSlideshowActive(false)
@@ -629,30 +564,6 @@ function isWithinQuietHours(now: Date, startStr = '22:00', endStr = '06:00'): bo
         setSlideshowActive(true)
       }
     }
-
-    // Schedule check ticker for automatic quiet hours transitions (runs every 15 seconds)
-    const checkSchedule = () => {
-      const cfg = configRef.current
-      if (cfg?.kiosk_sleep_enabled === false) return
-      const inQuiet = isWithinQuietHours(
-        new Date(),
-        cfg?.kiosk_sleep_start ?? '22:00',
-        cfg?.kiosk_sleep_end ?? '06:00',
-      )
-
-      if (inQuiet && !wasQuietHoursRef.current) {
-        wasQuietHoursRef.current = true
-        turnScreenOff()
-      } else if (!inQuiet && wasQuietHoursRef.current) {
-        wasQuietHoursRef.current = false
-        turnScreenOn()
-        setSlideshowActive(false)
-        if (currentRoute() !== 'home') location.hash = '#/home'
-      }
-    }
-
-    const scheduleInterval = setInterval(checkSchedule, 15000)
-    checkSchedule()
 
     for (const ev of ['pointerdown', 'touchstart', 'keydown']) {
       window.addEventListener(ev, reset, { passive: true })
@@ -674,9 +585,7 @@ function isWithinQuietHours(now: Date, startStr = '22:00', endStr = '06:00'): bo
     }
 
     return () => {
-      clearInterval(scheduleInterval)
       clearTimeout(slideshowTimer)
-      clearTimeout(screenOffTimer)
       for (const ev of ['pointerdown', 'touchstart', 'keydown']) {
         window.removeEventListener(ev, reset)
       }
@@ -1026,7 +935,7 @@ function isWithinQuietHours(now: Date, startStr = '22:00', endStr = '06:00'): bo
             </div>
           </div>
         </motion.div>
-        {slideshowActive && photosList.length > 0 && !isScreenOff && !isTimerActive && (
+        {slideshowActive && photosList.length > 0 && !isTimerActive && (
           <Slideshow
             photos={photosList}
             onDismiss={() => setSlideshowActive(false)}
