@@ -171,3 +171,34 @@ def test_school_year_bounds(db_session):
     is_school, reason = is_school_day(db_session, summer)
     assert not is_school
     assert "After last day of school" in reason
+
+
+def test_check_and_trigger_school_timer(monkeypatch, db_session):
+    from unittest.mock import MagicMock
+    from app.scheduler import check_and_trigger_school_timer
+    from app.services.timer_service import timer_service
+
+    # Mock SessionLocal to return our test db_session
+    monkeypatch.setattr("app.db.SessionLocal", lambda: db_session)
+    # Ensure db_session.__enter__ returns itself
+    db_session.close = MagicMock()
+
+    # Case 1: School day -> should start 45m (2700s) timer
+    monkeypatch.setattr("app.services.school_calendar.is_school_day", lambda db, d: (True, "School day"))
+    start_mock = MagicMock()
+    monkeypatch.setattr(timer_service, "start_timer", start_mock)
+
+    check_and_trigger_school_timer()
+    start_mock.assert_called_once_with(
+        total_seconds=2700,
+        label="School Morning Timer",
+        source="school_schedule",
+    )
+
+    # Case 2: Weekend / Holiday -> should NOT start timer
+    monkeypatch.setattr("app.services.school_calendar.is_school_day", lambda db, d: (False, "Weekend (Saturday)"))
+    start_mock.reset_mock()
+
+    check_and_trigger_school_timer()
+    start_mock.assert_not_called()
+

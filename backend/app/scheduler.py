@@ -32,7 +32,7 @@ def _scan_photos() -> None:
 
 
 def check_and_trigger_school_timer() -> None:
-    """Every school day at 7:00 AM, automatically start a 30-minute timer."""
+    """Every school day at 6:30 AM, automatically start a 45-minute timer (ends at 7:15 AM)."""
     from zoneinfo import ZoneInfo
     from .config import get_settings
     from .db import SessionLocal
@@ -48,14 +48,14 @@ def check_and_trigger_school_timer() -> None:
     with SessionLocal() as db:
         school_day, reason = is_school_day(db, today)
         if school_day:
-            log.info("Triggering 30-minute school morning timer for %s (reason: %s)", today, reason)
+            log.info("Triggering 45-minute school morning timer for %s (reason: %s)", today, reason)
             timer_service.start_timer(
-                total_seconds=1800,  # 30 mins
+                total_seconds=2700,  # 45 mins (6:30 AM -> 7:15 AM)
                 label="School Morning Timer",
                 source="school_schedule",
             )
         else:
-            log.info("7:00 AM school timer skipped for %s: %s", today, reason)
+            log.info("6:30 AM school timer skipped for %s: %s", today, reason)
 
 
 scheduler = AsyncIOScheduler()
@@ -86,8 +86,8 @@ def start() -> None:
     scheduler.add_job(
         check_and_trigger_school_timer,
         "cron",
-        hour=7,
-        minute=0,
+        hour=6,
+        minute=30,
         timezone=app_tz,
         id="school_timer",
         coalesce=True,
