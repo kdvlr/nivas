@@ -184,9 +184,6 @@ export default function FullScreenTimer() {
                   >
                     {timeInfo.formatted}
                   </div>
-                  <span className="mt-2 sm:mt-3 text-xs sm:text-sm font-bold uppercase tracking-widest text-white/70">
-                    {styles.badgeText}
-                  </span>
                 </div>
               )}
             </div>
