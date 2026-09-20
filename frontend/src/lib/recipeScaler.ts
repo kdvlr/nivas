@@ -77,8 +77,8 @@ export function parseNumberToken(str: string): number | null {
 }
 
 /**
- * Formats a scaled numeric quantity into natural cooking fractions or decimals.
- * e.g. 1.5 -> "1 1/2", 0.25 -> "1/4", 2.0 -> "2", 300 -> "300"
+ * Formats a scaled numeric quantity into natural cooking fractions (using Unicode fractions) or decimals.
+ * e.g. 1.5 -> "1 ½", 0.5 -> "½", 0.25 -> "¼", 2.0 -> "2", 300 -> "300"
  */
 export function formatQuantity(val: number): string {
   if (val <= 0) return '0'
@@ -90,16 +90,16 @@ export function formatQuantity(val: number): string {
   const frac = val - whole
 
   const STANDARD_FRACTIONS = [
-    { val: 1 / 8, text: '1/8' },
-    { val: 1 / 6, text: '1/6' },
-    { val: 1 / 4, text: '1/4' },
-    { val: 1 / 3, text: '1/3' },
-    { val: 3 / 8, text: '3/8' },
-    { val: 1 / 2, text: '1/2' },
-    { val: 5 / 8, text: '5/8' },
-    { val: 2 / 3, text: '2/3' },
-    { val: 3 / 4, text: '3/4' },
-    { val: 7 / 8, text: '7/8' },
+    { val: 1 / 8, text: '⅛' },
+    { val: 1 / 6, text: '⅙' },
+    { val: 1 / 4, text: '¼' },
+    { val: 1 / 3, text: '⅓' },
+    { val: 3 / 8, text: '⅜' },
+    { val: 1 / 2, text: '½' },
+    { val: 5 / 8, text: '⅝' },
+    { val: 2 / 3, text: '⅔' },
+    { val: 3 / 4, text: '¾' },
+    { val: 7 / 8, text: '⅞' },
     { val: 1.0, text: '1' },
   ]
 
@@ -122,6 +122,129 @@ export function formatQuantity(val: number): string {
 
   if (val >= 10) return String(Math.round(val))
   return val.toFixed(1).replace(/\.0$/, '')
+}
+
+/**
+ * Common regex token matching numeric quantities, fractions, mixed numbers, or decimals.
+ */
+const NUM_TOKEN =
+  '(?:\\d+\\s+\\d+\\/\\d+|\\d+\\/\\d+|\\d+\\s*[½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]|[½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]|\\d+(?:\\.\\d+)?)'
+
+/**
+ * Checks if a parenthetical string contains preparation instructions or dimensional measurements
+ * that must NEVER be scaled.
+ */
+function shouldSkipParenthetical(inner: string): boolean {
+  // Dimensions like "¾ x ¾ inch", "1 x 1 inch", "2x2 cm"
+  if (/\d+\s*(?:x|×|by)\s*\d+/i.test(inner)) {
+    return true
+  }
+  // Preceded by preparation / cutting verbs (e.g. "cubed to", "chopped to", "cut into")
+  if (/\b(?:cubed|chopped|cut|sliced|diced|grated|minced|shredded)\s+(?:in|into|to|about)\b/i.test(inner)) {
+    return true
+  }
+  // Thickness / dimension geometry qualifiers
+  if (/\b(?:thick|thickness|wide|width|diameter)\b/i.test(inner)) {
+    return true
+  }
+  // Cooking temperatures or durations
+  if (/(?:\d+°\s*[FC]|\d+\s*(?:minutes?|mins?|hours?|hrs?|sec|seconds?))\b/i.test(inner)) {
+    return true
+  }
+  // Substitution clauses (e.g. "or 1/4 cup tomato puree...") but allow item count choices like "2 large or 3 medium"
+  if (/\b(?:or|substitute|mixed with)\b/i.test(inner) && !/\d+\s*(?:large|medium|small)\s+or\s+\d+/i.test(inner)) {
+    return true
+  }
+  return false
+}
+
+/**
+ * Scales secondary quantities inside a parenthetical clause if eligible.
+ * Examples:
+ * - "(2 medium)" -> "(4 medium)"
+ * - "(180 grams)" -> "(360 grams)"
+ * - "(3 to 4)" -> "(6 to 8)"
+ * - "(½ inch)" -> "(1 inch)"
+ * - "(2 large or 3 medium)" -> "(4 large or 6 medium)"
+ */
+function scaleParenthetical(inner: string, factor: number): string {
+  let trimmed = inner.trim()
+  // Clean nested redundant parens e.g. "((foo))" -> "foo"
+  while (trimmed.startsWith('(') && trimmed.endsWith(')')) {
+    trimmed = trimmed.slice(1, -1).trim()
+  }
+
+  if (shouldSkipParenthetical(trimmed)) {
+    return trimmed
+  }
+
+  // Pattern 1: Pure number range inside paren, e.g. "3 to 4", "6 to 8", "1-2"
+  const rangeRegex = new RegExp(`^(\\s*)(${NUM_TOKEN})(\\s*(?:-|to|–|—)\\s*)(${NUM_TOKEN})(\\s*.*)$`, 'i')
+  const rangeMatch = trimmed.match(rangeRegex)
+  if (rangeMatch) {
+    const n1 = parseNumberToken(rangeMatch[2])
+    const n2 = parseNumberToken(rangeMatch[4])
+    if (n1 !== null && n2 !== null) {
+      const sep = rangeMatch[3]
+      const sepStr = sep.includes('-') ? '-' : ` ${sep.trim()} `
+      const rest = rangeMatch[5]
+      return `${rangeMatch[1]}${formatQuantity(n1 * factor)}${sepStr}${formatQuantity(n2 * factor)}${rest}`
+    }
+  }
+
+  // Pattern 2: Choice between counts, e.g. "2 large or 3 medium"
+  const choiceRegex = new RegExp(`^(\\s*)(${NUM_TOKEN})(\\s*(?:large|medium|small)\\b\\s+or\\s+)(${NUM_TOKEN})(\\s*(?:large|medium|small)\\b.*)$`, 'i')
+  const choiceMatch = trimmed.match(choiceRegex)
+  if (choiceMatch) {
+    const n1 = parseNumberToken(choiceMatch[2])
+    const n2 = parseNumberToken(choiceMatch[4])
+    if (n1 !== null && n2 !== null) {
+      return `${choiceMatch[1]}${formatQuantity(n1 * factor)}${choiceMatch[3]}${formatQuantity(n2 * factor)}${choiceMatch[5]}`
+    }
+  }
+
+  // Pattern 3: Single number with unit or descriptor, e.g. "2 medium", "180 grams", "6 oz", "½ inch", "palak - 3½ cups"
+  const singleRegex = new RegExp(`(\\b|^)(${NUM_TOKEN})(\\s*(?:medium|large|small|grams?|g|oz|ounces?|cups?|tbsp|tablespoons?|tsp|teaspoons?|ml|lbs?|pounds?|inch|inches|cm)\\b)`, 'i')
+  const singleMatch = trimmed.match(singleRegex)
+  if (singleMatch && singleMatch.index !== undefined) {
+    const val = parseNumberToken(singleMatch[2])
+    if (val !== null) {
+      const scaled = formatQuantity(val * factor)
+      const start = singleMatch.index + singleMatch[1].length
+      const end = start + singleMatch[2].length
+      return trimmed.slice(0, start) + scaled + trimmed.slice(end)
+    }
+  }
+
+  return trimmed
+}
+
+/**
+ * Walks a string and transforms all top-level parenthetical expressions while respecting nesting.
+ */
+function processParentheticals(text: string, factor: number): string {
+  const result: string[] = []
+  let i = 0
+  while (i < text.length) {
+    if (text[i] === '(') {
+      let depth = 1
+      let j = i + 1
+      while (j < text.length && depth > 0) {
+        if (text[j] === '(') depth++
+        else if (text[j] === ')') depth--
+        j++
+      }
+      if (depth === 0) {
+        const inner = text.slice(i + 1, j - 1)
+        result.push('(' + scaleParenthetical(inner, factor) + ')')
+        i = j
+        continue
+      }
+    }
+    result.push(text[i])
+    i++
+  }
+  return result.join('')
 }
 
 /**
@@ -152,40 +275,43 @@ function adjustUnitPlural(rest: string, quantity: number): string {
 
 /**
  * Scales an ingredient string based on a multiplier factor.
- * Automatically identifies leading numbers, fractions, mixed numbers, and ranges.
+ * Automatically identifies:
+ * 1. Primary leading quantity / range at the start of the ingredient.
+ * 2. Secondary parenthetical quantities/weights/counts (e.g. (2 medium), (180 grams), (3 to 4)).
+ * 3. Preserves cutting dimensions (e.g. cubed to ¾ x ¾ inch), temperatures, and notes.
  */
 export function scaleIngredient(ingredient: string, factor: number): string {
   if (!ingredient || factor === 1 || factor <= 0) return ingredient
 
-  // Match token representing single quantity or mixed number
-  const numToken =
-    '(?:\\d+\\s+\\d+\\/\\d+|\\d+\\/\\d+|\\d+\\s*[½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]|[½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]|\\d+(?:\\.\\d+)?)'
-  const rangeRegex = new RegExp(
-    '^(' + numToken + ')(?:\\s*(-|to|–|—)\\s*(' + numToken + '))?(.*)$',
-    'i'
-  )
+  const trimmed = ingredient.trim()
+  const rangeRegex = new RegExp(`^(${NUM_TOKEN})(?:(\\s*(?:-|to|–|—)\\s*)(${NUM_TOKEN}))?(.*)$`, 'i')
+  const match = trimmed.match(rangeRegex)
 
-  const match = ingredient.match(rangeRegex)
-  if (!match) return ingredient
+  if (!match) {
+    return processParentheticals(trimmed, factor)
+  }
 
   const num1 = parseNumberToken(match[1])
-  if (num1 === null) return ingredient
+  if (num1 === null) {
+    return processParentheticals(trimmed, factor)
+  }
 
-  const separator = match[2]
+  const sep = match[2]
   const num2 = match[3] ? parseNumberToken(match[3]) : null
   let rest = match[4]
 
   const scaled1 = num1 * factor
   let formattedResult = formatQuantity(scaled1)
 
-  if (separator && num2 !== null) {
+  if (sep && num2 !== null) {
     const scaled2 = num2 * factor
-    const sepStr = separator === '-' ? '-' : ` ${separator} `
+    const sepStr = sep.includes('-') ? '-' : ` ${sep.trim()} `
     formattedResult += sepStr + formatQuantity(scaled2)
     rest = adjustUnitPlural(rest, scaled2)
   } else {
     rest = adjustUnitPlural(rest, scaled1)
   }
 
+  rest = processParentheticals(rest, factor)
   return formattedResult + rest
 }
