@@ -89,7 +89,7 @@ async def create_chore(body: ChoreCreate, db: Session = Depends(get_db)):
     row = Chore(
         title=body.title.strip(),
         assigned_to=body.assigned_to,
-        coins=body.coins,
+        coins=max(1, body.coins),
         due_date=due_date,
         notes=body.notes,
         recurrence=body.recurrence,
@@ -110,7 +110,7 @@ async def patch_chore(chore_id: int, body: ChorePatch, db: Session = Depends(get
     if body.assigned_to is not None:
         row.assigned_to = body.assigned_to
     if body.coins is not None:
-        row.coins = body.coins
+        row.coins = max(1, body.coins)
     if body.due_date is not None:
         row.due_date = body.due_date
     if body.notes is not None:

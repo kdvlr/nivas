@@ -107,7 +107,8 @@ export function PointsAdminCard() {
                 <div className="min-w-0">
                   <p className="truncate font-medium text-ink">{b.person_name}</p>
                   <p className="text-xs text-ink-faint">
-                    earned {b.earned} · spent {Math.abs(b.spent)} · missed {Math.abs(b.lost)}
+                    earned {b.earned} · spent {Math.abs(b.spent)}
+                    {b.lost !== 0 && ` · missed ${Math.abs(b.lost)}`}
                     {b.adjusted !== 0 && ` · adjusted ${b.adjusted > 0 ? '+' : ''}${b.adjusted}`}
                   </p>
                 </div>

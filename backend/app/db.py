@@ -97,6 +97,8 @@ def init_db() -> None:
             conn.execute(text("ALTER TABLE recipes ADD COLUMN nutrition JSON DEFAULT NULL"))
         except Exception:
             pass
+        # Remove historical chore penalty transactions so points are not docked
+        conn.execute(text("DELETE FROM coin_transactions WHERE reason = 'chore_missed'"))
 
 
 def get_db() -> Generator[Session, None, None]:

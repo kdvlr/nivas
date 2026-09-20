@@ -343,9 +343,9 @@ def _is_due_today(chore: Chore, today: date) -> bool:
 
 def check_missed_chores() -> None:
     """
-    Check for recurring chores not completed by end of day.
-    Penalise assigned person by deducting their chore's coin value.
-    Then reset the chore for its next occurrence.
+    Check for recurring chores at end of day.
+    Reset recurring chores for their next occurrence and advance due date.
+    No points are docked if a chore is not completed.
     Called by the scheduler daily at 23:59.
     """
     db = SessionLocal()
@@ -354,7 +354,6 @@ def check_missed_chores() -> None:
         today_iso = today.isoformat()
 
         chores = db.query(Chore).filter(Chore.recurrence != "").all()
-        penalised = False
 
         for chore in chores:
             if not _is_due_today(chore, today):
@@ -362,30 +361,6 @@ def check_missed_chores() -> None:
             # Already processed today (reset already happened)
             if chore.last_reset_date == today_iso:
                 continue
-            # Not completed → penalty
-            if not chore.completed and chore.assigned_to:
-                already_recorded = (
-                    db.query(CoinTransaction.id)
-                    .filter(
-                        CoinTransaction.reason == "chore_missed",
-                        CoinTransaction.reference_id == chore.id,
-                        CoinTransaction.occurrence_date == today_iso,
-                    )
-                    .first()
-                )
-                if already_recorded is None:
-                    db.add(
-                        CoinTransaction(
-                            person_name=chore.assigned_to,
-                            amount=-chore.coins,
-                            reason="chore_missed",
-                            reference_id=chore.id,
-                            occurrence_date=today_iso,
-                            created_at=utcnow(),
-                        )
-                    )
-                    penalised = True
-                    log.info("Missed chore penalty: %s owes %d coin(s) for '%s'", chore.assigned_to, chore.coins, chore.title)
 
             # Reset recurring chore for next occurrence and advance due date
             chore.completed = False
@@ -397,8 +372,6 @@ def check_missed_chores() -> None:
 
         db.commit()
         manager.broadcast_threadsafe("chores")
-        if penalised:
-            manager.broadcast_threadsafe("rewards")
     except Exception:
         log.exception("Error checking missed chores")
         db.rollback()

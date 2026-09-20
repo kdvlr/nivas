@@ -83,10 +83,10 @@ export default function Rewards() {
             <span className="text-3xl font-semibold tracking-tight text-ink text-amber-500"><CoinIcon /> {b.balance}</span>
             <span className="mt-1 text-sm text-ink-soft">
               earned {b.earned}
-              {b.lost > 0 && (
-                <span className="text-rose-400"> · lost {b.lost}</span>
+              {b.lost !== 0 && (
+                <span className="text-rose-400"> · lost {Math.abs(b.lost)}</span>
               )}
-              {' '}· spent {b.spent}
+              {' '}· spent {Math.abs(b.spent)}
             </span>
           </motion.div>
         ))}

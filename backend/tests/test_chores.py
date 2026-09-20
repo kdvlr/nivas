@@ -90,3 +90,40 @@ def test_recurring_chore_transactions_keep_prior_occurrences(db):
     remaining = db.query(CoinTransaction).all()
     assert len(remaining) == 1
     assert remaining[0].occurrence_date == "2026-09-05"
+
+
+def test_check_missed_chores_does_not_dock_points(db, monkeypatch):
+    from datetime import date
+    from app.routers.rewards import check_missed_chores
+
+    today = date.today().isoformat()
+    chore = Chore(
+        title="Brush Teeth",
+        assigned_to="Swara",
+        coins=5,
+        recurrence="daily",
+        due_date=today,
+        completed=False,
+    )
+    db.add(chore)
+    db.commit()
+
+    # Patch SessionLocal so check_missed_chores creates a session on the test db
+    test_session_maker = sessionmaker(bind=db.bind, expire_on_commit=False)
+    monkeypatch.setattr("app.routers.rewards.SessionLocal", test_session_maker)
+    # Patch manager to no-op
+    monkeypatch.setattr("app.routers.rewards.manager.broadcast_threadsafe", lambda *args, **kwargs: None)
+
+    check_missed_chores()
+
+    # Verify NO penalty transactions were created
+    txns = db.query(CoinTransaction).all()
+    assert len(txns) == 0
+
+    # Verify the chore was reset and its due date advanced
+    db.expire_all()
+    updated_chore = db.get(Chore, chore.id)
+    assert updated_chore.completed is False
+    assert updated_chore.last_reset_date == today
+    assert updated_chore.due_date > today
+
