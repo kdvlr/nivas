@@ -154,6 +154,9 @@ function AppContent() {
   const isTimerActiveRef = useRef(isTimerActive)
   isTimerActiveRef.current = isTimerActive
 
+  const slideshowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const prevTimerActiveRef = useRef(isTimerActive)
+
   const [route, setRoute] = useState(currentRoute)
   const [appearance, setAppearanceState] = useState<Appearance>(getAppearance)
   const [style, setStyleState] = useState<ThemeStyle>(getStyle)
@@ -161,6 +164,22 @@ function AppContent() {
   const [slideshowActive, setSlideshowActive] = useState(false)
   const slideshowActiveRef = useRef(false)
   slideshowActiveRef.current = slideshowActive
+
+  // Arm/re-arm the 3-minute inactivity screensaver timer.
+  // Strictly suppressed whenever a timer is active (countdown or ringing).
+  const armSlideshowTimer = useCallback(() => {
+    if (slideshowTimerRef.current) {
+      clearTimeout(slideshowTimerRef.current)
+      slideshowTimerRef.current = null
+    }
+    if (isTimerActiveRef.current) return
+
+    slideshowTimerRef.current = setTimeout(() => {
+      if (isTimerActiveRef.current) return
+      setSlideshowActive(true)
+      if (currentRoute() !== 'home') location.hash = '#/home'
+    }, 3 * 60 * 1000)
+  }, [])
   const alertedSetRef = useRef(new Set<string>())
   const dashboardRef = useRef<HTMLDivElement>(null)
   const resumeVideosRef = useRef<HTMLVideoElement[]>([])
@@ -390,12 +409,28 @@ function AppContent() {
     }
   }, [])
 
-  // When a timer becomes active, immediately dismiss any active slideshow
+  // Timer lifecycle transitions:
+  // 1. When a timer starts or is running, ensure slideshow is completely dismissed and cancelled.
+  // 2. When a timer finishes and is dismissed (or auto-dismisses after 15m), ensure route is #/home,
+  //    and re-arm the 3-minute inactivity timer so the existing logic takes over from that moment.
   useEffect(() => {
-    if (isTimerActive && slideshowActive) {
-      setSlideshowActive(false)
+    if (isTimerActive) {
+      if (slideshowActive) {
+        setSlideshowActive(false)
+      }
+      if (slideshowTimerRef.current) {
+        clearTimeout(slideshowTimerRef.current)
+        slideshowTimerRef.current = null
+      }
+    } else if (prevTimerActiveRef.current && !isTimerActive) {
+      if (currentRoute() !== 'home') {
+        location.hash = '#/home'
+      }
+      lastMotionTimeRef.current = Date.now()
+      armSlideshowTimer()
     }
-  }, [isTimerActive, slideshowActive])
+    prevTimerActiveRef.current = isTimerActive
+  }, [isTimerActive, slideshowActive, armSlideshowTimer])
 
   // "#/photos?sky=night&skyfx=stormy" jumps straight into the slideshow so the
   // sky preview is one URL away. Keyed on the route, so dismissing it stays
@@ -521,21 +556,13 @@ function AppContent() {
 
   // Screensaver + kiosk return to home logic (display power on/off is managed externally by Home Assistant)
   useEffect(() => {
-    const SLIDESHOW_TRIGGER_MS = 3 * 60 * 1000 // 3 minutes of inactivity to start slideshow
     const TWO_HOURS_MS = 2 * 60 * 60 * 1000 // 2 hours threshold for wake destination
 
-    let slideshowTimer = setTimeout(startSlideshow, SLIDESHOW_TRIGGER_MS)
-
-    function startSlideshow() {
-      if (isTimerActiveRef.current) return
-      setSlideshowActive(true)
-      if (currentRoute() !== 'home') location.hash = '#/home'
-    }
+    armSlideshowTimer()
 
     function reset() {
       lastMotionTimeRef.current = Date.now()
-      clearTimeout(slideshowTimer)
-      slideshowTimer = setTimeout(startSlideshow, SLIDESHOW_TRIGGER_MS)
+      armSlideshowTimer()
     }
 
     function handleKioskMotion() {
@@ -543,18 +570,18 @@ function AppContent() {
       const elapsedMs = nowMs - lastMotionTimeRef.current
       lastMotionTimeRef.current = nowMs
 
+      // If a timer is active, ensure slideshow remains dismissed and full-screen timer stays visible
+      if (isTimerActiveRef.current) {
+        setSlideshowActive(false)
+        return
+      }
+
       // If the user is actively interacting with the app (slideshow is NOT active),
       // DO NOT let motion interrupt their search, typing, or view with the slideshow!
       if (!slideshowActiveRef.current) {
         return
       }
 
-      // Waking up from an active screensaver:
-      // If a timer is active, dismiss slideshow immediately
-      if (isTimerActiveRef.current) {
-        setSlideshowActive(false)
-        return
-      }
       // Over 2 hours of inactivity (e.g. overnight sleep managed by Home Assistant) -> Home Page
       // Under 2 hours of inactivity -> Keep Photos Slideshow active
       if (elapsedMs > TWO_HOURS_MS) {
@@ -585,7 +612,10 @@ function AppContent() {
     }
 
     return () => {
-      clearTimeout(slideshowTimer)
+      if (slideshowTimerRef.current) {
+        clearTimeout(slideshowTimerRef.current)
+        slideshowTimerRef.current = null
+      }
       for (const ev of ['pointerdown', 'touchstart', 'keydown']) {
         window.removeEventListener(ev, reset)
       }
@@ -593,7 +623,7 @@ function AppContent() {
         window.removeEventListener(ev, handleKioskMotion)
       }
     }
-  }, [])
+  }, [armSlideshowTimer])
 
   const chooseAppearance = (a: Appearance) => {
     setAppearanceState(a)
@@ -956,7 +986,18 @@ function AppContent() {
           />
         )}
         <CreateTimerModal />
-        <FullScreenTimer />
+        <FullScreenTimer
+          currentTrack={currentTrack}
+          isPlaying={isPlaying}
+          isBuffering={isBuffering}
+          elapsedSeconds={elapsedSeconds}
+          durationSeconds={durationSeconds}
+          onTogglePlay={handleTogglePlay}
+          onNextTrack={handleNextTrack}
+          onPrevTrack={handlePrevTrack}
+          onSeek={handleSeek}
+          onClose={handleStopPlayer}
+        />
         <MiniTimerCapsule />
       </>
   )

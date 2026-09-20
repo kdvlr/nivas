@@ -4,12 +4,36 @@ import Icon from '../Icon'
 import { useTimer } from '../../context/TimerContext'
 import { getStageStyles, formatTimerDisplay } from '../../lib/timer'
 import { PRESS_SPRING, SPATIAL_EXPRESSIVE_DEFAULT } from '../../lib/motion'
+import MiniPlayerBar, { Track } from '../ytmusic/MiniPlayerBar'
 
-export default function FullScreenTimer() {
+interface FullScreenTimerProps {
+  currentTrack?: Track | null
+  isPlaying?: boolean
+  isBuffering?: boolean
+  elapsedSeconds?: number
+  durationSeconds?: number
+  onTogglePlay?: () => void
+  onNextTrack?: () => void
+  onPrevTrack?: () => void
+  onSeek?: (seconds: number) => void
+  onClose?: () => void
+}
+
+export default function FullScreenTimer({
+  currentTrack,
+  isPlaying = false,
+  isBuffering = false,
+  elapsedSeconds = 0,
+  durationSeconds = 0,
+  onTogglePlay,
+  onNextTrack,
+  onPrevTrack,
+  onSeek,
+  onClose,
+}: FullScreenTimerProps) {
   const {
     timer,
     isFullScreen,
-    closeFullScreen,
     pauseTimer,
     resumeTimer,
     resetTimer,
@@ -41,21 +65,14 @@ export default function FullScreenTimer() {
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         transition={SPATIAL_EXPRESSIVE_DEFAULT}
-        className="fixed inset-0 z-[95] flex flex-col justify-between p-6 sm:p-10 select-none overflow-hidden bg-slate-950/96 backdrop-blur-2xl text-white"
+        className="fixed inset-0 z-[95] flex flex-col justify-between p-6 sm:p-10 select-none overflow-hidden bg-slate-950/96 backdrop-blur-2xl text-white dark"
       >
         {/* Top Bar / Header */}
         <div className="flex items-center justify-between w-full max-w-5xl mx-auto z-10 shrink-0">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.92 }}
-            transition={PRESS_SPRING}
-            onClick={closeFullScreen}
-            className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/10 hover:bg-white/15 text-white/90 text-sm font-semibold backdrop-blur-md transition-colors cursor-pointer"
-            title="Minimize to floating widget"
-          >
-            <Icon name="fullscreen_exit" className="text-xl" />
-            <span className="hidden sm:inline">Minimize</span>
-          </motion.button>
+          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/70 text-xs font-semibold select-none">
+            <Icon name="timer" className="text-sm text-[var(--primary)]" />
+            <span className="tracking-wider">COUNTDOWN</span>
+          </div>
 
           <div className="flex flex-col items-center">
             <span className="text-sm font-bold tracking-widest uppercase text-white/60">
@@ -249,7 +266,30 @@ export default function FullScreenTimer() {
             </>
           )}
         </div>
+
+        {/* Docked MiniPlayer in Bottom Right */}
+        {currentTrack && (
+          <div className="sm:absolute sm:bottom-6 sm:right-6 z-20 pointer-events-auto shrink-0 flex justify-end">
+            <MiniPlayerBar
+              docked
+              slideshowMode
+              currentTrack={currentTrack}
+              isPlaying={Boolean(isPlaying)}
+              isBuffering={Boolean(isBuffering)}
+              elapsedSeconds={elapsedSeconds}
+              durationSeconds={durationSeconds}
+              onTogglePlay={onTogglePlay ?? (() => {})}
+              onNextTrack={onNextTrack ?? (() => {})}
+              onPrevTrack={onPrevTrack ?? (() => {})}
+              onSeek={onSeek ?? (() => {})}
+              onOpenFullPlayer={() => {}}
+              onClose={onClose}
+              className="pointer-events-auto shrink-0 bg-slate-900/90 text-white border-white/15 shadow-2xl backdrop-blur-xl"
+            />
+          </div>
+        )}
       </motion.div>
     </AnimatePresence>
   )
 }
+

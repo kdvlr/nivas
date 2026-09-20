@@ -121,6 +121,13 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   const timerRef = useRef<ActiveTimer | null>(timer)
   timerRef.current = timer
 
+  // Ensure full-screen is always active when a timer is on
+  useEffect(() => {
+    if (timer) {
+      setIsFullScreen(true)
+    }
+  }, [timer])
+
   // Keep localStorage synchronized
   useEffect(() => {
     if (!timer) {
@@ -224,7 +231,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
       source: serverTimer.source || 'manual',
     })
 
-    if (status === 'running' || status === 'ringing') {
+    if (status === 'running' || status === 'paused' || status === 'ringing') {
       setIsFullScreen(true)
     }
   }, [])
@@ -364,6 +371,9 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     setIsFullScreen(false)
     localStorage.removeItem(STORAGE_KEY)
     api.post('/api/timer/cancel').catch(() => {})
+    if (window.location.hash !== '#/' && window.location.hash !== '#/home' && window.location.hash !== '') {
+      window.location.hash = '#/home'
+    }
   }, [])
 
   const dismissAlarm = useCallback(() => {
