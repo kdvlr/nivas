@@ -9,6 +9,7 @@ import ConfirmModal from '../components/ConfirmModal'
 import TopClockHeader from '../components/TopClockHeader'
 import NutritionLabel from '../components/recipes/NutritionLabel'
 import { PRESS_SPRING } from '../lib/motion'
+import { parseBaseServings, scaleIngredient } from '../lib/recipeScaler'
 
 function detailIdFromHash() {
   const m = location.hash.match(/^#\/recipes\/(\d+)/)
@@ -20,6 +21,20 @@ function RecipeDetail({ id, onBack }: { id: number; onBack: () => void }) {
   const [checked, setChecked] = useState<Set<number>>(new Set())
   const [step, setStep] = useState(-1) // -1 = overview, otherwise cook-mode step index
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  const baseServings = useMemo(() => parseBaseServings(r?.servings), [r?.servings])
+  const [servings, setServings] = useState(baseServings)
+
+  useEffect(() => {
+    setServings(baseServings)
+  }, [baseServings])
+
+  const scaledIngredients = useMemo(() => {
+    if (!r?.ingredients) return []
+    if (servings === baseServings || baseServings <= 0) return r.ingredients
+    const factor = servings / baseServings
+    return r.ingredients.map((ing) => scaleIngredient(ing, factor))
+  }, [r?.ingredients, servings, baseServings])
 
   // hands-free while cooking: say "next" / "previous" / "exit"
   const stepCount = r?.steps?.length ?? 0
@@ -128,7 +143,7 @@ function RecipeDetail({ id, onBack }: { id: number; onBack: () => void }) {
             {[
               ['Prep', r.prep_time],
               ['Cook', r.cook_time],
-              ['Serves', r.servings],
+              ['Serves', servings !== baseServings ? `${servings} (orig. ${r.servings})` : r.servings],
             ]
               .filter(([, v]) => v)
               .map(([k, v]) => (
@@ -155,17 +170,59 @@ function RecipeDetail({ id, onBack }: { id: number; onBack: () => void }) {
         </div>
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink">{r.title}</h1>
-          <button
-            onClick={() => setStep(0)}
-            className="mt-4 btn-primary px-4 py-2.5 text-sm lg:text-base lg:px-6"
-          >
-            <Icon name="skillet" /> Cook step-by-step
-          </button>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setStep(0)}
+              className="btn-primary flex items-center gap-2 px-4 py-2.5 text-sm lg:text-base lg:px-6 cursor-pointer active:scale-95"
+            >
+              <Icon name="skillet" /> Cook step-by-step
+            </button>
+            <div className="flex items-center gap-1.5 rounded-xl glass-inset p-1 text-sm lg:text-base">
+              <button
+                type="button"
+                onClick={() => setServings((s) => Math.max(1, s - 1))}
+                disabled={servings <= 1}
+                aria-label="Decrease serving size"
+                className="btn-glass h-8 w-8 rounded-lg flex items-center justify-center font-bold text-lg disabled:opacity-30 cursor-pointer active:scale-95 text-ink select-none"
+              >
+                −
+              </button>
+              <span className="px-2 font-medium text-ink select-none flex items-center gap-1.5">
+                <span className="text-ink-soft">Serving Size:</span>
+                <span className="font-bold tabular-nums text-base lg:text-lg text-[var(--primary)]">{servings}</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setServings((s) => s + 1)}
+                aria-label="Increase serving size"
+                className="btn-glass h-8 w-8 rounded-lg flex items-center justify-center font-bold text-lg cursor-pointer active:scale-95 text-ink select-none"
+              >
+                +
+              </button>
+              {servings !== baseServings && (
+                <button
+                  type="button"
+                  onClick={() => setServings(baseServings)}
+                  className="px-2 text-xs text-[var(--primary)] hover:underline cursor-pointer font-medium"
+                  title={`Reset to original (${baseServings})`}
+                >
+                  Reset
+                </button>
+              )}
+            </div>
+          </div>
           <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
             <section>
-              <h2 className="mb-4 text-xl font-medium">Ingredients</h2>
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-xl font-medium">Ingredients</h2>
+                {servings !== baseServings && (
+                  <span className="text-xs font-medium text-[var(--primary)] bg-[var(--primary)]/10 px-2.5 py-1 rounded-full">
+                    Adjusted for {servings} {servings === 1 ? 'serving' : 'servings'}
+                  </span>
+                )}
+              </div>
               <ul className="flex flex-col gap-2">
-                {(r.ingredients ?? []).map((ing, i) => (
+                {(scaledIngredients ?? []).map((ing, i) => (
                   <li key={i}>
                     <button
                       onClick={() =>
