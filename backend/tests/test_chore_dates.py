@@ -1,10 +1,12 @@
 import pytest
 from datetime import date, datetime, timezone
+from zoneinfo import ZoneInfo
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.main import app
+from app.config import get_settings
 from app.db import get_db
 from app.models import Base, Chore
 from app.utils import next_due_date
@@ -138,8 +140,9 @@ def test_create_and_patch_recurring_chore_due_date_alignment(client_and_db):
     chore = resp.json()
     chore_id = chore["id"]
     due_d = date.fromisoformat(chore["due_date"])
+    today_local = datetime.now(ZoneInfo(get_settings().tz)).date()
     assert due_d.weekday() == 5  # Must be Saturday!
-    assert due_d >= date.today()
+    assert due_d >= today_local
 
     # Patch recurrence to weekly Sunday (6)
     patch_resp = client.patch(f"/api/chores/{chore_id}", json={
@@ -149,5 +152,5 @@ def test_create_and_patch_recurring_chore_due_date_alignment(client_and_db):
     patched = patch_resp.json()
     patched_d = date.fromisoformat(patched["due_date"])
     assert patched_d.weekday() == 6  # Must be Sunday!
-    assert patched_d >= date.today()
+    assert patched_d >= today_local
 
