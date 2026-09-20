@@ -121,11 +121,9 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   const timerRef = useRef<ActiveTimer | null>(timer)
   timerRef.current = timer
 
-  // Ensure full-screen is always active when a timer is on
+  // Ensure full-screen is always active when a timer is on, and false when no timer exists
   useEffect(() => {
-    if (timer) {
-      setIsFullScreen(true)
-    }
+    setIsFullScreen(Boolean(timer))
   }, [timer])
 
   // Keep localStorage synchronized
@@ -185,12 +183,15 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   const applyServerTimer = useCallback((serverTimer: any) => {
     if (!serverTimer) {
       setTimer((prev) => {
-        if (prev?.source === 'school_schedule') {
+        if (prev) {
           setIsFullScreen(false)
           localStorage.removeItem(STORAGE_KEY)
+          if (window.location.hash !== '#/' && window.location.hash !== '#/home' && window.location.hash !== '') {
+            window.location.hash = '#/home'
+          }
           return null
         }
-        return prev
+        return null
       })
       return
     }
