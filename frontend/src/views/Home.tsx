@@ -371,26 +371,26 @@ export default function Home() {
         {weather?.current && (
           <button
             onClick={() => setWeatherOpen(true)}
-            className="flex items-center gap-1.5 lg:gap-2 rounded-xl px-1.5 py-0.5 transition-transform active:scale-95 lg:px-3 shrink-0"
+            className="flex items-center gap-2.5 sm:gap-3 lg:gap-3 rounded-2xl px-2.5 py-1.5 transition-transform active:scale-95 lg:px-3 shrink-0"
             title="Weather details"
           >
-            <span className="text-2xl sm:text-3xl lg:text-4xl leading-none">{weather.current.icon}</span>
+            <span className="text-3xl sm:text-4xl lg:text-4xl leading-none select-none">{weather.current.icon}</span>
             <div className="text-left">
-              <div className="flex items-baseline gap-1 lg:gap-1.5">
-                <span className="text-sm sm:text-base lg:text-xl font-semibold text-ink leading-none">
+              <div className="flex items-baseline gap-1.5 lg:gap-1.5">
+                <span className="text-2xl sm:text-2xl lg:text-2xl font-bold text-ink leading-none">
                   {weather.current.temp}°
                 </span>
-                <span className="text-[11px] sm:text-xs lg:text-base font-medium text-ink-soft leading-none">
+                <span className="text-sm sm:text-sm lg:text-base font-medium text-ink-soft leading-none">
                   {weather.current.label}
                 </span>
               </div>
               {todayWeather && (
-                <div className="text-[10px] sm:text-[11px] lg:text-xs text-ink-faint mt-0.5 leading-none">
+                <div className="text-xs sm:text-xs lg:text-xs text-ink-faint mt-1 leading-none font-medium">
                   H {todayWeather.tmax}° L {todayWeather.tmin}°
                 </div>
               )}
             </div>
-            <Icon name="chevron_right" className="hidden sm:block text-xs lg:text-lg text-ink-faint" />
+            <Icon name="chevron_right" className="text-sm sm:text-base lg:text-lg text-ink-faint" />
           </button>
         )}
       </div>
