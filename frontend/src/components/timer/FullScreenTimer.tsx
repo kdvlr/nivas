@@ -30,7 +30,7 @@ export default function FullScreenTimer() {
   // Progress computation (1.0 at start down to 0.0 at completion)
   const progress = timer.totalSeconds > 0 ? Math.max(0, Math.min(1, timer.remainingSeconds / timer.totalSeconds)) : 0
 
-  const radius = 126
+  const radius = 176
   const circumference = 2 * Math.PI * radius
   const strokeDashoffset = circumference * (1 - progress)
 
@@ -112,8 +112,8 @@ export default function FullScreenTimer() {
         </div>
 
         {/* Center: Animated Circular Gauge & Digits */}
-        <div className="flex flex-col items-center justify-center flex-1 my-4 z-10">
-          <div className="relative flex items-center justify-center w-72 h-72 sm:w-96 sm:h-96 lg:w-[440px] lg:h-[440px]">
+        <div className="flex flex-col items-center justify-center flex-1 my-2 sm:my-4 z-10 min-h-0 w-full">
+          <div className="relative flex items-center justify-center w-[min(84vw,84vh,680px)] h-[min(84vw,84vh,680px)] max-w-[680px] max-h-[680px]">
             {/* Ambient Radial Color Glow */}
             <div
               className={`absolute inset-0 rounded-full transition-all duration-700 pointer-events-none ${
@@ -127,31 +127,31 @@ export default function FullScreenTimer() {
             {/* SVG Circular Progress Ring */}
             <svg
               className="w-full h-full transform -rotate-90 pointer-events-none drop-shadow-2xl"
-              viewBox="0 0 300 300"
+              viewBox="0 0 400 400"
             >
               {/* Track */}
               <circle
-                cx="150"
-                cy="150"
+                cx="200"
+                cy="200"
                 r={radius}
                 stroke="rgba(255, 255, 255, 0.08)"
-                strokeWidth="12"
+                strokeWidth="16"
                 fill="none"
               />
               {/* Active Animated Ring */}
               <circle
-                cx="150"
-                cy="150"
+                cx="200"
+                cy="200"
                 r={radius}
                 stroke={styles.strokeColor}
-                strokeWidth="12"
+                strokeWidth="16"
                 strokeDasharray={circumference}
                 strokeDashoffset={strokeDashoffset}
                 strokeLinecap="round"
                 fill="none"
                 className="transition-[stroke-dashoffset,stroke] duration-300 ease-out"
                 style={{
-                  filter: `drop-shadow(0 0 16px ${styles.strokeColor})`,
+                  filter: `drop-shadow(0 0 20px ${styles.strokeColor})`,
                 }}
               />
             </svg>
@@ -160,29 +160,29 @@ export default function FullScreenTimer() {
             <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
               {isRinging ? (
                 <div className="flex flex-col items-center animate-timer-alarm">
-                  <Icon name="notifications_active" className="text-6xl sm:text-7xl text-red-500 animate-bounce mb-2" />
-                  <span className="text-4xl sm:text-5xl lg:text-6xl font-black text-red-400 tracking-tight leading-none drop-shadow-lg">
+                  <Icon name="notifications_active" className="text-7xl sm:text-8xl lg:text-9xl text-red-500 animate-bounce mb-3" />
+                  <span className="text-5xl sm:text-6xl lg:text-7xl font-black text-red-400 tracking-tight leading-none drop-shadow-lg">
                     TIME'S UP!
                   </span>
-                  <span className="text-sm font-semibold text-white/70 mt-3 uppercase tracking-widest">
+                  <span className="text-base sm:text-lg font-semibold text-white/70 mt-3 uppercase tracking-widest">
                     Timer Completed
                   </span>
                 </div>
               ) : (
-                <div className={`flex flex-col items-center ${styles.isFlashing ? 'animate-timer-flash' : ''}`}>
+                <div className={`flex flex-col items-center justify-center w-full ${styles.isFlashing ? 'animate-timer-flash' : ''}`}>
                   <div
                     className="font-black tabular-nums tracking-tight leading-none select-text"
                     style={{
                       fontSize: timeInfo.hasHours
-                        ? 'clamp(2.5rem, 7vw, 5.5rem)'
-                        : 'clamp(3.5rem, 11vw, 7.5rem)',
+                        ? 'clamp(3rem, 10vw, 7.5rem)'
+                        : 'clamp(4.5rem, 16vw, 11.5rem)',
                       color: styles.strokeColor,
-                      filter: `drop-shadow(0 0 20px ${styles.strokeColor})`,
+                      filter: `drop-shadow(0 0 28px ${styles.strokeColor})`,
                     }}
                   >
                     {timeInfo.formatted}
                   </div>
-                  <span className="mt-4 text-xs sm:text-sm font-bold uppercase tracking-widest text-white/70">
+                  <span className="mt-3 sm:mt-5 text-sm sm:text-base lg:text-lg font-bold uppercase tracking-widest text-white/70">
                     {styles.badgeText}
                   </span>
                 </div>
