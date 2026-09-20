@@ -30,7 +30,7 @@ export default function FullScreenTimer() {
   // Progress computation (1.0 at start down to 0.0 at completion)
   const progress = timer.totalSeconds > 0 ? Math.max(0, Math.min(1, timer.remainingSeconds / timer.totalSeconds)) : 0
 
-  const radius = 156
+  const radius = 164
   const circumference = 2 * Math.PI * radius
   const strokeDashoffset = circumference * (1 - progress)
 
@@ -113,45 +113,46 @@ export default function FullScreenTimer() {
 
         {/* Center: Animated Circular Gauge & Digits */}
         <div className="flex flex-col items-center justify-center flex-1 my-1 sm:my-2 z-10 min-h-0 w-full overflow-hidden">
-          <div className="relative flex items-center justify-center w-[min(52vh,78vw,460px)] h-[min(52vh,78vw,460px)] max-w-[460px] max-h-[460px] aspect-square shrink-0">
-            {/* Ambient Radial Color Glow (reduced) */}
+          <div className="relative flex items-center justify-center w-[min(58vh,80vw,550px)] h-[min(58vh,80vw,550px)] max-w-[550px] max-h-[550px] aspect-square shrink-0">
+            {/* Ambient Radial Color Glow */}
             <div
-              className={`absolute inset-0 rounded-full transition-all duration-700 pointer-events-none ${
+              className={`absolute -inset-8 sm:-inset-12 rounded-full transition-all duration-700 pointer-events-none ${
                 styles.isFlashing ? 'animate-timer-flash' : ''
               }`}
               style={{
-                background: `radial-gradient(circle, ${styles.bgGlow} 0%, transparent 60%)`,
+                background: `radial-gradient(circle, ${styles.bgGlow} 0%, transparent 68%)`,
+                filter: 'blur(20px)',
               }}
             />
 
             {/* SVG Circular Progress Ring */}
             <svg
               className="w-full h-full transform -rotate-90 pointer-events-none drop-shadow-md"
-              viewBox="0 0 360 360"
+              viewBox="0 0 380 380"
             >
               {/* Track */}
               <circle
-                cx="180"
-                cy="180"
+                cx="190"
+                cy="190"
                 r={radius}
                 stroke="rgba(255, 255, 255, 0.08)"
-                strokeWidth="14"
+                strokeWidth="15"
                 fill="none"
               />
               {/* Active Animated Ring */}
               <circle
-                cx="180"
-                cy="180"
+                cx="190"
+                cy="190"
                 r={radius}
                 stroke={styles.strokeColor}
-                strokeWidth="14"
+                strokeWidth="15"
                 strokeDasharray={circumference}
                 strokeDashoffset={strokeDashoffset}
                 strokeLinecap="round"
                 fill="none"
                 className="transition-[stroke-dashoffset,stroke] duration-300 ease-out"
                 style={{
-                  filter: `drop-shadow(0 0 8px ${styles.strokeColor}80)`,
+                  filter: `drop-shadow(0 0 12px ${styles.strokeColor}) drop-shadow(0 0 24px ${styles.strokeColor}66)`,
                 }}
               />
             </svg>
@@ -160,7 +161,7 @@ export default function FullScreenTimer() {
             <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
               {isRinging ? (
                 <div className="flex flex-col items-center animate-timer-alarm">
-                  <Icon name="notifications_active" className="text-6xl sm:text-7xl text-red-500 animate-bounce mb-2" />
+                  <Icon name="notifications_active" className="text-7xl sm:text-8xl text-red-500 animate-bounce mb-2" />
                   <span className="text-4xl sm:text-5xl lg:text-6xl font-black text-red-400 tracking-tight leading-none drop-shadow-md">
                     TIME'S UP!
                   </span>
@@ -174,10 +175,10 @@ export default function FullScreenTimer() {
                     className="font-black tabular-nums tracking-tight leading-none select-text"
                     style={{
                       fontSize: timeInfo.hasHours
-                        ? 'clamp(2.5rem, 6.5vw, 4.75rem)'
-                        : 'clamp(3.75rem, 11vw, 7.25rem)',
+                        ? 'clamp(2.75rem, 7.5vw, 5.25rem)'
+                        : 'clamp(4.25rem, 13vw, 8.5rem)',
                       color: styles.strokeColor,
-                      filter: `drop-shadow(0 2px 8px ${styles.strokeColor}60)`,
+                      filter: `drop-shadow(0 0 16px ${styles.strokeColor}88)`,
                     }}
                   >
                     {timeInfo.formatted}
@@ -228,7 +229,7 @@ export default function FullScreenTimer() {
                 style={{
                   backgroundColor: styles.strokeColor,
                   color: '#0f172a',
-                  boxShadow: `0 4px 16px ${styles.strokeColor}40`,
+                  boxShadow: `0 0 24px ${styles.strokeColor}66, 0 4px 16px rgba(0,0,0,0.4)`,
                 }}
                 title={isRunning ? 'Pause timer' : 'Resume timer'}
               >
