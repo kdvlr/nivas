@@ -15,21 +15,56 @@ def client():
     return TestClient(app)
 
 def test_kids_daily_time_window():
-    # Weekday 7:00 AM -> Active
+    # Weekday 7:00 AM -> Active morning
     weekday_morning = datetime(2026, 8, 14, 7, 0) # Friday
     assert kids_daily_service.is_active_morning_window(weekday_morning) is True
+    assert kids_daily_service.get_active_window_name(weekday_morning) == "morning"
 
     # Weekday 8:30 AM -> Inactive
     weekday_late = datetime(2026, 8, 14, 8, 30)
     assert kids_daily_service.is_active_morning_window(weekday_late) is False
+    assert kids_daily_service.get_active_window_name(weekday_late) == ""
 
-    # Weekend 10:00 AM -> Active
+    # Weekday 3:14 PM -> Inactive (just before afternoon window)
+    weekday_before_afternoon = datetime(2026, 8, 14, 15, 14)
+    assert kids_daily_service.is_active_morning_window(weekday_before_afternoon) is False
+    assert kids_daily_service.get_active_window_name(weekday_before_afternoon) == ""
+
+    # Weekday 3:15 PM -> Active afternoon
+    weekday_start_afternoon = datetime(2026, 8, 14, 15, 15)
+    assert kids_daily_service.is_active_morning_window(weekday_start_afternoon) is True
+    assert kids_daily_service.get_active_window_name(weekday_start_afternoon) == "afternoon"
+
+    # Weekday 5:00 PM -> Active afternoon
+    weekday_mid_afternoon = datetime(2026, 8, 14, 17, 0)
+    assert kids_daily_service.is_active_morning_window(weekday_mid_afternoon) is True
+    assert kids_daily_service.get_active_window_name(weekday_mid_afternoon) == "afternoon"
+
+    # Weekday 6:59 PM -> Active afternoon
+    weekday_end_afternoon = datetime(2026, 8, 14, 18, 59)
+    assert kids_daily_service.is_active_morning_window(weekday_end_afternoon) is True
+    assert kids_daily_service.get_active_window_name(weekday_end_afternoon) == "afternoon"
+
+    # Weekday 7:00 PM -> Inactive
+    weekday_past_afternoon = datetime(2026, 8, 14, 19, 0)
+    assert kids_daily_service.is_active_morning_window(weekday_past_afternoon) is False
+    assert kids_daily_service.get_active_window_name(weekday_past_afternoon) == ""
+
+    # Weekend 10:00 AM -> Active morning
     weekend_morning = datetime(2026, 8, 15, 10, 0) # Saturday
     assert kids_daily_service.is_active_morning_window(weekend_morning) is True
+    assert kids_daily_service.get_active_window_name(weekend_morning) == "morning"
 
     # Weekend 7:00 AM -> Inactive
     weekend_early = datetime(2026, 8, 15, 7, 0)
     assert kids_daily_service.is_active_morning_window(weekend_early) is False
+    assert kids_daily_service.get_active_window_name(weekend_early) == ""
+
+    # Weekend 4:30 PM -> Active afternoon
+    weekend_afternoon = datetime(2026, 8, 15, 16, 30)
+    assert kids_daily_service.is_active_morning_window(weekend_afternoon) is True
+    assert kids_daily_service.get_active_window_name(weekend_afternoon) == "afternoon"
+
 
 def test_kids_daily_public_endpoint(client):
     res = client.get("/api/kids-daily/today")
@@ -39,6 +74,7 @@ def test_kids_daily_public_endpoint(client):
     assert "fun_fact" in data
     assert "stem_5yo" in data
     assert "stem_9yo" in data
+    assert "active_window" in data
     # The kiosk's Answers board is driven by the same daily payload.
     assert "answer" in data["stem_5yo"]
     assert "parent_explanation" in data["stem_5yo"]

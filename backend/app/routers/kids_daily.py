@@ -45,6 +45,7 @@ def get_today_content(date: Optional[str] = None):
     return {
         "date": payload.get("date"),
         "is_active_window": payload.get("is_active_window"),
+        "active_window": payload.get("active_window", ""),
         "force_active": payload.get("force_active"),
         "word_of_the_day": content.get("word_of_the_day", {}),
         "fun_fact": content.get("fun_fact", {}),

@@ -6,6 +6,7 @@ import threading
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
+from zoneinfo import ZoneInfo
 from ..config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -1184,23 +1185,41 @@ class KidsDailyService:
         except Exception as e:
             logger.error(f"Failed to save kids daily cache: {e}")
 
-    def is_active_morning_window(self, now: Optional[datetime] = None) -> bool:
+    def get_active_window_name(self, now: Optional[datetime] = None) -> str:
         """
-        Active hours:
-        - Weekdays (Mon-Fri, weekday 0-4): 6:00 AM - 8:00 AM
-        - Weekends (Sat-Sun, weekday 5-6): 9:00 AM - 11:00 AM
+        Return the name of the active display window ('morning' or 'afternoon'),
+        or '' if outside active hours.
+        - Weekdays (Mon-Fri): 6:00 AM - 8:00 AM (morning), 3:15 PM - 7:00 PM (afternoon)
+        - Weekends (Sat-Sun): 9:00 AM - 11:00 AM (morning), 3:15 PM - 7:00 PM (afternoon)
         """
         if self._settings.get("force_banner_active", False):
-            return True
+            return "forced"
 
-        current = now or datetime.now()
+        current = now or datetime.now(ZoneInfo(get_settings().tz))
         is_weekend = current.weekday() >= 5
         minute_of_day = current.hour * 60 + current.minute
 
+        # Afternoon window: 3:15 PM (15:15 = 915) to 7:00 PM (19:00 = 1140)
+        if 15 * 60 + 15 <= minute_of_day < 19 * 60:
+            return "afternoon"
+
+        # Morning window
         if is_weekend:
-            return 9 * 60 <= minute_of_day < 11 * 60
+            if 9 * 60 <= minute_of_day < 11 * 60:
+                return "morning"
         else:
-            return 6 * 60 <= minute_of_day < 8 * 60
+            if 6 * 60 <= minute_of_day < 8 * 60:
+                return "morning"
+
+        return ""
+
+    def is_active_morning_window(self, now: Optional[datetime] = None) -> bool:
+        """
+        Active hours:
+        - Weekdays (Mon-Fri, weekday 0-4): 6:00 AM - 8:00 AM, 3:15 PM - 7:00 PM
+        - Weekends (Sat-Sun, weekday 5-6): 9:00 AM - 11:00 AM, 3:15 PM - 7:00 PM
+        """
+        return bool(self.get_active_window_name(now))
 
     def get_settings(self) -> Dict[str, Any]:
         s = get_settings()
@@ -1243,9 +1262,11 @@ class KidsDailyService:
                 self._save_cache()
 
         is_active = self.is_active_morning_window()
+        active_window = self.get_active_window_name()
         return {
             "date": today_key,
             "is_active_window": is_active,
+            "active_window": active_window,
             "force_active": bool(self._settings.get("force_banner_active", False)),
             "content": content,
         }

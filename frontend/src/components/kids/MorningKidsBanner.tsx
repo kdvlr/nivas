@@ -9,6 +9,7 @@ interface MorningKidsBannerProps {
   className?: string
   forceOpen?: boolean
   onClose?: () => void
+  onDisplayChange?: (displayed: boolean) => void
 }
 
 export default function MorningKidsBanner({
@@ -16,11 +17,12 @@ export default function MorningKidsBanner({
   className = '',
   forceOpen = false,
   onClose,
+  onDisplayChange,
 }: MorningKidsBannerProps) {
   // The server owns the active-window decision so every client sees the same state.
   void now
   const [data, setData] = useState<KidsDailyPublicResponse | null>(null)
-  const [dismissedDate, setDismissedDate] = useState<string | null>(null)
+  const [dismissedSession, setDismissedSession] = useState<string | null>(null)
   const [manuallyDismissed, setManuallyDismissed] = useState(false)
   const [showHint5, setShowHint5] = useState(false)
   const [showHint9, setShowHint9] = useState(false)
@@ -44,9 +46,9 @@ export default function MorningKidsBanner({
 
   useEffect(() => {
     loadDailyContent()
-    const storedDismissed = localStorage.getItem('kids_banner_dismissed_date')
+    const storedDismissed = localStorage.getItem('kids_banner_dismissed_session')
     if (storedDismissed) {
-      setDismissedDate(storedDismissed)
+      setDismissedSession(storedDismissed)
     }
     const interval = setInterval(loadDailyContent, 60000)
     return () => clearInterval(interval)
@@ -59,20 +61,42 @@ export default function MorningKidsBanner({
     }
   }, [forceOpen])
 
+  const activeWindow = data?.active_window || (new Date().getHours() < 12 ? 'morning' : 'afternoon')
+  const sessionKey = data?.date ? `${data.date}_${activeWindow}` : null
+  const isDismissedSession = sessionKey ? dismissedSession === sessionKey : false
   const isForceActive = Boolean(data?.force_active)
-  const isDismissedToday = dismissedDate === data?.date
 
   const shouldDisplay = Boolean(
     data &&
       (forceOpen ||
-        (!manuallyDismissed && !isDismissedToday && (isForceActive || data.is_active_window)))
+        (!manuallyDismissed && !isDismissedSession && (isForceActive || data.is_active_window)))
   )
+
+  useEffect(() => {
+    onDisplayChange?.(shouldDisplay)
+    window.dispatchEvent(
+      new CustomEvent('kids-nuggets-display-change', {
+        detail: { displayed: shouldDisplay },
+      })
+    )
+  }, [shouldDisplay, onDisplayChange])
+
+  useEffect(() => {
+    return () => {
+      onDisplayChange?.(false)
+      window.dispatchEvent(
+        new CustomEvent('kids-nuggets-display-change', {
+          detail: { displayed: false },
+        })
+      )
+    }
+  }, [onDisplayChange])
 
   const handleDismiss = () => {
     setManuallyDismissed(true)
-    if (data?.date) {
-      localStorage.setItem('kids_banner_dismissed_date', data.date)
-      setDismissedDate(data.date)
+    if (sessionKey) {
+      localStorage.setItem('kids_banner_dismissed_session', sessionKey)
+      setDismissedSession(sessionKey)
     }
     if (onClose) {
       onClose()

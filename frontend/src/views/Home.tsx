@@ -6,7 +6,6 @@ import Icon from '../components/Icon'
 import Modal from '../components/Modal'
 import WeatherModal from '../components/WeatherModal'
 import TopClockHeader from '../components/TopClockHeader'
-import MorningKidsBanner from '../components/kids/MorningKidsBanner'
 import { useCelebration } from '../components/celebrations/CelebrationContext'
 import { useClock, useData, todayISO, addDaysISO } from '../lib/hooks'
 import { useSwipeNavigation } from '../lib/useSwipeNavigation'
@@ -138,7 +137,6 @@ export default function Home() {
   const [removedIds, setRemovedIds] = useState<string[]>([])
   const [selectedEvent, setSelectedEvent] = useState<CalEvent | null>(null)
   const [weatherOpen, setWeatherOpen] = useState(false)
-  const [kidsHubOpen, setKidsHubOpen] = useState(false)
   const now = useClock()
   const today = todayISO()
   const [scheduleStartDate, setScheduleStartDate] = useState(() => todayISO())
@@ -397,7 +395,7 @@ export default function Home() {
       </div>
 
       <button
-        onClick={() => setKidsHubOpen((prev) => !prev)}
+        onClick={() => window.dispatchEvent(new CustomEvent('toggle-kids-nuggets'))}
         aria-label="Toggle Kids Brain Nuggets"
         className="hidden lg:flex flex-1 justify-center text-center px-2 min-w-0 truncate cursor-pointer transition-transform active:scale-95 group/title focus:outline-none"
       >
@@ -939,13 +937,6 @@ export default function Home() {
 
   return (
     <div className="h-full w-full lg:overflow-visible overflow-hidden relative">
-      {/* Morning Kids Discovery Hub Floating Window */}
-      <MorningKidsBanner
-        now={now}
-        forceOpen={kidsHubOpen}
-        onClose={() => setKidsHubOpen(false)}
-      />
-
       {/* Desktop view */}
       <div className="hidden lg:flex h-full flex-col gap-4">
         {renderHeader()}

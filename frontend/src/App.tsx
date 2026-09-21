@@ -39,6 +39,7 @@ import { TimerProvider, useTimer } from './context/TimerContext'
 import CreateTimerModal from './components/timer/CreateTimerModal'
 import FullScreenTimer from './components/timer/FullScreenTimer'
 import MiniTimerCapsule from './components/timer/MiniTimerCapsule'
+import MorningKidsBanner from './components/kids/MorningKidsBanner'
 
 const NAV = [
   { id: 'home', label: 'Home', icon: 'home', view: Home, active: 'bg-sky-200 text-sky-950 dark:bg-sky-900 dark:text-sky-100', activeText: 'text-sky-600 dark:text-sky-400' },
@@ -165,17 +166,30 @@ function AppContent() {
   const slideshowActiveRef = useRef(false)
   slideshowActiveRef.current = slideshowActive
 
+  const [kidsHubOpen, setKidsHubOpen] = useState(false)
+  const [kidsNuggetsDisplayed, setKidsNuggetsDisplayed] = useState(false)
+  const kidsNuggetsDisplayedRef = useRef(false)
+  kidsNuggetsDisplayedRef.current = kidsNuggetsDisplayed
+
+  useEffect(() => {
+    const handleToggle = () => setKidsHubOpen((prev) => !prev)
+    window.addEventListener('toggle-kids-nuggets', handleToggle)
+    return () => window.removeEventListener('toggle-kids-nuggets', handleToggle)
+  }, [])
+
   // Arm/re-arm the 3-minute inactivity screensaver timer.
-  // Strictly suppressed whenever a timer is active (countdown or ringing).
+  // Strictly suppressed whenever:
+  // 1. A timer is active (countdown or ringing).
+  // 2. Kids Brain Nuggets is displayed.
   const armSlideshowTimer = useCallback(() => {
     if (slideshowTimerRef.current) {
       clearTimeout(slideshowTimerRef.current)
       slideshowTimerRef.current = null
     }
-    if (isTimerActiveRef.current) return
+    if (isTimerActiveRef.current || kidsNuggetsDisplayedRef.current) return
 
     slideshowTimerRef.current = setTimeout(() => {
-      if (isTimerActiveRef.current) return
+      if (isTimerActiveRef.current || kidsNuggetsDisplayedRef.current) return
       setSlideshowActive(true)
       if (currentRoute() !== 'home') location.hash = '#/home'
     }, 3 * 60 * 1000)
@@ -432,6 +446,26 @@ function AppContent() {
     prevTimerActiveRef.current = isTimerActive
   }, [isTimerActive, slideshowActive, armSlideshowTimer])
 
+  // Kids Brain Nuggets lifecycle:
+  // When Kids Brain Nuggets is displayed, dismiss and disable the photo slideshow.
+  // When Kids Brain Nuggets is closed/dismissed, re-arm the inactivity timer so the slideshow resumes.
+  useEffect(() => {
+    if (kidsNuggetsDisplayed) {
+      if (slideshowActive) {
+        setSlideshowActive(false)
+      }
+      if (slideshowTimerRef.current) {
+        clearTimeout(slideshowTimerRef.current)
+        slideshowTimerRef.current = null
+      }
+      if (currentRoute() !== 'home') {
+        location.hash = '#/home'
+      }
+    } else if (!isTimerActiveRef.current) {
+      armSlideshowTimer()
+    }
+  }, [kidsNuggetsDisplayed, slideshowActive, armSlideshowTimer])
+
   // "#/photos?sky=night&skyfx=stormy" jumps straight into the slideshow so the
   // sky preview is one URL away. Keyed on the route, so dismissing it stays
   // dismissed until you navigate again.
@@ -570,8 +604,8 @@ function AppContent() {
       const elapsedMs = nowMs - lastMotionTimeRef.current
       lastMotionTimeRef.current = nowMs
 
-      // If a timer is active, ensure slideshow remains dismissed and full-screen timer stays visible
-      if (isTimerActiveRef.current) {
+      // If a timer or kids brain nuggets is active, ensure slideshow remains dismissed
+      if (isTimerActiveRef.current || kidsNuggetsDisplayedRef.current) {
         setSlideshowActive(false)
         return
       }
@@ -965,7 +999,7 @@ function AppContent() {
             </div>
           </div>
         </motion.div>
-        {slideshowActive && photosList.length > 0 && !isTimerActive && (
+        {slideshowActive && photosList.length > 0 && !isTimerActive && !kidsNuggetsDisplayed && (
           <Slideshow
             photos={photosList}
             onDismiss={() => setSlideshowActive(false)}
@@ -985,6 +1019,12 @@ function AppContent() {
             onClose={handleStopPlayer}
           />
         )}
+        {/* Kids Brain Nuggets Floating Window */}
+        <MorningKidsBanner
+          forceOpen={kidsHubOpen}
+          onClose={() => setKidsHubOpen(false)}
+          onDisplayChange={setKidsNuggetsDisplayed}
+        />
         <CreateTimerModal />
         <FullScreenTimer
           currentTrack={currentTrack}

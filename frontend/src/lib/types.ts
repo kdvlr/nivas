@@ -226,6 +226,7 @@ export interface KidsSTEMQuestion {
 export interface KidsDailyPublicResponse {
   date: string
   is_active_window: boolean
+  active_window?: string
   force_active: boolean
   word_of_the_day: KidsWordOfTheDay
   fun_fact: KidsFunFact
@@ -244,6 +245,7 @@ export interface KidsDailyAdminContent {
 export interface KidsDailyAdminResponse {
   date: string
   is_active_window: boolean
+  active_window?: string
   force_active: boolean
   content: KidsDailyAdminContent
   settings: {
