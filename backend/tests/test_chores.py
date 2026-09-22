@@ -129,21 +129,25 @@ def test_check_missed_chores_does_not_dock_points(db, monkeypatch):
 
 
 def test_list_chores_auto_advances_past_due_recurring_chores(db, monkeypatch):
-    from datetime import date, timedelta
+    from datetime import timedelta
+    from zoneinfo import ZoneInfo
+    from app.config import get_settings
     from app.routers.chores import list_chores
 
     # Mock broadcast
     monkeypatch.setattr("app.routers.chores.manager.broadcast_threadsafe", lambda *args, **kwargs: None)
 
-    yesterday = (date.today() - timedelta(days=2)).isoformat()
+    tz = ZoneInfo(get_settings().tz)
+    today = datetime.now(tz).date()
+    past_due = (today - timedelta(days=2)).isoformat()
     chore = Chore(
         title="Homework",
         assigned_to="Dhruv",
         coins=5,
         recurrence="weekly:0,1,2,3,6",
-        due_date=yesterday,
+        due_date=past_due,
         completed=True,
-        completed_at=datetime.now(timezone.utc) - timedelta(days=2),
+        completed_at=datetime.now(tz) - timedelta(days=2),
     )
     db.add(chore)
     db.commit()
@@ -153,23 +157,25 @@ def test_list_chores_auto_advances_past_due_recurring_chores(db, monkeypatch):
     item = results[0]
     # Completed should be reset to False, due date advanced to on or after today
     assert item["completed"] is False
-    assert item["due_date"] >= date.today().isoformat()
+    assert item["due_date"] >= today.isoformat()
 
     # DB state verified
     db.expire_all()
     c = db.get(Chore, chore.id)
     assert c.completed is False
     assert c.completed_at is None
-    assert c.due_date >= date.today().isoformat()
+    assert c.due_date >= today.isoformat()
 
 
 def test_list_chores_preserves_today_completed_chore(db, monkeypatch):
-    from datetime import date
+    from zoneinfo import ZoneInfo
+    from app.config import get_settings
     from app.routers.chores import list_chores
 
     monkeypatch.setattr("app.routers.chores.manager.broadcast_threadsafe", lambda *args, **kwargs: None)
 
-    today = date.today().isoformat()
+    tz = ZoneInfo(get_settings().tz)
+    today = datetime.now(tz).date().isoformat()
     chore = Chore(
         title="Make Bed",
         assigned_to="Swara",
@@ -177,7 +183,7 @@ def test_list_chores_preserves_today_completed_chore(db, monkeypatch):
         recurrence="daily",
         due_date=today,
         completed=True,
-        completed_at=datetime.now(timezone.utc),
+        completed_at=datetime.now(tz),
     )
     db.add(chore)
     db.commit()
