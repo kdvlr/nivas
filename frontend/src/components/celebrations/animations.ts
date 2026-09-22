@@ -1,6 +1,7 @@
 /** Fullscreen canvas celebrations. Each returns a cleanup function. */
 
 import confetti from 'canvas-confetti'
+import { balloonCannonRun } from './balloon-cannon-animation'
 
 export type CelebrationName =
   | 'confetti'
@@ -12,6 +13,7 @@ export type CelebrationName =
   | 'superhero'
   | 'bubbles'
   | 'dino'
+  | 'balloon-cannon'
   | 'hyperspace'
 
 export interface Celebration {
@@ -1375,6 +1377,16 @@ export const CELEBRATIONS: Celebration[] = [
     backdrop: 'rgba(20, 40, 16, 0.98)',
     praise: ['ROAR-some job!', 'Dino-mite!', 'Stomp, stomp, HOORAY!'],
     run: dinoRun,
+  },
+  {
+    name: 'balloon-cannon',
+    emoji: '🎈',
+    label: 'Balloon Cannon',
+    backdrop: '#38bdf8',
+    durationMs: 7500,
+    hideHtmlPraise: true,
+    praise: ['Chores blown away!'],
+    run: balloonCannonRun,
   },
   {
     name: 'hyperspace',
