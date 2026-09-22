@@ -17,6 +17,11 @@ export type CelebrationName =
   | 'balloon-cannon'
   | 'wrecking-ball'
   | 'hyperspace'
+  | 'bunny-bake-off'
+  | 'panda-tea-party'
+  | 'butterfly-garden'
+  | 'pop-star-concert'
+  | 'baa-baa-story'
 
 export interface Celebration {
   name: CelebrationName
@@ -28,7 +33,9 @@ export interface Celebration {
   praise: string[]
   durationMs?: number
   hideHtmlPraise?: boolean
-  run: (canvas: HTMLCanvasElement) => () => void
+  /** Animation-only standalone scene rendered without its preview-page chrome. */
+  iframeSrc?: string
+  run?: (canvas: HTMLCanvasElement) => () => void
 }
 
 const rand = (a: number, b: number) => a + Math.random() * (b - a)
@@ -1308,6 +1315,56 @@ const hyperspaceRun = (canvas: HTMLCanvasElement) => {
 }
 
 export const CELEBRATIONS: Celebration[] = [
+  {
+    name: 'bunny-bake-off',
+    emoji: '🐰',
+    label: 'Bunny Bake-Off',
+    backdrop: '#ffe9d5',
+    durationMs: 7600,
+    hideHtmlPraise: true,
+    praise: ['Sweet success!'],
+    iframeSrc: '/celebrations/bunny_bake_off.html?embed=1',
+  },
+  {
+    name: 'panda-tea-party',
+    emoji: '🐼',
+    label: 'Panda Chore Tea Party',
+    backdrop: '#e5eee1',
+    durationMs: 7600,
+    hideHtmlPraise: true,
+    praise: ['Tea-riffic job!'],
+    iframeSrc: '/celebrations/panda_tea_party.html?embed=1',
+  },
+  {
+    name: 'butterfly-garden',
+    emoji: '🦋',
+    label: 'Butterfly Chore Garden',
+    backdrop: '#e6eddc',
+    durationMs: 7600,
+    hideHtmlPraise: true,
+    praise: ['Beautiful work!'],
+    iframeSrc: '/celebrations/butterfly_chore_garden.html?embed=1',
+  },
+  {
+    name: 'pop-star-concert',
+    emoji: '🎤',
+    label: 'Pop-Star Chore Concert',
+    backdrop: '#231f42',
+    durationMs: 7600,
+    hideHtmlPraise: true,
+    praise: ['You rocked your chores!'],
+    iframeSrc: '/celebrations/pop_star_chore_concert.html?embed=1',
+  },
+  {
+    name: 'baa-baa-story',
+    emoji: '🐑',
+    label: 'Baa-Baa Chores',
+    backdrop: '#d8dfe8',
+    durationMs: 7600,
+    hideHtmlPraise: true,
+    praise: ['Ewe did it!'],
+    iframeSrc: '/celebrations/baa_baa_chores.html?embed=1',
+  },
   {
     name: 'confetti',
     emoji: '🎊',

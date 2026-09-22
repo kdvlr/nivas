@@ -57,8 +57,10 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
   )
 
   useEffect(() => {
-    if (!active || !canvasRef.current) return
-    cleanupRef.current = active.run(canvasRef.current)
+    if (!active) return
+    if (active.run && canvasRef.current) {
+      cleanupRef.current = active.run(canvasRef.current)
+    }
     const duration = active.durationMs || DURATION_MS
     timersRef.current = [
       setTimeout(() => setFading(true), Math.max(duration - 600, 0)),
@@ -80,7 +82,16 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
           style={{ background: active.backdrop }}
           onClick={stop}
         >
-          <canvas ref={canvasRef} className="h-full w-full" />
+          {active.iframeSrc ? (
+            <iframe
+              key={active.name}
+              src={active.iframeSrc}
+              title={active.label}
+              className="pointer-events-none h-full w-full border-0"
+            />
+          ) : (
+            <canvas ref={canvasRef} className="h-full w-full" />
+          )}
           {!active.durationMs && !active.hideHtmlPraise && (
             <div className="pointer-events-none absolute inset-x-0 top-[12%] text-center">
               <span

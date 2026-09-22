@@ -5,6 +5,7 @@
 <title>Bunny Bake-Off · Sweet Success</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#f7eee4;color:#50372e;font-family:ui-rounded,'Avenir Next',system-ui,sans-serif;min-height:100vh;display:grid;place-items:center;padding:30px}main{width:min(1200px,100%)}header{display:flex;align-items:center;justify-content:space-between;margin:0 3px 22px}.eyebrow{font-size:11px;font-weight:800;letter-spacing:3px;text-transform:uppercase;color:#997965}h1{font-size:clamp(23px,3vw,35px);letter-spacing:-1px;margin:7px 0 0;font-weight:850}.badge{border:1px solid #d8c6b6;padding:10px 15px;border-radius:30px;font-size:12px;font-weight:650}.stage{overflow:hidden;border-radius:26px;background:#ffe9d5;box-shadow:0 25px 65px #6a3f2520;border:6px solid #fffbf5}svg{display:block;width:100%;height:auto;aspect-ratio:16/9}footer{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:22px 3px 0}footer p{font-size:13px;color:#8e7261;margin:0}.buttons{display:flex;gap:9px}button{border:1px solid #d9c3b3;background:#fffaf3;color:#573a30;padding:12px 20px;border-radius:30px;font:700 13px inherit;cursor:pointer}button.primary{background:#67463c;color:#fff7ee;border-color:#67463c}button:focus-visible{outline:3px solid #cf754e;outline-offset:4px}button:hover{filter:brightness(.96)}.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}@media(max-width:600px){body{padding:16px 8px}header{padding:0 6px}.badge{display:none}.stage{border-width:3px;border-radius:16px}footer{align-items:flex-start;padding:17px 6px}footer p{max-width:145px;font-size:11px}button{padding:10px 14px}}
+.embed{display:block;min-height:0;padding:0;background:#000;overflow:hidden}.embed main{width:100vw;height:100vh}.embed header,.embed footer,.embed .sr{display:none}.embed .stage{width:100vw;height:100vh;border:0;border-radius:0;box-shadow:none}.embed svg{width:100%;height:100%}
 </style>
 </head>
 <body><main><header><div><div class="eyebrow">A little celebration · No. 20</div><h1>Bunny Bake-Off</h1></div><div class="badge">Made with a little magic ✧</div></header>
@@ -119,6 +120,7 @@ class CelebrationPlayer{
  destroy(){if(this.destroyed)return;this.pause();this.destroyed=true;this.observer.disconnect();document.removeEventListener('visibilitychange',this.onVisibility);this.motion.removeEventListener('change',this.onMotion);window.removeEventListener('pagehide',this.onPageHide);this.onDestroy?.()}
 }
 window.CelebrationPlayer=CelebrationPlayer;window.celebrationScenes=scenes;
+if(new URLSearchParams(location.search).has('embed'))document.body.classList.add('embed');
 const pauseButton=document.getElementById('pause');
 const player=new CelebrationPlayer(document.getElementById('scene'),{onStateChange:playing=>{pauseButton.textContent=playing?'Pause':'Play';pauseButton.setAttribute('aria-label',playing?'Pause animation':'Play animation')}});
 window.bunnyPlayer=player;
