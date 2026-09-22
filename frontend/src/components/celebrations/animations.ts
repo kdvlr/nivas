@@ -1,7 +1,6 @@
 /** Fullscreen canvas celebrations. Each returns a cleanup function. */
 
 import confetti from 'canvas-confetti'
-import { CHORE_STORY_CELEBRATIONS } from './chore-story-animations'
 
 export type CelebrationName =
   | 'confetti'
@@ -13,18 +12,6 @@ export type CelebrationName =
   | 'superhero'
   | 'bubbles'
   | 'dino'
-  | 'baa-chores'
-  | 'monster-truck'
-  | 'ninja'
-  | 'ninja-classic'
-  | 'robot'
-  | 'pirate'
-  | 'shark'
-  | 'princess'
-  | 'mermaid'
-  | 'kitten'
-  | 'butterflies'
-  | 'pop-star'
   | 'hyperspace'
 
 export interface Celebration {
@@ -1390,94 +1377,6 @@ export const CELEBRATIONS: Celebration[] = [
     run: dinoRun,
   },
   {
-    name: 'baa-chores',
-    emoji: '🐑',
-    label: 'Baa-Baa Chores',
-    backdrop: 'linear-gradient(145deg, rgba(253, 242, 248, 0.98), rgba(250, 232, 255, 0.98) 48%, rgba(224, 231, 255, 0.98))',
-    praise: ['Shear brilliance!', 'Ewe did it!', 'Fluffy fabulous!'],
-    run: baaChoresRun,
-  },
-  {
-    name: 'monster-truck',
-    emoji: '🛻',
-    label: 'Monster Truck',
-    backdrop: '#bfdbfe',
-    praise: ['Chores crushed!', 'Mega jump!', 'Unstoppable!'],
-    run: monsterTruckRun,
-  },
-  {
-    name: 'ninja-classic',
-    emoji: '🥷',
-    label: 'Ninja Chop (Classic)',
-    backdrop: '#111827',
-    praise: ['Swift work!', 'Legendary focus!', 'Sneaky good!'],
-    run: ninjaRun,
-  },
-  {
-    name: 'robot',
-    emoji: '🤖',
-    label: 'Robot Protocol',
-    backdrop: '#082f49',
-    praise: ['Task protocol complete!', 'Maximum efficiency!', 'Beep-boop—brilliant!'],
-    run: robotRun,
-  },
-  {
-    name: 'pirate',
-    emoji: '🏴‍☠️',
-    label: 'Pirate Treasure',
-    backdrop: '#155e75',
-    praise: ['Treasure unlocked!', 'Aye, great job!', 'Captain of chores!'],
-    run: pirateRun,
-  },
-  {
-    name: 'shark',
-    emoji: '🦈',
-    label: 'Shark Splash',
-    backdrop: '#0ea5e9',
-    praise: ['Jawsome work!', 'Made a splash!', 'Fin-tastic!'],
-    run: sharkRun,
-  },
-  {
-    name: 'princess',
-    emoji: '👑',
-    label: 'Princess Crown',
-    backdrop: '#fbcfe8',
-    praise: ['Chore royalty!', 'Your crown awaits!', 'Majestically done!'],
-    run: princessRun,
-  },
-  {
-    name: 'mermaid',
-    emoji: '🧜‍♀️',
-    label: 'Mermaid Pearls',
-    backdrop: '#99f6e4',
-    praise: ['Mer-mazing!', 'Pearl-fect work!', 'Ocean of awesome!'],
-    run: mermaidRun,
-  },
-  {
-    name: 'kitten',
-    emoji: '🐱',
-    label: 'Kitten Purr-ty',
-    backdrop: '#fed7aa',
-    praise: ['Purr-fect!', 'Pawsome job!', 'The cat’s meow!'],
-    run: kittenRun,
-  },
-  {
-    name: 'butterflies',
-    emoji: '🦋',
-    label: 'Butterfly Garden',
-    backdrop: '#dcfce7',
-    praise: ['Beautiful work!', 'Watch you bloom!', 'Simply flutterful!'],
-    run: butterfliesRun,
-  },
-  {
-    name: 'pop-star',
-    emoji: '🎤',
-    label: 'Pop-Star Concert',
-    backdrop: '#831843',
-    praise: ['You rocked it!', 'Encore!', 'Chore chart-topper!'],
-    run: popStarRun,
-  },
-  {
     name: 'hyperspace',
     emoji: '🌌',
     label: 'Hyperspace',
@@ -1485,5 +1384,4 @@ export const CELEBRATIONS: Celebration[] = [
     praise: ['Warp speed ahead!', 'Light-speed legend!', 'To infinity… and DONE!'],
     run: hyperspaceRun,
   },
-  ...CHORE_STORY_CELEBRATIONS,
 ]

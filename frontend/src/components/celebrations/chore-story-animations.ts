@@ -3,7 +3,6 @@
  * 20 Distinct Narrative Canvas 2D Celebrations (~7.6 seconds each)
  */
 
-import type { Celebration } from './animations'
 
 export const V_W = 1280
 export const V_H = 720
@@ -933,7 +932,7 @@ export class ChoreScenePlayer {
 // REGISTRY: EXPORT CHORE CELEBRATIONS
 // =============================================================================
 
-export const CHORE_STORY_CELEBRATIONS: Celebration[] = [
+export const CHORE_STORY_CELEBRATIONS = [
   {
     name: 'ninja',
     emoji: '🥷',
