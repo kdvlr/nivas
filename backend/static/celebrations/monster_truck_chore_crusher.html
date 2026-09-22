@@ -1,0 +1,85 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Monster Truck Chore Crusher · Chores Crushed</title><style>
+*{box-sizing:border-box}body{margin:0;background:#f3eee4;color:#31596b;font-family:ui-rounded,'Avenir Next',system-ui,sans-serif;min-height:100vh;display:grid;place-items:center;padding:30px}main{width:min(1200px,100%)}header{display:flex;align-items:center;justify-content:space-between;margin:0 3px 22px}.eyebrow{font-size:11px;font-weight:800;letter-spacing:3px;color:#899177;text-transform:uppercase}h1{font-size:clamp(23px,3vw,35px);letter-spacing:-1px;margin:7px 0 0}.badge{border:1px solid #cad0bd;padding:10px 15px;border-radius:30px;font-size:12px}.stage{overflow:hidden;border-radius:26px;background:#e9eddc;box-shadow:0 25px 65px #31596b20;border:6px solid #fffbf5}svg{display:block;width:100%;height:auto;aspect-ratio:16/9}footer{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:22px 3px 0}footer p{font-size:13px;color:#7c896f;margin:0}.buttons{display:flex;gap:9px}button{border:1px solid #c9cebb;background:#fffaf3;color:#31596b;padding:12px 20px;border-radius:30px;font:700 13px system-ui;cursor:pointer}button.primary{background:#438f9c;color:#fff7ee;border-color:#438f9c}button:focus-visible{outline:3px solid #c399ab;outline-offset:4px}button:hover{filter:brightness(.96)}.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}@media(max-width:600px){body{padding:16px 8px}header{padding:0 6px}.badge{display:none}.stage{border-width:3px;border-radius:16px}footer{align-items:flex-start;padding:17px 6px}footer p{max-width:145px;font-size:11px}button{padding:10px 14px}}
+.embed{display:block;min-height:0;padding:0;background:#000;overflow:hidden}.embed main{width:100vw;height:100vh}.embed header,.embed footer,.embed .sr{display:none}.embed .stage{width:100vw;height:100vh;border:0;border-radius:0;box-shadow:none}.embed svg{width:100%;height:100%}
+</style></head><body><main><header><div><div class="eyebrow">A little celebration · No. 3</div><h1>Monster Truck Chore Crusher</h1></div><div class="badge">Big wheels. A mighty little finish.</div></header><div class="stage"><svg id="scene" viewBox="0 0 1200 675" role="img" aria-labelledby="scene-title scene-desc"></svg></div><footer><p>Rev up. Jump high. Finish strong.</p><div class="buttons"><button id="pause" aria-label="Pause animation">Pause</button><button id="replay" class="primary">↻ Replay</button></div></footer><p id="announcement" class="sr" role="status" aria-live="polite"></p></main><script>
+'use strict';
+const clamp=x=>Math.max(0,Math.min(1,x)),phase=(t,a,b)=>clamp((t-a)/(b-a)),ease=x=>1-Math.pow(1-clamp(x),3),mix=(a,b,p)=>a+(b-a)*p;
+const palettes={strawberry:{accent:'#d3a5cd',dark:'#b88fbd',soft:'#ecd9ef'},blueberry:{accent:'#a89bd5',dark:'#7967ad',soft:'#e5def7'},mint:{accent:'#82baa6',dark:'#478c76',soft:'#cef0df'}};
+const check=(x,y,s=1,color='#fff')=>`<path d="M ${x-10*s} ${y} l ${7*s} ${8*s} l ${15*s} ${-19*s}" fill="none" stroke="${color}" stroke-width="${5*s}" stroke-linecap="round" stroke-linejoin="round"/>`;
+const star=(x,y,s,c)=>`<path d="M0 -14 Q3 -3 14 0 Q3 3 0 14 Q-3 3 -14 0 Q-3 -3 0 -14" transform="translate(${x} ${y}) scale(${s})" fill="${c}"/>`;
+const scenes={
+'monster-truck-chore-crusher':{
+ duration:7.6,
+ description:'Chores crushed! A friendly monster truck races up a ramp, jumps onto four symbol cubes, and bounces on its giant wheels. The boxes become checkmarks as the truck draws a giant checkmark in the dirt and celebrates beneath waving finish flags.',
+ mount(svg){svg.innerHTML=`<title id="scene-title">Monster Truck Chore Crusher</title><desc id="scene-desc">${this.description}</desc>
+ <defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#384767"/><stop offset="1" stop-color="#b98c9a"/></linearGradient><linearGradient id="paint" x2="0" y2="1"><stop stop-color="#e9adab"/><stop offset="1" stop-color="#bd798d"/></linearGradient><pattern id="checker" width="24" height="24" patternUnits="userSpaceOnUse"><rect width="24" height="24" fill="#fff2d9"/><path d="M0 0 H12 V12 H0Z M12 12 H24 V24 H12Z" fill="#53677b"/></pattern>
+ <g id="wheel-art"><circle r="49" fill="#35465a" stroke="#23364c" stroke-width="5"/>${Array.from({length:12},(_,i)=>`<path d="M-9 -44 L8 -44" transform="rotate(${i*30})" stroke="#687786" stroke-width="7" stroke-linecap="round"/>`).join('')}<circle r="27" fill="#b2c6c8" stroke="#849aab" stroke-width="5"/><circle r="12" fill="#e6c98e"/>${[0,1,2,3,4].map(i=>`<circle cx="${Math.cos(i*6.283/5)*19}" cy="${Math.sin(i*6.283/5)*19}" r="3" fill="#536779"/>`).join('')}</g></defs>
+ <rect width="1200" height="675" fill="url(#sky)"/>
+ <g id="beams" fill="#fff0bf" opacity=".1"><path d="M122 353 L245 28 H387Z"/><path d="M1078 353 L813 28 H955Z"/></g>
+ <path d="M0 260 Q600 350 1200 260 V429 H0Z" fill="#4b6175"/><path d="M0 296 Q600 389 1200 296 M0 333 Q600 426 1200 333" fill="none" stroke="#7891a0" stroke-width="4"/>
+ <g id="crowd">${Array.from({length:55},(_,i)=>`<g transform="translate(${14+i*22} ${301+Math.sin(i/55*Math.PI)*66})" fill="${['#e5b8b7','#b2cbbd','#e9d09d','#a9b7d1'][i%4]}"><circle r="5"/><path d="M-7 20 V10 Q0 4 7 10 V20Z"/></g>`).join('')}</g>
+ <path d="M0 405 Q600 456 1200 405 V675 H0Z" fill="#c6a37e"/><ellipse cx="632" cy="529" rx="476" ry="111" fill="#dcc09a"/><ellipse cx="632" cy="529" rx="414" ry="87" fill="none" stroke="#b99874" stroke-width="3" stroke-dasharray="14 12"/>
+ <g fill="#ecd29e">${[0,1,2,3,4,5,6].map(i=>`<circle id="light${i}" cx="${150+i*150}" cy="401" r="7"/>`).join('')}</g>
+ <path id="track" d="M418 510 L530 586 L813 427" fill="none" stroke="#93795f" stroke-width="29" stroke-linecap="round" stroke-linejoin="round"/><path id="track-light" d="M418 510 L530 586 L813 427" fill="none" stroke="#ffe5a1" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+ <g id="ramp"><path d="M178 531 L380 452 L398 531Z" fill="#9a8490" stroke="#6c6575" stroke-width="4"/><path d="M181 528 L380 450" stroke="#e3c5ad" stroke-width="10"/><path d="M248 518 L303 498 M285 523 L347 500" stroke="#c6adb2" stroke-width="5"/></g>
+ <g id="boxes">${[[619,485],[681,485],[650,426],[712,426]].map(([x,y],i)=>`<g id="box${i}" transform="translate(${x} ${y})"><rect x="-28" y="-28" width="56" height="56" rx="7" fill="${i===3?'#ebbac0':'#e8c798'}" stroke="#ae8b73" stroke-width="3"/><path d="M-26 -16 H26" stroke="#f5dfb8" stroke-width="7"/>${i<3?check(0,4,1,'#829989'):'<g id="empty"><rect x="-10" y="-7" width="21" height="21" rx="3" fill="none" stroke="#a77788" stroke-width="3"/></g>'}</g>`).join('')}</g>
+ <g id="fragments">${Array.from({length:16},(_,i)=>`<g id="fragment${i}"><rect x="-14" y="-10" width="28" height="20" rx="3" fill="${['#eac697','#eab6bf','#d8ceaa'][i%3]}"/>${check(0,0,.55,'#7f9587')}</g>`).join('')}</g>
+ <g id="dust">${Array.from({length:12},(_,i)=>`<ellipse id="dust${i}" rx="${10+i%4*7}" ry="${7+i%3*4}" fill="#f1d7ad"/>`).join('')}</g>
+ <ellipse id="shadow" cx="650" cy="533" rx="117" ry="16" fill="#8d765e" opacity=".24"/>
+ <g id="truck"><g id="body"><path d="M-83 1 L-69 -42 H-24 L-5 -84 H55 L88 -34 L122 -19 V18 H-101 V-1Z" fill="url(#paint)" stroke="#815f79" stroke-width="4"/><path d="M1 -75 H48 L72 -36 H-13Z" fill="#d2e7de" stroke="#815f79" stroke-width="4"/><path d="M25 -75 V-36" stroke="#815f79" stroke-width="4"/>
+ <g id="driver"><circle cx="8" cy="-55" r="12" fill="#ebc7a7"/><path d="M-5 -59 Q8 -78 22 -59Z" fill="#f3d58e"/><circle cx="12" cy="-55" r="2" fill="#5b6873"/><path d="M13 -48 Q17 -45 20 -49" stroke="#9e7b70" stroke-width="2" fill="none"/><path id="thumb" d="M13 -38 L21 -44 L20 -54 M21 -44 L28 -43" fill="none" stroke="#ebc7a7" stroke-width="6" stroke-linecap="round"/></g>
+ <path d="M-91 -14 H-44 L-27 -30 H52 L76 -12 H115" fill="none" stroke="#f4d8a5" stroke-width="8"/><rect x="94" y="-16" width="25" height="12" rx="4" fill="#fff0b3"/><rect x="-108" y="9" width="238" height="12" rx="6" fill="#9cacb6"/><path d="M-49 8 L-41 35 M71 8 L62 35" stroke="#d4dcd6" stroke-width="8"/>${star(11,-9,.85,'#ffe2a9')}</g>
+ <g id="wheel0"><use href="#wheel-art"/></g><g id="wheel1"><use href="#wheel-art"/></g></g>
+ <g id="flags">${[205,995].map((x,i)=>`<g id="flag${i}" transform="translate(${x} 372)"><path d="M0 0 V145" stroke="#768898" stroke-width="7" stroke-linecap="round"/><path d="M0 0 Q43 -15 84 0 V61 Q44 43 0 60Z" fill="url(#checker)" stroke="#eadabb" stroke-width="2"/></g>`).join('')}</g>
+ <g id="message"><path d="M347 0 V72 M853 0 V72" stroke="#a4afb0" stroke-width="5"/><rect x="266" y="68" width="668" height="111" rx="22" fill="#fff0c8" stroke="#bfa0a2" stroke-width="6"/><circle cx="286" cy="89" r="5" fill="#a69290"/><circle cx="914" cy="89" r="5" fill="#a69290"/><text x="600" y="144" text-anchor="middle" fill="#625b78" font-family="ui-rounded,system-ui,sans-serif" font-size="58" font-weight="900" letter-spacing="-1">CHORES CRUSHED!</text><text id="child-label" x="600" y="641" text-anchor="middle" fill="#675e65" font-family="system-ui,sans-serif" font-size="22" font-weight="700"></text></g>
+ <g id="wipe"><use href="#wheel-art"/></g>`;
+ const nodes={};svg.querySelectorAll('[id]').forEach(n=>nodes[n.id]=n);return nodes;},
+ render(n,t){const show=(id,v)=>n[id].setAttribute('opacity',v),tr=(id,v)=>n[id].setAttribute('transform',v);
+ let x=80,y=470,angle=0,scale=1;
+ if(t<1.2){x=-160;}
+ else if(t<2.8){let p=phase(t,1.2,2.8);x=mix(-120,354,p*p);y=470-57*phase(x,190,354)+Math.sin(t*19)*3;angle=-17*phase(x,190,354)}
+ else if(t<3.85){let p=phase(t,2.8,3.85);x=mix(354,668,p);y=mix(413,424,p)-Math.sin(p*Math.PI)*130;angle=mix(-22,14,p)}
+ else if(t<4.6){let p=phase(t,3.85,4.6);x=668;y=424+Math.sin(p*Math.PI*3)*12*(1-p);angle=Math.sin(p*Math.PI*3)*4*(1-p)}
+ else if(t<6.8){let p=phase(t,4.6,6.8),a=p*Math.PI*2;x=668+190*Math.sin(a);y=446-45*Math.sin(a*2);scale=1-.13*Math.sin(a);angle=Math.cos(a)*6}
+ else{let p=ease(phase(t,6.8,7.6));x=mix(668,630,p);y=mix(446,520,p);scale=1+p*2;angle=0}
+ tr('truck',`translate(${x} ${y}) rotate(${angle}) scale(${scale})`);tr('body',`translate(0 ${t>=3.85&&t<4.6?Math.sin(phase(t,3.85,4.6)*Math.PI*3)*13:Math.sin(t*13)*1.5})`);
+ for(let i=0;i<2;i++)tr('wheel'+i,`translate(${i?72:-61} 32) rotate(${t*360})`);tr('shadow',`translate(${x-650} 0) scale(1 ${t>2.8&&t<3.85?.5:1})`);show('thumb',t>=2.8?1:0);
+ for(let i=0;i<4;i++){let drop=ease(phase(t,i*.13,.45+i*.13));let squash=phase(t,3.85,4.05);show('box'+i,1-phase(t,3.95,4.15));tr('box'+i,`translate(${[619,681,650,712][i]} ${[485,485,426,426][i]-180*(1-drop)+squash*20}) scale(${1+squash*.35} ${1-squash*.75})`)}
+ for(let i=0;i<16;i++){let p=phase(t,3.95,5.1);show('fragment'+i,Math.sin(p*Math.PI));tr('fragment'+i,`translate(${668+(i-7.5)*31*p} ${465-Math.sin(p*Math.PI)*(60+i%5*19)+p*55}) rotate(${p*300+i*23})`)}
+ for(let i=0;i<12;i++){let p=(t*1.5+i/12)%1;show('dust'+i,t>1.3&&t<6.8?(1-p)*.55:0);tr('dust'+i,`translate(${x-80-p*115} ${y+69-p*25}) scale(${.5+p})`)}
+ let track=phase(t,4.6,6.35);n.track.setAttribute('stroke-dasharray',`${track*500} 550`);n['track-light'].setAttribute('stroke-dasharray',`${track*500} 550`);show('track',track?1:0);show('track-light',track?1:0);
+ show('flags',phase(t,4.7,5.05));for(let i=0;i<2;i++)tr('flag'+i,`translate(${i?995:205} 372) rotate(${Math.sin(t*8+i)*5} 0 145)`);
+ show('message',phase(t,4.75,5.1));tr('message',`translate(0 ${-225*(1-ease(phase(t,4.75,5.2)))+Math.sin(phase(t,5.1,5.5)*Math.PI)*5})`);
+ tr('crowd',`translate(0 ${t>4.3?-Math.abs(Math.sin(t*10))*5:0})`);tr('beams',`rotate(${Math.sin(t*2)*5} 600 400)`);
+ let wipe=ease(phase(t,7,7.6));show('wipe',wipe?1:0);tr('wipe',`translate(600 338) scale(${wipe*17}) rotate(${t*220})`);
+ }
+}};
+class CelebrationPlayer{
+ constructor(svg,{sceneId='monster-truck-chore-crusher',colorVariation='strawberry',childName='',loop=true,onStateChange=()=>{}}={}){
+ if(!scenes[sceneId])throw new Error('Unknown celebration scene');
+ this.svg=svg;this.scene=scenes[sceneId];this.loop=loop;this.onStateChange=onStateChange;this.time=0;this.running=false;this.destroyed=false;this.visible=true;this.frame=0;this.last=null;this.announced=false;
+ const p=palettes[colorVariation]||palettes.strawberry;Object.entries(p).forEach(([k,v])=>svg.style.setProperty('--'+k,v));this.nodes=this.scene.mount(svg);this.nodes['child-label'].textContent=childName?`Well done, ${String(childName).slice(0,32)}!`:'';
+ this.motion=matchMedia('(prefers-reduced-motion: reduce)');
+ this.tick=now=>{this.frame=0;if(!this.canRun()){this.last=null;return}if(this.last!==null)this.time+=(now-this.last)/1000;this.last=now;if(this.time>=this.scene.duration){if(this.loop){this.time%=this.scene.duration;this.announced=false}else{this.time=6.6;this.running=false;this.onStateChange(false)}}this.render();this.schedule();};
+ this.onVisibility=()=>{this.cancel();this.schedule()};this.onMotion=()=>{this.cancel();if(this.motion.matches){this.time=6.4;this.render()}else if(this.running){this.time=0;this.render();this.schedule()}this.onStateChange(this.running&&!this.motion.matches)};
+ document.addEventListener('visibilitychange',this.onVisibility);this.motion.addEventListener('change',this.onMotion);
+ this.observer=new IntersectionObserver(entries=>{this.visible=entries[0].isIntersecting;this.cancel();this.schedule()});this.observer.observe(svg);
+ this.onPageHide=()=>this.destroy();window.addEventListener('pagehide',this.onPageHide,{once:true});this.render();this.play();
+ }
+ canRun(){return this.running&&!this.destroyed&&this.visible&&!document.hidden&&!this.motion.matches}
+ schedule(){if(this.canRun()&&!this.frame)this.frame=requestAnimationFrame(this.tick)}
+ cancel(){cancelAnimationFrame(this.frame);this.frame=0;this.last=null}
+ render(){this.scene.render(this.nodes,this.time,this.svg);if(this.time>=5.6&&!this.announced){document.getElementById('announcement').textContent=this.scene.description;this.announced=true}}
+ play(){if(this.destroyed)return;this.running=true;if(this.motion.matches){this.time=6.4;this.render()}this.onStateChange(!this.motion.matches);this.schedule()}
+ pause(){if(this.destroyed)return;this.running=false;this.cancel();this.onStateChange(false)}
+ replay(){if(this.destroyed)return;this.cancel();this.time=this.motion.matches?6.4:0;this.announced=false;this.render();this.play()}
+ destroy(){if(this.destroyed)return;this.pause();this.destroyed=true;this.observer.disconnect();document.removeEventListener('visibilitychange',this.onVisibility);this.motion.removeEventListener('change',this.onMotion);window.removeEventListener('pagehide',this.onPageHide);this.onDestroy?.()}
+}
+window.CelebrationPlayer=CelebrationPlayer;window.celebrationScenes=scenes;
+if(new URLSearchParams(location.search).has('embed'))document.body.classList.add('embed');
+const pauseButton=document.getElementById('pause');
+const player=new CelebrationPlayer(document.getElementById('scene'),{onStateChange:playing=>{pauseButton.textContent=playing?'Pause':'Play';pauseButton.setAttribute('aria-label',playing?'Pause animation':'Play animation')}});
+window.monsterTruckPlayer=player;
+const toggle=()=>player.running&&!player.motion.matches?player.pause():player.play();const replay=()=>player.replay();
+pauseButton.addEventListener('click',toggle);document.getElementById('replay').addEventListener('click',replay);player.onDestroy=()=>{pauseButton.removeEventListener('click',toggle);document.getElementById('replay').removeEventListener('click',replay)};
+</script></body></html>

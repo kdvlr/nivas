@@ -22,6 +22,9 @@ export type CelebrationName =
   | 'butterfly-garden'
   | 'pop-star-concert'
   | 'baa-baa-story'
+  | 'monster-truck'
+  | 'robot-mission'
+  | 'pirate-treasure'
 
 export interface Celebration {
   name: CelebrationName
@@ -1364,6 +1367,36 @@ export const CELEBRATIONS: Celebration[] = [
     hideHtmlPraise: true,
     praise: ['Ewe did it!'],
     iframeSrc: '/celebrations/baa_baa_chores.html?embed=1',
+  },
+  {
+    name: 'monster-truck',
+    emoji: '🛻',
+    label: 'Monster Truck Chore Crusher',
+    backdrop: '#384767',
+    durationMs: 7600,
+    hideHtmlPraise: true,
+    praise: ['Chores crushed!'],
+    iframeSrc: '/celebrations/monster_truck_chore_crusher.html?embed=1',
+  },
+  {
+    name: 'robot-mission',
+    emoji: '🤖',
+    label: 'Robot Completion Mission',
+    backdrop: '#263651',
+    durationMs: 7600,
+    hideHtmlPraise: true,
+    praise: ['Mission accomplished!'],
+    iframeSrc: '/celebrations/robot_completion_mission.html?embed=1',
+  },
+  {
+    name: 'pirate-treasure',
+    emoji: '🏴‍☠️',
+    label: 'Pirate Chore Treasure',
+    backdrop: '#b7ddd9',
+    durationMs: 7600,
+    hideHtmlPraise: true,
+    praise: ['Arrr-some! Chores complete!'],
+    iframeSrc: '/celebrations/pirate_chore_treasure.html?embed=1',
   },
   {
     name: 'confetti',

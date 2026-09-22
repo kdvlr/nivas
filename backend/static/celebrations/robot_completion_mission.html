@@ -1,0 +1,87 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Robot Completion Mission · Mission Accomplished</title><style>
+*{box-sizing:border-box}body{margin:0;background:#e8eff3;color:#31596b;font-family:ui-rounded,'Avenir Next',system-ui,sans-serif;min-height:100vh;display:grid;place-items:center;padding:30px}main{width:min(1200px,100%)}header{display:flex;align-items:center;justify-content:space-between;margin:0 3px 22px}.eyebrow{font-size:11px;font-weight:800;letter-spacing:3px;color:#899177;text-transform:uppercase}h1{font-size:clamp(23px,3vw,35px);letter-spacing:-1px;margin:7px 0 0}.badge{border:1px solid #cad0bd;padding:10px 15px;border-radius:30px;font-size:12px}.stage{overflow:hidden;border-radius:26px;background:#e9eddc;box-shadow:0 25px 65px #31596b20;border:6px solid #fffbf5}svg{display:block;width:100%;height:auto;aspect-ratio:16/9}footer{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:22px 3px 0}footer p{font-size:13px;color:#7c896f;margin:0}.buttons{display:flex;gap:9px}button{border:1px solid #c9cebb;background:#fffaf3;color:#31596b;padding:12px 20px;border-radius:30px;font:700 13px system-ui;cursor:pointer}button.primary{background:#438f9c;color:#fff7ee;border-color:#438f9c}button:focus-visible{outline:3px solid #c399ab;outline-offset:4px}button:hover{filter:brightness(.96)}.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}@media(max-width:600px){body{padding:16px 8px}header{padding:0 6px}.badge{display:none}.stage{border-width:3px;border-radius:16px}footer{align-items:flex-start;padding:17px 6px}footer p{max-width:145px;font-size:11px}button{padding:10px 14px}}
+.embed{display:block;min-height:0;padding:0;background:#000;overflow:hidden}.embed main{width:100vw;height:100vh}.embed header,.embed footer,.embed .sr{display:none}.embed .stage{width:100vw;height:100vh;border:0;border-radius:0;box-shadow:none}.embed svg{width:100%;height:100%}
+</style></head><body><main><header><div><div class="eyebrow">A little celebration · No. 4</div><h1>Robot Completion Mission</h1></div><div class="badge">A little focus. A happy little robot.</div></header><div class="stage"><svg id="scene" viewBox="0 0 1200 675" role="img" aria-labelledby="scene-title scene-desc"></svg></div><footer><p>One last check. Time for a happy dance.</p><div class="buttons"><button id="pause" aria-label="Pause animation">Pause</button><button id="replay" class="primary">↻ Replay</button></div></footer><p id="announcement" class="sr" role="status" aria-live="polite"></p></main><script>
+'use strict';
+const clamp=x=>Math.max(0,Math.min(1,x)),phase=(t,a,b)=>clamp((t-a)/(b-a)),ease=x=>1-Math.pow(1-clamp(x),3),mix=(a,b,p)=>a+(b-a)*p;
+const palettes={strawberry:{accent:'#d3a5cd',dark:'#b88fbd',soft:'#ecd9ef'},blueberry:{accent:'#a89bd5',dark:'#7967ad',soft:'#e5def7'},mint:{accent:'#82baa6',dark:'#478c76',soft:'#cef0df'}};
+const check=(x,y,s=1,color='#fff')=>`<path d="M ${x-10*s} ${y} l ${7*s} ${8*s} l ${15*s} ${-19*s}" fill="none" stroke="${color}" stroke-width="${5*s}" stroke-linecap="round" stroke-linejoin="round"/>`;
+const star=(x,y,s,c)=>`<path d="M0 -14 Q3 -3 14 0 Q3 3 0 14 Q-3 3 -14 0 Q-3 -3 0 -14" transform="translate(${x} ${y}) scale(${s})" fill="${c}"/>`;
+const scenes={
+'robot-completion-mission':{
+ duration:7.6,
+ description:'Mission accomplished! A friendly robot scans the last unfinished tile, tries a gentle button tap, then presses firmly to complete the checklist. The room glows green and the robot celebrates with heart eyes, a dance, and a salute.',
+ mount(svg){svg.innerHTML=`<title id="scene-title">Robot Completion Mission</title><desc id="scene-desc">${this.description}</desc>
+ <defs><linearGradient id="room" x2="0" y2="1"><stop stop-color="#263651"/><stop offset="1" stop-color="#4b687d"/></linearGradient><linearGradient id="metal" x2="1" y2="1"><stop stop-color="#edf4ed"/><stop offset="1" stop-color="#9bbbc8"/></linearGradient><radialGradient id="halo"><stop stop-color="#b5f9d8" stop-opacity=".4"/><stop offset="1" stop-color="#b5f9d8" stop-opacity="0"/></radialGradient><g id="heart"><path d="M0 7 C-23 -7 -13 -22 0 -11 C13 -22 23 -7 0 7Z" fill="#f1b5cb"/></g></defs>
+ <rect width="1200" height="675" fill="url(#room)"/><path d="M0 535 H1200 V675 H0Z" fill="#344d64"/>
+ <path d="M0 535 H1200 M0 600 H1200 M180 675 L360 535 M450 675 L500 535 M750 675 L700 535 M1020 675 L840 535" fill="none" stroke="#698f9e" stroke-opacity=".3" stroke-width="2"/>
+ <g stroke="#7895a9" stroke-width="3" fill="#32485f"><rect x="53" y="128" width="168" height="353" rx="27"/><rect x="979" y="128" width="168" height="353" rx="27"/></g>
+ <g id="wall-lights">${[0,1,2,3].map(i=>`<g><rect x="77" y="${161+i*77}" width="120" height="12" rx="6"/><rect x="1003" y="${161+i*77}" width="120" height="12" rx="6"/></g>`).join('')}</g>
+ <g fill="none" stroke="#75929f" stroke-width="3"><path d="M220 88 H421 L456 53 H768 L805 88 H981"/><path d="M240 449 H304 V502 H363 M960 449 H896 V502 H857"/></g>
+ <circle id="room-glow" cx="600" cy="340" r="410" fill="url(#halo)"/>
+ <g id="panels"><path id="panel-left" d="M239 203 H293 V422 H239Z" fill="#b9cdd0"/><path id="panel-right" d="M907 203 H961 V422 H907Z" fill="#b9cdd0"/></g>
+ <g id="task-panel"><rect x="603" y="210" width="309" height="218" rx="24" fill="#264b60" stroke="#92d6d6" stroke-width="3"/><rect x="619" y="226" width="277" height="186" rx="16" fill="#70c8cb" fill-opacity=".09"/>
+ ${[0,1,2,3].map(i=>`<g transform="translate(650 ${250+i*44})"><rect x="-16" y="-16" width="32" height="32" rx="8" fill="#8dc7c7" fill-opacity=".2"/>${i<3?check(0,0,.75,'#b4e8d5'):'<g id="empty"><rect x="-8" y="-8" width="16" height="16" rx="3" fill="none" stroke="#ead1a0" stroke-width="3"/></g><g id="last-check">'+check(0,0,.75,'#b4e8d5')+'</g>'}<path d="M32 -4 Q45 -12 59 -4 T87 -4 T117 -4 M33 7 H${116-i*8}" fill="none" stroke="#86b7c2" stroke-width="4" stroke-linecap="round"/></g>`).join('')}
+ <rect x="817" y="242" width="65" height="65" rx="17" fill="#b4e8d5" fill-opacity=".13"/><text id="percent" x="849" y="282" text-anchor="middle" fill="#d6f4e2" font-family="system-ui,sans-serif" font-size="23" font-weight="800">99%</text>
+ <g id="scan"><rect x="619" y="230" width="277" height="22" rx="8" fill="#b5ffed" opacity=".15"/><path d="M619 245 H896" stroke="#c4fff0" stroke-width="4"/></g></g>
+ <g id="console"><path d="M541 504 L580 465 H744 L777 504 V554 H541Z" fill="#7a9aa9" stroke="#a3c1c6" stroke-width="3"/><path d="M551 506 H768" stroke="#aecfd0" stroke-width="4"/><rect x="614" y="523" width="91" height="8" rx="4" fill="#acc6c9"/><ellipse cx="658" cy="479" rx="42" ry="15" fill="#3d647a"/><g id="button"><path d="M624 462 V477 Q657 498 691 477 V462" fill="#ba8398"/><ellipse cx="657" cy="462" rx="34" ry="13" fill="#f1bace"/><circle cx="657" cy="462" r="5" fill="#fff1de"/></g></g>
+ <g id="robot"><ellipse cy="153" rx="98" ry="15" fill="#142d42" opacity=".35"/>
+ <g id="wheel"><rect x="-43" y="112" width="86" height="41" rx="20" fill="#293f56" stroke="#7394a6" stroke-width="4"/><path id="tread" d="M-25 118 V147 M-8 117 V148 M9 117 V148 M26 118 V147" stroke="#b0c6c9" stroke-width="5"/></g>
+ <rect x="-68" y="-1" width="136" height="124" rx="37" fill="url(#metal)" stroke="#7294a7" stroke-width="4"/><rect x="-42" y="27" width="84" height="59" rx="19" fill="#55758a"/><circle id="chest-light" cy="56" r="15" fill="#b5e8de"/>${check(0,56,.8,'#55758a')}
+ <path id="left-arm" d="M-65 23 Q-107 56 -87 83" fill="none" stroke="#b0cbd0" stroke-width="23" stroke-linecap="round"/>
+ <path id="right-arm" d="M65 23 Q110 26 137 52" fill="none" stroke="#b0cbd0" stroke-width="23" stroke-linecap="round"/>
+ <circle id="hand" cx="137" cy="52" r="15" fill="#e0eae0"/>
+ <g id="head"><path d="M0 -111 V-133" stroke="#a9c6ce" stroke-width="7"/><circle cx="0" cy="-141" r="10" fill="#e6b2c7"/><rect x="-93" y="-74" width="25" height="42" rx="10" fill="#aec7cc"/><rect x="68" y="-74" width="25" height="42" rx="10" fill="#aec7cc"/><rect x="-76" y="-112" width="152" height="123" rx="37" fill="url(#metal)" stroke="#7294a7" stroke-width="4"/><rect x="-59" y="-89" width="118" height="72" rx="24" fill="#294a62"/>
+ <g id="eyes"><rect x="-34" y="-70" width="14" height="23" rx="7" fill="#baf3e5"/><rect x="20" y="-70" width="14" height="23" rx="7" fill="#baf3e5"/></g><g id="hearts"><use href="#heart" transform="translate(-28 -54) scale(.8)"/><use href="#heart" transform="translate(28 -54) scale(.8)"/></g><path id="smile" d="M-12 -38 Q0 -28 12 -38" fill="none" stroke="#baf3e5" stroke-width="4" stroke-linecap="round"/></g></g>
+ <g id="stamp"><rect x="310" y="85" width="580" height="105" rx="20" fill="#d7f1d8" stroke="#83bbaa" stroke-width="5"/><text x="600" y="127" text-anchor="middle" fill="#376879" font-family="ui-rounded,system-ui,sans-serif" font-size="32" font-weight="900" letter-spacing="3">MISSION</text><text x="600" y="169" text-anchor="middle" fill="#376879" font-family="ui-rounded,system-ui,sans-serif" font-size="39" font-weight="900">ACCOMPLISHED!</text></g>
+ <g id="pixels">${Array.from({length:32},(_,i)=>`<rect id="pixel${i}" width="${5+i%3*3}" height="${5+i%3*3}" rx="2" fill="${['#dfb3cf','#b3e7d4','#eddaa1','#a9c6e6'][i%4]}"/>`).join('')}</g>
+ <g id="orbit">${[0,1,2,3].map(i=>`<g id="check${i}"><circle r="22" fill="#b2e4d6" fill-opacity=".14"/>${check(0,0,1,'#c7f4d8')}</g>`).join('')}</g>
+ <g id="big-check">${check(753,324,3,'#c7f4d8')}</g><text id="child-label" x="600" y="622" text-anchor="middle" fill="#c8e6dc" font-family="system-ui,sans-serif" font-size="22" font-weight="700"></text>
+ <circle id="wipe" cx="600" cy="338" r="1" fill="#c8eee3"/>`;
+ const nodes={};svg.querySelectorAll('[id]').forEach(n=>nodes[n.id]=n);return nodes;},
+ render(n,t){const show=(id,v)=>n[id].setAttribute('opacity',v),tr=(id,v)=>n[id].setAttribute('transform',v);
+ const done=t>=4.35,dance=t>=5.3,dp=phase(t,5.3,6.8);show('room-glow',done?.7+.15*Math.sin(t*4):0);n['wall-lights'].setAttribute('fill',done?'#b5edce':'#8dbaca');
+ show('empty',done?0:1);show('last-check',done?1:0);n.percent.textContent=done?'100%':'99%';show('scan',t>=1.1&&t<2.8?Math.sin(phase(t,1.1,2.8)*Math.PI):0);tr('scan',`translate(0 ${phase(t,1.1,2.8)*145})`);
+ let wrong=t>=3.2&&t<3.6,press=t>=4&&t<4.6,pressP=Math.sin(phase(t,4,4.6)*Math.PI);tr('task-panel',`translate(${wrong?Math.sin(t*48)*5:0} 0)`);show('task-panel',1-phase(t,5.65,6.3));
+ tr('button',`translate(0 ${press?pressP*12:wrong?2:0})`);let entry=ease(phase(t,0,1));let bob=dance?Math.abs(Math.sin((t-5.3)*9))*9:0;tr('robot',`translate(${mix(345,451,entry)} ${416-bob}) rotate(${dance?Math.sin((t-5.3)*9)*5:0} 0 100)`);
+ let tap=phase(t,2.8,3.25)*(1-phase(t,3.4,3.7)),hard=phase(t,3.8,4.3)*(1-phase(t,4.5,4.9));let hx=137+69*Math.max(tap,hard),hy=52-6*tap+6*hard;
+ if(dance){hx=120+Math.sin(t*8)*18;hy=-25+Math.sin(t*10)*43;if(t>6.55){hx=75;hy=-95}}
+ n['right-arm'].setAttribute('d',`M65 23 Q115 ${hy+12} ${hx} ${hy}`);n.hand.setAttribute('cx',hx);n.hand.setAttribute('cy',hy);n['left-arm'].setAttribute('d',`M-65 23 Q-107 ${dance?-15+Math.sin(t*10)*30:56} -87 ${dance?-30+Math.sin(t*10)*48:83}`);
+ tr('head',`rotate(${wrong?-12:dance?Math.sin(t*7)*4:Math.sin(t*2)*2} 0 -50)`);show('eyes',dance?0:1);show('hearts',dance?1:0);tr('tread',`translate(${Math.sin(t*12)*(dance?4:2)} 0)`);
+ show('stamp',phase(t,4.5,4.85));tr('stamp',`translate(0 ${-190*(1-ease(phase(t,4.5,4.95)))}) rotate(${-7*(1-ease(phase(t,4.5,5.05)))} 600 130)`);
+ let panels=ease(phase(t,5,5.5));tr('panel-left',`translate(${-panels*43} 0)`);tr('panel-right',`translate(${panels*43} 0)`);
+ for(let i=0;i<32;i++){let p=phase(t,5.15+i%4*.07,7);show('pixel'+i,Math.sin(p*Math.PI)*.85);tr('pixel'+i,`translate(${(i%2?951:242)+(i%2?-1:1)*p*(35+i%7*20)} ${280-Math.sin(p*Math.PI)*(55+i%5*23)+p*260}) rotate(${p*180+i*16})`)}
+ for(let i=0;i<4;i++){let a=dp*Math.PI*2+i*Math.PI/2;show('check'+i,t>=5.3?1-phase(t,6.15,6.65):0);tr('check'+i,`translate(${600+Math.cos(a)*190} ${335+Math.sin(a)*105})`)}
+ show('big-check',phase(t,6.05,6.5));tr('big-check',`translate(0 ${16*(1-ease(phase(t,6.05,6.5)))})`);
+ n.wipe.setAttribute('r',ease(phase(t,7,7.6))*750);show('wipe',t>=7?1:0);
+ }
+}};
+class CelebrationPlayer{
+ constructor(svg,{sceneId='robot-completion-mission',colorVariation='strawberry',childName='',loop=true,onStateChange=()=>{}}={}){
+ if(!scenes[sceneId])throw new Error('Unknown celebration scene');
+ this.svg=svg;this.scene=scenes[sceneId];this.loop=loop;this.onStateChange=onStateChange;this.time=0;this.running=false;this.destroyed=false;this.visible=true;this.frame=0;this.last=null;this.announced=false;
+ const p=palettes[colorVariation]||palettes.strawberry;Object.entries(p).forEach(([k,v])=>svg.style.setProperty('--'+k,v));this.nodes=this.scene.mount(svg);this.nodes['child-label'].textContent=childName?`Well done, ${String(childName).slice(0,32)}!`:'';
+ this.motion=matchMedia('(prefers-reduced-motion: reduce)');
+ this.tick=now=>{this.frame=0;if(!this.canRun()){this.last=null;return}if(this.last!==null)this.time+=(now-this.last)/1000;this.last=now;if(this.time>=this.scene.duration){if(this.loop){this.time%=this.scene.duration;this.announced=false}else{this.time=6.6;this.running=false;this.onStateChange(false)}}this.render();this.schedule();};
+ this.onVisibility=()=>{this.cancel();this.schedule()};this.onMotion=()=>{this.cancel();if(this.motion.matches){this.time=6.4;this.render()}else if(this.running){this.time=0;this.render();this.schedule()}this.onStateChange(this.running&&!this.motion.matches)};
+ document.addEventListener('visibilitychange',this.onVisibility);this.motion.addEventListener('change',this.onMotion);
+ this.observer=new IntersectionObserver(entries=>{this.visible=entries[0].isIntersecting;this.cancel();this.schedule()});this.observer.observe(svg);
+ this.onPageHide=()=>this.destroy();window.addEventListener('pagehide',this.onPageHide,{once:true});this.render();this.play();
+ }
+ canRun(){return this.running&&!this.destroyed&&this.visible&&!document.hidden&&!this.motion.matches}
+ schedule(){if(this.canRun()&&!this.frame)this.frame=requestAnimationFrame(this.tick)}
+ cancel(){cancelAnimationFrame(this.frame);this.frame=0;this.last=null}
+ render(){this.scene.render(this.nodes,this.time,this.svg);if(this.time>=5.6&&!this.announced){document.getElementById('announcement').textContent=this.scene.description;this.announced=true}}
+ play(){if(this.destroyed)return;this.running=true;if(this.motion.matches){this.time=6.4;this.render()}this.onStateChange(!this.motion.matches);this.schedule()}
+ pause(){if(this.destroyed)return;this.running=false;this.cancel();this.onStateChange(false)}
+ replay(){if(this.destroyed)return;this.cancel();this.time=this.motion.matches?6.4:0;this.announced=false;this.render();this.play()}
+ destroy(){if(this.destroyed)return;this.pause();this.destroyed=true;this.observer.disconnect();document.removeEventListener('visibilitychange',this.onVisibility);this.motion.removeEventListener('change',this.onMotion);window.removeEventListener('pagehide',this.onPageHide);this.onDestroy?.()}
+}
+window.CelebrationPlayer=CelebrationPlayer;window.celebrationScenes=scenes;
+if(new URLSearchParams(location.search).has('embed'))document.body.classList.add('embed');
+const pauseButton=document.getElementById('pause');
+const player=new CelebrationPlayer(document.getElementById('scene'),{onStateChange:playing=>{pauseButton.textContent=playing?'Pause':'Play';pauseButton.setAttribute('aria-label',playing?'Pause animation':'Play animation')}});
+window.robotPlayer=player;
+const toggle=()=>player.running&&!player.motion.matches?player.pause():player.play();const replay=()=>player.replay();
+pauseButton.addEventListener('click',toggle);document.getElementById('replay').addEventListener('click',replay);player.onDestroy=()=>{pauseButton.removeEventListener('click',toggle);document.getElementById('replay').removeEventListener('click',replay)};
+</script></body></html>
