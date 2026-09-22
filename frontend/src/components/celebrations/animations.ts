@@ -2,6 +2,7 @@
 
 import confetti from 'canvas-confetti'
 import { balloonCannonRun } from './balloon-cannon-animation'
+import { wreckingBallRun } from './wrecking-ball-animation'
 
 export type CelebrationName =
   | 'confetti'
@@ -14,6 +15,7 @@ export type CelebrationName =
   | 'bubbles'
   | 'dino'
   | 'balloon-cannon'
+  | 'wrecking-ball'
   | 'hyperspace'
 
 export interface Celebration {
@@ -1387,6 +1389,16 @@ export const CELEBRATIONS: Celebration[] = [
     hideHtmlPraise: true,
     praise: ['Chores blown away!'],
     run: balloonCannonRun,
+  },
+  {
+    name: 'wrecking-ball',
+    emoji: '🏗️',
+    label: 'Wrecking Ball',
+    backdrop: '#38bdf8',
+    durationMs: 7500,
+    hideHtmlPraise: true,
+    praise: ['Chores demolished!'],
+    run: wreckingBallRun,
   },
   {
     name: 'hyperspace',

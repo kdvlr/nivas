@@ -867,23 +867,35 @@ export const balloonCannonRun = (canvas: HTMLCanvasElement): (() => void) => {
   let rafId = 0
   const startTime = performance.now()
 
-  const loop = (now: number) => {
-    const t = (now - startTime) / 1000
+  // Cache dimensions to avoid layout thrashing in loop
+  let targetW = 0
+  let targetH = 0
+  let scale = 1
+  let offsetX = 0
+  let offsetY = 0
 
+  const updateSize = () => {
     const dpr = window.devicePixelRatio || 1
-    const cw = canvas.clientWidth
-    const ch = canvas.clientHeight
-    const targetW = Math.floor(cw * dpr)
-    const targetH = Math.floor(ch * dpr)
+    const cw = canvas.clientWidth || window.innerWidth
+    const ch = canvas.clientHeight || window.innerHeight
+    targetW = Math.floor(cw * dpr)
+    targetH = Math.floor(ch * dpr)
 
     if (canvas.width !== targetW || canvas.height !== targetH) {
       canvas.width = targetW
       canvas.height = targetH
     }
 
-    const scale = Math.min(targetW / V_W, targetH / V_H)
-    const offsetX = (targetW - V_W * scale) / 2
-    const offsetY = (targetH - V_H * scale) / 2
+    scale = Math.min(targetW / V_W, targetH / V_H)
+    offsetX = (targetW - V_W * scale) / 2
+    offsetY = (targetH - V_H * scale) / 2
+  }
+
+  updateSize()
+  window.addEventListener('resize', updateSize)
+
+  const loop = (now: number) => {
+    const t = (now - startTime) / 1000
 
     ctx.save()
     ctx.clearRect(0, 0, targetW, targetH)
@@ -902,6 +914,7 @@ export const balloonCannonRun = (canvas: HTMLCanvasElement): (() => void) => {
   rafId = requestAnimationFrame(loop)
 
   return () => {
+    window.removeEventListener('resize', updateSize)
     cancelAnimationFrame(rafId)
   }
 }
