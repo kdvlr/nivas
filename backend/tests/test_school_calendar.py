@@ -202,3 +202,28 @@ def test_check_and_trigger_school_timer(monkeypatch, db_session):
     check_and_trigger_school_timer()
     start_mock.assert_not_called()
 
+
+def test_school_timer_cron_scheduled_at_6_15(monkeypatch):
+    """Verify that school_timer cron job is registered for 6:15 AM."""
+    from unittest.mock import MagicMock
+    from app import scheduler
+
+    mock_add_job = MagicMock()
+    monkeypatch.setattr(scheduler.scheduler, "add_job", mock_add_job)
+    monkeypatch.setattr(scheduler.scheduler, "start", MagicMock())
+    monkeypatch.setattr(scheduler.scheduler, "modify_job", MagicMock())
+
+    scheduler.start()
+
+    # Find the call for id="school_timer"
+    school_timer_calls = [
+        call for call in mock_add_job.call_args_list
+        if call.kwargs.get("id") == "school_timer"
+    ]
+    assert len(school_timer_calls) == 1
+    call = school_timer_calls[0]
+    assert call.kwargs.get("hour") == 6
+    assert call.kwargs.get("minute") == 15
+    assert call.args[1] == "cron"
+
+
