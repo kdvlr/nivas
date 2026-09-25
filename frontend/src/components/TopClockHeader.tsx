@@ -77,26 +77,26 @@ export default function TopClockHeader({ now, config, className = '' }: TopClock
         type="button"
         onClick={handleClockClick}
         title="Click to set a timer"
-        className="group/clock flex items-center justify-end gap-2 cursor-pointer select-none transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] outline-none text-right"
+        className="group/clock flex items-center justify-end gap-1.5 sm:gap-2 cursor-pointer select-none transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] outline-none text-right"
       >
         {activeTimer && (
-          <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] animate-pulse">
-            <Icon name="timer" className="text-sm" />
+          <span className="inline-flex items-center gap-1 text-[0.65rem] sm:text-xs font-semibold px-1.5 sm:px-2 py-0.5 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] animate-pulse">
+            <Icon name="timer" className="text-xs sm:text-sm" />
             <span>{formatTimerDisplay(activeTimer.remainingSeconds).formatted}</span>
           </span>
         )}
-        <div className="text-4xl sm:text-5xl lg:text-5xl font-bold tabular-nums tracking-tight text-[var(--primary)] leading-none group-hover/clock:opacity-90">
+        <div className="text-3xl sm:text-4xl lg:text-5xl font-bold tabular-nums tracking-tight text-[var(--primary)] leading-none group-hover/clock:opacity-90">
           {now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
         </div>
       </button>
 
-      <div className="mt-1 flex items-center gap-2 text-sm lg:text-base font-semibold text-ink-soft">
+      <div className="mt-0.5 sm:mt-1 flex items-center justify-end gap-1 sm:gap-2 text-[0.7rem] sm:text-sm lg:text-base font-semibold text-ink-soft whitespace-nowrap">
         <span>{now.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
         <span className="opacity-40">•</span>
         <span>
           {secondaryEmoji} {secondaryTimeFormatted}
           {hasDateDiff && secondaryDateFormatted && (
-            <span className="ml-1 text-xs opacity-80">({secondaryDateFormatted})</span>
+            <span className="ml-0.5 sm:ml-1 text-[0.65rem] sm:text-xs opacity-80">({secondaryDateFormatted})</span>
           )}
         </span>
       </div>
