@@ -664,16 +664,19 @@ export default function Home() {
                     {dayEvents.map((e) => {
                       const isFamily = !e.person_name || ['family', 'shared'].includes(e.person_name.toLowerCase())
                       const bgStyle = isFamily ? FAMILY_GRADIENT : e.color
+                      const isComplete = isEventComplete(e, now)
                       return (
                         <div
                           key={e.id}
-                          className="rounded-xl p-3.5 text-white shadow flex flex-col gap-1 transition-transform active:scale-[0.98] cursor-pointer"
+                          className={`rounded-xl p-3.5 text-white shadow flex flex-col gap-1 transition-all active:scale-[0.98] cursor-pointer ${
+                            isComplete ? 'fc-event-completed' : ''
+                          }`}
                           style={{ background: bgStyle }}
                           onClick={() => setSelectedEvent(e)}
                         >
                           {e.all_day ? (
                             <div className="text-[0.7rem] font-bold uppercase tracking-wider opacity-90 flex items-center gap-1.5 mb-0.5">
-                              <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                              <span className={`h-1.5 w-1.5 rounded-full bg-white ${isComplete ? 'opacity-50' : 'animate-pulse'}`} />
                               <span>All Day</span>
                             </div>
                           ) : (
