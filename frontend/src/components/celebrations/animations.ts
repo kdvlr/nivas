@@ -25,6 +25,8 @@ export type CelebrationName =
   | 'monster-truck'
   | 'robot-mission'
   | 'pirate-treasure'
+  | 'hot-cocoa'
+  | 'donut-crusher'
 
 export interface Celebration {
   name: CelebrationName
@@ -1397,6 +1399,26 @@ export const CELEBRATIONS: Celebration[] = [
     hideHtmlPraise: true,
     praise: ['Arrr-some! Chores complete!'],
     iframeSrc: '/celebrations/pirate_chore_treasure.html?embed=1',
+  },
+  {
+    name: 'hot-cocoa',
+    emoji: '☕',
+    label: 'Hot Cocoa Chore Crew',
+    backdrop: '#cddbe9',
+    durationMs: 8000,
+    hideHtmlPraise: true,
+    praise: ['Cocoa-nquered!'],
+    iframeSrc: '/celebrations/hot_cocoa_chore_crew.html?embed=1',
+  },
+  {
+    name: 'donut-crusher',
+    emoji: '🍩',
+    label: 'Donut Chore Crusher',
+    backdrop: '#f4dce8',
+    durationMs: 8000,
+    hideHtmlPraise: true,
+    praise: ['Chores do-nut stand a chance!'],
+    iframeSrc: '/celebrations/donut_chore_crusher.html?embed=1',
   },
   {
     name: 'confetti',
