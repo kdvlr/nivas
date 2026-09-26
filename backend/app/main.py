@@ -89,5 +89,17 @@ if STATIC_DIR.exists():
         except (OSError, ValueError):
             contained = False
         if path and contained and file.is_file() and file.name != "index.html":
+            if file.name == "sw.js":
+                return FileResponse(
+                    file,
+                    media_type="text/javascript; charset=utf-8",
+                    headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+                )
+            if file.name == "manifest.json":
+                return FileResponse(
+                    file,
+                    media_type="application/manifest+json",
+                    headers={"Cache-Control": "public, max-age=3600"},
+                )
             return FileResponse(file)
         return FileResponse(STATIC_DIR / "index.html", headers=INDEX_HEADERS)

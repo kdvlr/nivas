@@ -29,6 +29,7 @@ import { PIN_FAIL_ANIMATIONS, type PinFailAnimation } from '../components/celebr
 import PinFailOverlay from '../components/celebrations/PinFailOverlay'
 import ConfirmModal from '../components/ConfirmModal'
 import { PointsAdminCard, RewardStoreCard, ChoresAdminCard } from '../components/setup/RewardsAdminCards'
+import { usePwaInstall } from '../lib/usePwaInstall'
 
 const COLORS = [
   '#f87171', '#fb923c', '#fbbf24', '#facc15', '#a3e635', '#4ade80', '#34d399', '#2dd4bf',
@@ -1060,6 +1061,8 @@ function SetupInner() {
 
         {section === 'looks' && <PinFailPreviewCard />}
 
+        {section === 'general' && <PwaSettingsCard />}
+
         {section === 'general' && <KioskScheduleCard />}
 
         {section === 'general' && <WeatherCard />}
@@ -1960,6 +1963,159 @@ function KioskScheduleCard() {
             • <strong>Daily Web Auto-Reload</strong>: Set to 05:45 AM (under Web Auto Reload) to flush browser memory before morning wake.
           </p>
         </div>
+      </div>
+    </Card>
+  )
+}
+
+function PwaSettingsCard() {
+  const { isInstallable, isStandalone, isIos, promptInstall } = usePwaInstall()
+  const [swActive, setSwActive] = useState<boolean | null>(null)
+  const [checkingUpdate, setCheckingUpdate] = useState(false)
+  const [updateMsg, setUpdateMsg] = useState('')
+  const [showIosGuide, setShowIosGuide] = useState(false)
+
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistration().then((reg) => {
+        setSwActive(Boolean(reg?.active))
+      })
+    } else {
+      setSwActive(false)
+    }
+  }, [])
+
+  const handleCheckUpdate = async () => {
+    if (!('serviceWorker' in navigator)) {
+      setUpdateMsg('Service workers not supported in this browser.')
+      return
+    }
+    setCheckingUpdate(true)
+    setUpdateMsg('')
+    try {
+      const reg = await navigator.serviceWorker.getRegistration()
+      if (reg) {
+        await reg.update()
+        if (reg.waiting) {
+          reg.waiting.postMessage({ type: 'SKIP_WAITING' })
+          setUpdateMsg('New version ready! Reloading...')
+          setTimeout(() => window.location.reload(), 1000)
+          return
+        }
+        setUpdateMsg('Nivas is up to date!')
+      } else {
+        setUpdateMsg('No active service worker found.')
+      }
+    } catch (e) {
+      setUpdateMsg('Could not check for updates.')
+    } finally {
+      setCheckingUpdate(false)
+    }
+  }
+
+  const handleClearCache = async () => {
+    if ('caches' in window) {
+      const keys = await caches.keys()
+      await Promise.all(keys.map((k) => caches.delete(k)))
+      window.location.reload()
+    }
+  }
+
+  return (
+    <Card
+      title={
+        <span className="flex items-center gap-2">
+          <Icon name="app_shortcut" className="text-teal-500" /> Progressive Web App (PWA)
+        </span>
+      }
+      badge={
+        isStandalone ? (
+          <Badge ok={true} label="Installed (PWA)" />
+        ) : (
+          <Badge ok={false} label="Running in Browser" />
+        )
+      }
+    >
+      <div className="space-y-4 text-sm">
+        <div className="rounded-xl bg-teal-500/10 p-3.5 border border-teal-500/20 text-xs text-ink space-y-2">
+          <div className="font-semibold text-teal-700 dark:text-teal-300 flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <Icon name="offline_pin" className="text-sm" /> Service Worker & Offline Caching
+            </span>
+            <span className="font-mono text-[11px] px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-800 dark:text-teal-200">
+              {swActive ? 'Active (nivas-cache-v3)' : 'Checking...'}
+            </span>
+          </div>
+          <p className="text-ink-soft leading-relaxed">
+            Nivas runs as a standalone PWA with an offline-first service worker. Core static bundles and icons are cached locally for instant launches on kiosks, tablets, and mobile devices, while live calendar, chore, and music streams are queried in real time.
+          </p>
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex flex-wrap items-center gap-2.5 pt-1">
+          {isInstallable && (
+            <button
+              onClick={() => promptInstall()}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--primary)] text-[var(--on-primary)] text-xs font-semibold shadow-sm hover:opacity-90 active:scale-95 transition cursor-pointer"
+            >
+              <Icon name="install_mobile" className="text-base" /> Install Nivas App
+            </button>
+          )}
+
+          {isIos && !isStandalone && (
+            <button
+              onClick={() => setShowIosGuide(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-semibold shadow-sm hover:bg-indigo-700 active:scale-95 transition cursor-pointer"
+            >
+              <Icon name="ios_share" className="text-base" /> iOS Install Instructions
+            </button>
+          )}
+
+          <button
+            onClick={handleCheckUpdate}
+            disabled={checkingUpdate}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl btn-glass text-xs font-semibold hover:bg-black/5 dark:hover:bg-white/10 active:scale-95 transition cursor-pointer disabled:opacity-50"
+          >
+            <Icon name="sync" className={`text-base ${checkingUpdate ? 'animate-spin' : ''}`} />
+            {checkingUpdate ? 'Checking...' : 'Check for Updates'}
+          </button>
+
+          <button
+            onClick={handleClearCache}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl btn-glass text-xs font-semibold hover:bg-rose-500/10 text-rose-600 dark:text-rose-400 active:scale-95 transition cursor-pointer ml-auto"
+            title="Clear cached assets and reload the app"
+          >
+            <Icon name="delete_sweep" className="text-base" /> Reset Cache & Reload
+          </button>
+        </div>
+
+        {updateMsg && (
+          <p className="text-xs font-medium text-teal-600 dark:text-teal-400 mt-2">
+            {updateMsg}
+          </p>
+        )}
+
+        {showIosGuide && (
+          <div className="rounded-xl bg-indigo-500/10 p-3.5 border border-indigo-500/20 text-xs text-ink space-y-2 mt-2">
+            <div className="font-semibold text-indigo-700 dark:text-indigo-300 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Icon name="smartphone" className="text-sm" /> How to Install on iOS (iPhone / iPad)
+              </span>
+              <button
+                onClick={() => setShowIosGuide(false)}
+                className="text-xs text-ink-soft hover:text-ink font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            <ol className="list-decimal list-inside space-y-1 text-ink-soft">
+              <li>Open Nivas in <strong>Safari</strong>.</li>
+              <li>Tap the <strong>Share</strong> button <Icon name="ios_share" className="inline text-sm align-middle" /> in the navigation bar.</li>
+              <li>Scroll down and tap <strong>Add to Home Screen</strong> <Icon name="add_box" className="inline text-sm align-middle" />.</li>
+              <li>Tap <strong>Add</strong> in the top-right corner to finish.</li>
+            </ol>
+          </div>
+        )}
       </div>
     </Card>
   )

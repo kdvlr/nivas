@@ -40,6 +40,8 @@ import CreateTimerModal from './components/timer/CreateTimerModal'
 import FullScreenTimer from './components/timer/FullScreenTimer'
 import MiniTimerCapsule from './components/timer/MiniTimerCapsule'
 import MorningKidsBanner from './components/kids/MorningKidsBanner'
+import Modal from './components/Modal'
+import { usePwaInstall } from './lib/usePwaInstall'
 
 const NAV = [
   { id: 'home', label: 'Home', icon: 'home', view: Home, active: 'bg-sky-200 text-sky-950 dark:bg-sky-900 dark:text-sky-100', activeText: 'text-sky-600 dark:text-sky-400' },
@@ -170,6 +172,9 @@ function AppContent() {
   const [kidsNuggetsDisplayed, setKidsNuggetsDisplayed] = useState(false)
   const kidsNuggetsDisplayedRef = useRef(false)
   kidsNuggetsDisplayedRef.current = kidsNuggetsDisplayed
+
+  const { isInstallable, isStandalone, isIos, promptInstall } = usePwaInstall()
+  const [showIosInstallModal, setShowIosInstallModal] = useState(false)
 
   useEffect(() => {
     const handleToggle = () => setKidsHubOpen((prev) => !prev)
@@ -984,6 +989,43 @@ function AppContent() {
                 onSelect={chooseStyle}
                 inline
               />
+
+              {!isStandalone && (isInstallable || isIos) && (
+                <div className="flex flex-col gap-2 mt-1">
+                  {isInstallable && (
+                    <motion.button
+                      whileTap={{ scale: 0.97 }}
+                      transition={PRESS_SPRING}
+                      onClick={async () => {
+                        await promptInstall()
+                        setMoreOpen(false)
+                      }}
+                      className="btn-primary flex items-center justify-between !rounded-2xl px-5 py-3.5 text-base shadow-md cursor-pointer"
+                    >
+                      <span className="flex items-center gap-3 font-semibold">
+                        <Icon name="install_mobile" /> Install Nivas App
+                      </span>
+                      <Icon name="download" />
+                    </motion.button>
+                  )}
+                  {isIos && (
+                    <motion.button
+                      whileTap={{ scale: 0.97 }}
+                      transition={PRESS_SPRING}
+                      onClick={() => {
+                        setMoreOpen(false)
+                        setShowIosInstallModal(true)
+                      }}
+                      className="flex items-center justify-between rounded-2xl bg-indigo-600 text-white px-5 py-3.5 text-base font-semibold shadow-md cursor-pointer"
+                    >
+                      <span className="flex items-center gap-3">
+                        <Icon name="ios_share" /> Add to Home Screen
+                      </span>
+                      <Icon name="chevron_right" />
+                    </motion.button>
+                  )}
+                </div>
+              )}
               
               <motion.a
                 href="#/setup"
@@ -1039,6 +1081,43 @@ function AppContent() {
           onClose={handleStopPlayer}
         />
         <MiniTimerCapsule />
+
+        {showIosInstallModal && (
+          <Modal title="Install Nivas on iOS" onClose={() => setShowIosInstallModal(false)}>
+            <div className="space-y-4 text-sm text-ink p-1">
+              <p className="text-ink-soft leading-relaxed">
+                Install Nivas as a full-screen Progressive Web App on your iPhone or iPad for quick access, zero browser bars, and instant loading:
+              </p>
+              <ol className="space-y-3 pl-1">
+                <li className="flex items-start gap-3">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-white text-xs font-bold">1</span>
+                  <span>Open Nivas in <strong>Safari</strong> on your device.</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-white text-xs font-bold">2</span>
+                  <span>Tap the <strong>Share</strong> button <Icon name="ios_share" className="inline text-base align-middle text-indigo-500" /> in Safari's bottom toolbar.</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-white text-xs font-bold">3</span>
+                  <span>Scroll down the share sheet and tap <strong>Add to Home Screen</strong> <Icon name="add_box" className="inline text-base align-middle text-indigo-500" />.</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-white text-xs font-bold">4</span>
+                  <span>Tap <strong>Add</strong> in the top-right corner. Nivas will now launch like a native app!</span>
+                </li>
+              </ol>
+              <div className="pt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowIosInstallModal(false)}
+                  className="btn-primary px-5 py-2.5 rounded-xl font-semibold cursor-pointer"
+                >
+                  Got it
+                </button>
+              </div>
+            </div>
+          </Modal>
+        )}
       </>
   )
 }
