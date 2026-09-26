@@ -326,54 +326,65 @@ export default function MorningKidsBanner({
   return (
     <AnimatePresence>
       {shouldDisplay && data && (
-        /* Wall-display card: designed to remain fully visible at 1920x1080. */
-        <motion.div
-          key="morning-kids-banner"
-          initial={{ opacity: 0, y: -20, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -20, scale: 0.98 }}
-          transition={{ type: 'spring', stiffness: 350, damping: 28 }}
-          data-testid="kids-nuggets-panel"
-          data-density={density}
-          ref={panelRef}
-          className={`glass fixed inset-x-2 top-2 bottom-2 sm:inset-x-4 sm:top-3 sm:bottom-3 lg:inset-x-8 lg:top-4 lg:bottom-4 z-40 mx-auto flex max-w-[1856px] flex-col p-3.5 text-ink backdrop-blur-2xl sm:p-4 lg:p-5 overflow-y-auto lg:overflow-hidden ${className}`}
-          style={{
-            border: '1px solid color-mix(in srgb, var(--outline) 38%, transparent)',
-            boxShadow:
-              '0 32px 90px rgb(0 0 0 / 0.46), 0 0 0 1px color-mix(in srgb, var(--outline) 24%, transparent), 0 0 36px color-mix(in srgb, var(--primary) 16%, transparent)',
-          }}
-        >
-          {/* Header Ribbon */}
-          <div className="flex min-h-14 shrink-0 items-center justify-between gap-4 border-b border-[var(--outline-var)] pb-2.5 lg:min-h-16">
-            <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--primary-container)] text-[var(--primary)] shadow-inner">
-                <Icon name="wb_sunny" className="text-2xl" />
-              </span>
-              <div>
-                <h2 className="text-xl font-extrabold leading-none tracking-tight text-ink sm:text-2xl lg:text-3xl">
-                  Kids’ Brain Nuggets
-                </h2>
+        <>
+          <motion.div
+            key="morning-kids-banner-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={handleDismiss}
+            aria-label="Dismiss Brain Nuggets backdrop"
+            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm cursor-pointer"
+          />
+          {/* Wall-display card: designed to remain fully visible at 1920x1080. */}
+          <motion.div
+            key="morning-kids-banner"
+            initial={{ opacity: 0, y: -20, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.98 }}
+            transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+            data-testid="kids-nuggets-panel"
+            data-density={density}
+            ref={panelRef}
+            className={`glass fixed inset-x-2 sm:inset-x-4 lg:inset-x-8 top-[max(0.75rem,calc(env(safe-area-inset-top,0px)+0.5rem))] bottom-[max(0.75rem,calc(env(safe-area-inset-bottom,0px)+0.5rem))] z-40 mx-auto flex max-w-[1856px] flex-col p-3.5 text-ink backdrop-blur-2xl sm:p-4 lg:p-5 overflow-y-auto lg:overflow-hidden ${className}`}
+            style={{
+              border: '1px solid color-mix(in srgb, var(--outline) 38%, transparent)',
+              boxShadow:
+                '0 32px 90px rgb(0 0 0 / 0.46), 0 0 0 1px color-mix(in srgb, var(--outline) 24%, transparent), 0 0 36px color-mix(in srgb, var(--primary) 16%, transparent)',
+            }}
+          >
+            {/* Header Ribbon */}
+            <div className="flex min-h-14 shrink-0 items-center justify-between gap-4 border-b border-[var(--outline-var)] pb-2.5 lg:min-h-16">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--primary-container)] text-[var(--primary)] shadow-inner">
+                  <Icon name="wb_sunny" className="text-2xl" />
+                </span>
+                <div>
+                  <h2 className="text-xl font-extrabold leading-none tracking-tight text-ink sm:text-2xl lg:text-3xl">
+                    Kids’ Brain Nuggets
+                  </h2>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 shrink-0">
+                <button
+                  onClick={() => setShowAnswersModal(true)}
+                  aria-label="View answers & explanations"
+                  className="btn-primary px-3.5 sm:px-4 py-1.5 text-xs sm:text-sm font-extrabold cursor-pointer"
+                >
+                  <Icon name="psychology" className="text-lg sm:text-xl" />
+                  <span>Answers</span>
+                </button>
+                <button
+                  onClick={handleDismiss}
+                  aria-label="Dismiss Brain Nuggets for today"
+                  className="btn-glass flex h-10 sm:h-11 items-center gap-1.5 px-3.5 sm:px-4 rounded-full font-bold text-ink transition active:scale-95 cursor-pointer bg-slate-200/80 dark:bg-slate-700/80 hover:bg-slate-300 dark:hover:bg-slate-600 shadow-sm"
+                >
+                  <Icon name="close" className="text-xl sm:text-2xl" />
+                  <span className="text-xs sm:text-sm">Dismiss</span>
+                </button>
               </div>
             </div>
-
-            <div className="flex items-center gap-2.5 shrink-0">
-              <button
-                onClick={() => setShowAnswersModal(true)}
-                aria-label="View answers & explanations"
-                className="btn-primary px-3.5 sm:px-4 py-1.5 text-xs sm:text-sm font-extrabold cursor-pointer"
-              >
-                <Icon name="psychology" className="text-lg sm:text-xl" />
-                <span>Answers</span>
-              </button>
-              <button
-                onClick={handleDismiss}
-                aria-label="Dismiss for today"
-                className="btn-glass flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center transition active:scale-90 cursor-pointer"
-              >
-                <Icon name="close" className="text-xl sm:text-2xl" />
-              </button>
-            </div>
-          </div>
 
           {/* Full-height columns prevent one section from painting into another row. */}
           <div data-testid="kids-content-grid" className="mt-3 grid flex-1 grid-cols-1 gap-3 sm:gap-4 lg:min-h-0 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.05fr)_minmax(0,1.05fr)] lg:grid-rows-1 lg:gap-4">
@@ -513,6 +524,18 @@ export default function MorningKidsBanner({
             </section>
           </div>
 
+          {/* Mobile / touch dismiss bar (ensures one-tap dismissal even when scrolled) */}
+          <div className="mt-3 flex sm:hidden items-center justify-center shrink-0 pt-2 border-t border-[var(--outline-var)]">
+            <button
+              type="button"
+              onClick={handleDismiss}
+              className="btn-glass w-full py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-sm font-bold text-ink shadow active:scale-95 bg-slate-200/80 dark:bg-slate-700/80 hover:bg-slate-300 dark:hover:bg-slate-600"
+            >
+              <Icon name="close" className="text-xl" />
+              <span>Dismiss Brain Nuggets for Today</span>
+            </button>
+          </div>
+
           {/* Answers Pop-up Modal */}
           <AnimatePresence>
             {showAnswersModal && (
@@ -621,7 +644,8 @@ export default function MorningKidsBanner({
             )}
           </AnimatePresence>
         </motion.div>
-      )}
-    </AnimatePresence>
+      </>
+    )}
+  </AnimatePresence>
   )
 }

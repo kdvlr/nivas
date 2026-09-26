@@ -723,11 +723,11 @@ function AppContent() {
             FullCalendar keeps its measured layout) but skips paint and
             compositing for the whole app — the slideshow gets the GPU. */}
         <div
-          className="flex h-full max-h-full flex-col lg:flex-row gap-2 p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] lg:gap-4 lg:p-4 lg:pb-[calc(1rem+env(safe-area-inset-bottom,0px))] overflow-hidden"
+          className="flex h-full max-h-full flex-col lg:flex-row gap-2 p-2 pt-[calc(0.5rem+env(safe-area-inset-top,0px))] pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] pl-[calc(0.5rem+env(safe-area-inset-left,0px))] pr-[calc(0.5rem+env(safe-area-inset-right,0px))] lg:gap-4 lg:p-4 lg:pt-[calc(1rem+env(safe-area-inset-top,0px))] lg:pb-[calc(1rem+env(safe-area-inset-bottom,0px))] lg:pl-[calc(1rem+env(safe-area-inset-left,0px))] lg:pr-[calc(1rem+env(safe-area-inset-right,0px))] overflow-hidden"
           ref={dashboardRef}
           style={slideshowActive ? { visibility: 'hidden' } : undefined}
         >
-          <nav className="glass group/nav order-last lg:order-first flex flex-row lg:flex-col w-full lg:w-16 hover:lg:w-48 transition-[width] duration-300 ease-in-out h-[calc(3.5rem+env(safe-area-inset-bottom,0px))] lg:h-full shrink-0 items-center lg:items-start justify-around lg:justify-start gap-1 lg:gap-4 py-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom,0px))] lg:py-4 px-2 lg:px-2 z-20">
+          <nav className="glass group/nav order-last lg:order-first flex flex-row lg:flex-col w-full lg:w-16 hover:lg:w-48 transition-[width] duration-300 ease-in-out h-14 lg:h-full shrink-0 items-center lg:items-start justify-around lg:justify-start gap-1 lg:gap-4 py-1.5 lg:py-4 px-2 z-20">
 
             {/* Main Nav Items */}
             <div className="flex flex-row lg:flex-col items-center justify-around lg:justify-start gap-1 lg:gap-3 flex-1 lg:flex-none w-full">
@@ -896,7 +896,7 @@ function AppContent() {
 
           {/* Floating Dock: MiniPlayerBar (left of FAB on both mobile & desktop) + Themed FAB */}
           <div
-            className={`fixed bottom-[calc(5rem+env(safe-area-inset-bottom,0px)+env(safe-area-inset-bottom,0px))] right-4 lg:bottom-6 lg:right-6 z-30 flex flex-row items-end gap-3 pointer-events-none transition-opacity duration-200 ${
+            className={`fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] right-4 lg:bottom-6 lg:right-6 z-30 flex flex-row items-end gap-3 pointer-events-none transition-opacity duration-200 ${
               moreOpen ? 'opacity-0' : 'opacity-100'
             }`}
           >
@@ -945,7 +945,7 @@ function AppContent() {
           onDragEnd={(_, info) => {
             if (info.offset.y > 70 || info.velocity.y > 500) setMoreOpen(false)
           }}
-          className={`glass fixed inset-x-0 bottom-0 z-40 !rounded-b-none !rounded-t-3xl p-5 pb-[calc(2rem+env(safe-area-inset-bottom))] lg:hidden ${moreOpen ? '' : 'pointer-events-none'}`}
+          className={`glass fixed inset-x-0 bottom-0 z-40 !rounded-b-none !rounded-t-3xl p-5 pb-[calc(2rem+env(safe-area-inset-bottom,0px))] lg:hidden ${moreOpen ? '' : 'pointer-events-none'}`}
         >
           <div className="mx-auto mb-5 h-1.5 w-12 rounded-full bg-[var(--outline-var)]" />
           <div className="flex flex-col gap-5">

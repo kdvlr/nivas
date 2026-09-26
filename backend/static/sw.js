@@ -1,5 +1,5 @@
 // Nivas Progressive Web App Service Worker
-const CACHE_NAME = 'nivas-cache-v3';
+const CACHE_NAME = 'nivas-cache-v4';
 
 const PRECACHE_ASSETS = [
   '/',
@@ -9,6 +9,7 @@ const PRECACHE_ASSETS = [
   '/favicon.png',
   '/icon-192.png',
   '/icon-512.png',
+  '/maskable-icon-512.png',
   '/apple-touch-icon.png',
   '/material-symbols-rounded.woff2'
 ];

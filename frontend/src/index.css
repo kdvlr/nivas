@@ -297,6 +297,10 @@ html[data-theme='glass'].dark {
   display: none;
 }
 
+html {
+  background-color: var(--surface);
+}
+
 html,
 body,
 #root {
