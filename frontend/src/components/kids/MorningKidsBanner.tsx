@@ -377,11 +377,10 @@ export default function MorningKidsBanner({
                 </button>
                 <button
                   onClick={handleDismiss}
-                  aria-label="Dismiss Brain Nuggets for today"
-                  className="btn-glass flex h-10 sm:h-11 items-center gap-1.5 px-3.5 sm:px-4 rounded-full font-bold text-ink transition active:scale-95 cursor-pointer bg-slate-200/80 dark:bg-slate-700/80 hover:bg-slate-300 dark:hover:bg-slate-600 shadow-sm"
+                  aria-label="Close"
+                  className="btn-glass flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-full text-ink transition active:scale-95 cursor-pointer bg-slate-200/80 dark:bg-slate-700/80 hover:bg-slate-300 dark:hover:bg-slate-600 shadow-sm"
                 >
                   <Icon name="close" className="text-xl sm:text-2xl" />
-                  <span className="text-xs sm:text-sm">Dismiss</span>
                 </button>
               </div>
             </div>
@@ -524,17 +523,6 @@ export default function MorningKidsBanner({
             </section>
           </div>
 
-          {/* Mobile / touch dismiss bar (ensures one-tap dismissal even when scrolled) */}
-          <div className="mt-3 flex sm:hidden items-center justify-center shrink-0 pt-2 border-t border-[var(--outline-var)]">
-            <button
-              type="button"
-              onClick={handleDismiss}
-              className="btn-glass w-full py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-sm font-bold text-ink shadow active:scale-95 bg-slate-200/80 dark:bg-slate-700/80 hover:bg-slate-300 dark:hover:bg-slate-600"
-            >
-              <Icon name="close" className="text-xl" />
-              <span>Dismiss Brain Nuggets for Today</span>
-            </button>
-          </div>
 
           {/* Answers Pop-up Modal */}
           <AnimatePresence>
