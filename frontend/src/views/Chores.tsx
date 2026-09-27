@@ -10,7 +10,7 @@ import type { ChoreItem, CoinBalance } from '../lib/types'
 import { useCelebration } from '../components/celebrations/CelebrationContext'
 import Modal from '../components/Modal'
 import ConfirmModal from '../components/ConfirmModal'
-import TopClockHeader from '../components/TopClockHeader'
+import PageHeader from '../components/PageHeader'
 
 interface Person {
   id: number
@@ -543,11 +543,19 @@ export default function Chores() {
 
   return (
     <div className="flex h-full flex-col px-4 lg:px-8">
-      {/* Header */}
-      <div className="mb-3 lg:mb-4 flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink">Chores</h1>
+      <PageHeader
+        title="Chores"
+        inlineActions={
+          <>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              transition={PRESS_SPRING}
+              onClick={() => (location.hash = '#/rewards')}
+              className="btn-sunny px-2.5 py-1 sm:px-4 sm:py-2 lg:px-6 lg:py-3 text-xs sm:text-base lg:text-lg cursor-pointer flex items-center gap-1.5 shrink-0"
+            >
+              <Icon name="storefront" /> <span>Rewards</span>
+            </motion.button>
             {filterPerson && (
               <motion.button
                 initial={{ scale: 0.9, opacity: 0 }}
@@ -555,7 +563,7 @@ export default function Chores() {
                 exit={{ scale: 0.9, opacity: 0 }}
                 transition={EXPRESSIVE_ENTER}
                 onClick={() => setFilterPerson('')}
-                className="btn-glass flex items-center gap-1 rounded-full px-3 py-1.5 text-sm cursor-pointer"
+                className="hidden sm:flex btn-glass items-center gap-1 rounded-full px-3 py-1.5 text-sm cursor-pointer shrink-0"
               >
                 {filterPerson} <Icon name="close" className="text-base" />
               </motion.button>
@@ -566,7 +574,7 @@ export default function Chores() {
                 whileTap={{ scale: 0.95 }}
                 transition={PRESS_SPRING}
                 onClick={handleToggleUpcoming}
-                className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs lg:text-sm font-medium transition-all cursor-pointer ${
+                className={`hidden sm:flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs lg:text-sm font-medium transition-all cursor-pointer shrink-0 ${
                   showUpcoming
                     ? 'bg-sky-500/15 text-sky-600 dark:text-sky-300 border border-sky-500/30 shadow-xs'
                     : 'btn-glass !text-ink-soft'
@@ -577,21 +585,44 @@ export default function Chores() {
                 <span>Upcoming ({totalUpcomingCount})</span>
               </motion.button>
             )}
-          </div>
-          <div className="flex items-center gap-2 lg:gap-3">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              transition={PRESS_SPRING}
-              onClick={() => (location.hash = '#/rewards')}
-              className="btn-sunny px-4 py-2 lg:px-6 lg:py-3 text-base lg:text-lg cursor-pointer"
-            >
-              <Icon name="storefront" /> Rewards
-            </motion.button>
-            <TopClockHeader now={new Date()} />
-          </div>
-        </div>
-      </div>
+          </>
+        }
+        secondaryMobileRow={
+          (filterPerson || totalUpcomingCount > 0) ? (
+            <>
+              {filterPerson && (
+                <motion.button
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.9, opacity: 0 }}
+                  transition={EXPRESSIVE_ENTER}
+                  onClick={() => setFilterPerson('')}
+                  className="btn-glass flex items-center gap-1 rounded-full px-2.5 py-1 text-xs cursor-pointer"
+                >
+                  {filterPerson} <Icon name="close" className="text-sm" />
+                </motion.button>
+              )}
+              {totalUpcomingCount > 0 && (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={PRESS_SPRING}
+                  onClick={handleToggleUpcoming}
+                  className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-all cursor-pointer ${
+                    showUpcoming
+                      ? 'bg-sky-500/15 text-sky-600 dark:text-sky-300 border border-sky-500/30 shadow-xs'
+                      : 'btn-glass !text-ink-soft'
+                  }`}
+                  title={showUpcoming ? 'Hide upcoming chores' : 'Show upcoming chores'}
+                >
+                  <Icon name={showUpcoming ? 'visibility' : 'visibility_off'} className="text-sm" />
+                  <span>Upcoming ({totalUpcomingCount})</span>
+                </motion.button>
+              )}
+            </>
+          ) : undefined
+        }
+      />
 
       {/* Layout for Chores */}
       <div className="flex flex-1 flex-col min-h-0 min-w-0">

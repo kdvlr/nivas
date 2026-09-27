@@ -8,7 +8,9 @@ __pycache__/
 # Node
 node_modules/
 frontend/dist/
+.vite/
 *.tsbuildinfo
+**/*.tsbuildinfo
 
 # Runtime data & secrets
 data/

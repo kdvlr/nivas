@@ -8,7 +8,7 @@ import { useData, todayISO, fmtDate } from '../lib/hooks'
 import type { Task } from '../lib/types'
 import Modal from '../components/Modal'
 import ConfirmModal from '../components/ConfirmModal'
-import TopClockHeader from '../components/TopClockHeader'
+import PageHeader from '../components/PageHeader'
 
 interface TasksResponse {
   today: string
@@ -422,16 +422,26 @@ export default function ToDos() {
 
   return (
     <div className="flex h-full flex-col px-4 lg:px-8 overflow-hidden min-h-0">
-      <div className="mb-3 lg:mb-4 flex flex-wrap items-center justify-between gap-3 shrink-0">
-        <div className="flex flex-wrap items-center gap-4 lg:gap-6">
-          <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink">To-Dos</h1>
-          <div className="btn-glass flex rounded-full p-1">
+      <PageHeader
+        title="To-Dos"
+        badge={
+          <>
+            <span className="sm:hidden text-xs font-medium text-ink-soft">
+              {open} to do{done ? ` · ${done} done` : ''}
+            </span>
+            <span className="hidden sm:inline text-sm lg:text-base font-medium text-ink-soft">
+              {open} to do{done ? ` · ${done} done 🎉` : ''}
+            </span>
+          </>
+        }
+        rightActions={
+          <div className="hidden sm:flex btn-glass rounded-full p-0.5 sm:p-1">
             {(['week', 'all'] as const).map((r) => (
               <button
                 key={r}
                 type="button"
                 onClick={() => setRange(r)}
-                className={`rounded-full px-4 lg:px-5 py-1.5 lg:py-2 text-sm lg:text-base font-medium capitalize transition-all duration-200 cursor-pointer ${
+                className={`rounded-full px-3 sm:px-4 lg:px-5 py-1 sm:py-1.5 lg:py-2 text-xs sm:text-sm lg:text-base font-medium capitalize transition-all duration-200 cursor-pointer ${
                   range === r 
                     ? 'bg-gradient-to-r from-teal-400 to-sky-500 text-white shadow-md' 
                     : 'text-ink-soft hover:text-ink'
@@ -441,12 +451,26 @@ export default function ToDos() {
               </button>
             ))}
           </div>
-          <span className="text-sm lg:text-base font-medium text-ink-soft">
-            {open} to do{done ? ` · ${done} done 🎉` : ''}
-          </span>
-        </div>
-        <TopClockHeader now={new Date()} />
-      </div>
+        }
+        secondaryMobileRow={
+          <div className="btn-glass flex rounded-full p-0.5">
+            {(['week', 'all'] as const).map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setRange(r)}
+                className={`rounded-full px-3 py-1 text-xs font-medium capitalize transition-all duration-200 cursor-pointer ${
+                  range === r 
+                    ? 'bg-gradient-to-r from-teal-400 to-sky-500 text-white shadow-md' 
+                    : 'text-ink-soft hover:text-ink'
+                }`}
+              >
+                {r === 'week' ? 'This Week' : 'All'}
+              </button>
+            ))}
+          </div>
+        }
+      />
 
       {/* Member Filter Bar like Chores */}
       <div className="mb-3 lg:mb-4 flex items-center gap-2 overflow-x-auto pb-1 shrink-0 [&::-webkit-scrollbar]:hidden">

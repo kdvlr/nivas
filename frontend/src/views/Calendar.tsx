@@ -15,7 +15,7 @@ import { isEventComplete } from '../lib/calendar'
 import Modal from '../components/Modal'
 import { useEffect } from 'react'
 import Icon from '../components/Icon'
-import TopClockHeader from '../components/TopClockHeader'
+import PageHeader from '../components/PageHeader'
 import { useSwipeNavigation } from '../lib/useSwipeNavigation'
 
 const FAMILY_GRADIENT = 'linear-gradient(115deg, #ef4444, #f97316, #eab308, #22c55e, #3b82f6, #a855f7)'
@@ -1228,10 +1228,12 @@ export default function Calendar() {
 
   return (
     <div className="flex h-full max-h-full flex-col px-4 lg:px-8 pb-2 lg:pb-3 min-h-0 overflow-hidden">
-      <div className="mb-3 flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink">Calendar</h1>
-          {!isMobile && selections.length > 0 && (
+      <PageHeader
+        title="Calendar"
+        now={now}
+        className="!mb-3"
+        inlineActions={
+          !isMobile && selections.length > 0 ? (
             <div className="flex flex-wrap items-center gap-2">
               {selections.map((s) => (
                 <span
@@ -1243,10 +1245,9 @@ export default function Calendar() {
                 </span>
               ))}
             </div>
-          )}
-        </div>
-        <TopClockHeader now={now} />
-      </div>
+          ) : undefined
+        }
+      />
       {error && (
         <div className="mb-3 flex items-center">
           <span className="font-medium text-rose-500">{error}</span>

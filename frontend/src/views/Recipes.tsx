@@ -6,7 +6,7 @@ import { useData, useVoiceCommands } from '../lib/hooks'
 import type { Recipe } from '../lib/types'
 import Modal from '../components/Modal'
 import ConfirmModal from '../components/ConfirmModal'
-import TopClockHeader from '../components/TopClockHeader'
+import PageHeader from '../components/PageHeader'
 import NutritionLabel from '../components/recipes/NutritionLabel'
 import { PRESS_SPRING } from '../lib/motion'
 import { parseBaseServings, scaleIngredient } from '../lib/recipeScaler'
@@ -455,18 +455,10 @@ export default function Recipes() {
 
   return (
     <div className="flex h-full flex-col px-4 py-3 lg:px-8 lg:py-4">
-      {/* Header */}
-      <div className="mb-4 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink">Recipes</h1>
-          <span className="text-sm lg:text-base font-medium text-ink-soft">
-            {searchQuery.trim()
-              ? `${filteredRecipes.length} found`
-              : `${recipes?.length ?? 0} saved`}
-          </span>
-        </div>
-        <TopClockHeader now={new Date()} />
-      </div>
+      <PageHeader
+        title="Recipes"
+        badge={searchQuery.trim() ? `${filteredRecipes.length} found` : `${recipes?.length ?? 0} saved`}
+      />
 
       {/* Search Bar */}
       <div className="mb-4 flex w-full max-w-xl">

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useData } from '../lib/hooks'
 import Icon from '../components/Icon'
-import TopClockHeader from '../components/TopClockHeader'
+import PageHeader from '../components/PageHeader'
 
 let activeGalleryLiveVideo: HTMLVideoElement | null = null
 
@@ -280,39 +280,32 @@ export default function Photos({ onStartSlideshow }: { onStartSlideshow?: () => 
   const currentMedia = lightboxIdx !== null && media ? media[lightboxIdx] : null
 
   return (
-    <div className="h-full flex flex-col p-6 overflow-y-auto">
-      {/* Header section in MD3 Style */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink">
-            Photos
-          </h1>
-          <p className="text-sm lg:text-base text-ink-soft mt-1">
-            Ambient family gallery synced from iCloud
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {onStartSlideshow && media && media.length > 0 && (
+    <div className="h-full flex flex-col p-4 sm:p-6 overflow-y-auto">
+      <PageHeader
+        title="Photos"
+        rightActions={
+          <>
+            {onStartSlideshow && media && media.length > 0 && (
+              <button
+                onClick={onStartSlideshow}
+                className="btn-glass p-2 sm:px-4 sm:py-2.5 shadow-sm text-sm flex items-center gap-1.5 cursor-pointer"
+                title="Start slideshow"
+              >
+                <Icon name="play_circle" className="text-lg" />
+                <span className="hidden sm:inline">Slideshow</span>
+              </button>
+            )}
             <button
-              onClick={onStartSlideshow}
-              className="btn-glass px-4 py-2.5 shadow-sm text-sm flex items-center gap-1.5 cursor-pointer"
+              onClick={reload}
+              disabled={loading}
+              className="btn-glass p-2 sm:p-3 shadow-sm"
+              title="Refresh gallery"
             >
-              <Icon name="play_circle" className="text-lg" />
-              <span>Slideshow</span>
+              <Icon name="refresh" className={loading ? 'animate-spin' : ''} />
             </button>
-          )}
-          <TopClockHeader now={new Date()} />
-          <button
-            onClick={reload}
-            disabled={loading}
-            className="btn-glass p-3 shadow-sm"
-            title="Refresh gallery"
-          >
-            <Icon name="refresh" className={loading ? 'animate-spin' : ''} />
-          </button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* Loading state */}
       {loading && !media && (
