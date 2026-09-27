@@ -2084,9 +2084,19 @@ function PwaSettingsCard() {
 
         {/* Action buttons */}
         <div className="flex flex-wrap items-center gap-2.5 pt-1">
-          {isInstallable && (
+          {!isStandalone && (
             <button
-              onClick={() => promptInstall()}
+              onClick={async () => {
+                if (isInstallable) {
+                  const done = await promptInstall()
+                  if (done) return
+                }
+                if (isIos) {
+                  setShowIosGuide(true)
+                } else {
+                  setShowAndroidGuide(true)
+                }
+              }}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--primary)] text-[var(--on-primary)] text-xs font-semibold shadow-sm hover:opacity-90 active:scale-95 transition cursor-pointer"
             >
               <Icon name="install_mobile" className="text-base" /> Install Nivas App

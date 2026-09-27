@@ -173,8 +173,20 @@ function AppContent() {
   const kidsNuggetsDisplayedRef = useRef(false)
   kidsNuggetsDisplayedRef.current = kidsNuggetsDisplayed
 
-  const { isInstallable, isStandalone, isIos, promptInstall } = usePwaInstall()
-  const [showIosInstallModal, setShowIosInstallModal] = useState(false)
+  const { isInstallable, isStandalone, isIos, isSecure, promptInstall } = usePwaInstall()
+  const [showInstallModal, setShowInstallModal] = useState(false)
+
+  const handleInstallClick = async () => {
+    if (isInstallable) {
+      const accepted = await promptInstall()
+      if (accepted) {
+        setMoreOpen(false)
+        return
+      }
+    }
+    setMoreOpen(false)
+    setShowInstallModal(true)
+  }
 
   useEffect(() => {
     const handleToggle = () => setKidsHubOpen((prev) => !prev)
@@ -779,6 +791,25 @@ function AppContent() {
 
             {/* Bottom/Right Tools (Desktop Only) */}
             <div className="hidden lg:flex lg:mt-auto flex-col items-center gap-3 lg:pb-4 w-full">
+              {!isStandalone && (
+                <button
+                  onClick={handleInstallClick}
+                  className="flex flex-col lg:flex-row items-center lg:justify-start justify-center transition-all duration-200 group text-center lg:text-left w-full cursor-pointer overflow-hidden"
+                  title="Install Nivas as standalone app"
+                >
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    transition={PRESS_SPRING}
+                    className="flex flex-col lg:flex-row items-center lg:justify-start justify-center gap-1 lg:gap-3 rounded-2xl w-full py-1.5 lg:py-2.5 lg:px-3 transition-all duration-200 text-teal-700 dark:text-teal-300 bg-teal-500/15 hover:bg-teal-500/25 border border-teal-500/30"
+                  >
+                    <Icon name="install_mobile" className="text-[1.25rem] lg:text-[1.55rem] shrink-0 text-teal-600 dark:text-teal-400" />
+                    <span className="hidden text-[0.65rem] lg:text-sm font-semibold lg:block tracking-tight leading-none whitespace-nowrap opacity-0 lg:scale-95 group-hover/nav:opacity-100 group-hover/nav:scale-100 transition-all duration-300 w-0 group-hover/nav:w-auto">
+                      Install App
+                    </span>
+                  </motion.div>
+                </button>
+              )}
               <button
                 onClick={cycleAppearance}
                 className="flex flex-col lg:flex-row items-center lg:justify-start justify-center transition-all duration-200 group text-center lg:text-left w-full cursor-pointer overflow-hidden"
@@ -859,6 +890,22 @@ function AppContent() {
                     </div>
                   }
                 >
+                  {!isStandalone && (
+                    <div className="mb-2 shrink-0 flex items-center justify-between gap-3 px-4 py-2 rounded-2xl bg-teal-500/10 border border-teal-500/25 text-xs text-ink shadow-sm">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Icon name="install_mobile" className="text-teal-600 dark:text-teal-400 text-lg shrink-0" />
+                        <span className="truncate">
+                          <strong>Running in Browser:</strong> Install Nivas for full-screen kiosk mode with no address bar.
+                        </span>
+                      </div>
+                      <button
+                        onClick={handleInstallClick}
+                        className="btn-primary shrink-0 px-3.5 py-1.5 !rounded-xl text-xs font-semibold shadow cursor-pointer flex items-center gap-1.5"
+                      >
+                        <Icon name="download" className="text-sm" /> Install App
+                      </button>
+                    </div>
+                  )}
                   {playbackError && (
                     <div role="alert" className="mb-4 flex items-center justify-between rounded-lg bg-red-950/90 border border-red-800/50 px-4 py-3 text-sm text-red-200">
                       <span>{playbackError}</span>
@@ -990,40 +1037,19 @@ function AppContent() {
                 inline
               />
 
-              {!isStandalone && (isInstallable || isIos) && (
+              {!isStandalone && (
                 <div className="flex flex-col gap-2 mt-1">
-                  {isInstallable && (
-                    <motion.button
-                      whileTap={{ scale: 0.97 }}
-                      transition={PRESS_SPRING}
-                      onClick={async () => {
-                        await promptInstall()
-                        setMoreOpen(false)
-                      }}
-                      className="btn-primary flex items-center justify-between !rounded-2xl px-5 py-3.5 text-base shadow-md cursor-pointer"
-                    >
-                      <span className="flex items-center gap-3 font-semibold">
-                        <Icon name="install_mobile" /> Install Nivas App
-                      </span>
-                      <Icon name="download" />
-                    </motion.button>
-                  )}
-                  {isIos && (
-                    <motion.button
-                      whileTap={{ scale: 0.97 }}
-                      transition={PRESS_SPRING}
-                      onClick={() => {
-                        setMoreOpen(false)
-                        setShowIosInstallModal(true)
-                      }}
-                      className="flex items-center justify-between rounded-2xl bg-indigo-600 text-white px-5 py-3.5 text-base font-semibold shadow-md cursor-pointer"
-                    >
-                      <span className="flex items-center gap-3">
-                        <Icon name="ios_share" /> Add to Home Screen
-                      </span>
-                      <Icon name="chevron_right" />
-                    </motion.button>
-                  )}
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    transition={PRESS_SPRING}
+                    onClick={handleInstallClick}
+                    className="btn-primary flex items-center justify-between !rounded-2xl px-5 py-3.5 text-base shadow-md cursor-pointer"
+                  >
+                    <span className="flex items-center gap-3 font-semibold">
+                      <Icon name="install_mobile" /> Install Nivas App
+                    </span>
+                    <Icon name="download" />
+                  </motion.button>
                 </div>
               )}
               
@@ -1082,37 +1108,88 @@ function AppContent() {
         />
         <MiniTimerCapsule />
 
-        {showIosInstallModal && (
-          <Modal title="Install Nivas on iOS" onClose={() => setShowIosInstallModal(false)}>
+        {showInstallModal && (
+          <Modal title="Install Nivas App" onClose={() => setShowInstallModal(false)}>
             <div className="space-y-4 text-sm text-ink p-1">
               <p className="text-ink-soft leading-relaxed">
-                Install Nivas as a full-screen Progressive Web App on your iPhone or iPad for quick access, zero browser bars, and instant loading:
+                Install Nivas as a standalone Progressive Web App (PWA) for an instant, full-screen dashboard with zero browser URL bars.
               </p>
-              <ol className="space-y-3 pl-1">
-                <li className="flex items-start gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-white text-xs font-bold">1</span>
-                  <span>Open Nivas in <strong>Safari</strong> on your device.</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-white text-xs font-bold">2</span>
-                  <span>Tap the <strong>Share</strong> button <Icon name="ios_share" className="inline text-base align-middle text-indigo-500" /> in Safari's bottom toolbar.</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-white text-xs font-bold">3</span>
-                  <span>Scroll down the share sheet and tap <strong>Add to Home Screen</strong> <Icon name="add_box" className="inline text-base align-middle text-indigo-500" />.</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-white text-xs font-bold">4</span>
-                  <span>Tap <strong>Add</strong> in the top-right corner. Nivas will now launch like a native app!</span>
-                </li>
-              </ol>
-              <div className="pt-2 flex justify-end">
+
+              {isIos ? (
+                <div className="space-y-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 p-4">
+                  <div className="font-semibold text-indigo-700 dark:text-indigo-300 flex items-center gap-2">
+                    <Icon name="smartphone" /> Apple iOS (Safari)
+                  </div>
+                  <ol className="space-y-2 pl-1 text-ink-soft">
+                    <li className="flex items-start gap-2">
+                      <span className="font-bold text-ink">1.</span>
+                      <span>Tap the <strong>Share</strong> button <Icon name="ios_share" className="inline text-base align-middle text-indigo-500" /> in Safari's bottom toolbar.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="font-bold text-ink">2.</span>
+                      <span>Scroll down and tap <strong>Add to Home Screen</strong> <Icon name="add_box" className="inline text-base align-middle text-indigo-500" />.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="font-bold text-ink">3.</span>
+                      <span>Tap <strong>Add</strong> in the top-right corner to finish.</span>
+                    </li>
+                  </ol>
+                </div>
+              ) : (
+                <div className="space-y-3 rounded-2xl bg-teal-500/10 border border-teal-500/20 p-4">
+                  <div className="font-semibold text-teal-700 dark:text-teal-300 flex items-center gap-2">
+                    <Icon name="tablet_android" /> Apolosign / Android Tablet / Chrome
+                  </div>
+                  <ol className="space-y-2.5 pl-1 text-ink-soft">
+                    <li className="flex items-start gap-2.5">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-teal-600 text-white text-xs font-bold">1</span>
+                      <span>In Chrome on the tablet, tap the <strong>3 vertical dots (⋮)</strong> in the top-right corner of the browser window.</span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-teal-600 text-white text-xs font-bold">2</span>
+                      <span>Tap <strong>Add to Home screen</strong> (or <strong>Install app</strong>).</span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-teal-600 text-white text-xs font-bold">3</span>
+                      <span>In the confirmation prompt, tap <strong>Install</strong>. Android will create the standalone app!</span>
+                    </li>
+                  </ol>
+                </div>
+              )}
+
+              {!isSecure && (
+                <div className="rounded-2xl bg-amber-500/10 border border-amber-500/20 p-4 space-y-2 text-xs">
+                  <div className="font-semibold text-amber-700 dark:text-amber-300 flex items-center gap-2">
+                    <Icon name="warning" className="text-amber-600" /> Insecure HTTP Connection
+                  </div>
+                  <p className="text-ink-soft leading-relaxed">
+                    You are connected via plain HTTP (<code className="font-mono bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded">{typeof window !== 'undefined' ? window.location.origin : ''}</code>). Chrome disables PWA installation on HTTP LAN IPs unless whitelisted:
+                  </p>
+                  <p className="text-ink-soft">
+                    Open a new tab to <code className="font-mono bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded">chrome://flags/#unsafely-treat-insecure-origin-as-secure</code>, set to <strong>Enabled</strong>, add <code className="font-mono bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded">{typeof window !== 'undefined' ? window.location.origin : ''}</code>, and tap <strong>Relaunch</strong>. Alternatively, open <code className="font-mono bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded">https://nivas.dkiran.com</code>.
+                  </p>
+                </div>
+              )}
+
+              <div className="pt-2 flex items-center justify-between gap-3">
+                {isInstallable && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const done = await promptInstall()
+                      if (done) setShowInstallModal(false)
+                    }}
+                    className="btn-primary px-5 py-2.5 rounded-xl font-semibold cursor-pointer inline-flex items-center gap-2"
+                  >
+                    <Icon name="install_mobile" /> Prompt Install Now
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={() => setShowIosInstallModal(false)}
-                  className="btn-primary px-5 py-2.5 rounded-xl font-semibold cursor-pointer"
+                  onClick={() => setShowInstallModal(false)}
+                  className="btn-glass px-5 py-2.5 rounded-xl font-semibold cursor-pointer ml-auto"
                 >
-                  Got it
+                  Close
                 </button>
               </div>
             </div>
