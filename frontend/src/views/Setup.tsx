@@ -2070,7 +2070,7 @@ function PwaSettingsCard() {
               <Icon name="offline_pin" className="text-sm" /> Service Worker & Offline Caching
             </span>
             <span className="font-mono text-[11px] px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-800 dark:text-teal-200">
-              {swActive ? 'Active (v5)' : swActive === false ? 'Inactive' : 'Checking...'}
+              {swActive ? 'Active (v6)' : swActive === false ? 'Inactive' : 'Checking...'}
             </span>
           </div>
           <p className="text-ink-soft leading-relaxed">

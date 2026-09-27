@@ -28,6 +28,7 @@ export type CelebrationName =
   | 'hot-cocoa'
   | 'donut-crusher'
   | 'firefighter-rescue'
+  | 'ninja-chop'
 
 export interface Celebration {
   name: CelebrationName
@@ -1430,6 +1431,16 @@ export const CELEBRATIONS: Celebration[] = [
     hideHtmlPraise: true,
     praise: ['Chores extinguished!'],
     iframeSrc: '/celebrations/firefighter_chore_rescue.html?embed=1',
+  },
+  {
+    name: 'ninja-chop',
+    emoji: '🥷',
+    label: 'Ninja Chore Chop',
+    backdrop: '#292740',
+    durationMs: 6800,
+    hideHtmlPraise: true,
+    praise: ['Hi-yah! Chores complete!'],
+    iframeSrc: '/celebrations/ninja_chore_chop.html?embed=1',
   },
   {
     name: 'confetti',
