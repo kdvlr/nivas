@@ -27,6 +27,7 @@ export type CelebrationName =
   | 'pirate-treasure'
   | 'hot-cocoa'
   | 'donut-crusher'
+  | 'firefighter-rescue'
 
 export interface Celebration {
   name: CelebrationName
@@ -1419,6 +1420,16 @@ export const CELEBRATIONS: Celebration[] = [
     hideHtmlPraise: true,
     praise: ['Chores do-nut stand a chance!'],
     iframeSrc: '/celebrations/donut_chore_crusher.html?embed=1',
+  },
+  {
+    name: 'firefighter-rescue',
+    emoji: '🚒',
+    label: 'Firefighter Chore Rescue',
+    backdrop: '#bbc9df',
+    durationMs: 8500,
+    hideHtmlPraise: true,
+    praise: ['Chores extinguished!'],
+    iframeSrc: '/celebrations/firefighter_chore_rescue.html?embed=1',
   },
   {
     name: 'confetti',
