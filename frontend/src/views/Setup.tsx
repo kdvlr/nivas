@@ -1969,17 +1969,23 @@ function KioskScheduleCard() {
 }
 
 function PwaSettingsCard() {
-  const { isInstallable, isStandalone, isIos, promptInstall } = usePwaInstall()
+  const { isInstallable, isStandalone, isIos, isSecure, promptInstall } = usePwaInstall()
   const [swActive, setSwActive] = useState<boolean | null>(null)
   const [checkingUpdate, setCheckingUpdate] = useState(false)
   const [updateMsg, setUpdateMsg] = useState('')
   const [showIosGuide, setShowIosGuide] = useState(false)
+  const [showAndroidGuide, setShowAndroidGuide] = useState(false)
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistration().then((reg) => {
-        setSwActive(Boolean(reg?.active))
-      })
+      navigator.serviceWorker
+        .getRegistration()
+        .then((reg) => {
+          setSwActive(Boolean(reg?.active))
+        })
+        .catch(() => {
+          setSwActive(false)
+        })
     } else {
       setSwActive(false)
     }
@@ -2021,6 +2027,8 @@ function PwaSettingsCard() {
     }
   }
 
+  const currentOrigin = typeof window !== 'undefined' ? window.location.origin : ''
+
   return (
     <Card
       title={
@@ -2043,13 +2051,36 @@ function PwaSettingsCard() {
               <Icon name="offline_pin" className="text-sm" /> Service Worker & Offline Caching
             </span>
             <span className="font-mono text-[11px] px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-800 dark:text-teal-200">
-              {swActive ? 'Active (nivas-cache-v3)' : 'Checking...'}
+              {swActive ? 'Active (v5)' : swActive === false ? 'Inactive' : 'Checking...'}
             </span>
           </div>
           <p className="text-ink-soft leading-relaxed">
             Nivas runs as a standalone PWA with an offline-first service worker. Core static bundles and icons are cached locally for instant launches on kiosks, tablets, and mobile devices, while live calendar, chore, and music streams are queried in real time.
           </p>
         </div>
+
+        {!isSecure && !isStandalone && (
+          <div className="rounded-xl bg-amber-500/10 p-3.5 border border-amber-500/20 text-xs text-ink space-y-2">
+            <div className="font-semibold text-amber-700 dark:text-amber-300 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Icon name="warning" className="text-base text-amber-600 dark:text-amber-400" />
+                Insecure HTTP Origin Detected
+              </span>
+              <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-800 dark:text-amber-200 font-semibold uppercase">
+                Chrome PWA Blocked
+              </span>
+            </div>
+            <p className="text-ink-soft leading-relaxed">
+              Chrome on Android blocks PWA installation and Service Workers on plain HTTP local network addresses (<code className="font-mono bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded">{currentOrigin}</code>). To enable PWA installation on your Apolosign tablet:
+            </p>
+            <ol className="list-decimal list-inside space-y-1 text-ink-soft pl-1">
+              <li>In Chrome on Apolosign, open a tab to: <code className="font-mono bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded">chrome://flags/#unsafely-treat-insecure-origin-as-secure</code></li>
+              <li>Set the flag to <strong>Enabled</strong> and add <code className="font-mono bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded">{currentOrigin}</code></li>
+              <li>Tap <strong>Relaunch</strong> at the bottom of Chrome.</li>
+              <li>Or access Nivas via secure HTTPS: <code className="font-mono bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded">https://nivas.dkiran.com</code></li>
+            </ol>
+          </div>
+        )}
 
         {/* Action buttons */}
         <div className="flex flex-wrap items-center gap-2.5 pt-1">
@@ -2059,6 +2090,15 @@ function PwaSettingsCard() {
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--primary)] text-[var(--on-primary)] text-xs font-semibold shadow-sm hover:opacity-90 active:scale-95 transition cursor-pointer"
             >
               <Icon name="install_mobile" className="text-base" /> Install Nivas App
+            </button>
+          )}
+
+          {!isStandalone && !isIos && (
+            <button
+              onClick={() => setShowAndroidGuide(!showAndroidGuide)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-600/10 text-amber-800 dark:text-amber-200 border border-amber-600/20 text-xs font-semibold hover:bg-amber-600/20 active:scale-95 transition cursor-pointer"
+            >
+              <Icon name="tablet_android" className="text-base" /> Apolosign / Android Guide
             </button>
           )}
 
@@ -2093,6 +2133,40 @@ function PwaSettingsCard() {
           <p className="text-xs font-medium text-teal-600 dark:text-teal-400 mt-2">
             {updateMsg}
           </p>
+        )}
+
+        {showAndroidGuide && (
+          <div className="rounded-xl bg-amber-500/10 p-3.5 border border-amber-500/20 text-xs text-ink space-y-2 mt-2">
+            <div className="font-semibold text-amber-700 dark:text-amber-300 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Icon name="tablet_android" className="text-sm" /> Installing Nivas on Apolosign / Android Tablets
+              </span>
+              <button
+                onClick={() => setShowAndroidGuide(false)}
+                className="text-xs text-ink-soft hover:text-ink font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="space-y-2 text-ink-soft">
+              <div>
+                <p className="font-semibold text-ink">Option 1: Chrome Flag (For Local IP / Offline LAN)</p>
+                <ol className="list-decimal list-inside space-y-1 pl-1 pt-0.5">
+                  <li>In Chrome on Apolosign, visit <code className="font-mono bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded">chrome://flags/#unsafely-treat-insecure-origin-as-secure</code></li>
+                  <li>Enable the flag and add: <code className="font-mono bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded">http://192.168.100.231:8000</code></li>
+                  <li>Tap <strong>Relaunch</strong>. Open Nivas and tap Chrome menu (⋮) → <strong>Install app</strong>.</li>
+                </ol>
+              </div>
+              <div>
+                <p className="font-semibold text-ink">Option 2: Use Secure HTTPS</p>
+                <p className="pl-1 pt-0.5">Open <code className="font-mono bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded">https://nivas.dkiran.com</code> in Chrome. Tap Chrome menu (⋮) → <strong>Install app</strong>.</p>
+              </div>
+              <div>
+                <p className="font-semibold text-ink">Option 3: Fully Kiosk Browser</p>
+                <p className="pl-1 pt-0.5">If running Fully Kiosk Browser, configure Start URL to <code className="font-mono bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded">http://192.168.100.231:8000</code> and enable Kiosk Mode.</p>
+              </div>
+            </div>
+          </div>
         )}
 
         {showIosGuide && (

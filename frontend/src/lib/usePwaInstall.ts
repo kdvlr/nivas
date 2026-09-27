@@ -36,8 +36,13 @@ export function usePwaInstall() {
   const [isInstalled, setIsInstalled] = useState(false)
   const [isIos, setIsIos] = useState(false)
   const [isStandalone, setIsStandalone] = useState(false)
+  const [isSecure, setIsSecure] = useState(true)
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const secure = window.isSecureContext ?? (window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      setIsSecure(Boolean(secure))
+    }
     const checkStandalone = () => {
       const isStandaloneMedia = window.matchMedia('(display-mode: standalone)').matches
       const isStandaloneNavigator = (navigator as unknown as { standalone?: boolean }).standalone === true
@@ -88,6 +93,7 @@ export function usePwaInstall() {
     isInstalled,
     isStandalone,
     isIos,
+    isSecure,
     promptInstall,
   }
 }

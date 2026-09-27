@@ -78,7 +78,7 @@ if STATIC_DIR.exists():
     # and every deploy looks like it did nothing.
     INDEX_HEADERS = {"Cache-Control": "no-cache, no-store, must-revalidate"}
 
-    @app.get("/{path:path}")
+    @app.api_route("/{path:path}", methods=["GET", "HEAD"])
     def spa(path: str):
         file = STATIC_DIR / path
         # Keep the lookup inside STATIC_DIR — "path" is attacker-controlled and
