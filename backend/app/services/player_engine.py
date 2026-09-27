@@ -63,7 +63,7 @@ class PlayerEngine:
         self.elapsed_seconds: float = 0
         self.raw_elapsed_seconds: float = 0.0
         self.duration_seconds: float = 0
-        self.master_volume: int = 70
+        self.master_volume: int = 0
         self.devices: Dict[str, AirPlayDevice] = {}
         self.active_targets: List[str] = []
         self.autoplay_enabled: bool = True
@@ -148,9 +148,14 @@ class PlayerEngine:
         return set(self.played_history.keys())
 
     def _update_master_volume_from_devices(self) -> None:
-        selected_devs = [dev for dev in self.devices.values() if dev.is_selected]
+        selected_devs = [
+            dev for dev in self.devices.values()
+            if dev.is_selected and not dev.is_hidden
+        ]
         if selected_devs:
             self.master_volume = round(sum(dev.volume for dev in selected_devs) / len(selected_devs))
+        else:
+            self.master_volume = 0
 
     def _load_preferences(self) -> tuple[set[str], set[str], set[str], dict[str, int], dict[str, int]]:
         try:
@@ -570,6 +575,7 @@ class PlayerEngine:
             pass
 
     def get_state(self) -> Dict[str, Any]:
+        self._update_master_volume_from_devices()
         paused_expires_in = None
         if self._paused_at is not None and self._stream_procs:
             paused_expires_in = max(
@@ -620,6 +626,7 @@ class PlayerEngine:
                     first_dev.is_selected = True
                     if first_dev.id not in self.active_targets:
                         self.active_targets.append(first_dev.id)
+        self._update_master_volume_from_devices()
 
     async def play_track(self, track: Dict[str, Any], queue: Optional[List[Dict[str, Any]]] = None, is_back: bool = False):
         video_id = track.get("videoId")
@@ -1892,6 +1899,7 @@ class PlayerEngine:
             self._hidden_device_ids.discard(device_id)
         if device:
             device.is_hidden = hidden
+        self._update_master_volume_from_devices()
         self._save_preferences()
         self._broadcast_state()
         return self.get_state()
@@ -1925,17 +1933,31 @@ class PlayerEngine:
 
     def set_master_volume(self, volume: int) -> Dict[str, Any]:
         target_volume = max(0, min(100, volume))
-        delta = target_volume - self.master_volume
-        self.master_volume = target_volume
-        for dev in self.devices.values():
-            if dev.is_selected:
+        selected_devs = [
+            dev for dev in self.devices.values()
+            if dev.is_selected and not dev.is_hidden
+        ]
+        if not selected_devs:
+            self.master_volume = 0
+            self._broadcast_state()
+            return self.get_state()
+
+        current_master = round(sum(dev.volume for dev in selected_devs) / len(selected_devs))
+        delta = target_volume - current_master
+
+        for dev in selected_devs:
+            if target_volume == 0:
+                new_vol = 0
+            elif target_volume == 100:
+                new_vol = 100
+            else:
                 new_vol = max(0, min(100, dev.volume + delta))
-                dev.volume = new_vol
-                self._device_volumes[dev.id] = new_vol
-                if dev.id in self.active_targets:
-                    self._write_stream_command(
-                        f"volume {dev.address} {dev.volume / 100.0:.4f}"
-                    )
+            dev.volume = new_vol
+            self._device_volumes[dev.id] = new_vol
+            if dev.id in self.active_targets:
+                self._write_stream_command(
+                    f"volume {dev.address} {dev.volume / 100.0:.4f}"
+                )
         self._update_master_volume_from_devices()
         self._schedule_save_preferences(0.5)
         self._broadcast_state()

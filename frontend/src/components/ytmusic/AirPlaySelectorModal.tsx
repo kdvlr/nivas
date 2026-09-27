@@ -32,9 +32,18 @@ interface PanelPosition {
   origin: string
 }
 
+export function computeMasterVolume(devList: AirPlayDevice[]): number {
+  const selected = devList.filter((d) => d.isSelected && !d.isHidden)
+  if (selected.length === 0) return 0
+  return Math.round(selected.reduce((sum, d) => sum + d.volume, 0) / selected.length)
+}
+
 export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: AirPlaySelectorModalProps) {
   const [devices, setDevices] = useState<AirPlayDevice[]>([])
-  const [masterVolume, setMasterVolume] = useState(70)
+  const [masterVolume, setMasterVolume] = useState(0)
+  const devicesRef = useRef<AirPlayDevice[]>(devices)
+  devicesRef.current = devices
+
   const [loading, setLoading] = useState(false)
   const [showHidden, setShowHidden] = useState(false)
   const [calibratingDeviceId, setCalibratingDeviceId] = useState<string | null>(null)
@@ -70,16 +79,23 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
           // Preserve local optimistic volumes, update other metadata
           setDevices((previous) => {
             const prevMap = new Map(previous.map((d) => [d.id, d]))
-            return response.devices.map((remote: AirPlayDevice) => {
+            const updated = response.devices.map((remote: AirPlayDevice) => {
               const local = prevMap.get(remote.id)
               return local ? { ...remote, volume: local.volume } : remote
             })
+            devicesRef.current = updated
+            return updated
           })
         } else {
+          devicesRef.current = response.devices
           setDevices(response.devices)
+          setMasterVolume(
+            typeof response?.masterVolume === 'number'
+              ? response.masterVolume
+              : computeMasterVolume(response.devices)
+          )
         }
-      }
-      if (typeof response?.masterVolume === 'number' && !isInteracting) {
+      } else if (typeof response?.masterVolume === 'number' && !isInteracting) {
         setMasterVolume(response.masterVolume)
       }
     } catch (error) {
@@ -135,19 +151,26 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
 
   const toggleDevice = async (device: AirPlayDevice) => {
     const selected = !device.isSelected
-    setDevices((previous) => {
-      const next = previous.map((item) => item.id === device.id ? { ...item, isSelected: selected } : item)
-      const selectedDevs = next.filter((d) => d.isSelected)
-      if (selectedDevs.length > 0) {
-        const avg = Math.round(selectedDevs.reduce((sum, d) => sum + d.volume, 0) / selectedDevs.length)
-        setMasterVolume(avg)
-      }
-      return next
-    })
+    const currentDevices = devicesRef.current
+    const nextDevices = currentDevices.map((item) =>
+      item.id === device.id ? { ...item, isSelected: selected } : item
+    )
+    devicesRef.current = nextDevices
+    setDevices(nextDevices)
+    setMasterVolume(computeMasterVolume(nextDevices))
+
     try {
       const response = await api.post<any>('/api/ytmusic/airplay/devices/toggle', { deviceId: device.id, selected })
       if (Array.isArray(response?.devices)) {
-        if (!isInteractingRef.current) setDevices(response.devices)
+        if (!isInteractingRef.current) {
+          devicesRef.current = response.devices
+          setDevices(response.devices)
+          setMasterVolume(
+            typeof response?.masterVolume === 'number'
+              ? response.masterVolume
+              : computeMasterVolume(response.devices)
+          )
+        }
       }
     } catch (error) {
       console.error('Failed to toggle AirPlay device', error)
@@ -175,17 +198,13 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
     isInteractingRef.current = true
     lastInteractionTimeRef.current = Date.now()
 
-    setDevices((previous) => {
-      const next = previous.map((device) =>
-        device.id === deviceId ? { ...device, volume } : device
-      )
-      const selected = next.filter((d) => d.isSelected)
-      if (selected.length > 0) {
-        const avg = Math.round(selected.reduce((sum, d) => sum + d.volume, 0) / selected.length)
-        setMasterVolume(avg)
-      }
-      return next
-    })
+    const currentDevices = devicesRef.current
+    const nextDevices = currentDevices.map((device) =>
+      device.id === deviceId ? { ...device, volume } : device
+    )
+    devicesRef.current = nextDevices
+    setDevices(nextDevices)
+    setMasterVolume(computeMasterVolume(nextDevices))
 
     pendingDeviceVolRef.current.set(deviceId, volume)
     if (!deviceInFlightRef.current.get(deviceId) && !deviceThrottleTimerRef.current.has(deviceId)) {
@@ -242,19 +261,33 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
     isInteractingRef.current = true
     lastInteractionTimeRef.current = Date.now()
 
-    setMasterVolume((prevMaster) => {
-      const delta = newVolume - prevMaster
-      setDevices((previous) =>
-        previous.map((device) => {
-          if (!device.isSelected) return device
-          return {
-            ...device,
-            volume: Math.max(0, Math.min(100, device.volume + delta)),
-          }
-        })
-      )
-      return newVolume
+    const currentDevices = devicesRef.current
+    const selected = currentDevices.filter((d) => d.isSelected && !d.isHidden)
+    if (selected.length === 0) {
+      setMasterVolume(0)
+      return
+    }
+
+    const currentAvg = Math.round(selected.reduce((sum, d) => sum + d.volume, 0) / selected.length)
+    const delta = newVolume - currentAvg
+
+    const nextDevices = currentDevices.map((device) => {
+      if (!device.isSelected || device.isHidden) return device
+      let nextVol: number
+      if (newVolume === 0) {
+        nextVol = 0
+      } else if (newVolume === 100) {
+        nextVol = 100
+      } else {
+        nextVol = Math.max(0, Math.min(100, device.volume + delta))
+      }
+      return { ...device, volume: nextVol }
     })
+
+    const newAvg = computeMasterVolume(nextDevices)
+    devicesRef.current = nextDevices
+    setDevices(nextDevices)
+    setMasterVolume(newAvg)
 
     pendingMasterVolRef.current = newVolume
     if (!masterInFlightRef.current && !masterThrottleTimerRef.current) {
@@ -290,10 +323,29 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
   }
 
   const setDeviceHidden = async (deviceId: string, hidden: boolean) => {
-    setDevices((previous) => previous.map((device) => device.id === deviceId ? { ...device, isHidden: hidden, isSelected: hidden ? false : device.isSelected } : device))
+    const currentDevices = devicesRef.current
+    const nextDevices = currentDevices.map((device) =>
+      device.id === deviceId
+        ? { ...device, isHidden: hidden, isSelected: hidden ? false : device.isSelected }
+        : device
+    )
+    devicesRef.current = nextDevices
+    setDevices(nextDevices)
+    setMasterVolume(computeMasterVolume(nextDevices))
+
     try {
       const response = await api.post<any>('/api/ytmusic/airplay/devices/hide', { deviceId, hidden })
-      if (Array.isArray(response?.devices)) setDevices(response.devices)
+      if (Array.isArray(response?.devices)) {
+        if (!isInteractingRef.current) {
+          devicesRef.current = response.devices
+          setDevices(response.devices)
+          setMasterVolume(
+            typeof response?.masterVolume === 'number'
+              ? response.masterVolume
+              : computeMasterVolume(response.devices)
+          )
+        }
+      }
     } catch (error) {
       console.error('Failed to update speaker visibility', error)
       fetchDevices()
@@ -318,6 +370,7 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
 
   const hiddenDevices = devices.filter((device) => device.isHidden)
   const displayedDevices = devices.filter((device) => showHidden ? device.isHidden : !device.isHidden)
+  const selectedCount = devices.filter((device) => device.isSelected && !device.isHidden).length
 
   const modalContent = (
     <AnimatePresence>
@@ -359,7 +412,8 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
                     value={masterVolume}
                     onChange={handleGroupVolumeChange}
                     onChangeEnd={handleGroupVolumeCommit}
-                    label="All Speakers"
+                    label={selectedCount === 0 ? "No Speakers Selected" : "All Speakers"}
+                    disabled={selectedCount === 0}
                     className="w-full"
                   />
                 </div>

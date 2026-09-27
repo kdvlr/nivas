@@ -916,3 +916,139 @@ async def test_mono_audio_triggers_stereo_transcoding():
 
         # Mono file (channels=1) must trigger normalization transcode to stereo in cache
         mock_fetch.assert_called_once()
+
+
+def test_master_volume_tracks_individual_speakers_average(tmp_path):
+    engine = PlayerEngine()
+    engine._preferences_path = tmp_path / "airplay_preferences.json"
+    spk1 = AirPlayDevice("spk1", "Speaker 1", "192.168.1.101", 7000, volume=40)
+    spk2 = AirPlayDevice("spk2", "Speaker 2", "192.168.1.102", 7000, volume=60)
+    spk1.is_selected = True
+    spk2.is_selected = True
+    engine.devices = {"spk1": spk1, "spk2": spk2}
+    engine.active_targets = ["spk1", "spk2"]
+
+    engine._update_master_volume_from_devices()
+    assert engine.master_volume == 50
+
+    engine.set_device_volume("spk1", 80)
+    assert spk1.volume == 80
+    assert engine.master_volume == 70  # (80 + 60) / 2
+
+    engine.set_device_volume("spk2", 90)
+    assert spk2.volume == 90
+    assert engine.master_volume == 85  # (80 + 90) / 2
+
+
+def test_master_volume_recalculates_on_adding_and_removing_speakers(tmp_path):
+    engine = PlayerEngine()
+    engine._preferences_path = tmp_path / "airplay_preferences.json"
+    spk1 = AirPlayDevice("spk1", "Speaker 1", "192.168.1.101", 7000, volume=30)
+    spk2 = AirPlayDevice("spk2", "Speaker 2", "192.168.1.102", 7000, volume=60)
+    spk3 = AirPlayDevice("spk3", "Speaker 3", "192.168.1.103", 7000, volume=90)
+    engine.devices = {"spk1": spk1, "spk2": spk2, "spk3": spk3}
+
+    # Initially none selected
+    assert engine.get_state()["masterVolume"] == 0
+
+    # Add Speaker 1
+    engine.toggle_device("spk1", True)
+    assert engine.master_volume == 30
+    assert engine.get_state()["masterVolume"] == 30
+
+    # Add Speaker 2
+    engine.toggle_device("spk2", True)
+    assert engine.master_volume == 45  # (30 + 60) / 2
+    assert engine.get_state()["masterVolume"] == 45
+
+    # Add Speaker 3
+    engine.toggle_device("spk3", True)
+    assert engine.master_volume == 60  # (30 + 60 + 90) / 3
+    assert engine.get_state()["masterVolume"] == 60
+
+    # Remove Speaker 1
+    engine.toggle_device("spk1", False)
+    assert engine.master_volume == 75  # (60 + 90) / 2
+    assert engine.get_state()["masterVolume"] == 75
+
+    # Remove Speaker 2
+    engine.toggle_device("spk2", False)
+    assert engine.master_volume == 90
+    assert engine.get_state()["masterVolume"] == 90
+
+    # Remove Speaker 3 (all removed)
+    engine.toggle_device("spk3", False)
+    assert engine.master_volume == 0
+    assert engine.get_state()["masterVolume"] == 0
+
+
+def test_master_volume_ignores_hidden_speakers(tmp_path):
+    engine = PlayerEngine()
+    engine._preferences_path = tmp_path / "airplay_preferences.json"
+    spk1 = AirPlayDevice("spk1", "Speaker 1", "192.168.1.101", 7000, volume=40)
+    spk2 = AirPlayDevice("spk2", "Speaker 2", "192.168.1.102", 7000, volume=80)
+    spk1.is_selected = True
+    spk2.is_selected = True
+    engine.devices = {"spk1": spk1, "spk2": spk2}
+    engine.active_targets = ["spk1", "spk2"]
+
+    # When both visible, average is 60
+    assert engine.get_state()["masterVolume"] == 60
+
+    # Hide spk2
+    engine.set_device_hidden("spk2", True)
+    assert spk2.is_hidden is True
+    # Hidden device is unselected or ignored in calculation
+    assert engine.master_volume == 40
+    assert engine.get_state()["masterVolume"] == 40
+
+    # Hide spk1 as well -> no visible selected speakers -> master volume is 0
+    engine.set_device_hidden("spk1", True)
+    assert engine.master_volume == 0
+    assert engine.get_state()["masterVolume"] == 0
+
+    # Unhide spk1 and select it
+    engine.set_device_hidden("spk1", False)
+    engine.toggle_device("spk1", True)
+    assert engine.master_volume == 40
+    assert engine.get_state()["masterVolume"] == 40
+
+
+def test_set_master_volume_adjusts_selected_speakers_proportionally(tmp_path):
+    engine = PlayerEngine()
+    engine._preferences_path = tmp_path / "airplay_preferences.json"
+    spk1 = AirPlayDevice("spk1", "Speaker 1", "192.168.1.101", 7000, volume=30)
+    spk2 = AirPlayDevice("spk2", "Speaker 2", "192.168.1.102", 7000, volume=50)
+    spk1.is_selected = True
+    spk2.is_selected = True
+    engine.devices = {"spk1": spk1, "spk2": spk2}
+    engine.active_targets = ["spk1", "spk2"]
+
+    # Initial average = 40
+    assert engine.get_state()["masterVolume"] == 40
+
+    # Adjust master volume to 60 (delta = +20)
+    engine.set_master_volume(60)
+    assert spk1.volume == 50  # 30 + 20
+    assert spk2.volume == 70  # 50 + 20
+    assert engine.master_volume == 60
+
+    # Mute all to 0
+    engine.set_master_volume(0)
+    assert spk1.volume == 0
+    assert spk2.volume == 0
+    assert engine.master_volume == 0
+
+    # Max all to 100
+    engine.set_master_volume(100)
+    assert spk1.volume == 100
+    assert spk2.volume == 100
+    assert engine.master_volume == 100
+
+    # Test with no speakers selected
+    engine.toggle_device("spk1", False)
+    engine.toggle_device("spk2", False)
+    state = engine.set_master_volume(50)
+    assert state["masterVolume"] == 0
+    assert engine.master_volume == 0
+
