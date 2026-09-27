@@ -1,4 +1,3 @@
-import PageHeader from '../components/PageHeader'
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence, LayoutGroup, useMotionValue, useTransform } from 'framer-motion'
 import { PRESS_SPRING, EXPRESSIVE_ENTER } from '../lib/motion'
@@ -164,14 +163,14 @@ export default function Shopping() {
   }
 
   return (
-    <div className="page-layout flex h-full flex-col px-4 lg:px-8">
-      <PageHeader>
-        <div className="flex min-w-0 flex-wrap items-center gap-3">
+    <div className="flex h-full flex-col px-4 lg:px-8">
+      <div className="mb-4 lg:mb-5 flex items-center justify-between gap-2 lg:gap-4">
+        <div className="flex items-center gap-3">
           <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink">Shopping</h1>
           <span className="text-base lg:text-lg font-normal text-ink-soft">{active.length} items</span>
         </div>
         <TopClockHeader now={new Date()} />
-      </PageHeader>
+      </div>
 
       <div className="mb-4 lg:mb-6 flex gap-2 lg:gap-3">
         <input
@@ -179,7 +178,7 @@ export default function Shopping() {
           onChange={(e) => setNewTitle(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && add()}
           placeholder="Add an item…"
-          className="min-w-0 flex-1 input-glass px-4 py-2.5 lg:px-6 lg:py-4 text-base lg:text-xl focus:outline-none"
+          className="flex-1 input-glass px-4 py-2.5 lg:px-6 lg:py-4 text-base lg:text-xl focus:outline-none"
         />
         <motion.button
           whileHover={{ scale: 1.05 }}

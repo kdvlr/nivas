@@ -1,4 +1,3 @@
-import PageHeader from '../components/PageHeader'
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { PRESS_SPRING, EXPRESSIVE_ENTER } from '../lib/motion'
@@ -52,10 +51,10 @@ export default function Rewards() {
   const txns = transactions ?? []
 
   return (
-    <div className="page-layout flex h-full flex-col px-4 py-3 lg:px-8 lg:py-4">
+    <div className="flex h-full flex-col px-4 py-3 lg:px-8 lg:py-4">
       {/* Header */}
-      <PageHeader>
-        <div className="flex min-w-0 flex-wrap items-center gap-4">
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
           <button
             onClick={() => (location.hash = '#/chores')}
             className="text-lg font-medium text-ink-soft transition-colors hover:text-ink cursor-pointer flex items-center gap-1"
@@ -65,7 +64,7 @@ export default function Rewards() {
           <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink"><Icon name="storefront" /> Rewards Store</h1>
         </div>
         <TopClockHeader now={new Date()} />
-      </PageHeader>
+      </div>
 
       {/* Coin Balances */}
       <div className="mb-8 flex flex-wrap gap-4">

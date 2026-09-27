@@ -5,9 +5,7 @@ import Avatar from '../components/Avatar'
 import Icon from '../components/Icon'
 import Modal from '../components/Modal'
 import WeatherModal from '../components/WeatherModal'
-import TopClockHeader, { getTzDateString } from '../components/TopClockHeader'
-import { useTimer } from '../context/TimerContext'
-import { formatTimerDisplay } from '../lib/timer'
+import TopClockHeader from '../components/TopClockHeader'
 import { useCelebration } from '../components/celebrations/CelebrationContext'
 import { useClock, useData, todayISO, addDaysISO } from '../lib/hooks'
 import { useSwipeNavigation } from '../lib/useSwipeNavigation'
@@ -161,68 +159,6 @@ export default function Home() {
     ['setup'],
   )
   const { celebrate } = useCelebration()
-
-  type MobileHeaderStyle = 'dual' | 'single' | 'ambient'
-  const [mobileHeaderStyle, setMobileHeaderStyle] = useState<MobileHeaderStyle>(() => {
-    try {
-      const urlParam = new URLSearchParams(window.location.hash.split('?')[1] || '').get('header')
-      if (urlParam === 'dual' || urlParam === 'single' || urlParam === 'ambient') return urlParam
-      return (localStorage.getItem('nivas_mobile_header_style') as MobileHeaderStyle) || 'dual'
-    } catch {
-      return 'dual'
-    }
-  })
-
-  useEffect(() => {
-    const handleHash = () => {
-      const urlParam = new URLSearchParams(window.location.hash.split('?')[1] || '').get('header')
-      if (urlParam === 'dual' || urlParam === 'single' || urlParam === 'ambient') {
-        setMobileHeaderStyle(urlParam)
-      }
-    }
-    const handleCustom = (e: any) => {
-      if (e.detail && (e.detail === 'dual' || e.detail === 'single' || e.detail === 'ambient')) {
-        setMobileHeaderStyle(e.detail)
-      }
-    }
-    window.addEventListener('hashchange', handleHash)
-    window.addEventListener('nivas-set-header-style', handleCustom)
-    return () => {
-      window.removeEventListener('hashchange', handleHash)
-      window.removeEventListener('nivas-set-header-style', handleCustom)
-    }
-  }, [])
-
-  let timerCtx: ReturnType<typeof useTimer> | null = null
-  try {
-    timerCtx = useTimer()
-  } catch {}
-  const activeTimer = timerCtx?.timer
-  const handleClockClick = () => {
-    if (timerCtx) {
-      timerCtx.openCreateModal()
-    } else {
-      window.dispatchEvent(new CustomEvent('open-create-timer'))
-    }
-  }
-
-  const secondaryTz = config?.secondary_tz || 'Asia/Kolkata'
-  const secondaryEmoji = config?.secondary_tz_emoji || '🇮🇳'
-  const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone
-  const localDateStr = getTzDateString(now, localTz)
-  const secondaryDateStr = getTzDateString(now, secondaryTz)
-  const hasDateDiff = localDateStr !== secondaryDateStr && secondaryDateStr !== ''
-
-  let secondaryTimeFormatted = ''
-  try {
-    secondaryTimeFormatted = now.toLocaleTimeString(undefined, {
-      timeZone: secondaryTz,
-      hour: 'numeric',
-      minute: '2-digit',
-    })
-  } catch (e) {
-    secondaryTimeFormatted = now.toLocaleTimeString()
-  }
 
 
   // Reset completing/removed tracking when data reloads
@@ -473,198 +409,6 @@ export default function Home() {
 
       <TopClockHeader now={now} config={config} />
     </header>
-    )
-  }
-
-  const renderMobileHeader = () => {
-    return (
-      <div className="flex flex-col gap-1.5 w-full">
-        {/* Style 1: Modern M3 Dual Capsules */}
-        {mobileHeaderStyle === 'dual' && (
-          <div className="flex items-center justify-between gap-2.5 w-full">
-            {weather?.current && (
-              <button
-                type="button"
-                onClick={() => setWeatherOpen(true)}
-                className="glass flex items-center gap-2 rounded-2xl px-2.5 py-1.5 active:scale-95 transition-all text-left shadow-xs min-w-0"
-                title="Weather details"
-              >
-                <span className="text-2xl leading-none select-none shrink-0">{weather.current.icon}</span>
-                <div className="min-w-0">
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-lg font-bold text-ink leading-none">{weather.current.temp}°</span>
-                    <span className="text-xs font-semibold text-ink-soft leading-none truncate max-w-[4.5rem]">
-                      {weather.current.label}
-                    </span>
-                  </div>
-                  {todayWeather && (
-                    <div className="text-[10px] text-ink-faint font-medium mt-0.5 leading-none tabular-nums whitespace-nowrap">
-                      H {todayWeather.tmax}° · L {todayWeather.tmin}°
-                    </div>
-                  )}
-                </div>
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={handleClockClick}
-              className="glass flex flex-col items-end rounded-2xl px-3 py-1.5 active:scale-95 transition-all text-right shrink-0 shadow-xs ml-auto"
-              title="Click to set a timer"
-            >
-              <div className="text-lg font-bold tabular-nums text-[var(--primary)] leading-none flex items-center gap-1.5">
-                {activeTimer && (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] animate-pulse">
-                    <Icon name="timer" className="text-xs" />
-                    <span>{formatTimerDisplay(activeTimer.remainingSeconds).formatted}</span>
-                  </span>
-                )}
-                <span>{now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span>
-              </div>
-              <div className="mt-1 flex items-center gap-1 text-[10px] font-medium text-ink-soft whitespace-nowrap">
-                <span>{now.toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' })}</span>
-                <span className="opacity-40">•</span>
-                <span>{secondaryEmoji} {secondaryTimeFormatted}{hasDateDiff ? ' (+1d)' : ''}</span>
-              </div>
-            </button>
-          </div>
-        )}
-
-        {/* Style 2: Streamlined Single Glass Bar */}
-        {mobileHeaderStyle === 'single' && (
-          <header className="glass flex items-center justify-between px-3 py-1.5 rounded-2xl w-full">
-            {weather?.current && (
-              <button
-                type="button"
-                onClick={() => setWeatherOpen(true)}
-                className="flex items-center gap-2 text-left min-w-0 active:scale-95 transition-transform"
-                title="Weather details"
-              >
-                <span className="text-2xl leading-none select-none shrink-0">{weather.current.icon}</span>
-                <div className="min-w-0">
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-lg font-bold text-ink leading-none">{weather.current.temp}°</span>
-                    <span className="text-xs font-semibold text-ink-soft leading-none truncate max-w-[4rem]">
-                      {weather.current.label}
-                    </span>
-                  </div>
-                  {todayWeather && (
-                    <div className="text-[10px] text-ink-faint font-medium mt-0.5 leading-none tabular-nums whitespace-nowrap">
-                      H {todayWeather.tmax}° · L {todayWeather.tmin}°
-                    </div>
-                  )}
-                </div>
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={handleClockClick}
-              className="flex flex-col items-end text-right shrink-0 active:scale-95 transition-transform ml-auto"
-              title="Click to set a timer"
-            >
-              <div className="text-lg font-bold tabular-nums text-[var(--primary)] leading-none flex items-center gap-1.5">
-                {activeTimer && (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] animate-pulse">
-                    <Icon name="timer" className="text-xs" />
-                    <span>{formatTimerDisplay(activeTimer.remainingSeconds).formatted}</span>
-                  </span>
-                )}
-                <span>{now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span>
-              </div>
-              <div className="mt-1 flex items-center gap-1 text-[10px] font-medium text-ink-soft whitespace-nowrap">
-                <span>{now.toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' })}</span>
-                <span className="opacity-40">•</span>
-                <span>{secondaryEmoji} {secondaryTimeFormatted}{hasDateDiff ? ' (+1d)' : ''}</span>
-              </div>
-            </button>
-          </header>
-        )}
-
-        {/* Style 3: Ambient Two-Tier Header */}
-        {mobileHeaderStyle === 'ambient' && (
-          <header className="glass flex flex-col px-3 py-1.5 rounded-2xl w-full gap-1">
-            <div className="flex items-center justify-between w-full border-b border-[var(--outline-var)]/15 pb-1">
-              <span
-                style={{ fontFamily: FAMILY_TITLE_FONT }}
-                className="hidden md:inline text-sm font-normal text-[var(--primary)] tracking-wide select-none leading-none"
-              >
-                The Davuluri Family
-              </span>
-              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-ink-soft leading-none">
-                <span>{secondaryEmoji} {secondaryTimeFormatted}</span>
-                {hasDateDiff && <span className="opacity-80 text-[9px]">(+1d)</span>}
-              </span>
-            </div>
-            <div className="flex items-center justify-between w-full pt-0.5">
-              {weather?.current && (
-                <button
-                  type="button"
-                  onClick={() => setWeatherOpen(true)}
-                  className="flex items-center gap-1.5 active:scale-95 transition-transform"
-                  title="Weather details"
-                >
-                  <span className="text-xl leading-none">{weather.current.icon}</span>
-                  <span className="text-base font-bold text-ink leading-none">{weather.current.temp}°</span>
-                  <span className="text-xs font-medium text-ink-soft leading-none">{weather.current.label}</span>
-                  {todayWeather && (
-                    <span className="text-[10px] text-ink-faint tabular-nums ml-1">
-                      H {todayWeather.tmax}° L {todayWeather.tmin}°
-                    </span>
-                  )}
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={handleClockClick}
-                className="flex items-center gap-1.5 active:scale-95 transition-transform text-right ml-auto"
-                title="Click to set a timer"
-              >
-                {activeTimer && (
-                  <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold px-1 py-0.5 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] animate-pulse">
-                    <Icon name="timer" className="text-[10px]" />
-                    <span>{formatTimerDisplay(activeTimer.remainingSeconds).formatted}</span>
-                  </span>
-                )}
-                <span className="text-base font-bold tabular-nums text-[var(--primary)] leading-none">
-                  {now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
-                </span>
-                <span className="text-[11px] font-medium text-ink-soft leading-none">
-                  {now.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
-                </span>
-              </button>
-            </div>
-          </header>
-        )}
-
-        {/* Live Option Switcher Bar */}
-        <div className="hidden md:flex items-center justify-between px-1 py-0.5 -mt-0.5">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-faint">Header Style:</span>
-          <div className="glass-inset inline-flex items-center rounded-full p-0.5 gap-0.5">
-            {[
-              { id: 'dual', label: '1. Dual Pills' },
-              { id: 'single', label: '2. Single Bar' },
-              { id: 'ambient', label: '3. Ambient 2-Tier' },
-            ].map((opt) => (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => {
-                  setMobileHeaderStyle(opt.id as any)
-                  localStorage.setItem('nivas_mobile_header_style', opt.id)
-                }}
-                className={`px-2 py-0.5 rounded-full text-[10px] font-semibold transition-all cursor-pointer ${
-                  mobileHeaderStyle === opt.id
-                    ? 'bg-[var(--primary)] text-white shadow-xs'
-                    : 'text-ink-soft hover:text-ink'
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
     )
   }
 
@@ -1213,7 +957,7 @@ export default function Home() {
       <div className="flex lg:hidden h-full w-full flex-col overflow-y-auto">
         {/* Slide 1: Header + Schedule */}
         <div className="min-h-[calc(100dvh-5.25rem)] w-full flex flex-col p-2 sm:p-4 gap-2 sm:gap-3 overflow-hidden">
-          {renderMobileHeader()}
+          {renderHeader()}
           <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
             {renderSchedule(false)}
           </div>

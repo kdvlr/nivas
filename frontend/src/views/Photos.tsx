@@ -1,4 +1,3 @@
-import PageHeader from '../components/PageHeader'
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useData } from '../lib/hooks'
@@ -281,19 +280,19 @@ export default function Photos({ onStartSlideshow }: { onStartSlideshow?: () => 
   const currentMedia = lightboxIdx !== null && media ? media[lightboxIdx] : null
 
   return (
-    <div className="h-full min-h-0 min-w-0 flex flex-col p-3 md:p-6 overflow-y-auto">
+    <div className="h-full flex flex-col p-6 overflow-y-auto">
       {/* Header section in MD3 Style */}
-      <PageHeader>
+      <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink">
             Photos
           </h1>
-          <p className="hidden md:block text-sm lg:text-base text-ink-soft mt-1">
+          <p className="text-sm lg:text-base text-ink-soft mt-1">
             Ambient family gallery synced from iCloud
           </p>
         </div>
 
-        <div className="flex min-w-0 flex-wrap items-center gap-3">
+        <div className="flex items-center gap-3">
           {onStartSlideshow && media && media.length > 0 && (
             <button
               onClick={onStartSlideshow}
@@ -313,7 +312,7 @@ export default function Photos({ onStartSlideshow }: { onStartSlideshow?: () => 
             <Icon name="refresh" className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
-      </PageHeader>
+      </div>
 
       {/* Loading state */}
       {loading && !media && (

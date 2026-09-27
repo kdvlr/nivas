@@ -72,12 +72,12 @@ export default function TopClockHeader({ now, config, className = '' }: TopClock
   const activeTimer = timerCtx?.timer
 
   return (
-    <div className={`hidden md:flex max-w-full flex-col items-end text-right shrink-0 ${className}`}>
+    <div className={`flex flex-col items-end text-right shrink-0 ${className}`}>
       <button
         type="button"
         onClick={handleClockClick}
         title="Click to set a timer"
-        className="group/clock flex items-center justify-end flex-wrap gap-1.5 sm:gap-2 cursor-pointer select-none transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] outline-none text-right"
+        className="group/clock flex items-center justify-end gap-1.5 sm:gap-2 cursor-pointer select-none transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] outline-none text-right"
       >
         {activeTimer && (
           <span className="inline-flex items-center gap-1 text-[0.65rem] sm:text-xs font-semibold px-1.5 sm:px-2 py-0.5 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] animate-pulse">
@@ -90,7 +90,7 @@ export default function TopClockHeader({ now, config, className = '' }: TopClock
         </div>
       </button>
 
-      <div className="mt-0.5 sm:mt-1 flex items-center justify-end gap-1 sm:gap-2 text-[0.7rem] sm:text-sm lg:text-base font-semibold text-ink-soft flex-wrap">
+      <div className="mt-0.5 sm:mt-1 flex items-center justify-end gap-1 sm:gap-2 text-[0.7rem] sm:text-sm lg:text-base font-semibold text-ink-soft whitespace-nowrap">
         <span>{now.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
         <span className="opacity-40">•</span>
         <span>

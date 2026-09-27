@@ -686,23 +686,15 @@ function AppContent() {
 
   const now = useClock()
   const isHome = route === 'home'
-  const touchStartedAtTop = useRef(true)
 
   const onTouchStart = (e: React.TouchEvent) => {
-    // Pages own their scrolling; the non-scrolling main shell is always at zero.
-    touchStartedAtTop.current = true
-    let element = e.target instanceof Element ? e.target : null
-    while (element && element !== mainRef.current) {
-      if (element.scrollTop > 0) touchStartedAtTop.current = false
-      element = element.parentElement
-    }
     setTouchEnd(null)
     setTouchStart({ x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY })
   }
 
   const onTouchMove = (e: React.TouchEvent) => {
     setTouchEnd({ x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY })
-    if (touchStart && touchStartedAtTop.current && mainRef.current) {
+    if (touchStart && mainRef.current && mainRef.current.scrollTop <= 0) {
       const yDiff = e.targetTouches[0].clientY - touchStart.y
       if (yDiff > 0 && yDiff < 200) { // Limit max pull
         setPullY(Math.min(yDiff * 0.4, 80))
@@ -833,7 +825,7 @@ function AppContent() {
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
-            className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden relative py-1 lg:py-0"
+            className="flex min-w-0 flex-1 flex-col overflow-hidden relative py-1 lg:py-0"
           >
             {pullY > 0 && (
               <div 

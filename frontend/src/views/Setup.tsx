@@ -1,4 +1,3 @@
-import PageHeader from '../components/PageHeader'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { SPATIAL_STANDARD_DEFAULT, STANDARD_ENTER, PRESS_SPRING } from '../lib/motion'
@@ -404,10 +403,10 @@ function SetupInner() {
   }
 
   return (
-    <div className="page-layout flex h-full flex-col p-4 lg:p-6">
-      <PageHeader>
+    <div className="flex h-full flex-col p-4 lg:p-6">
+      <div className="mb-4 flex items-center justify-between gap-3 lg:gap-4">
         <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink">Setup</h1>
-        <div className="flex min-w-0 flex-wrap items-center gap-3">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => api.post('/api/setup/sync')}
             className="btn-primary px-4 py-2 lg:px-6 lg:py-3 text-base lg:text-lg cursor-pointer"
@@ -416,7 +415,7 @@ function SetupInner() {
           </button>
           <TopClockHeader now={new Date()} />
         </div>
-      </PageHeader>
+      </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row lg:gap-6">
         {/* section rail — vertical on wide screens, chips on narrow */}

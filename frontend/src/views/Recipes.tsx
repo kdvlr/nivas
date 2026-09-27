@@ -1,4 +1,3 @@
-import PageHeader from '../components/PageHeader'
 import { useEffect, useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import Icon from '../components/Icon'
@@ -455,10 +454,10 @@ export default function Recipes() {
   }
 
   return (
-    <div className="page-layout flex h-full flex-col px-4 py-3 lg:px-8 lg:py-4">
+    <div className="flex h-full flex-col px-4 py-3 lg:px-8 lg:py-4">
       {/* Header */}
-      <PageHeader>
-        <div className="flex min-w-0 flex-wrap items-center gap-3">
+      <div className="mb-4 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
           <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink">Recipes</h1>
           <span className="text-sm lg:text-base font-medium text-ink-soft">
             {searchQuery.trim()
@@ -467,7 +466,7 @@ export default function Recipes() {
           </span>
         </div>
         <TopClockHeader now={new Date()} />
-      </PageHeader>
+      </div>
 
       {/* Search Bar */}
       <div className="mb-4 flex w-full max-w-xl">

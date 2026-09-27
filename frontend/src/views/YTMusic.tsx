@@ -1053,7 +1053,7 @@ export default function YTMusicView({
         </div>
 
         <div className="ml-auto flex shrink-0 items-center gap-2 md:gap-3">
-          <TopClockHeader now={now} config={config} className="hidden md:flex" />
+          <TopClockHeader now={now} config={config} className="hidden sm:flex" />
         </div>
       </header>
 
