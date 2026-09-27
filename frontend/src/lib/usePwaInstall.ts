@@ -31,11 +31,23 @@ if (typeof window !== 'undefined') {
   })
 }
 
+function checkIsFullyKiosk(): boolean {
+  if (typeof window === 'undefined') return false
+  if (Boolean((window as any).fully || (window as any).fullyKiosk)) return true
+  const ua = (window.navigator?.userAgent || '').toLowerCase()
+  if (ua.includes('fully') || ua.includes('kiosk')) return true
+  // Android WebView in a dedicated kiosk shell (e.g. Apolosign)
+  if (/android.*version\/[0-9.]+/i.test(ua) && ua.includes('; wv')) return true
+  if (window.location?.search?.includes('kiosk') || window.location?.search?.includes('standalone')) return true
+  return false
+}
+
 export function usePwaInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(globalDeferredPrompt)
   const [isInstalled, setIsInstalled] = useState(false)
   const [isIos, setIsIos] = useState(false)
   const [isStandalone, setIsStandalone] = useState(false)
+  const [isFullyKiosk, setIsFullyKiosk] = useState(false)
   const [isSecure, setIsSecure] = useState(true)
 
   useEffect(() => {
@@ -49,23 +61,42 @@ export function usePwaInstall() {
       return isStandaloneMedia || isStandaloneNavigator
     }
 
-    const standalone = checkStandalone()
-    setIsStandalone(standalone)
-    setIsInstalled(standalone)
+    const evaluateState = () => {
+      const fully = checkIsFullyKiosk()
+      const standalone = checkStandalone() || fully
+      setIsFullyKiosk(fully)
+      setIsStandalone(standalone)
+      setIsInstalled(standalone)
+    }
 
-    const ua = window.navigator.userAgent.toLowerCase()
+    evaluateState()
+
+    const ua = (window.navigator?.userAgent || '').toLowerCase()
     const ios = /iphone|ipad|ipod/.test(ua)
     setIsIos(ios)
 
+    // Android WebViews can bind window.fully asynchronously
+    const t1 = setTimeout(evaluateState, 400)
+    const t2 = setTimeout(evaluateState, 1500)
+    const t3 = setTimeout(evaluateState, 3000)
+
+    const mediaQuery = typeof window !== 'undefined' ? window.matchMedia('(display-mode: standalone)') : null
+    const handleMediaChange = () => evaluateState()
+    mediaQuery?.addEventListener?.('change', handleMediaChange)
+
     const listener = (prompt: BeforeInstallPromptEvent | null) => {
       setDeferredPrompt(prompt)
-      if (!prompt && checkStandalone()) {
-        setIsInstalled(true)
+      if (!prompt) {
+        evaluateState()
       }
     }
 
     promptListeners.add(listener)
     return () => {
+      clearTimeout(t1)
+      clearTimeout(t2)
+      clearTimeout(t3)
+      mediaQuery?.removeEventListener?.('change', handleMediaChange)
       promptListeners.delete(listener)
     }
   }, [])
@@ -89,11 +120,13 @@ export function usePwaInstall() {
   }, [])
 
   return {
-    isInstallable: Boolean(deferredPrompt),
+    isInstallable: isFullyKiosk ? false : Boolean(deferredPrompt),
     isInstalled,
     isStandalone,
+    isFullyKiosk,
     isIos,
     isSecure,
     promptInstall,
   }
 }
+

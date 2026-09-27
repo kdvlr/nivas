@@ -1969,7 +1969,7 @@ function KioskScheduleCard() {
 }
 
 function PwaSettingsCard() {
-  const { isInstallable, isStandalone, isIos, isSecure, promptInstall } = usePwaInstall()
+  const { isInstallable, isStandalone, isFullyKiosk, isIos, isSecure, promptInstall } = usePwaInstall()
   const [swActive, setSwActive] = useState<boolean | null>(null)
   const [checkingUpdate, setCheckingUpdate] = useState(false)
   const [updateMsg, setUpdateMsg] = useState('')
@@ -2037,7 +2037,9 @@ function PwaSettingsCard() {
         </span>
       }
       badge={
-        isStandalone ? (
+        isFullyKiosk ? (
+          <Badge ok={true} label="Installed (Fully Kiosk)" />
+        ) : isStandalone ? (
           <Badge ok={true} label="Installed (PWA)" />
         ) : (
           <Badge ok={false} label="Running in Browser" />
@@ -2045,6 +2047,23 @@ function PwaSettingsCard() {
       }
     >
       <div className="space-y-4 text-sm">
+        {isFullyKiosk && (
+          <div className="rounded-xl bg-teal-500/10 p-3.5 border border-teal-500/20 text-xs text-ink space-y-2">
+            <div className="font-semibold text-teal-700 dark:text-teal-300 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Icon name="verified" className="text-base text-teal-600 dark:text-teal-400" />
+                Fully Kiosk Browser Dedicated Shell Active
+              </span>
+              <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-teal-500/20 text-teal-800 dark:text-teal-200 font-semibold uppercase">
+                Apolosign Kiosk
+              </span>
+            </div>
+            <p className="text-ink-soft leading-relaxed">
+              Nivas is running inside the Fully Kiosk application. Hardware-level screen wake, camera motion detection, and zero-browser address bars are active and integrated with Home Assistant.
+            </p>
+          </div>
+        )}
+
         <div className="rounded-xl bg-teal-500/10 p-3.5 border border-teal-500/20 text-xs text-ink space-y-2">
           <div className="font-semibold text-teal-700 dark:text-teal-300 flex items-center justify-between">
             <span className="flex items-center gap-1.5">
