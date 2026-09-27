@@ -1,9 +1,14 @@
 # Python
 __pycache__/
 *.pyc
+*.log
 .venv/
 .pytest_cache/
 .ruff_cache/
+
+# Rust
+target/
+**/target/
 
 # Node
 node_modules/
