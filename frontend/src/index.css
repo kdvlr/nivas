@@ -753,3 +753,25 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   animation: timer-alarm-shake 0.7s ease-in-out infinite;
 }
 
+
+/* Shared page chrome: controls wrap instead of being clipped by the app shell. */
+.page-header {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: .75rem; margin-bottom: 1rem; flex-shrink: 0; min-width: 0;
+}
+.page-header > * { min-width: 0; max-width: 100%; }
+.page-header button { max-width: 100%; overflow-wrap: anywhere; }
+.page-layout { min-height: 0; min-width: 0; }
+@supports (height: 100dvh) {
+  #root { height: 100dvh; }
+}
+@media (max-width: 767px) {
+  /* A single phone scroller keeps both tall headers and lists reachable.
+     Only page content participates; dialog scroll containers stay independent. */
+  .page-layout { overflow-y: auto; overflow-x: hidden; padding-bottom: 5.5rem; }
+  .page-layout > * { flex-shrink: 0; }
+  .page-layout > .flex-1 { flex: none; }
+  .page-layout > .overflow-y-auto,
+  .page-layout > .flex-1 > .overflow-y-auto { overflow-y: visible; flex: none; }
+  .page-header { gap: .625rem; margin-bottom: .75rem; }
+}

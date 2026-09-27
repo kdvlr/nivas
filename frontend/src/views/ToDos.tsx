@@ -1,3 +1,4 @@
+import PageHeader from '../components/PageHeader'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence, LayoutGroup, useMotionValue, useTransform } from 'framer-motion'
 import { PRESS_SPRING, EXPRESSIVE_ENTER } from '../lib/motion'
@@ -421,8 +422,8 @@ export default function ToDos() {
   const done = completedTasks.length
 
   return (
-    <div className="flex h-full flex-col px-4 lg:px-8 overflow-hidden min-h-0">
-      <div className="mb-3 lg:mb-4 flex flex-wrap items-center justify-between gap-3 shrink-0">
+    <div className="page-layout flex h-full flex-col px-4 lg:px-8 overflow-hidden min-h-0">
+      <PageHeader>
         <div className="flex flex-wrap items-center gap-4 lg:gap-6">
           <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink">To-Dos</h1>
           <div className="btn-glass flex rounded-full p-1">
@@ -446,7 +447,7 @@ export default function ToDos() {
           </span>
         </div>
         <TopClockHeader now={new Date()} />
-      </div>
+      </PageHeader>
 
       {/* Member Filter Bar like Chores */}
       <div className="mb-3 lg:mb-4 flex items-center gap-2 overflow-x-auto pb-1 shrink-0 [&::-webkit-scrollbar]:hidden">

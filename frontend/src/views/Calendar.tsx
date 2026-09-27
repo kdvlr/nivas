@@ -1,3 +1,4 @@
+import PageHeader from '../components/PageHeader'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
@@ -1228,8 +1229,8 @@ export default function Calendar() {
 
   return (
     <div className="flex h-full max-h-full flex-col px-4 lg:px-8 pb-2 lg:pb-3 min-h-0 overflow-hidden">
-      <div className="mb-3 flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3">
+      <PageHeader>
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
           <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink">Calendar</h1>
           {!isMobile && selections.length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
@@ -1246,7 +1247,7 @@ export default function Calendar() {
           )}
         </div>
         <TopClockHeader now={now} />
-      </div>
+      </PageHeader>
       {error && (
         <div className="mb-3 flex items-center">
           <span className="font-medium text-rose-500">{error}</span>

@@ -1,3 +1,4 @@
+import PageHeader from '../components/PageHeader'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
 import { PRESS_SPRING, EXPRESSIVE_ENTER } from '../lib/motion'
@@ -542,11 +543,11 @@ export default function Chores() {
   const sortedBalances = [...(balances ?? [])].sort((a, b) => b.balance - a.balance)
 
   return (
-    <div className="flex h-full flex-col px-4 lg:px-8">
+    <div className="page-layout flex h-full flex-col px-4 lg:px-8">
       {/* Header */}
-      <div className="mb-3 lg:mb-4 flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <PageHeader>
+        <div className="flex w-full flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
             <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-ink">Chores</h1>
             {filterPerson && (
               <motion.button
@@ -578,7 +579,7 @@ export default function Chores() {
               </motion.button>
             )}
           </div>
-          <div className="flex items-center gap-2 lg:gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 lg:gap-3">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -591,7 +592,7 @@ export default function Chores() {
             <TopClockHeader now={new Date()} />
           </div>
         </div>
-      </div>
+      </PageHeader>
 
       {/* Layout for Chores */}
       <div className="flex flex-1 flex-col min-h-0 min-w-0">
@@ -634,11 +635,11 @@ export default function Chores() {
 
                   return (
                     <section key={person} className="flex flex-col min-w-0">
-                      <div className="mb-2.5 flex items-center justify-between">
+                      <div className="mb-2.5 flex min-w-0 items-center justify-between gap-2">
                         <button
                           type="button"
                           onClick={() => setFilterPerson(isFiltered ? '' : person)}
-                          className={`flex items-center gap-2 rounded-xl text-left cursor-pointer transition-all py-1 px-1.5 -ml-1.5 ${
+                          className={`flex min-w-0 flex-1 items-center gap-2 rounded-xl text-left cursor-pointer transition-all py-1 px-1.5 -ml-1.5 ${
                             isFiltered
                               ? 'ring-2 ring-[var(--primary)] bg-surface-variant/40 shadow-xs'
                               : 'hover:bg-surface-variant/20'
@@ -670,7 +671,7 @@ export default function Chores() {
                             </span>
                           )}
                         </button>
-                        <span className="text-xs lg:text-sm font-semibold px-2.5 py-0.5 rounded-full bg-surface-variant text-ink-soft">
+                        <span className="shrink-0 text-xs lg:text-sm font-semibold px-2.5 py-0.5 rounded-full bg-surface-variant text-ink-soft">
                           {todayList.filter((c) => !c.completed).length} left
                         </span>
                       </div>
