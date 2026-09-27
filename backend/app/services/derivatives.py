@@ -203,12 +203,6 @@ def make_playback(src: Path) -> Path | None:
         return None
 
 
-def ensure(src: Path) -> None:
-    """Build both derivatives for one video if they are missing."""
-    make_poster(src)
-    make_playback(src)
-
-
 def _iter_videos(photos_dir: Path, exts: set[str]):
     for p in sorted(photos_dir.rglob("*")):
         if p.is_file() and p.suffix.lower() in exts:

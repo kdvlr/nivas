@@ -721,11 +721,3 @@ def get_photos(db: Session = Depends(get_db)):
             })
             
     return sorted(media_items, key=lambda item: (item.get("date_taken") or "", item["name"]), reverse=True)
-
-
-@router.get("/deck")
-def slideshow_deck(db: Session = Depends(get_db)):
-    """Compact, stable slideshow index with a version suitable for conditional refreshes."""
-    items = get_photos(db)
-    version = hashlib.sha256("|".join(f"{item['name']}:{item.get('date_taken')}" for item in items).encode()).hexdigest()[:16]
-    return {"version": version, "items": items}

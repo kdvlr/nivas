@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from typing import Optional
 from ..services.kids_daily_service import kids_daily_service
@@ -12,11 +12,6 @@ class SettingsUpdateRequest(BaseModel):
     gemini_model: Optional[str] = None
     age_groups: Optional[list[int]] = None
     interests: Optional[list[str]] = None
-
-class FeedbackRequest(BaseModel):
-    date: str
-    section: str
-    rating: str
 
 @router.get("/today")
 def get_today_content(date: Optional[str] = None):
@@ -95,11 +90,3 @@ def update_settings(body: SettingsUpdateRequest, _: None = Depends(require_admin
     if body.interests is not None:
         updates["interests"] = body.interests
     return kids_daily_service.update_settings(updates)
-
-@router.post("/feedback")
-def feedback(body: FeedbackRequest):
-    try:
-        kids_daily_service.record_feedback(body.date, body.section, body.rating)
-    except ValueError as exc:
-        raise HTTPException(400, str(exc))
-    return {"ok": True}

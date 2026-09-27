@@ -4,7 +4,6 @@
  */
 
 let audioCtx: AudioContext | null = null
-let alarmInterval: ReturnType<typeof setInterval> | null = null
 
 function getAudioContext(): AudioContext {
   if (!audioCtx) {
@@ -78,16 +77,5 @@ export function playChime(type: 'gentle' | 'reminder' | 'alarm' = 'reminder') {
     })
   } catch (e) {
     console.warn('[AudioChime] Unable to play chime:', e)
-  }
-}
-
-export function startAlarmSound() {
-  // Audio alarm removed per user request
-}
-
-export function stopAlarmSound() {
-  if (alarmInterval) {
-    clearInterval(alarmInterval)
-    alarmInterval = null
   }
 }

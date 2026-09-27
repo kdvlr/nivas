@@ -121,17 +121,6 @@ class Recipe(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
-class MealPlanEntry(Base):
-    __tablename__ = "meal_plan"
-    __table_args__ = (UniqueConstraint("date", "slot"),)
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    date: Mapped[str] = mapped_column(String)  # YYYY-MM-DD
-    slot: Mapped[str] = mapped_column(String)  # breakfast | lunch | dinner
-    text: Mapped[str] = mapped_column(String, default="")
-    recipe_id: Mapped[int | None] = mapped_column(ForeignKey("recipes.id"), nullable=True)
-
-
 class Setting(Base):
     """Free-form key/value store (selected reminder lists, kiosk prefs, ...)."""
 

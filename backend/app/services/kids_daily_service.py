@@ -23,9 +23,6 @@ def _similarity(left: str, right: str) -> float:
     return len(a & b) / len(a | b) if a and b else 0.0
 
 
-def _fingerprint(value: str) -> str:
-    return " ".join(sorted(_tokens(value)))
-
 def _get_kids_daily_file() -> Path:
     return Path(get_settings().data_dir) / "kids_daily.json"
 
@@ -1270,17 +1267,6 @@ class KidsDailyService:
             "force_active": bool(self._settings.get("force_banner_active", False)),
             "content": content,
         }
-
-    def record_feedback(self, date_str: str, section: str, rating: str) -> None:
-        if section not in {"word_of_the_day", "fun_fact", "stem_5yo", "stem_9yo"} or rating not in {"too_easy", "right_level", "too_hard", "loved_it"}:
-            raise ValueError("invalid feedback")
-        with self._lock:
-            day = self._cache.get(date_str)
-            if not day:
-                raise ValueError("unknown date")
-            feedback = day.setdefault("feedback", {})
-            feedback.setdefault(section, []).append({"rating": rating, "at": datetime.now().isoformat()})
-            self._save_cache()
 
     def _validate_candidate(self, candidate: Dict[str, Any], current_date_str: str) -> tuple[bool, list[str]]:
         """Deterministic local duplicate/overlap checks; no model judgement required."""

@@ -85,20 +85,6 @@ export interface Recipe {
   nutrition?: RecipeNutrition | null
 }
 
-export interface MealSlot {
-  date: string
-  slot: string
-  text: string
-  recipe_id: number | null
-  recipe_title: string | null
-  recipe_image: string | null
-}
-
-export interface MealDay {
-  date: string
-  slots: { breakfast: MealSlot | null; lunch: MealSlot | null; dinner: MealSlot | null }
-}
-
 export interface SetupStatus {
   sync: Record<string, { ok: boolean; detail: string; at: string }>
   icloud: { connected: boolean; needs_2fa: boolean; error: string }
