@@ -21,13 +21,16 @@ export interface AirPlayDevice {
 interface AirPlaySelectorModalProps {
   isOpen: boolean
   onClose: () => void
-  anchorRef: React.RefObject<HTMLElement | null>
+  anchorRef?: React.RefObject<HTMLElement | null>
+  anchorEl?: HTMLElement | null
 }
 
 interface PanelPosition {
   top?: number
   bottom?: number
+  left?: number
   right?: number
+  maxHeight?: number
   isMobile: boolean
   origin: string
 }
@@ -38,7 +41,7 @@ export function computeMasterVolume(devList: AirPlayDevice[]): number {
   return Math.round(selected.reduce((sum, d) => sum + d.volume, 0) / selected.length)
 }
 
-export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: AirPlaySelectorModalProps) {
+export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef, anchorEl }: AirPlaySelectorModalProps) {
   const [devices, setDevices] = useState<AirPlayDevice[]>([])
   const [masterVolume, setMasterVolume] = useState(0)
   const devicesRef = useRef<AirPlayDevice[]>(devices)
@@ -47,7 +50,7 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
   const [loading, setLoading] = useState(false)
   const [showHidden, setShowHidden] = useState(false)
   const [calibratingDeviceId, setCalibratingDeviceId] = useState<string | null>(null)
-  const [position, setPosition] = useState<PanelPosition>({ top: 84, right: 20, isMobile: false, origin: 'top right' })
+  const [position, setPosition] = useState<PanelPosition>({ top: 84, right: 20, maxHeight: 520, isMobile: false, origin: 'top right' })
 
   const isInteractingRef = useRef(false)
   const lastInteractionTimeRef = useRef(0)
@@ -115,39 +118,117 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
     if (!isOpen) return
     const placePanel = () => {
       const isMobile = window.innerWidth < 640
+      const targetAnchor = anchorEl || anchorRef?.current
+      const rectangle = targetAnchor?.getBoundingClientRect()
+      const margin = 12
+      const gap = 8
+      const maxPanelHeight = 520
+
       if (isMobile) {
-        const rectangle = anchorRef.current?.getBoundingClientRect()
-        const bottom = rectangle && rectangle.top > 0
-          ? Math.max(16, window.innerHeight - rectangle.top + 8)
-          : 84
-        setPosition({
-          bottom,
-          isMobile: true,
-          origin: 'bottom center',
-        })
+        if (rectangle && (rectangle.width > 0 || rectangle.height > 0)) {
+          const spaceBelow = window.innerHeight - rectangle.bottom - gap - margin
+          const spaceAbove = rectangle.top - gap - margin
+          if (spaceAbove >= spaceBelow) {
+            const bottom = Math.max(margin, window.innerHeight - rectangle.top + gap)
+            const maxHeight = Math.min(maxPanelHeight, Math.max(160, rectangle.top - gap - margin))
+            setPosition({
+              bottom,
+              maxHeight,
+              isMobile: true,
+              origin: 'bottom center',
+            })
+          } else {
+            const top = Math.max(margin, rectangle.bottom + gap)
+            const maxHeight = Math.min(maxPanelHeight, Math.max(160, window.innerHeight - top - margin))
+            setPosition({
+              top,
+              maxHeight,
+              isMobile: true,
+              origin: 'top center',
+            })
+          }
+        } else {
+          const bottom = 84
+          const maxHeight = Math.min(maxPanelHeight, Math.max(160, window.innerHeight - bottom - margin))
+          setPosition({
+            bottom,
+            maxHeight,
+            isMobile: true,
+            origin: 'bottom center',
+          })
+        }
         return
       }
 
-      const rectangle = anchorRef.current?.getBoundingClientRect()
+      // Desktop / Tablet
       if (!rectangle || (rectangle.width === 0 && rectangle.height === 0)) {
-        setPosition({ bottom: 20, right: 16, isMobile: false, origin: 'bottom right' })
+        const top = 72
+        const right = 20
+        const maxHeight = Math.min(maxPanelHeight, Math.max(160, window.innerHeight - top - margin))
+        setPosition({ top, right, maxHeight, isMobile: false, origin: 'top right' })
         return
       }
+
       const panelWidth = 368
-      const calculatedRight = Math.max(12, window.innerWidth - rectangle.right)
-      const maxRight = Math.max(12, window.innerWidth - panelWidth - 12)
-      const right = Math.min(maxRight, calculatedRight)
-      const estimatedHeight = Math.min(520, 76 + devices.length * 52)
-      if (rectangle.bottom + estimatedHeight + 12 <= window.innerHeight) {
-        setPosition({ top: rectangle.bottom + 8, right, isMobile: false, origin: 'top right' })
+      const anchorCenterX = (rectangle.left + rectangle.right) / 2
+      const isAnchorOnLeft = anchorCenterX < window.innerWidth / 2
+
+      let left: number | undefined
+      let right: number | undefined
+      if (isAnchorOnLeft) {
+        left = Math.max(margin, Math.min(window.innerWidth - panelWidth - margin, rectangle.left))
       } else {
-        setPosition({ bottom: Math.max(12, window.innerHeight - rectangle.top + 8), right, isMobile: false, origin: 'bottom right' })
+        const calculatedRight = window.innerWidth - rectangle.right
+        const maxRight = window.innerWidth - panelWidth - margin
+        right = Math.max(margin, Math.min(maxRight, calculatedRight))
+      }
+
+      const spaceBelow = window.innerHeight - rectangle.bottom - gap - margin
+      const spaceAbove = rectangle.top - gap - margin
+
+      const numItems = showHidden ? hiddenDevices.length : displayedDevices.length
+      const estimatedHeight = Math.min(
+        maxPanelHeight,
+        80 + Math.max(numItems, 1) * 52 + (hiddenDevices.length > 0 || showHidden ? 44 : 0)
+      )
+
+      let placeBelow = true
+      if (spaceBelow >= estimatedHeight) {
+        placeBelow = true
+      } else if (spaceAbove >= estimatedHeight) {
+        placeBelow = false
+      } else {
+        placeBelow = spaceBelow >= spaceAbove
+      }
+
+      if (placeBelow) {
+        const top = Math.max(margin, rectangle.bottom + gap)
+        const maxHeight = Math.min(maxPanelHeight, Math.max(160, window.innerHeight - top - margin))
+        setPosition({
+          top,
+          left,
+          right,
+          maxHeight,
+          isMobile: false,
+          origin: isAnchorOnLeft ? 'top left' : 'top right',
+        })
+      } else {
+        const bottom = Math.max(margin, window.innerHeight - rectangle.top + gap)
+        const maxHeight = Math.min(maxPanelHeight, Math.max(160, rectangle.top - gap - margin))
+        setPosition({
+          bottom,
+          left,
+          right,
+          maxHeight,
+          isMobile: false,
+          origin: isAnchorOnLeft ? 'bottom left' : 'bottom right',
+        })
       }
     }
     placePanel()
     window.addEventListener('resize', placePanel)
     return () => window.removeEventListener('resize', placePanel)
-  }, [isOpen, anchorRef, devices.length])
+  }, [isOpen, anchorRef, anchorEl, devices.length, showHidden])
 
   const toggleDevice = async (device: AirPlayDevice) => {
     const selected = !device.isSelected
@@ -385,28 +466,32 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
             style={{
               top: position.top,
               bottom: position.bottom,
+              left: position.isMobile ? undefined : position.left,
               right: position.isMobile ? undefined : position.right,
+              maxHeight: position.maxHeight,
               transformOrigin: position.origin,
             }}
-            className={`fixed z-[150] pointer-events-auto overflow-hidden rounded-[1.35rem] border border-[var(--outline-var)] glass p-2.5 text-ink shadow-[0_20px_55px_rgba(0,0,0,0.35)] backdrop-blur-2xl ${
+            className={`fixed z-[150] pointer-events-auto flex flex-col overflow-hidden rounded-[1.35rem] border border-[var(--outline-var)] glass p-2.5 text-ink shadow-[0_20px_55px_rgba(0,0,0,0.35)] backdrop-blur-2xl ${
               position.isMobile
                 ? 'left-3 right-3 mx-auto w-auto max-w-[23rem]'
                 : 'w-[23rem]'
             }`}
           >
-            {showHidden && (
-              <button
-                type="button"
-                onClick={onClose}
-                aria-label="Close AirPlay speakers"
-                title="Close"
-                className="absolute right-2 top-2 z-10 flex h-9 w-9 items-center justify-center rounded-xl text-ink-soft transition hover:bg-[var(--sc-high)] hover:text-ink cursor-pointer"
-              >
-                <Icon name="close" className="text-xl" />
-              </button>
-            )}
-            {!showHidden && (
-              <div className="mb-2 flex items-center gap-2 border-b border-[var(--outline-var)] px-1 pb-2">
+            {showHidden ? (
+              <div className="mb-2 flex shrink-0 items-center justify-between border-b border-[var(--outline-var)] px-2 pb-2">
+                <span className="text-sm font-semibold text-ink">Hidden Speakers</span>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label="Close AirPlay speakers"
+                  title="Close"
+                  className="flex h-9 w-9 items-center justify-center rounded-xl text-ink-soft transition hover:bg-[var(--sc-high)] hover:text-ink cursor-pointer"
+                >
+                  <Icon name="close" className="text-xl" />
+                </button>
+              </div>
+            ) : (
+              <div className="mb-2 flex shrink-0 items-center gap-2 border-b border-[var(--outline-var)] px-1 pb-2">
                 <div className="min-w-0 flex-1">
                   <VolumeCapsuleScrubber
                     value={masterVolume}
@@ -428,7 +513,7 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
                 </button>
               </div>
             )}
-            <div className="flex max-h-[min(31rem,calc(100vh-7rem))] flex-col gap-1.5 overflow-y-auto overscroll-contain">
+            <div className="flex flex-1 min-h-0 flex-col gap-1.5 overflow-y-auto overscroll-contain pr-0.5">
               {displayedDevices.length ? displayedDevices.map((device) => (
                 <div key={device.id} className="flex flex-col rounded-2xl px-1">
                   <div className="flex h-12 items-center gap-2">
@@ -535,7 +620,7 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef }: Air
               <button
                 type="button"
                 onClick={() => setShowHidden((value) => !value)}
-                className="mt-1 flex h-10 w-full items-center justify-center gap-2 border-t border-[var(--outline-var)] text-xs font-medium text-ink-soft transition hover:text-ink cursor-pointer"
+                className="mt-1 flex shrink-0 h-10 w-full items-center justify-center gap-2 border-t border-[var(--outline-var)] text-xs font-medium text-ink-soft transition hover:text-ink cursor-pointer"
               >
                 <Icon name={showHidden ? 'arrow_back' : 'visibility'} className="text-base" />
                 {showHidden ? 'Speakers' : `${hiddenDevices.length} hidden`}

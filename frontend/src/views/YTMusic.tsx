@@ -274,6 +274,7 @@ export default function YTMusicView({
 
   const [activeView, setActiveView] = useState<MusicView>(initialParsed.view)
   const [showAirPlayModal, setShowAirPlayModal] = useState(false)
+  const [airPlayAnchorEl, setAirPlayAnchorEl] = useState<HTMLElement | null>(null)
   const airPlayButtonRef = useRef<HTMLButtonElement>(null)
   const [playerTab, setPlayerTab] = useState<PlayerTab>('queue')
   const [lyrics, setLyrics] = useState<string>('')
@@ -2030,7 +2031,10 @@ export default function YTMusicView({
                       <Icon name="skip_next" className="text-2xl" />
                     </button>
                     <button
-                      onClick={() => setShowAirPlayModal(true)}
+                      onClick={(e) => {
+                        setAirPlayAnchorEl(e.currentTarget)
+                        setShowAirPlayModal(true)
+                      }}
                       title="Choose AirPlay rooms"
                       aria-label="Choose AirPlay rooms"
                       className="flex h-10 w-10 items-center justify-center rounded-full text-ink-soft hover:bg-[var(--sc-high)] hover:text-ink cursor-pointer"
@@ -2096,7 +2100,10 @@ export default function YTMusicView({
                     </button>
                     <button
                       ref={airPlayButtonRef}
-                      onClick={() => setShowAirPlayModal(true)}
+                      onClick={(e) => {
+                        setAirPlayAnchorEl(e.currentTarget)
+                        setShowAirPlayModal(true)
+                      }}
                       title="Choose AirPlay rooms"
                       aria-label="Choose AirPlay rooms"
                       className="flex h-12 w-12 items-center justify-center rounded-full text-ink-soft hover:bg-[var(--sc-high)] hover:text-ink cursor-pointer"
@@ -2221,8 +2228,12 @@ export default function YTMusicView({
 
       <AirPlaySelectorModal
         isOpen={showAirPlayModal}
-        onClose={() => setShowAirPlayModal(false)}
+        onClose={() => {
+          setShowAirPlayModal(false)
+          setAirPlayAnchorEl(null)
+        }}
         anchorRef={airPlayButtonRef}
+        anchorEl={airPlayAnchorEl}
       />
     </div>
   )
