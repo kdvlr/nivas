@@ -1931,7 +1931,9 @@ class PlayerEngine:
         self._broadcast_state()
         return self.get_state()
 
-    def set_master_volume(self, volume: int) -> Dict[str, Any]:
+    def set_master_volume(
+        self, volume: int, device_volumes: Optional[Dict[str, int]] = None
+    ) -> Dict[str, Any]:
         target_volume = max(0, min(100, volume))
         selected_devs = [
             dev for dev in self.devices.values()
@@ -1942,22 +1944,61 @@ class PlayerEngine:
             self._broadcast_state()
             return self.get_state()
 
-        current_master = round(sum(dev.volume for dev in selected_devs) / len(selected_devs))
-        delta = target_volume - current_master
-
-        for dev in selected_devs:
+        if device_volumes is not None and isinstance(device_volumes, dict):
+            for dev in selected_devs:
+                if dev.id in device_volumes:
+                    new_vol = max(0, min(100, int(device_volumes[dev.id])))
+                elif target_volume == 0:
+                    new_vol = 0
+                elif target_volume == 100:
+                    new_vol = 100
+                else:
+                    new_vol = dev.volume
+                dev.volume = new_vol
+                self._device_volumes[dev.id] = new_vol
+                if dev.id in self.active_targets:
+                    self._write_stream_command(
+                        f"volume {dev.address} {dev.volume / 100.0:.4f}"
+                    )
+        else:
+            current_master = round(sum(dev.volume for dev in selected_devs) / len(selected_devs))
             if target_volume == 0:
-                new_vol = 0
+                new_vols = {dev.id: 0 for dev in selected_devs}
             elif target_volume == 100:
-                new_vol = 100
-            else:
-                new_vol = max(0, min(100, dev.volume + delta))
-            dev.volume = new_vol
-            self._device_volumes[dev.id] = new_vol
-            if dev.id in self.active_targets:
-                self._write_stream_command(
-                    f"volume {dev.address} {dev.volume / 100.0:.4f}"
-                )
+                new_vols = {dev.id: 100 for dev in selected_devs}
+            elif target_volume == current_master:
+                new_vols = {dev.id: dev.volume for dev in selected_devs}
+            elif target_volume < current_master:
+                if current_master == 0:
+                    new_vols = {dev.id: 0 for dev in selected_devs}
+                else:
+                    ratio = target_volume / current_master
+                    new_vols = {
+                        dev.id: max(0, min(100, round(dev.volume * ratio)))
+                        for dev in selected_devs
+                    }
+            else:  # target_volume > current_master
+                if current_master >= 100:
+                    new_vols = {dev.id: 100 for dev in selected_devs}
+                elif current_master == 0:
+                    new_vols = {dev.id: target_volume for dev in selected_devs}
+                else:
+                    ratio = (target_volume - current_master) / (100 - current_master)
+                    new_vols = {
+                        dev.id: max(0, min(100, round(dev.volume + (100 - dev.volume) * ratio)))
+                        if dev.volume > 0 else 0
+                        for dev in selected_devs
+                    }
+
+            for dev in selected_devs:
+                new_vol = new_vols.get(dev.id, dev.volume)
+                dev.volume = new_vol
+                self._device_volumes[dev.id] = new_vol
+                if dev.id in self.active_targets:
+                    self._write_stream_command(
+                        f"volume {dev.address} {dev.volume / 100.0:.4f}"
+                    )
+
         self._update_master_volume_from_devices()
         self._schedule_save_preferences(0.5)
         self._broadcast_state()

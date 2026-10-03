@@ -5,6 +5,7 @@ interface VolumeCapsuleScrubberProps {
   value: number
   onChange: (value: number) => void
   onChangeEnd?: (value: number) => void
+  onChangeStart?: (startValue: number) => void
   label: string
   icon?: string
   disabled?: boolean
@@ -15,6 +16,7 @@ export default function VolumeCapsuleScrubber({
   value,
   onChange,
   onChangeEnd,
+  onChangeStart,
   label,
   icon = 'volume_up',
   disabled = false,
@@ -46,6 +48,7 @@ export default function VolumeCapsuleScrubber({
     hasDraggedRef.current = false
     startXRef.current = event.clientX
     startVolumeRef.current = dragValueRef.current
+    onChangeStart?.(dragValueRef.current)
   }
 
   const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -74,10 +77,8 @@ export default function VolumeCapsuleScrubber({
     }
     if (!isPointerDownRef.current) return
 
-    if (hasDraggedRef.current) {
-      const finalValue = dragValueRef.current
-      onChangeEnd?.(finalValue)
-    }
+    const finalValue = dragValueRef.current
+    onChangeEnd?.(finalValue)
 
     isPointerDownRef.current = false
     hasDraggedRef.current = false

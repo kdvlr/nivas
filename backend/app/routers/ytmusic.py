@@ -36,6 +36,7 @@ class DeviceSyncOffsetRequest(BaseModel):
 
 class MasterVolumeRequest(BaseModel):
     volume: int
+    deviceVolumes: Optional[Dict[str, int]] = None
 
 class SeekRequest(BaseModel):
     seconds: float
@@ -339,4 +340,4 @@ def set_device_sync_offset(req: DeviceSyncOffsetRequest):
 
 @router.post("/airplay/volume/master")
 def set_master_volume(req: MasterVolumeRequest):
-    return player_engine.set_master_volume(req.volume)
+    return player_engine.set_master_volume(req.volume, req.deviceVolumes)

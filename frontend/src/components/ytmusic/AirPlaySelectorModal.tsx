@@ -62,8 +62,9 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef, ancho
 
   // Network queue for group/master volume
   const masterInFlightRef = useRef(false)
-  const pendingMasterVolRef = useRef<number | null>(null)
+  const pendingMasterVolRef = useRef<{ volume: number; deviceVolumes?: Record<string, number> } | null>(null)
   const masterThrottleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const dragBaselineRef = useRef<{ master: number; devices: Map<string, number> } | null>(null)
 
   useEffect(() => {
     return () => {
@@ -231,6 +232,7 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef, ancho
   }, [isOpen, anchorRef, anchorEl, devices.length, showHidden])
 
   const toggleDevice = async (device: AirPlayDevice) => {
+    dragBaselineRef.current = null
     const selected = !device.isSelected
     const currentDevices = devicesRef.current
     const nextDevices = currentDevices.map((item) =>
@@ -278,6 +280,7 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef, ancho
   const handleDeviceVolumeChange = (deviceId: string, volume: number) => {
     isInteractingRef.current = true
     lastInteractionTimeRef.current = Date.now()
+    dragBaselineRef.current = null
 
     const currentDevices = devicesRef.current
     const nextDevices = currentDevices.map((device) =>
@@ -322,19 +325,32 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef, ancho
     }
   }
 
-  const sendGroupVolumeRequest = async (volume: number) => {
+  const sendGroupVolumeRequest = async (volume: number, deviceVolumes?: Record<string, number>) => {
     masterInFlightRef.current = true
     try {
-      await api.post<any>('/api/ytmusic/airplay/volume/master', { volume })
+      await api.post<any>('/api/ytmusic/airplay/volume/master', { volume, deviceVolumes })
     } catch (error) {
       console.error('Failed to update group volume', error)
     } finally {
       masterInFlightRef.current = false
       if (pendingMasterVolRef.current !== null) {
-        const nextVol = pendingMasterVolRef.current
+        const next = pendingMasterVolRef.current
         pendingMasterVolRef.current = null
-        sendGroupVolumeRequest(nextVol)
+        sendGroupVolumeRequest(next.volume, next.deviceVolumes)
       }
+    }
+  }
+
+  const handleGroupVolumeStart = () => {
+    isInteractingRef.current = true
+    lastInteractionTimeRef.current = Date.now()
+    const currentDevices = devicesRef.current
+    const selected = currentDevices.filter((d) => d.isSelected && !d.isHidden)
+    if (selected.length === 0) return
+    const currentAvg = Math.round(selected.reduce((sum, d) => sum + d.volume, 0) / selected.length)
+    dragBaselineRef.current = {
+      master: currentAvg,
+      devices: new Map(selected.map((d) => [d.id, d.volume])),
     }
   }
 
@@ -349,19 +365,49 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef, ancho
       return
     }
 
-    const currentAvg = Math.round(selected.reduce((sum, d) => sum + d.volume, 0) / selected.length)
-    const delta = newVolume - currentAvg
+    if (!dragBaselineRef.current) {
+      const currentAvg = Math.round(selected.reduce((sum, d) => sum + d.volume, 0) / selected.length)
+      dragBaselineRef.current = {
+        master: currentAvg,
+        devices: new Map(selected.map((d) => [d.id, d.volume])),
+      }
+    }
+
+    const { master: baseMaster, devices: baseDevices } = dragBaselineRef.current
+    const nextDeviceMap = new Map<string, number>()
 
     const nextDevices = currentDevices.map((device) => {
       if (!device.isSelected || device.isHidden) return device
+      const baseVol = baseDevices.get(device.id) ?? device.volume
       let nextVol: number
+
       if (newVolume === 0) {
         nextVol = 0
       } else if (newVolume === 100) {
         nextVol = 100
-      } else {
-        nextVol = Math.max(0, Math.min(100, device.volume + delta))
+      } else if (newVolume === baseMaster) {
+        nextVol = baseVol
+      } else if (newVolume < baseMaster) {
+        if (baseMaster === 0) {
+          nextVol = 0
+        } else {
+          const ratio = newVolume / baseMaster
+          nextVol = Math.max(0, Math.min(100, Math.round(baseVol * ratio)))
+        }
+      } else { // newVolume > baseMaster
+        if (baseMaster >= 100) {
+          nextVol = 100
+        } else if (baseMaster === 0) {
+          nextVol = newVolume
+        } else {
+          const ratio = (newVolume - baseMaster) / (100 - baseMaster)
+          nextVol = baseVol > 0
+            ? Math.max(0, Math.min(100, Math.round(baseVol + (100 - baseVol) * ratio)))
+            : 0
+        }
       }
+
+      nextDeviceMap.set(device.id, nextVol)
       return { ...device, volume: nextVol }
     })
 
@@ -370,17 +416,23 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef, ancho
     setDevices(nextDevices)
     setMasterVolume(newAvg)
 
-    pendingMasterVolRef.current = newVolume
+    const devVolsPayload: Record<string, number> = {}
+    nextDeviceMap.forEach((vol, id) => {
+      devVolsPayload[id] = vol
+    })
+
+    const payload = { volume: newVolume, deviceVolumes: devVolsPayload }
+    pendingMasterVolRef.current = payload
     if (!masterInFlightRef.current && !masterThrottleTimerRef.current) {
       pendingMasterVolRef.current = null
-      sendGroupVolumeRequest(newVolume)
+      sendGroupVolumeRequest(payload.volume, payload.deviceVolumes)
     } else if (!masterThrottleTimerRef.current) {
       masterThrottleTimerRef.current = setTimeout(() => {
         masterThrottleTimerRef.current = null
         if (!masterInFlightRef.current && pendingMasterVolRef.current !== null) {
-          const nextVol = pendingMasterVolRef.current
+          const next = pendingMasterVolRef.current
           pendingMasterVolRef.current = null
-          sendGroupVolumeRequest(nextVol)
+          sendGroupVolumeRequest(next.volume, next.deviceVolumes)
         }
       }, 50)
     }
@@ -390,20 +442,30 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef, ancho
     isInteractingRef.current = false
     lastInteractionTimeRef.current = Date.now()
 
+    const selected = devicesRef.current.filter((d) => d.isSelected && !d.isHidden)
+    const devVolsPayload: Record<string, number> = {}
+    for (const dev of selected) {
+      devVolsPayload[dev.id] = dev.volume
+    }
+
+    dragBaselineRef.current = null
+
     if (masterThrottleTimerRef.current) {
       clearTimeout(masterThrottleTimerRef.current)
       masterThrottleTimerRef.current = null
     }
 
+    const payload = { volume: newVolume, deviceVolumes: devVolsPayload }
     if (masterInFlightRef.current) {
-      pendingMasterVolRef.current = newVolume
+      pendingMasterVolRef.current = payload
     } else {
       pendingMasterVolRef.current = null
-      sendGroupVolumeRequest(newVolume)
+      sendGroupVolumeRequest(payload.volume, payload.deviceVolumes)
     }
   }
 
   const setDeviceHidden = async (deviceId: string, hidden: boolean) => {
+    dragBaselineRef.current = null
     const currentDevices = devicesRef.current
     const nextDevices = currentDevices.map((device) =>
       device.id === deviceId
@@ -495,6 +557,7 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef, ancho
                 <div className="min-w-0 flex-1">
                   <VolumeCapsuleScrubber
                     value={masterVolume}
+                    onChangeStart={handleGroupVolumeStart}
                     onChange={handleGroupVolumeChange}
                     onChangeEnd={handleGroupVolumeCommit}
                     label={selectedCount === 0 ? "No Speakers Selected" : "All Speakers"}
