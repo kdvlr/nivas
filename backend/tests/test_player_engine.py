@@ -184,8 +184,8 @@ def test_volume_commands_are_state_driven_and_targetable():
 
     assert process.stdin.getvalue() == (
         "volume 192.168.120.111 0.3700\n"
-        "volume 192.168.120.111 0.4700\n"
-        "volume 192.168.100.157 0.8000\n"
+        "volume 192.168.120.111 0.5100\n"
+        "volume 192.168.100.157 0.7700\n"
     )
 
 
@@ -1027,11 +1027,23 @@ def test_set_master_volume_adjusts_selected_speakers_proportionally(tmp_path):
     # Initial average = 40
     assert engine.get_state()["masterVolume"] == 40
 
-    # Adjust master volume to 60 (delta = +20)
+    # Adjust master volume to 60 proportionally
     engine.set_master_volume(60)
-    assert spk1.volume == 50  # 30 + 20
-    assert spk2.volume == 70  # 50 + 20
+    assert spk1.volume == 53  # 30 + round(70 * 20/60)
+    assert spk2.volume == 67  # 50 + round(50 * 20/60)
     assert engine.master_volume == 60
+
+    # Adjust master volume down to 30 proportionally (should not zero out quiet speakers)
+    engine.set_master_volume(30)
+    assert spk1.volume == 26  # round(53 * 30/60)
+    assert spk2.volume == 34  # round(67 * 30/60)
+    assert engine.master_volume == 30  # round((26 + 34) / 2)
+
+    # Test explicit per-device volumes payload
+    engine.set_master_volume(40, device_volumes={"spk1": 76, "spk2": 3})
+    assert spk1.volume == 76
+    assert spk2.volume == 3
+    assert engine.master_volume == 40
 
     # Mute all to 0
     engine.set_master_volume(0)
