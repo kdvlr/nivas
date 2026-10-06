@@ -904,12 +904,15 @@ function RunningSquirrel() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    timerRef.current = setTimeout(() => {
+    const trigger = () => {
       setDirection(Math.random() < 0.5 ? 1 : -1)
       setRunning(true)
-    }, 18_000)
+    }
+    window.addEventListener('trigger-squirrel', trigger)
+    timerRef.current = setTimeout(trigger, 8_000)
 
     return () => {
+      window.removeEventListener('trigger-squirrel', trigger)
       if (timerRef.current) clearTimeout(timerRef.current)
     }
   }, [])
@@ -920,7 +923,7 @@ function RunningSquirrel() {
     timerRef.current = setTimeout(() => {
       setDirection(Math.random() < 0.5 ? 1 : -1)
       setRunning(true)
-    }, 35_000 + Math.random() * 45_000)
+    }, 25_000 + Math.random() * 35_000)
   }
 
   if (!running) return null
@@ -1028,12 +1031,15 @@ function StruttingTurkey() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    timerRef.current = setTimeout(() => {
+    const trigger = () => {
       setDirection(Math.random() < 0.5 ? 1 : -1)
       setStrutting(true)
-    }, 15_000)
+    }
+    window.addEventListener('trigger-turkey', trigger)
+    timerRef.current = setTimeout(trigger, 8_000)
 
     return () => {
+      window.removeEventListener('trigger-turkey', trigger)
       if (timerRef.current) clearTimeout(timerRef.current)
     }
   }, [])
@@ -1044,7 +1050,7 @@ function StruttingTurkey() {
     timerRef.current = setTimeout(() => {
       setDirection(Math.random() < 0.5 ? 1 : -1)
       setStrutting(true)
-    }, 30_000 + Math.random() * 40_000)
+    }, 25_000 + Math.random() * 35_000)
   }
 
   if (!strutting) return null
