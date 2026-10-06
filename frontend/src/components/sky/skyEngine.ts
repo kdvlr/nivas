@@ -15,7 +15,14 @@ export interface SkyState {
 }
 
 const rand = (a: number, b: number) => a + Math.random() * (b - a)
-const isOctober = () => new Date().getMonth() === 9
+import {
+  getSeasonalDate,
+  isOctober,
+  isDecember,
+  isElfSeason,
+  isChristmasDay,
+  isNewYearsDay,
+} from './queryParam'
 
 // Cap the frame rate: full-screen 60fps canvas work is wasted on ambient
 // weather. rAF still schedules, we just skip paints.
@@ -257,6 +264,58 @@ interface Witch {
   sparkles: WitchSparkle[]
 }
 
+interface Santa {
+  x: number
+  y: number
+  baseY: number
+  speed: number
+  dir: 1 | -1
+  scale: number
+  sparkles: WitchSparkle[]
+}
+
+interface FallingGift {
+  x: number
+  y: number
+  baseX: number
+  size: number
+  speed: number
+  sway: number
+  angle: number
+  rotSpeed: number
+  offset: number
+  boxColor: string
+  ribbonColor: string
+}
+
+interface FireworksRocket {
+  x: number
+  y: number
+  targetY: number
+  speed: number
+  color: string
+  trail: { x: number; y: number; alpha: number }[]
+}
+
+interface FireworksSpark {
+  x: number
+  y: number
+  vx: number
+  vy: number
+  color: string
+  alpha: number
+  decay: number
+  size: number
+}
+
+interface FireworksFlash {
+  x: number
+  y: number
+  color: string
+  radius: number
+  alpha: number
+}
+
 export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): () => void {
   const ctx = canvas.getContext('2d')
   if (!ctx) return () => {}
@@ -266,11 +325,18 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
   let drops: Drop[] = []
   let flakes: Flake[] = []
   let flies: Firefly[] = []
+  let gifts: FallingGift[] = []
+  let rockets: FireworksRocket[] = []
+  let sparks: FireworksSpark[] = []
+  let flashes: FireworksFlash[] = []
   let sizeKey = ''
   let flock: Flock | null = null
   let nextFlock = performance.now() + rand(15_000, 60_000)
   let witch: Witch | null = null
   let nextWitch = performance.now() + rand(20_000, 50_000)
+  let santa: Santa | null = null
+  let nextSanta = performance.now() + rand(15_000, 45_000)
+  let nextRocket = performance.now() + 500
   let flashUntil = 0
   let nextFlash = performance.now() + rand(8_000, 20_000)
   let lastDraw = performance.now()
@@ -319,6 +385,29 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
       pulse: rand(0.6, 1.4),
       offset: rand(0, Math.PI * 2),
     }))
+    const giftPalettes = [
+      { box: '#dc2626', ribbon: '#22c55e' },
+      { box: '#16a34a', ribbon: '#facc15' },
+      { box: '#2563eb', ribbon: '#f8fafc' },
+      { box: '#eab308', ribbon: '#dc2626' },
+      { box: '#9333ea', ribbon: '#fde047' },
+    ]
+    gifts = Array.from({ length: Math.round(30 * density) }, () => {
+      const pal = giftPalettes[Math.floor(Math.random() * giftPalettes.length)]
+      return {
+        x: Math.random() * w,
+        baseX: Math.random() * w,
+        y: Math.random() * h,
+        size: rand(16, 26),
+        speed: rand(45, 85),
+        sway: rand(15, 35),
+        angle: rand(0, Math.PI * 2),
+        rotSpeed: rand(-0.7, 0.7),
+        offset: rand(0, Math.PI * 2),
+        boxColor: pal.box,
+        ribbonColor: pal.ribbon,
+      }
+    })
   }
 
   const drawBird = (x: number, y: number, flap: number, scale: number, color: string) => {
@@ -535,6 +624,197 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     ctx.restore()
   }
 
+  const drawSanta = (
+    x: number,
+    y: number,
+    scale: number,
+    dir: 1 | -1,
+    t: number
+  ) => {
+    ctx.save()
+    ctx.translate(x, y)
+    ctx.scale(dir * scale, scale)
+
+    // Reindeer 1 (lead Rudolph at x = 70) and Reindeer 2 (at x = 36)
+    const drawReindeer = (rx: number, ry: number, isLead: boolean) => {
+      const gallop = Math.sin(t / 75 + rx) * 4
+      ctx.save()
+      ctx.translate(rx, ry + gallop * 0.3)
+
+      // Reindeer Body
+      ctx.fillStyle = '#78350f'
+      ctx.beginPath()
+      ctx.ellipse(0, 0, 14, 7, 0, 0, Math.PI * 2)
+      ctx.fill()
+
+      // Neck & Chest
+      ctx.beginPath()
+      ctx.moveTo(8, -2)
+      ctx.lineTo(16, -14)
+      ctx.lineTo(11, -15)
+      ctx.lineTo(4, 2)
+      ctx.closePath()
+      ctx.fill()
+
+      // Head
+      ctx.beginPath()
+      ctx.ellipse(17, -15, 6, 4, 0.2, 0, Math.PI * 2)
+      ctx.fill()
+
+      // Antlers
+      ctx.strokeStyle = '#451a03'
+      ctx.lineWidth = 1.6
+      ctx.lineCap = 'round'
+      ctx.beginPath()
+      ctx.moveTo(15, -18)
+      ctx.lineTo(14, -26)
+      ctx.lineTo(11, -28)
+      ctx.moveTo(14, -23)
+      ctx.lineTo(18, -26)
+      ctx.stroke()
+
+      // Galloping legs
+      const legFront = Math.sin(t / 75 + rx) * 5
+      const legBack = -legFront
+      ctx.strokeStyle = '#78350f'
+      ctx.lineWidth = 2.2
+      ctx.beginPath()
+      ctx.moveTo(8, 4)
+      ctx.lineTo(15 + legFront, 15)
+      ctx.moveTo(-8, 4)
+      ctx.lineTo(-15 + legBack, 14)
+      ctx.stroke()
+
+      // Nose
+      if (isLead) {
+        ctx.fillStyle = '#ef4444'
+        ctx.beginPath()
+        ctx.arc(23, -15, 2.5, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.45)'
+        ctx.beginPath()
+        ctx.arc(23, -15, 6, 0, Math.PI * 2)
+        ctx.fill()
+      } else {
+        ctx.fillStyle = '#1c1917'
+        ctx.beginPath()
+        ctx.arc(22, -15, 1.5, 0, Math.PI * 2)
+        ctx.fill()
+      }
+
+      // Red harness with bell
+      ctx.strokeStyle = '#dc2626'
+      ctx.lineWidth = 1.6
+      ctx.beginPath()
+      ctx.arc(0, 0, 8, -Math.PI / 2, Math.PI / 2)
+      ctx.stroke()
+      ctx.fillStyle = '#facc15'
+      ctx.beginPath()
+      ctx.arc(4, 4, 1.5, 0, Math.PI * 2)
+      ctx.fill()
+
+      ctx.restore()
+    }
+
+    drawReindeer(70, -4, true)
+    drawReindeer(36, -2, false)
+
+    // Golden reins from Santa to reindeer
+    ctx.strokeStyle = '#facc15'
+    ctx.lineWidth = 1.2
+    ctx.beginPath()
+    ctx.moveTo(-6, -8)
+    ctx.quadraticCurveTo(15, -4, 36, -4)
+    ctx.quadraticCurveTo(52, -6, 70, -6)
+    ctx.stroke()
+
+    // Sleigh: Golden Runners underneath
+    ctx.strokeStyle = '#facc15'
+    ctx.lineWidth = 2.4
+    ctx.beginPath()
+    ctx.moveTo(-36, 12)
+    ctx.lineTo(8, 12)
+    ctx.quadraticCurveTo(18, 12, 16, 4)
+    ctx.moveTo(-32, 12)
+    ctx.lineTo(-28, 4)
+    ctx.moveTo(-2, 12)
+    ctx.lineTo(2, 4)
+    ctx.stroke()
+
+    // Sleigh Red Body
+    ctx.fillStyle = '#b91c1c'
+    ctx.beginPath()
+    ctx.moveTo(-34, 4)
+    ctx.quadraticCurveTo(-38, -6, -26, -4)
+    ctx.lineTo(2, -4)
+    ctx.quadraticCurveTo(12, -4, 8, 4)
+    ctx.lineTo(-30, 4)
+    ctx.closePath()
+    ctx.fill()
+
+    ctx.strokeStyle = '#facc15'
+    ctx.lineWidth = 1.8
+    ctx.stroke()
+
+    // Giant toy sack in the back of sleigh
+    ctx.fillStyle = '#15803d'
+    ctx.beginPath()
+    ctx.ellipse(-26, -10, 11, 13, -0.2, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.strokeStyle = '#dc2626'
+    ctx.lineWidth = 1.5
+    ctx.beginPath()
+    ctx.moveTo(-30, -18)
+    ctx.lineTo(-22, -18)
+    ctx.stroke()
+
+    // Santa in sleigh
+    // Body & Belt
+    ctx.fillStyle = '#dc2626'
+    ctx.beginPath()
+    ctx.ellipse(-10, -8, 9, 10, 0, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.fillStyle = '#1c1917'
+    ctx.fillRect(-16, -6, 13, 3)
+    ctx.fillStyle = '#facc15'
+    ctx.fillRect(-11, -7, 4, 5)
+
+    // White Beard
+    ctx.fillStyle = '#f8fafc'
+    ctx.beginPath()
+    ctx.ellipse(-6, -13, 6, 7, 0.2, 0, Math.PI * 2)
+    ctx.fill()
+
+    // Face & Nose
+    ctx.fillStyle = '#fde68a'
+    ctx.beginPath()
+    ctx.arc(-7, -18, 4.5, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.fillStyle = '#f43f5e'
+    ctx.beginPath()
+    ctx.arc(-5, -17, 1.6, 0, Math.PI * 2)
+    ctx.fill()
+
+    // Red Hat & white trim & pompom
+    ctx.fillStyle = '#ffffff'
+    ctx.beginPath()
+    ctx.ellipse(-8, -22, 6, 2.5, 0.1, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.fillStyle = '#dc2626'
+    ctx.beginPath()
+    ctx.moveTo(-13, -22)
+    ctx.lineTo(-3, -22)
+    ctx.quadraticCurveTo(-14, -30, -22, -24)
+    ctx.closePath()
+    ctx.fill()
+    ctx.fillStyle = '#ffffff'
+    ctx.beginPath()
+    ctx.arc(-22, -24, 2.8, 0, Math.PI * 2)
+    ctx.fill()
+
+    ctx.restore()
+  }
+
   const frame = (t: number) => {
     raf = requestAnimationFrame(frame)
     const state = get()
@@ -547,7 +827,11 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     const { phase, kind } = state
     const daylight = phase === 'day' || phase === 'dawn'
     const calm = kind === 'clear' || kind === 'cloudy'
-    const october = isOctober()
+
+    const seasonalDate = getSeasonalDate()
+    const october = isOctober(seasonalDate)
+    const christmasDay = isChristmasDay(seasonalDate)
+    const newYearsDay = isNewYearsDay(seasonalDate)
 
     // Decide whether this layer has anything to render at all. A clear day has
     // no weather and no fireflies, so the canvas would otherwise clear and
@@ -557,13 +841,19 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     const wantsFlies = (phase === 'night' || phase === 'dusk') && calm
     const creaturesPossible = calm && (october || daylight)
     const witchPossible = october && calm
+    const santaPossible = christmasDay && calm
+
     const active =
       wantsWeather ||
       wantsFlies ||
       flock !== null ||
       witch !== null ||
+      santa !== null ||
+      christmasDay ||
+      newYearsDay ||
       (creaturesPossible && t > nextFlock) ||
-      (witchPossible && t > nextWitch)
+      (witchPossible && t > nextWitch) ||
+      (santaPossible && t > nextSanta)
 
     if (!active) {
       if (!blanked) {
@@ -702,6 +992,215 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
       }
     } else {
       witch = null
+    }
+
+    // Santa: Christmas Day flight across the sky with reindeer and sleigh.
+    if (santaPossible) {
+      if (!santa && t > nextSanta) {
+        const dir: 1 | -1 = Math.random() < 0.5 ? 1 : -1
+        const scale = rand(0.9, 1.3)
+        const baseY = h * rand(0.1, 0.28)
+        santa = {
+          x: dir === 1 ? -160 : w + 160,
+          y: baseY,
+          baseY,
+          speed: rand(110, 150),
+          dir,
+          scale,
+          sparkles: [],
+        }
+      }
+      if (santa) {
+        santa.x += santa.dir * santa.speed * dt
+        santa.y = santa.baseY + Math.sin(t / 500) * 12
+
+        // Magical golden stardust sparkles behind sleigh
+        if (Math.random() < 0.4) {
+          santa.sparkles.push({
+            x: santa.x - santa.dir * 45 * santa.scale + rand(-6, 6),
+            y: santa.y + 4 * santa.scale + rand(-4, 4),
+            alpha: rand(0.7, 1),
+            size: rand(1.8, 3.2),
+          })
+        }
+
+        for (let i = santa.sparkles.length - 1; i >= 0; i--) {
+          const sp = santa.sparkles[i]
+          sp.alpha -= dt * 1.3
+          sp.y += dt * 6
+          if (sp.alpha <= 0) {
+            santa.sparkles.splice(i, 1)
+          }
+        }
+
+        const gone = santa.dir === 1 ? santa.x - 200 > w : santa.x + 200 < 0
+        if (gone) {
+          santa = null
+          nextSanta = t + rand(60_000, 130_000)
+        } else {
+          for (const sp of santa.sparkles) {
+            ctx.fillStyle = `rgba(250, 204, 21, ${sp.alpha})`
+            ctx.beginPath()
+            ctx.arc(sp.x, sp.y, sp.size, 0, Math.PI * 2)
+            ctx.fill()
+          }
+          drawSanta(santa.x, santa.y, santa.scale, santa.dir, t)
+        }
+      }
+    } else {
+      santa = null
+    }
+
+    // Christmas Day: falling wrapped gifts in the background!
+    if (christmasDay) {
+      for (const g of gifts) {
+        g.y += g.speed * dt
+        if (g.y > h + 30) {
+          g.y = -35
+          g.baseX = Math.random() * w
+        }
+        g.x = g.baseX + Math.sin(t / 1400 + g.offset) * g.sway
+        g.angle += g.rotSpeed * dt
+
+        ctx.save()
+        ctx.translate(g.x, g.y)
+        ctx.rotate(g.angle)
+        const s = g.size
+        // Box
+        ctx.fillStyle = g.boxColor
+        ctx.fillRect(-s / 2, -s / 2, s, s)
+        // Ribbon cross
+        ctx.fillStyle = g.ribbonColor
+        ctx.fillRect(-s / 2, -s / 6, s, s / 3)
+        ctx.fillRect(-s / 6, -s / 2, s / 3, s)
+        // Bow loops
+        ctx.beginPath()
+        ctx.ellipse(-s / 4, -s / 2 - 2, s / 4, s / 6, -0.4, 0, Math.PI * 2)
+        ctx.ellipse(s / 4, -s / 2 - 2, s / 4, s / 6, 0.4, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.restore()
+      }
+    }
+
+    // January 1st: New Year fireworks and explosions!
+    if (newYearsDay) {
+      if (t > nextRocket) {
+        nextRocket = t + rand(650, 1500)
+        const fireworkColors = [
+          '#facc15', // Gold
+          '#f43f5e', // Ruby
+          '#22c55e', // Emerald
+          '#38bdf8', // Cyan
+          '#a855f7', // Violet
+          '#fb923c', // Amber
+          '#ffffff', // Diamond
+        ]
+        const launchCount = Math.random() < 0.3 ? 2 : 1
+        for (let l = 0; l < launchCount; l++) {
+          rockets.push({
+            x: w * rand(0.12, 0.88),
+            y: h + 10,
+            targetY: h * rand(0.1, 0.45),
+            speed: rand(620, 880),
+            color: fireworkColors[Math.floor(Math.random() * fireworkColors.length)],
+            trail: [],
+          })
+        }
+      }
+
+      for (let i = rockets.length - 1; i >= 0; i--) {
+        const r = rockets[i]
+        r.y -= r.speed * dt
+        r.trail.push({ x: r.x, y: r.y, alpha: 1 })
+
+        if (r.y <= r.targetY) {
+          // Burst apex: Flash
+          flashes.push({
+            x: r.x,
+            y: r.y,
+            color: r.color,
+            radius: rand(45, 90),
+            alpha: 0.85,
+          })
+
+          // Burst apex: Sparks
+          const count = Math.floor(rand(45, 70))
+          for (let j = 0; j < count; j++) {
+            const angle = Math.random() * Math.PI * 2
+            const speed = rand(70, 240)
+            sparks.push({
+              x: r.x,
+              y: r.y,
+              vx: Math.cos(angle) * speed,
+              vy: Math.sin(angle) * speed,
+              color: r.color,
+              alpha: 1,
+              decay: rand(0.55, 1.1),
+              size: rand(1.6, 3.2),
+            })
+          }
+          rockets.splice(i, 1)
+        }
+      }
+
+      // Rocket heads & fizzing trails
+      for (const r of rockets) {
+        ctx.fillStyle = '#ffffff'
+        ctx.beginPath()
+        ctx.arc(r.x, r.y, 2.4, 0, Math.PI * 2)
+        ctx.fill()
+
+        for (let k = r.trail.length - 1; k >= 0; k--) {
+          const pt = r.trail[k]
+          pt.alpha -= dt * 4.5
+          if (pt.alpha <= 0) {
+            r.trail.splice(k, 1)
+          } else {
+            ctx.fillStyle = `rgba(254, 240, 138, ${pt.alpha})`
+            ctx.fillRect(pt.x - 1, pt.y - 1, 2, 4)
+          }
+        }
+      }
+
+      // Explosions / Flashes
+      for (let i = flashes.length - 1; i >= 0; i--) {
+        const fl = flashes[i]
+        fl.alpha -= dt * 4.2
+        if (fl.alpha <= 0) {
+          flashes.splice(i, 1)
+        } else {
+          const grad = ctx.createRadialGradient(fl.x, fl.y, 0, fl.x, fl.y, fl.radius)
+          grad.addColorStop(0, `rgba(255, 255, 255, ${fl.alpha * 0.9})`)
+          grad.addColorStop(0.35, `${fl.color}${Math.floor(fl.alpha * 180).toString(16).padStart(2, '0')}`)
+          grad.addColorStop(1, 'transparent')
+          ctx.fillStyle = grad
+          ctx.beginPath()
+          ctx.arc(fl.x, fl.y, fl.radius, 0, Math.PI * 2)
+          ctx.fill()
+        }
+      }
+
+      // Exploding Sparks
+      for (let i = sparks.length - 1; i >= 0; i--) {
+        const sp = sparks[i]
+        sp.x += sp.vx * dt
+        sp.y += sp.vy * dt
+        sp.vy += 120 * dt
+        sp.vx *= 0.96
+        sp.vy *= 0.96
+        sp.alpha -= sp.decay * dt
+
+        if (sp.alpha <= 0) {
+          sparks.splice(i, 1)
+        } else {
+          ctx.globalAlpha = sp.alpha
+          ctx.fillStyle = sp.color
+          ctx.beginPath()
+          ctx.arc(sp.x, sp.y, sp.size, 0, Math.PI * 2)
+          ctx.fill()
+        }
+      }
+      ctx.globalAlpha = 1
     }
 
     // Fireflies: calm nights and dusk.

@@ -15,3 +15,43 @@ export const getQueryParam = (key: string): string | null => {
   }
   return null
 }
+
+export function getSeasonalDate(now: Date = new Date()): Date {
+  const override = getQueryParam('holiday') || getQueryParam('season')
+  if (override) {
+    const o = override.toLowerCase()
+    if (o === 'october' || o === 'oct' || o === 'halloween') {
+      return new Date(2026, 9, 15)
+    }
+    if (o === 'december' || o === 'dec' || o === 'elves') {
+      return new Date(2026, 11, 15)
+    }
+    if (o === 'christmas' || o === 'dec25' || o === 'santa') {
+      return new Date(2026, 11, 25)
+    }
+    if (o === 'newyear' || o === 'jan1' || o === 'fireworks') {
+      return new Date(2026, 0, 1)
+    }
+  }
+  return now
+}
+
+export function isOctober(d: Date = getSeasonalDate()): boolean {
+  return d.getMonth() === 9
+}
+
+export function isDecember(d: Date = getSeasonalDate()): boolean {
+  return d.getMonth() === 11
+}
+
+export function isElfSeason(d: Date = getSeasonalDate()): boolean {
+  return d.getMonth() === 11 && d.getDate() >= 1 && d.getDate() <= 24
+}
+
+export function isChristmasDay(d: Date = getSeasonalDate()): boolean {
+  return d.getMonth() === 11 && d.getDate() === 25
+}
+
+export function isNewYearsDay(d: Date = getSeasonalDate()): boolean {
+  return d.getMonth() === 0 && d.getDate() === 1
+}

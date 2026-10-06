@@ -5,7 +5,15 @@ import { api } from '../lib/api'
 import { useData } from '../lib/hooks'
 import { startStarCanvas, startFxCanvas, SkyPhase, SkyKind, SkyState } from './sky/skyEngine'
 import { useQuality, Quality } from './sky/useQuality'
-import { getQueryParam } from './sky/queryParam'
+import {
+  getQueryParam,
+  getSeasonalDate,
+  isOctober,
+  isDecember,
+  isElfSeason,
+  isChristmasDay,
+  isNewYearsDay,
+} from './sky/queryParam'
 import AmbientCalendarOverlay, { ReminderPayload } from './AmbientCalendarOverlay'
 import MiniPlayerBar, { Track } from './ytmusic/MiniPlayerBar'
 
@@ -243,6 +251,313 @@ function JackOLantern({ seed = 0 }: { seed?: number }) {
       <ellipse cx="48" cy="89" rx="4" ry="2.5" fill="#7c2d12" />
       <path d="M48 89 C44 107 52 126 48 153" stroke="rgba(255,255,255,0.72)" strokeWidth="1.6" fill="none" />
     </svg>
+  )
+}
+
+function CandyCane({ seed = 0 }: { seed?: number }) {
+  const clipId = useId()
+  const flip = seed % 2 === 0
+  return (
+    <svg
+      width="112"
+      height="181"
+      viewBox="0 0 96 155"
+      className="pointer-events-none filter drop-shadow-[0_4px_12px_rgba(0,0,0,0.3)]"
+      aria-hidden="true"
+    >
+      <defs>
+        <clipPath id={clipId}>
+          <path
+            d={flip ? 'M 36 94 L 36 38 C 36 12, 68 12, 68 34' : 'M 60 94 L 60 38 C 60 12, 28 12, 28 34'}
+            stroke="white"
+            strokeWidth="15"
+            strokeLinecap="round"
+            fill="none"
+          />
+        </clipPath>
+      </defs>
+
+      {/* Candy Cane Body clipped with diagonal peppermint stripes */}
+      <g clipPath={`url(#${clipId})`}>
+        <rect x="0" y="0" width="96" height="155" fill="#f8fafc" />
+        {[-30, -14, 2, 18, 34, 50, 66, 82, 98, 114].map((offset) => (
+          <rect
+            key={offset}
+            x="-20"
+            y={offset}
+            width="140"
+            height="8"
+            fill="#dc2626"
+            transform="rotate(-35 48 48)"
+          />
+        ))}
+        {/* Gloss highlight */}
+        <path
+          d={flip ? 'M 33 92 L 33 38 C 33 15, 65 15, 65 34' : 'M 63 92 L 63 38 C 63 15, 31 15, 31 34'}
+          stroke="white"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          fill="none"
+          opacity="0.65"
+        />
+      </g>
+
+      {/* Satin Ribbon Bow tied around the cane */}
+      <g transform={`translate(${flip ? 36 : 60}, 62)`}>
+        <path d="M -4 2 Q -12 16 -16 28 L -8 24 Q -6 14 -2 4 Z" fill="#15803d" />
+        <path d="M 4 2 Q 12 16 16 28 L 8 24 Q 6 14 2 4 Z" fill="#15803d" />
+        <path d="M 0 0 C -18 -12, -22 10, 0 2 Z" fill="#16a34a" />
+        <path d="M 0 0 C 18 -12, 22 10, 0 2 Z" fill="#16a34a" />
+        <ellipse cx="0" cy="1" rx="4.5" ry="3.5" fill="#eab308" stroke="#ca8a04" strokeWidth="0.8" />
+      </g>
+
+      {/* Tether knot and string lifting photo card */}
+      <ellipse cx={flip ? 36 : 60} cy="92" rx="3.5" ry="2" fill="#b91c1c" />
+      <path
+        d={`M ${flip ? 36 : 60} 93 C 44 112 52 130 48 153`}
+        stroke="rgba(255,255,255,0.72)"
+        strokeWidth="1.6"
+        fill="none"
+      />
+    </svg>
+  )
+}
+
+function StringLights() {
+  const bulbs = useMemo(() => {
+    const colors = [
+      { fill: '#ef4444', glow: 'rgba(239,68,68,0.85)' },
+      { fill: '#22c55e', glow: 'rgba(34,197,94,0.85)' },
+      { fill: '#eab308', glow: 'rgba(234,179,8,0.9)' },
+      { fill: '#3b82f6', glow: 'rgba(59,130,246,0.85)' },
+      { fill: '#f97316', glow: 'rgba(249,115,22,0.85)' },
+      { fill: '#ec4899', glow: 'rgba(236,72,153,0.85)' },
+    ]
+    const list = []
+    const totalBulbs = 34
+    for (let i = 0; i <= totalBulbs; i++) {
+      const xPercent = (i / totalBulbs) * 100
+      const scallopPhase = i % 2 === 1 ? 18 : 6
+      const color = colors[i % colors.length]
+      list.push({
+        id: i,
+        xPercent,
+        y: scallopPhase,
+        color,
+        dur: 1.6 + ((i * 3) % 7) * 0.25,
+        delay: ((i * 5) % 9) * 0.3,
+      })
+    }
+    return list
+  }, [])
+
+  return (
+    <div className="fixed top-0 left-0 right-0 h-14 pointer-events-none z-30 select-none overflow-hidden">
+      <svg
+        viewBox="0 0 1920 54"
+        preserveAspectRatio="none"
+        className="w-full h-full"
+        aria-hidden="true"
+      >
+        <style>{`
+          @keyframes lightTwinkle {
+            0%, 100% { opacity: 0.95; transform: scale(1); }
+            50% { opacity: 0.35; transform: scale(0.92); }
+          }
+        `}</style>
+        <path
+          d={Array.from({ length: 17 }, (_, i) => {
+            const startX = i * (1920 / 17)
+            const endX = (i + 1) * (1920 / 17)
+            const midX = (startX + endX) / 2
+            return `${i === 0 ? `M ${startX} 0` : ''} Q ${midX} 22, ${endX} 0`
+          }).join(' ')}
+          stroke="#14532d"
+          strokeWidth="2.2"
+          fill="none"
+        />
+        {bulbs.map((b) => {
+          const px = (b.xPercent / 100) * 1920
+          return (
+            <g
+              key={b.id}
+              transform={`translate(${px}, ${b.y})`}
+              style={{
+                animation: `lightTwinkle ${b.dur}s ease-in-out infinite`,
+                animationDelay: `${b.delay}s`,
+                transformOrigin: `${px}px ${b.y}px`,
+              }}
+            >
+              <rect x="-3" y="0" width="6" height="5" rx="1" fill="#166534" />
+              <path
+                d="M 0 4 C -5 8, -5 16, 0 22 C 5 16, 5 8, 0 4 Z"
+                fill={b.color.fill}
+                style={{ filter: `drop-shadow(0 0 7px ${b.color.glow})` }}
+              />
+              <ellipse cx="-1" cy="11" rx="1.5" ry="3.5" fill="white" opacity="0.6" />
+            </g>
+          )
+        })}
+      </svg>
+    </div>
+  )
+}
+
+function Elf({ variant = 'sitting', flip = false }: { variant?: 'sitting' | 'standing' | 'running'; flip?: boolean }) {
+  return (
+    <svg
+      width="64"
+      height="80"
+      viewBox="0 0 54 68"
+      className="pointer-events-none select-none filter drop-shadow-[0_3px_8px_rgba(0,0,0,0.35)]"
+      style={{ transform: flip ? 'scaleX(-1)' : undefined }}
+      aria-hidden="true"
+    >
+      {variant === 'sitting' && (
+        <g>
+          <path d="M 21 44 L 21 58" stroke="#dc2626" strokeWidth="5" strokeLinecap="round" />
+          <path d="M 21 46 L 21 48" stroke="#ffffff" strokeWidth="5" />
+          <path d="M 21 52 L 21 54" stroke="#ffffff" strokeWidth="5" />
+          <path d="M 19 58 Q 15 60 11 59 Q 8 57 10 54 Q 14 55 19 56 Z" fill="#15803d" />
+          <circle cx="9" cy="55" r="1.5" fill="#facc15" />
+
+          <path d="M 31 44 L 31 59" stroke="#dc2626" strokeWidth="5" strokeLinecap="round" />
+          <path d="M 31 47 L 31 49" stroke="#ffffff" strokeWidth="5" />
+          <path d="M 31 53 L 31 55" stroke="#ffffff" strokeWidth="5" />
+          <path d="M 29 59 Q 25 61 21 60 Q 18 58 20 55 Q 24 56 29 57 Z" fill="#15803d" />
+          <circle cx="19" cy="56" r="1.5" fill="#facc15" />
+        </g>
+      )}
+
+      {variant === 'standing' && (
+        <g>
+          <path d="M 22 46 L 22 62" stroke="#dc2626" strokeWidth="5" strokeLinecap="round" />
+          <path d="M 22 48 L 22 50" stroke="#ffffff" strokeWidth="5" />
+          <path d="M 22 54 L 22 56" stroke="#ffffff" strokeWidth="5" />
+          <path d="M 20 62 Q 15 64 10 63 Q 7 60 10 58 Q 15 59 20 60 Z" fill="#15803d" />
+          <circle cx="8" cy="59" r="1.6" fill="#facc15" />
+
+          <path d="M 32 46 L 32 62" stroke="#dc2626" strokeWidth="5" strokeLinecap="round" />
+          <path d="M 32 48 L 32 50" stroke="#ffffff" strokeWidth="5" />
+          <path d="M 32 54 L 32 56" stroke="#ffffff" strokeWidth="5" />
+          <path d="M 34 62 Q 39 64 44 63 Q 47 60 44 58 Q 39 59 34 60 Z" fill="#15803d" />
+          <circle cx="46" cy="59" r="1.6" fill="#facc15" />
+        </g>
+      )}
+
+      {variant === 'running' && (
+        <g>
+          <path d="M 20 44 L 10 56" stroke="#dc2626" strokeWidth="5" strokeLinecap="round" />
+          <path d="M 17 48 L 15 50" stroke="#ffffff" strokeWidth="5" />
+          <path d="M 8 56 Q 3 55 1 51 Q 3 48 7 51 Z" fill="#15803d" />
+          <circle cx="2" cy="50" r="1.5" fill="#facc15" />
+
+          <path d="M 30 44 L 40 56" stroke="#dc2626" strokeWidth="5" strokeLinecap="round" />
+          <path d="M 34 49 L 36 51" stroke="#ffffff" strokeWidth="5" />
+          <path d="M 40 56 Q 46 60 50 58 Q 51 55 46 54 Z" fill="#15803d" />
+          <circle cx="50" cy="57" r="1.5" fill="#facc15" />
+        </g>
+      )}
+
+      {/* Elf Tunic */}
+      <path d="M 18 34 Q 14 46 17 47 L 37 47 Q 40 46 36 34 Z" fill="#16a34a" />
+      <rect x="17" y="42" width="20" height="4.5" fill="#18181b" />
+      <rect x="24" y="41" width="6" height="6.5" rx="1" fill="#facc15" stroke="#18181b" strokeWidth="1" />
+
+      {/* Scalloped Collar */}
+      <path d="M 18 33 L 21 38 L 27 34 L 33 38 L 36 33 Z" fill="#dc2626" />
+      <circle cx="21" cy="38" r="1" fill="#facc15" />
+      <circle cx="33" cy="38" r="1" fill="#facc15" />
+
+      {/* Arms */}
+      {variant === 'sitting' && (
+        <g>
+          <path d="M 18 36 Q 13 42 16 45" stroke="#16a34a" strokeWidth="4" strokeLinecap="round" fill="none" />
+          <circle cx="16" cy="45" r="2.5" fill="#fde68a" />
+          <path d="M 36 36 Q 41 42 38 45" stroke="#16a34a" strokeWidth="4" strokeLinecap="round" fill="none" />
+          <circle cx="38" cy="45" r="2.5" fill="#fde68a" />
+        </g>
+      )}
+
+      {variant === 'standing' && (
+        <g>
+          <path d="M 18 36 Q 13 40 14 44" stroke="#16a34a" strokeWidth="4" strokeLinecap="round" fill="none" />
+          <circle cx="14" cy="44" r="2.5" fill="#fde68a" />
+          <path d="M 36 36 Q 44 32 45 24" stroke="#16a34a" strokeWidth="4" strokeLinecap="round" fill="none" />
+          <circle cx="45" cy="24" r="2.5" fill="#fde68a" />
+        </g>
+      )}
+
+      {variant === 'running' && (
+        <g>
+          <path d="M 22 36 L 30 40" stroke="#16a34a" strokeWidth="4" strokeLinecap="round" />
+          <rect x="30" y="34" width="11" height="11" rx="1.5" fill="#eab308" />
+          <path d="M 35.5 34 L 35.5 45 M 30 39.5 L 41 39.5" stroke="#dc2626" strokeWidth="1.8" />
+          <circle cx="35.5" cy="33" r="2" fill="#dc2626" />
+        </g>
+      )}
+
+      {/* Head, Ears & Face */}
+      <path d="M 19 24 C 11 22, 9 17, 18 19 Z" fill="#fde68a" />
+      <path d="M 35 24 C 43 22, 45 17, 36 19 Z" fill="#fde68a" />
+      <ellipse cx="27" cy="25" rx="9.5" ry="10" fill="#fde68a" />
+      <circle cx="21" cy="27" r="2.5" fill="#f43f5e" opacity="0.45" />
+      <circle cx="33" cy="27" r="2.5" fill="#f43f5e" opacity="0.45" />
+      <path d="M 21 23 Q 23 21 25 23" stroke="#1c1917" strokeWidth="1.2" strokeLinecap="round" fill="none" />
+      <path d="M 29 23 Q 31 21 33 23" stroke="#1c1917" strokeWidth="1.2" strokeLinecap="round" fill="none" />
+      <circle cx="27" cy="25" r="1.1" fill="#f59e0b" />
+      <path d="M 24 28 Q 27 31 30 28" stroke="#b91c1c" strokeWidth="1.2" strokeLinecap="round" fill="none" />
+
+      {/* Hat */}
+      <path d="M 16 19 Q 27 16 38 19" stroke="#dc2626" strokeWidth="4.5" strokeLinecap="round" />
+      <path d="M 17 17 C 20 6, 32 3, 44 6 C 48 8, 49 12, 46 16 Z" fill="#16a34a" />
+      <circle cx="47" cy="16" r="3.2" fill="#facc15" stroke="#ca8a04" strokeWidth="0.8" />
+    </svg>
+  )
+}
+
+function RunningElf() {
+  const [running, setRunning] = useState(false)
+  const [direction, setDirection] = useState<1 | -1>(1)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    timerRef.current = setTimeout(() => {
+      setDirection(Math.random() < 0.5 ? 1 : -1)
+      setRunning(true)
+    }, 20_000)
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [])
+
+  const handleAnimationComplete = () => {
+    setRunning(false)
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => {
+      setDirection(Math.random() < 0.5 ? 1 : -1)
+      setRunning(true)
+    }, 40_000 + Math.random() * 50_000)
+  }
+
+  if (!running) return null
+
+  return (
+    <motion.div
+      initial={{ x: direction === 1 ? -80 : window.innerWidth + 80 }}
+      animate={{ x: direction === 1 ? window.innerWidth + 80 : -80 }}
+      transition={{ duration: 7.5, ease: 'linear' }}
+      onAnimationComplete={handleAnimationComplete}
+      className="fixed bottom-1 pointer-events-none z-30 select-none"
+    >
+      <motion.div
+        animate={{ y: [0, -5, 0] }}
+        transition={{ duration: 0.28, repeat: Infinity, ease: 'easeInOut' }}
+      >
+        <Elf variant="running" flip={direction === -1} />
+      </motion.div>
+    </motion.div>
   )
 }
 
@@ -520,9 +835,13 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVide
     </div>
   )
 
+  const seasonalNow = getSeasonalDate()
+  const hasSittingElf = isElfSeason(seasonalNow) && ((seed + pairIdx * 5 + index) % 3 === 0)
+  const elfFlip = (seed + index) % 2 === 0
+
   const card = (
     <div
-      className="bg-[#faf8f5] p-3.5 pb-4 rounded-[4px] border border-neutral-200/60 flex flex-col items-center pointer-events-auto cursor-pointer"
+      className="relative bg-[#faf8f5] p-3.5 pb-4 rounded-[4px] border border-neutral-200/60 flex flex-col items-center pointer-events-auto cursor-pointer"
       style={{ boxShadow: matShadow, transform: `rotate(${tilt.toFixed(1)}deg)` }}
       onClick={(e) => {
         // Prefer the transcoded copy: ~10x smaller and quick to start.
@@ -533,6 +852,11 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVide
         }
       }}
     >
+      {hasSittingElf && (
+        <div className={`absolute -top-[42px] ${elfFlip ? '-left-3' : '-right-3'} pointer-events-none z-20`}>
+          <Elf variant="sitting" flip={elfFlip} />
+        </div>
+      )}
       {media}
       {caption}
     </div>
@@ -540,10 +864,9 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVide
 
   // Select the top attachment element based on weather kind & sky phase
   let topElement: React.ReactNode = null
-  const isOctober = new Date().getMonth() === 9
+  const seedOffset = seed + pairIdx * 3 + index
 
-  if (isOctober) {
-    const seedOffset = seed + pairIdx * 3 + index
+  if (isOctober(seasonalNow)) {
     if (phase === 'dusk' || phase === 'night') {
       topElement = (
         <div className="absolute bottom-[calc(100%-12px)] pointer-events-none select-none z-10">
@@ -557,6 +880,12 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVide
         </div>
       )
     }
+  } else if (isDecember(seasonalNow)) {
+    topElement = (
+      <div className="absolute bottom-[calc(100%-12px)] pointer-events-none select-none z-10">
+        <CandyCane seed={seedOffset} />
+      </div>
+    )
   } else if (kind === 'snowy') {
     topElement = (
       <div className="absolute bottom-[calc(100%-16px)] pointer-events-none select-none z-10 text-[96px] filter drop-shadow-[0_0_16px_rgba(255,255,255,0.8)] animate-pulse">
@@ -683,6 +1012,7 @@ export default function Slideshow({
     }
   }, [])
 
+  const seasonalNow = getSeasonalDate(now)
   const phase: SkyPhase = override.phase ?? computePhase(now, sun.sunrise, sun.sunset)
   const skyState: SkyState = { phase, kind, paused: !!selectedVideo || hidden, quality }
   const stateRef = useRef<SkyState>(skyState)
@@ -1049,6 +1379,17 @@ export default function Slideshow({
 
       {/* Weather + delights (rain, snow, fireflies, birds — in front of photos) */}
       <canvas ref={fxRef} className="absolute inset-0 w-full h-full pointer-events-none z-20" />
+
+      {/* Holiday Delights (December String Lights & Elves) */}
+      {isDecember(seasonalNow) && <StringLights />}
+      {isElfSeason(seasonalNow) && (
+        <>
+          <div className="fixed bottom-2 left-10 pointer-events-none z-30 select-none animate-[bounce_4s_ease-in-out_infinite]">
+            <Elf variant="standing" />
+          </div>
+          <RunningElf />
+        </>
+      )}
 
       {/* Bottom right controls & Now Playing dock */}
       <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 z-[110] flex flex-col items-end gap-3 pointer-events-none">
