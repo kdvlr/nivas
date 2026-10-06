@@ -679,9 +679,23 @@ function Spider({ scale = 1, hourglassColor = '#ef4444' }: { scale?: number; hou
   return (
     <g
       transform={`scale(${scale})`}
-      className="filter drop-shadow-[0_3px_6px_rgba(0,0,0,0.6)]"
+      className="filter drop-shadow-[0_0_2px_rgba(255,255,255,0.4)] drop-shadow-[0_3px_6px_rgba(0,0,0,0.6)]"
     >
-      {/* 8 Creepy jointed spider legs */}
+      {/* 8 Creepy jointed spider legs - thin light white outline */}
+      <g stroke="rgba(255, 255, 255, 0.85)" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" fill="none">
+        {/* Left Legs */}
+        <path d="M -2 -4 Q -12 -12 -16 -4 L -14 6" />
+        <path d="M -3 -1 Q -16 -6 -20 3 L -16 12" />
+        <path d="M -3 3 Q -17 5 -18 14 L -13 22" />
+        <path d="M -2 7 Q -14 12 -15 22 L -9 27" />
+        {/* Right Legs */}
+        <path d="M 2 -4 Q 12 -12 16 -4 L 14 6" />
+        <path d="M 3 -1 Q 16 -6 20 3 L 16 12" />
+        <path d="M 3 3 Q 17 5 18 14 L 13 22" />
+        <path d="M 2 7 Q 14 12 15 22 L 9 27" />
+      </g>
+
+      {/* 8 Creepy jointed spider legs - dark body */}
       <g stroke="#18181b" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none">
         {/* Left Legs */}
         <path d="M -2 -4 Q -12 -12 -16 -4 L -14 6" />
@@ -695,19 +709,20 @@ function Spider({ scale = 1, hourglassColor = '#ef4444' }: { scale?: number; hou
         <path d="M 2 7 Q 14 12 15 22 L 9 27" />
       </g>
 
-      {/* Spider Abdomen */}
-      <ellipse cx="0" cy="8" rx="6.5" ry="8.5" fill="#18181b" stroke="#27272a" strokeWidth="0.8" />
+      {/* Spider Abdomen with thin light white outline */}
+      <ellipse cx="0" cy="8" rx="6.5" ry="8.5" fill="#18181b" stroke="rgba(255, 255, 255, 0.85)" strokeWidth="1" />
       {/* Hourglass/spooky marking on back */}
       <path
         d="M -2.2 4 L 2.2 4 L 0 8 L 2.2 12 L -2.2 12 L 0 8 Z"
         fill={hourglassColor}
-        opacity="0.9"
+        opacity="0.95"
       />
 
-      {/* Cephalothorax (Head) */}
-      <circle cx="0" cy="-1" r="4.5" fill="#27272a" />
+      {/* Cephalothorax (Head) with thin light white outline */}
+      <circle cx="0" cy="-1" r="4.5" fill="#27272a" stroke="rgba(255, 255, 255, 0.85)" strokeWidth="1" />
 
-      {/* Chelicerae / fangs */}
+      {/* Chelicerae / fangs with thin light white outline */}
+      <path d="M -1.8 -5 L -1.5 -8 M 1.8 -5 L 1.5 -8" stroke="rgba(255, 255, 255, 0.85)" strokeWidth="2.2" strokeLinecap="round" />
       <path d="M -1.8 -5 L -1.5 -8 M 1.8 -5 L 1.5 -8" stroke="#3f3f46" strokeWidth="1.2" strokeLinecap="round" />
 
       {/* Glowing beady eyes */}

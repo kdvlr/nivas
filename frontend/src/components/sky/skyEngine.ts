@@ -481,6 +481,8 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     ctx.translate(x, y)
     ctx.scale(dir * scale, scale)
 
+    const outlineColor = 'rgba(255, 255, 255, 0.8)'
+
     // 1. Broomstick
     ctx.strokeStyle = '#5c3a21'
     ctx.lineWidth = 2.4
@@ -488,6 +490,14 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     ctx.beginPath()
     ctx.moveTo(-32, 6)
     ctx.lineTo(30, -5)
+    ctx.stroke()
+
+    // Broomstick thin light white outline highlight
+    ctx.strokeStyle = outlineColor
+    ctx.lineWidth = 0.8
+    ctx.beginPath()
+    ctx.moveTo(-32, 4.8)
+    ctx.lineTo(30, -6.2)
     ctx.stroke()
 
     // 2. Straw bristles at rear of broom
@@ -500,6 +510,9 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     ctx.lineTo(-29, 8)
     ctx.closePath()
     ctx.fill()
+    ctx.strokeStyle = outlineColor
+    ctx.lineWidth = 1
+    ctx.stroke()
 
     // Straw twigs detail strokes
     ctx.strokeStyle = '#78350f'
@@ -531,6 +544,9 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     ctx.lineTo(3, -15)
     ctx.closePath()
     ctx.fill()
+    ctx.strokeStyle = outlineColor
+    ctx.lineWidth = 1
+    ctx.stroke()
 
     // Torso & sitting legs
     ctx.beginPath()
@@ -544,11 +560,22 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     ctx.lineTo(-2, 4)
     ctx.closePath()
     ctx.fill()
+    ctx.strokeStyle = outlineColor
+    ctx.lineWidth = 1
+    ctx.stroke()
 
-    // Arm reaching forward holding broomstick
-    ctx.strokeStyle = color
-    ctx.lineWidth = 2.5
+    // Arm reaching forward holding broomstick (outline undercoat + dark fill)
+    ctx.strokeStyle = outlineColor
+    ctx.lineWidth = 3.6
     ctx.lineCap = 'round'
+    ctx.beginPath()
+    ctx.moveTo(4, -13)
+    ctx.lineTo(9, -7)
+    ctx.lineTo(15, -2)
+    ctx.stroke()
+
+    ctx.strokeStyle = color
+    ctx.lineWidth = 2.2
     ctx.beginPath()
     ctx.moveTo(4, -13)
     ctx.lineTo(9, -7)
@@ -559,6 +586,9 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     ctx.beginPath()
     ctx.arc(8, -19, 4.5, 0, Math.PI * 2)
     ctx.fill()
+    ctx.strokeStyle = outlineColor
+    ctx.lineWidth = 1
+    ctx.stroke()
 
     // Pointed nose & chin profile
     ctx.beginPath()
@@ -569,6 +599,9 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     ctx.lineTo(9, -15)
     ctx.closePath()
     ctx.fill()
+    ctx.strokeStyle = outlineColor
+    ctx.lineWidth = 1
+    ctx.stroke()
 
     // 4. Iconic Witch Hat
     ctx.save()
@@ -580,6 +613,9 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     ctx.beginPath()
     ctx.ellipse(0, 0, 11, 2.5, 0, 0, Math.PI * 2)
     ctx.fill()
+    ctx.strokeStyle = outlineColor
+    ctx.lineWidth = 1
+    ctx.stroke()
 
     // Hat Band (orange ribbon)
     ctx.fillStyle = '#ea580c'
@@ -595,6 +631,9 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     ctx.quadraticCurveTo(-1, -10, -5, -2)
     ctx.closePath()
     ctx.fill()
+    ctx.strokeStyle = outlineColor
+    ctx.lineWidth = 1
+    ctx.stroke()
 
     ctx.restore()
 
@@ -603,9 +642,17 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     ctx.beginPath()
     ctx.ellipse(-14, 2, 3.5, 2.5, -0.2, 0, Math.PI * 2)
     ctx.fill()
+    ctx.strokeStyle = outlineColor
+    ctx.lineWidth = 0.8
+    ctx.stroke()
+
     ctx.beginPath()
     ctx.arc(-11, -1, 2.2, 0, Math.PI * 2)
     ctx.fill()
+    ctx.strokeStyle = outlineColor
+    ctx.lineWidth = 0.8
+    ctx.stroke()
+
     ctx.beginPath()
     ctx.moveTo(-12, -2)
     ctx.lineTo(-12.5, -4.5)
@@ -614,12 +661,30 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     ctx.lineTo(-9.5, -4.5)
     ctx.lineTo(-9, -2)
     ctx.fill()
+    ctx.strokeStyle = outlineColor
+    ctx.lineWidth = 0.8
+    ctx.stroke()
+
+    ctx.strokeStyle = outlineColor
+    ctx.lineWidth = 2.2
+    ctx.beginPath()
+    ctx.moveTo(-17, 3)
+    ctx.quadraticCurveTo(-22, 1, -20, -3)
+    ctx.stroke()
+
     ctx.strokeStyle = color
     ctx.lineWidth = 1.2
     ctx.beginPath()
     ctx.moveTo(-17, 3)
     ctx.quadraticCurveTo(-22, 1, -20, -3)
     ctx.stroke()
+
+    // Tiny glowing cat eyes
+    ctx.fillStyle = '#a3e635'
+    ctx.beginPath()
+    ctx.arc(-10.2, -1.2, 0.45, 0, Math.PI * 2)
+    ctx.arc(-11.5, -1.2, 0.45, 0, Math.PI * 2)
+    ctx.fill()
 
     ctx.restore()
   }
