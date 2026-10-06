@@ -562,97 +562,536 @@ function ThanksgivingTopper({ seed = 0 }: { seed?: number }) {
       width="112"
       height="181"
       viewBox="0 0 96 155"
-      className="pointer-events-none filter drop-shadow-[0_4px_12px_rgba(0,0,0,0.35)]"
+      className="pointer-events-none filter drop-shadow-[0_4px_14px_rgba(0,0,0,0.35)]"
       aria-hidden="true"
     >
+      <style>{`
+        @keyframes turkeySnoodSway {
+          0%, 100% { transform: rotate(0deg); }
+          50% { transform: rotate(12deg); }
+        }
+        @keyframes turkeyPlumagePulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.03, 0.98); }
+        }
+      `}</style>
       <g transform={flip ? 'translate(96, 0) scale(-1, 1)' : undefined}>
-        {/* Cornucopia Woven Horn Basket */}
-        <path
-          d="M 22 24 
-             C 14 30, 16 46, 26 50 
-             C 34 54, 46 56, 56 60 
-             C 68 64, 76 68, 78 72 
-             C 74 74, 52 74, 38 68 
-             C 24 62, 14 50, 12 36 
-             C 10 26, 16 18, 22 24 Z"
-          fill="#78350f"
-        />
-        {/* Curled horn tip */}
-        <path
-          d="M 22 24 C 26 20, 24 14, 18 16 C 14 18, 14 24, 18 26"
-          stroke="#451a03"
-          strokeWidth="3.5"
-          strokeLinecap="round"
-          fill="none"
-        />
-        {/* Wicker Weave Texture Ribs */}
-        <path
-          d="M 18 34 Q 24 40 28 48 
-             M 28 38 Q 36 46 42 54 
-             M 38 44 Q 48 52 56 60 
-             M 50 50 Q 62 58 70 66"
-          stroke="#92400e"
-          strokeWidth="1.6"
-          fill="none"
-        />
-        {/* Cornucopia Rim Opening */}
-        <ellipse cx="64" cy="62" rx="16" ry="12" fill="#451a03" transform="rotate(-25 64 62)" />
-        <ellipse cx="64" cy="62" rx="16" ry="12" stroke="#b45309" strokeWidth="2.5" fill="none" transform="rotate(-25 64 62)" />
-
-        {/* Harvest Bounty overflowing from horn opening */}
-        {/* Flint/Indian Corn */}
-        <g transform="translate(62, 44) rotate(35)">
-          <path d="M 0 0 C 4 -8, 10 -16, 12 -24 C 10 -26, 6 -26, 4 -22 C 2 -14, -2 -8, 0 0 Z" fill="#eab308" />
-          <circle cx="6" cy="-14" r="1.2" fill="#b91c1c" />
-          <circle cx="4" cy="-8" r="1.2" fill="#78350f" />
-          <circle cx="8" cy="-18" r="1.2" fill="#ea580c" />
-          <path d="M 0 0 C -4 -4, -6 -12, -4 -16 M 2 0 C 6 -4, 10 -8, 12 -12" stroke="#ca8a04" strokeWidth="1.2" fill="none" />
+        {/* 1. Magnificent Fanned Tail Feathers (Warm Autumn Radiance) */}
+        <g style={{ transformOrigin: '48px 62px', animation: 'turkeyPlumagePulse 2.8s ease-in-out infinite' }}>
+          {[-60, -43, -26, -9, 9, 26, 43, 60].map((deg, i) => (
+            <g key={deg} transform={`translate(48, 62) rotate(${deg}) translate(0, -38)`}>
+              {/* Outer feather shaft & vane */}
+              <path
+                d="M -5 20 L -6 0 Q 0 -10 6 0 L 5 20 Z"
+                fill={i % 2 === 0 ? '#78350f' : '#92400e'}
+              />
+              {/* Vibrant Cinnamon-Orange chevron band */}
+              <path
+                d="M -5.8 8 L 5.8 8 L 6.2 1 L -6.2 1 Z"
+                fill="#ea580c"
+              />
+              {/* Golden Yellow feather tip */}
+              <path
+                d="M -6.2 1 L 6.2 1 Q 0 -9 -6.2 1 Z"
+                fill="#facc15"
+              />
+              {/* White tip accent outline */}
+              <path
+                d="M -3 -3 Q 0 -8 3 -3"
+                stroke="#ffffff"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+                fill="none"
+              />
+            </g>
+          ))}
         </g>
 
-        {/* Mini Pumpkin Gourd */}
-        <g transform="translate(60, 62)">
-          <ellipse cx="0" cy="0" rx="9" ry="8" fill="#ea580c" />
-          <ellipse cx="-4" cy="0" rx="6" ry="7.5" fill="#f97316" />
-          <ellipse cx="4" cy="0" rx="6" ry="7.5" fill="#f97316" />
-          <ellipse cx="0" cy="0" rx="4" ry="8" fill="#fb923c" />
-          <path d="M 0 -8 C 0 -11, 2 -13, 4 -14" stroke="#16a34a" strokeWidth="1.6" strokeLinecap="round" fill="none" />
+        {/* 2. Plump Roasted-Chestnut Turkey Body */}
+        <g>
+          {/* Main Body */}
+          <ellipse cx="48" cy="58" rx="16" ry="15" fill="#78350f" />
+          {/* Layered Warm Brown Breast */}
+          <ellipse cx="48" cy="60" rx="12" ry="11" fill="#92400e" />
+          {/* Scalloped Breast Plumage Details */}
+          <path
+            d="M 42 56 Q 48 60 54 56 M 40 62 Q 48 67 56 62 M 43 68 Q 48 72 53 68"
+            stroke="#d97706"
+            strokeWidth="1.2"
+            strokeLinecap="round"
+            fill="none"
+          />
+
+          {/* Left and Right Folded Wings */}
+          <path
+            d="M 33 48 C 26 56, 30 68, 38 68 C 36 60, 36 52, 33 48 Z"
+            fill="#5c2607"
+          />
+          <path
+            d="M 63 48 C 70 56, 66 68, 58 68 C 60 60, 60 52, 63 48 Z"
+            fill="#5c2607"
+          />
         </g>
 
-        {/* Red Apple */}
-        <g transform="translate(74, 56)">
-          <ellipse cx="0" cy="0" rx="6.5" ry="6" fill="#dc2626" />
-          <path d="M 0 -6 L 1 -9" stroke="#78350f" strokeWidth="1.2" strokeLinecap="round" />
-          <ellipse cx="-2" cy="-2" rx="1.5" ry="3" fill="#ffffff" opacity="0.4" transform="rotate(-20 -2 -2)" />
+        {/* 3. Perched Golden Feet & Harvest Base */}
+        <g>
+          {/* Turkey Feet Perched at base */}
+          <path d="M 41 72 L 41 78 M 38 78 L 44 78 M 39 76 L 41 78" stroke="#f59e0b" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+          <path d="M 55 72 L 55 78 M 52 78 L 58 78 M 57 76 L 55 78" stroke="#f59e0b" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+
+          {/* Rustic Harvest Perch Bar */}
+          <rect x="22" y="78" width="52" height="4.5" rx="2.2" fill="#451a03" />
+          <rect x="24" y="79" width="48" height="1.8" fill="#78350f" opacity="0.6" />
+
+          {/* Mini Autumn Leaves at the perch ends */}
+          {/* Golden Oak Leaf (Left) */}
+          <g transform="translate(24, 79) rotate(-35)">
+            <path d="M 0 0 C -6 -4, -8 -10, 0 -14 C 8 -10, 6 -4, 0 0 Z" fill="#eab308" />
+          </g>
+          {/* Crimson Maple Leaf (Right) */}
+          <g transform="translate(72, 79) rotate(35)">
+            <path d="M 0 0 C -5 -5, -8 -12, 0 -16 C 8 -12, 5 -5, 0 0 Z" fill="#dc2626" />
+          </g>
+          {/* Central Harvest Acorn */}
+          <ellipse cx="48" cy="80" rx="3.5" ry="2" fill="#451a03" />
+          <path d="M 45 80 C 45 85, 51 85, 51 80 Z" fill="#78350f" />
         </g>
 
-        {/* Purple Grapes Cluster */}
-        <g transform="translate(72, 70)">
-          <circle cx="-5" cy="0" r="3.2" fill="#7e22ce" />
-          <circle cx="0" cy="0" r="3.2" fill="#9333ea" />
-          <circle cx="5" cy="0" r="3.2" fill="#7e22ce" />
-          <circle cx="-2.5" cy="4" r="3" fill="#6b21a8" />
-          <circle cx="2.5" cy="4" r="3" fill="#7e22ce" />
-          <circle cx="0" cy="8" r="2.8" fill="#581c87" />
+        {/* 4. Turkey Head, Face & Pilgrim Hat */}
+        <g>
+          {/* Head */}
+          <circle cx="48" cy="38" r="9.5" fill="#92400e" />
+
+          {/* Rosy/Red Caruncle Cheeks */}
+          <circle cx="42" cy="40" r="3" fill="#dc2626" opacity="0.75" />
+          <circle cx="54" cy="40" r="3" fill="#dc2626" opacity="0.75" />
+
+          {/* Big Expressive Friendly Eyes */}
+          <ellipse cx="44" cy="36" rx="2.4" ry="3.2" fill="#ffffff" />
+          <circle cx="44.5" cy="36" r="1.5" fill="#1c1917" />
+          <circle cx="43.8" cy="35.2" r="0.6" fill="#ffffff" />
+
+          <ellipse cx="52" cy="36" rx="2.4" ry="3.2" fill="#ffffff" />
+          <circle cx="51.5" cy="36" r="1.5" fill="#1c1917" />
+          <circle cx="50.8" cy="35.2" r="0.6" fill="#ffffff" />
+
+          {/* Cute Pointed Golden Beak */}
+          <polygon points="45,38 51,38 48,46" fill="#f59e0b" stroke="#d97706" strokeWidth="0.8" />
+
+          {/* Wobbling Ruby-Red Snood / Wattle */}
+          <g style={{ transformOrigin: '46px 38px', animation: 'turkeySnoodSway 1.8s ease-in-out infinite' }}>
+            <path
+              d="M 46 38 C 42 41, 41 48, 45 51 C 48 51, 48 45, 47 41 Z"
+              fill="#dc2626"
+            />
+          </g>
+
+          {/* Classic Pilgrim Hat */}
+          {/* Wide Flat Brim */}
+          <ellipse cx="48" cy="29" rx="16" ry="3.5" fill="#18181b" />
+          {/* Tapered Crown */}
+          <path d="M 39 29 L 41 12 L 55 12 L 57 29 Z" fill="#27272a" />
+          {/* Festive Orange Hatband */}
+          <rect x="40" y="24" width="16" height="5" fill="#ea580c" />
+          {/* Golden Square Buckle */}
+          <rect x="45" y="23" width="6" height="7" rx="1" fill="#facc15" stroke="#18181b" strokeWidth="1" />
         </g>
 
-        {/* Tied Ribbon Knot at Horn Neck */}
-        <g transform="translate(36, 62)">
-          <ellipse cx="0" cy="0" rx="3.5" ry="2.5" fill="#b45309" />
-          <path d="M -3 0 Q -8 8 -11 14" stroke="#d97706" strokeWidth="2" strokeLinecap="round" fill="none" />
-          <path d="M 3 0 Q 7 8 9 14" stroke="#d97706" strokeWidth="2" strokeLinecap="round" fill="none" />
-        </g>
+        {/* 5. Clean Golden Braided Suspension Cords lifting Photo Frame */}
+        <g stroke="#f59e0b" strokeWidth="1.8" fill="none">
+          {/* Left Cord */}
+          <path d="M 34 82 L 34 153" strokeDasharray="3 2" />
+          <circle cx="34" cy="84" r="2" fill="#facc15" />
+          <circle cx="34" cy="116" r="1.8" fill="#facc15" />
+          <circle cx="34" cy="148" r="2.2" fill="#facc15" />
 
-        {/* Tether Knot & String lifting photo card */}
-        <ellipse cx="48" cy="88" rx="4" ry="2.5" fill="#78350f" />
-        <path
-          d="M 48 88 C 44 107 52 126 48 153"
-          stroke="#d97706"
-          strokeWidth="1.8"
-          strokeDasharray="4 2"
-          fill="none"
-        />
+          {/* Right Cord */}
+          <path d="M 62 82 L 62 153" strokeDasharray="3 2" />
+          <circle cx="62" cy="84" r="2" fill="#facc15" />
+          <circle cx="62" cy="116" r="1.8" fill="#facc15" />
+          <circle cx="62" cy="148" r="2.2" fill="#facc15" />
+        </g>
       </g>
     </svg>
+  )
+}
+
+function DiwaliTempleHorizon({
+  seasonalDate,
+  phase,
+}: {
+  seasonalDate?: Date
+  phase: SkyPhase
+}) {
+  const isNightOrDusk = phase === 'night' || phase === 'dusk'
+
+  return (
+    <div className="absolute bottom-0 left-0 right-0 h-48 pointer-events-none z-[2] select-none overflow-hidden">
+      <svg
+        viewBox="0 0 1920 188"
+        preserveAspectRatio="none"
+        className="w-full h-full"
+        aria-hidden="true"
+      >
+        <style>{`
+          @keyframes templeDiyaFlicker {
+            0%, 100% { opacity: 0.95; filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.95)); }
+            50% { opacity: 0.7; filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.65)); }
+          }
+          @keyframes rangoliGlow {
+            0%, 100% { opacity: 0.9; filter: drop-shadow(0 0 14px rgba(251, 191, 36, 0.85)); }
+            50% { opacity: 0.6; filter: drop-shadow(0 0 7px rgba(245, 158, 11, 0.5)); }
+          }
+          @keyframes flagFlutter {
+            0%, 100% { transform: skewY(-3deg) scaleY(1); }
+            50% { transform: skewY(5deg) scaleY(0.96); }
+          }
+          @keyframes ladiFlash {
+            0%, 100% { opacity: 0; transform: scale(0.6); }
+            10% { opacity: 1; transform: scale(1.4); }
+            22% { opacity: 0.2; transform: scale(0.8); }
+            35% { opacity: 0.95; transform: scale(1.3); }
+            48% { opacity: 0.1; transform: scale(0.7); }
+            62% { opacity: 1; transform: scale(1.5); }
+            78% { opacity: 0.25; transform: scale(0.9); }
+          }
+          @keyframes ladiSparkBurst1 {
+            0% { transform: translate(0, 0) scale(0.5); opacity: 1; }
+            100% { transform: translate(-14px, -18px) scale(1.4); opacity: 0; }
+          }
+          @keyframes ladiSparkBurst2 {
+            0% { transform: translate(0, 0) scale(0.5); opacity: 1; }
+            100% { transform: translate(16px, -16px) scale(1.3); opacity: 0; }
+          }
+          @keyframes ladiSparkBurst3 {
+            0% { transform: translate(0, 0) scale(0.5); opacity: 1; }
+            100% { transform: translate(2px, -24px) scale(1.5); opacity: 0; }
+          }
+          @keyframes anaarFountain {
+            0%, 100% { opacity: 0.95; }
+            50% { opacity: 0.75; }
+          }
+          @keyframes chakriSpin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+
+        {/* --- LAYER 1: Distant Indian Temple & Palace Skyline --- */}
+        {/* Sky Silhouette Base Color */}
+        <g fill={isNightOrDusk ? '#190a16' : '#7c2d12'} opacity={isNightOrDusk ? '0.92' : '0.78'}>
+          {/* Connecting Palace Walls & Kangura Battlements across horizon */}
+          <path d="M 0 188 L 0 98 Q 320 84, 640 92 Q 960 98, 1280 88 Q 1600 82, 1920 94 L 1920 188 Z" />
+
+          {/* Temple 1: Left Mandir Shikhara (x = 160) */}
+          <g transform="translate(160, 92)">
+            {/* Curvilinear Shikhara spire */}
+            <path d="M -24 0 C -22 -35, -12 -58, 0 -72 C 12 -58, 22 -35, 24 0 Z" />
+            {/* Ribbed Amalaka Disc */}
+            <ellipse cx="0" cy="-72" rx="10" ry="3.5" fill={isNightOrDusk ? '#2d1428' : '#9a3412'} />
+            {/* Pointed Golden Kalash Finial */}
+            <path d="M -3 -73 L 0 -84 L 3 -73 Z" fill="#facc15" />
+            <circle cx="0" cy="-84" r="2.2" fill="#facc15" />
+            {/* Saffron Temple Flag (Dhwaja) fluttering */}
+            <g style={{ transformOrigin: '0 -84px', animation: 'flagFlutter 2.5s ease-in-out infinite' }}>
+              <polygon points="0,-84 18,-79 0,-74" fill="#f97316" />
+            </g>
+          </g>
+
+          {/* Pavilion 1: Rajput Domed Chhatri (x = 360) */}
+          <g transform="translate(360, 90)">
+            {/* Carved stone pillars */}
+            <line x1="-16" y1="0" x2="-16" y2="-28" stroke={isNightOrDusk ? '#2d1428' : '#9a3412'} strokeWidth="3" />
+            <line x1="16" y1="0" x2="16" y2="-28" stroke={isNightOrDusk ? '#2d1428' : '#9a3412'} strokeWidth="3" />
+            <line x1="-6" y1="0" x2="-6" y2="-28" stroke={isNightOrDusk ? '#2d1428' : '#9a3412'} strokeWidth="2.5" />
+            <line x1="6" y1="0" x2="6" y2="-28" stroke={isNightOrDusk ? '#2d1428' : '#9a3412'} strokeWidth="2.5" />
+            {/* Scalloped Arch Beam */}
+            <path d="M -20 -28 Q 0 -36 20 -28 Z" fill={isNightOrDusk ? '#2d1428' : '#9a3412'} />
+            {/* Graceful Fluted Dome */}
+            <path d="M -22 -28 C -20 -44, -10 -52, 0 -54 C 10 -52, 20 -44, 22 -28 Z" />
+            {/* Kalash on dome */}
+            <path d="M -2 -54 L 0 -62 L 2 -54 Z" fill="#facc15" />
+            <circle cx="0" cy="-62" r="1.8" fill="#facc15" />
+          </g>
+
+          {/* Temple 2: Grand Central Mandir Shikhara (x = 580) */}
+          <g transform="translate(580, 88)">
+            {/* Flanking mini spires (Urushringas) */}
+            <path d="M -34 0 C -32 -26, -24 -42, -18 -48 C -14 -40, -12 -22, -12 0 Z" fill={isNightOrDusk ? '#220e20' : '#882f14'} />
+            <path d="M 12 0 C 12 -22, 14 -40, 18 -48 C 24 -42, 32 -26, 34 0 Z" fill={isNightOrDusk ? '#220e20' : '#882f14'} />
+            {/* Main Towering Shikhara */}
+            <path d="M -28 0 C -25 -42, -14 -70, 0 -88 C 14 -70, 25 -42, 28 0 Z" />
+            {/* Ribbed Amalaka Disc */}
+            <ellipse cx="0" cy="-88" rx="12" ry="4.2" fill={isNightOrDusk ? '#2d1428' : '#9a3412'} />
+            {/* Golden Kalash Spire */}
+            <path d="M -4 -89 L 0 -102 L 4 -89 Z" fill="#facc15" />
+            <circle cx="0" cy="-102" r="2.5" fill="#facc15" />
+            {/* High Saffron Flag fluttering */}
+            <g style={{ transformOrigin: '0 -102px', animation: 'flagFlutter 2.8s ease-in-out infinite', animationDelay: '0.4s' }}>
+              <polygon points="0,-102 22,-96 0,-90" fill="#f97316" />
+            </g>
+          </g>
+
+          {/* Monument 3: Tiered Temple Gopuram / Gateway (Center, x = 960) */}
+          <g transform="translate(960, 92)">
+            {/* Stepped tiers */}
+            <polygon points="-42,0 -36,-18 36,-18 42,0" />
+            <polygon points="-34,-18 -28,-36 28,-36 34,-18" fill={isNightOrDusk ? '#251022' : '#8c3116'} />
+            <polygon points="-26,-36 -20,-52 20,-52 26,-36" />
+            <polygon points="-18,-52 -14,-66 14,-66 18,-52" fill={isNightOrDusk ? '#2d1428' : '#9a3412'} />
+            {/* Barrel-vaulted roof (Sala) with 5 Golden Kalash Finials */}
+            <path d="M -16 -66 C -14 -74, 14 -74, 16 -66 Z" fill="#facc15" />
+            {[-12, -6, 0, 6, 12].map((kx) => (
+              <g key={kx} transform={`translate(${kx}, -74)`}>
+                <line x1="0" y1="0" x2="0" y2="-6" stroke="#facc15" strokeWidth="1.5" />
+                <circle cx="0" cy="-6" r="1.4" fill="#facc15" />
+              </g>
+            ))}
+          </g>
+
+          {/* Temple 4: Right Mandir Shikhara (x = 1340) */}
+          <g transform="translate(1340, 90)">
+            <path d="M -22 0 C -20 -32, -10 -54, 0 -68 C 10 -54, 20 -32, 22 0 Z" />
+            <ellipse cx="0" cy="-68" rx="9" ry="3.2" fill={isNightOrDusk ? '#2d1428' : '#9a3412'} />
+            <path d="M -3 -69 L 0 -80 L 3 -69 Z" fill="#facc15" />
+            <circle cx="0" cy="-80" r="2" fill="#facc15" />
+            <g style={{ transformOrigin: '0 -80px', animation: 'flagFlutter 2.2s ease-in-out infinite', animationDelay: '0.8s' }}>
+              <polygon points="0,-80 18,-75 0,-70" fill="#f97316" />
+            </g>
+          </g>
+
+          {/* Pavilion 2: Domed Chhatri (x = 1560) */}
+          <g transform="translate(1560, 90)">
+            <line x1="-15" y1="0" x2="-15" y2="-26" stroke={isNightOrDusk ? '#2d1428' : '#9a3412'} strokeWidth="3" />
+            <line x1="15" y1="0" x2="15" y2="-26" stroke={isNightOrDusk ? '#2d1428' : '#9a3412'} strokeWidth="3" />
+            <path d="M -20 -26 C -18 -40, -8 -48, 0 -50 C 8 -48, 18 -40, 20 -26 Z" />
+            <circle cx="0" cy="-56" r="1.8" fill="#facc15" />
+          </g>
+
+          {/* Temple 5: Far Right Shikhara (x = 1780) */}
+          <g transform="translate(1780, 92)">
+            <path d="M -20 0 C -18 -30, -9 -50, 0 -62 C 9 -50, 18 -30, 20 0 Z" />
+            <ellipse cx="0" cy="-62" rx="8" ry="3" fill={isNightOrDusk ? '#2d1428' : '#9a3412'} />
+            <circle cx="0" cy="-72" r="1.8" fill="#facc15" />
+          </g>
+        </g>
+
+        {/* --- LAYER 2: Foreground Tiered Temple Ghats & Stone Balustrades --- */}
+        {/* Tiered stone ghat steps descending to foreground */}
+        <path
+          d="M 0 188 L 0 102 L 1920 102 L 1920 188 Z"
+          fill={isNightOrDusk ? '#0d040b' : '#571c0b'}
+        />
+        {/* Step 1 Terrace */}
+        <line x1="0" y1="120" x2="1920" y2="120" stroke={isNightOrDusk ? '#1f0a1c' : '#7c2d12'} strokeWidth="4" />
+        {/* Step 2 Terrace */}
+        <line x1="0" y1="144" x2="1920" y2="144" stroke={isNightOrDusk ? '#1f0a1c' : '#7c2d12'} strokeWidth="4" />
+
+        {/* Ornate Sandstone Balustrade Railing with carved pillars */}
+        <g stroke={isNightOrDusk ? '#291024' : '#882f14'} strokeWidth="2.5">
+          {[120, 200, 280, 420, 500, 640, 720, 860, 1060, 1200, 1280, 1420, 1500, 1640, 1720, 1860].map((bx) => (
+            <g key={bx}>
+              <line x1={bx} y1="120" x2={bx} y2="102" />
+              <circle cx={bx} cy="101" r="2.5" fill={isNightOrDusk ? '#3b1635' : '#a83a1b'} />
+            </g>
+          ))}
+          <line x1="110" y1="104" x2="1870" y2="104" strokeWidth="2" />
+        </g>
+
+        {/* --- LAYER 3: DEEPOTSAV - Rows of Glowing Clay Diyas along ledges --- */}
+        <g>
+          {[
+            120, 200, 280, 360, 440, 520, 600, 680, 760, 840,
+            1080, 1160, 1240, 1320, 1400, 1480, 1560, 1640, 1720, 1800
+          ].map((dx, i) => (
+            <g key={dx} transform={`translate(${dx}, 100)`}>
+              {/* Terracotta Diya Bowl */}
+              <path d="M -7 3 Q 0 6 7 3 Q 0 -1 -7 3 Z" fill="#9a3412" stroke="#ea580c" strokeWidth="0.8" />
+              {/* Dancing Teardrop Flame with Glow */}
+              <g style={{ transformOrigin: '0 2px', animation: `templeDiyaFlicker ${1.6 + (i % 4) * 0.25}s ease-in-out infinite`, animationDelay: `${(i % 6) * 0.2}s` }}>
+                <path d="M 0 -6 C -2.8 -2, -2.8 2, 0 2 C 2.8 2, 2.8 -2, 0 -6 Z" fill="#facc15" />
+                <ellipse cx="0" cy="0" rx="1.2" ry="2.2" fill="#ffffff" />
+              </g>
+            </g>
+          ))}
+
+          {/* Additional Lower Terrace Diyas */}
+          {[480, 640, 800, 1120, 1280, 1440].map((dx, i) => (
+            <g key={dx} transform={`translate(${dx}, 142)`}>
+              <path d="M -6 3 Q 0 6 6 3 Q 0 -1 -6 3 Z" fill="#9a3412" stroke="#ea580c" strokeWidth="0.8" />
+              <g style={{ transformOrigin: '0 2px', animation: `templeDiyaFlicker ${1.8 + (i % 3) * 0.3}s ease-in-out infinite`, animationDelay: `${i * 0.3}s` }}>
+                <path d="M 0 -5 C -2.5 -1, -2.5 2, 0 2 C 2.5 2, 2.5 -1, 0 -5 Z" fill="#facc15" />
+                <ellipse cx="0" cy="0" rx="1" ry="1.8" fill="#ffffff" />
+              </g>
+            </g>
+          ))}
+        </g>
+
+        {/* --- LAYER 4: CENTER RADIANT RANGOLI MANDALA (x = 960) --- */}
+        <g transform="translate(960, 150)" style={{ animation: 'rangoliGlow 3.5s ease-in-out infinite' }}>
+          {/* Outer dotted gold boundary */}
+          <circle cx="0" cy="0" r="32" stroke="#facc15" strokeWidth="1.4" strokeDasharray="3 3" fill="none" opacity="0.9" />
+          {/* Saffron ring */}
+          <circle cx="0" cy="0" r="24" stroke="#f97316" strokeWidth="1.6" fill="none" opacity="0.85" />
+          {/* 8-pointed star / lotus mandala */}
+          <polygon points="0,-22 6,-8 20,-8 10,2 14,16 0,8 -14,16 -10,2 -20,-8 -6,-8" fill="#fbbf24" opacity="0.65" />
+          <polygon points="0,22 -6,8 -20,8 -10,-2 -14,-16 0,-8 14,-16 10,-2 20,8 6,8" fill="#f43f5e" opacity="0.55" />
+          {/* Inner jewel flower */}
+          <circle cx="0" cy="0" r="10" fill="#ea580c" opacity="0.9" />
+          <circle cx="0" cy="0" r="5" fill="#fef08a" />
+          {/* Center Diya */}
+          <g style={{ transformOrigin: '0 0', animation: 'templeDiyaFlicker 1.8s ease-in-out infinite' }}>
+            <path d="M 0 -8 C -2.5 -3, -2.5 0, 0 0 C 2.5 0, 2.5 -3, 0 -8 Z" fill="#ffffff" />
+          </g>
+        </g>
+
+        {/* --- LAYER 5: INDIAN FIREWORKS (PATAKA) & 1000-WALA STRING BOMB --- */}
+        {/* A. 1000-Wala String Bomb (Ladi) on the Right Terrace (x = 1420 to 1720) */}
+        <g id="ladi-1000-wala">
+          {/* Long snaking fuse rope */}
+          <path
+            d="M 1420 156 Q 1460 150, 1500 158 Q 1540 166, 1580 154 Q 1620 148, 1660 156 Q 1690 162, 1720 155"
+            stroke="#e2e8f0"
+            strokeWidth="1.6"
+            strokeDasharray="2 2"
+            fill="none"
+            opacity="0.75"
+          />
+
+          {/* Tightly linked Red Paper Firecrackers (Ladi Cracker Roll) */}
+          {Array.from({ length: 32 }, (_, i) => {
+            const px = 1425 + i * 9.2
+            const py = 156 + Math.sin(i * 0.7) * 4
+            const rot = Math.cos(i * 0.9) * 22
+            return (
+              <g key={i} transform={`translate(${px}, ${py}) rotate(${rot})`}>
+                {/* Red Cracker Tube */}
+                <rect x="-2" y="-6" width="4" height="12" rx="1" fill="#dc2626" stroke="#991b1b" strokeWidth="0.5" />
+                {/* Golden/Yellow Label Band in Middle */}
+                <rect x="-2" y="-1.5" width="4" height="3" fill="#facc15" />
+                {/* Green Fuse End */}
+                <circle cx="0" cy="-6" r="0.9" fill="#16a34a" />
+              </g>
+            )
+          })}
+
+          {/* ACTIVE DETONATING HEAD of 1000-Wala: Continuous Explosive Crackles! */}
+          <g transform="translate(1540, 156)">
+            {/* White-Hot Explosive Flash Burst */}
+            <circle cx="0" cy="0" r="14" fill="#ffffff" style={{ animation: 'ladiFlash 0.35s ease-out infinite' }} />
+            <circle cx="0" cy="0" r="22" fill="#fef08a" opacity="0.6" style={{ animation: 'ladiFlash 0.35s ease-out infinite', animationDelay: '0.08s' }} />
+
+            {/* Golden Spark Starbursts Spraying in all Directions */}
+            <g style={{ animation: 'ladiSparkBurst1 0.4s ease-out infinite' }}>
+              <line x1="0" y1="0" x2="-14" y2="-18" stroke="#facc15" strokeWidth="2.2" strokeLinecap="round" />
+              <line x1="0" y1="0" x2="-20" y2="-6" stroke="#fb923c" strokeWidth="1.8" strokeLinecap="round" />
+              <circle cx="-14" cy="-18" r="1.8" fill="#ffffff" />
+            </g>
+            <g style={{ animation: 'ladiSparkBurst2 0.38s ease-out infinite', animationDelay: '0.12s' }}>
+              <line x1="0" y1="0" x2="16" y2="-16" stroke="#facc15" strokeWidth="2.2" strokeLinecap="round" />
+              <line x1="0" y1="0" x2="22" y2="-4" stroke="#f59e0b" strokeWidth="1.8" strokeLinecap="round" />
+              <circle cx="16" cy="-16" r="1.8" fill="#ffffff" />
+            </g>
+            <g style={{ animation: 'ladiSparkBurst3 0.44s ease-out infinite', animationDelay: '0.22s' }}>
+              <line x1="0" y1="0" x2="2" y2="-24" stroke="#ffffff" strokeWidth="2.4" strokeLinecap="round" />
+              <line x1="0" y1="0" x2="-8" y2="-26" stroke="#facc15" strokeWidth="1.8" strokeLinecap="round" />
+              <line x1="0" y1="0" x2="10" y2="-22" stroke="#ea580c" strokeWidth="1.8" strokeLinecap="round" />
+              <circle cx="2" cy="-24" r="2" fill="#ffffff" />
+            </g>
+
+            {/* Scattered Red Paper Shreds Flying Off */}
+            <rect x="-8" y="-12" width="3" height="3" fill="#dc2626" opacity="0.8" transform="rotate(45 -8 -12)" />
+            <rect x="12" y="-14" width="3.5" height="2.5" fill="#dc2626" opacity="0.8" transform="rotate(-30 12 -14)" />
+            <rect x="-3" y="-18" width="3" height="2" fill="#facc15" opacity="0.9" />
+
+            {/* Translucent Smoke Puff */}
+            <circle cx="-4" cy="-16" r="12" fill="rgba(241, 245, 249, 0.35)" />
+            <circle cx="8" cy="-20" r="10" fill="rgba(241, 245, 249, 0.28)" />
+          </g>
+
+          {/* Secondary Cracker Detonator at x = 1620 */}
+          <g transform="translate(1620, 154)">
+            <circle cx="0" cy="0" r="12" fill="#ffffff" style={{ animation: 'ladiFlash 0.42s ease-out infinite', animationDelay: '0.18s' }} />
+            <g style={{ animation: 'ladiSparkBurst1 0.46s ease-out infinite', animationDelay: '0.16s' }}>
+              <line x1="0" y1="0" x2="14" y2="-16" stroke="#facc15" strokeWidth="2" strokeLinecap="round" />
+              <line x1="0" y1="0" x2="-12" y2="-14" stroke="#f97316" strokeWidth="1.8" strokeLinecap="round" />
+            </g>
+          </g>
+        </g>
+
+        {/* B. Anaar (Flowerpot Firework Fountain) on the Left Terrace (x = 260) */}
+        <g id="anaar-flowerpot" transform="translate(260, 150)">
+          {/* Earthenware Conical Pot with Gold/Green Pattern */}
+          <polygon points="-12,18 12,18 5,0 -5,0" fill="#9a3412" stroke="#ea580c" strokeWidth="1" />
+          <polygon points="-10,14 10,14 4,3 -4,3" fill="#15803d" />
+          <polygon points="-7,10 7,10 3,5 -3,5" fill="#facc15" />
+          {/* Golden Rim Nozzle */}
+          <ellipse cx="0" cy="0" rx="5" ry="2" fill="#facc15" />
+
+          {/* Towering Fountain of Golden Sparks Shooting 100px up! */}
+          <g style={{ animation: 'anaarFountain 1.2s ease-in-out infinite' }}>
+            {/* Center Main Geyser Jet */}
+            <path
+              d="M 0 0 Q -4 -45, -8 -85 M 0 0 Q 0 -50, 0 -95 M 0 0 Q 4 -45, 8 -85"
+              stroke="#ffffff"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              fill="none"
+              opacity="0.95"
+            />
+            {/* Cascading Outward Golden Spark Arcs */}
+            <path
+              d="M 0 0 Q -12 -35, -24 -70 Q -32 -60, -36 -45 M 0 0 Q 12 -35, 24 -70 Q 32 -60, 36 -45"
+              stroke="#facc15"
+              strokeWidth="2"
+              strokeDasharray="4 3"
+              fill="none"
+            />
+            <path
+              d="M 0 0 Q -18 -28, -36 -52 Q -45 -40, -48 -25 M 0 0 Q 18 -28, 36 -52 Q 45 -40, 48 -25"
+              stroke="#fb923c"
+              strokeWidth="1.6"
+              strokeDasharray="3 3"
+              fill="none"
+            />
+
+            {/* Glowing Apex Sparkle Burst */}
+            <circle cx="0" cy="-95" r="4.5" fill="#ffffff" style={{ filter: 'drop-shadow(0 0 6px #facc15)' }} />
+            <circle cx="-8" cy="-85" r="3.2" fill="#fef08a" />
+            <circle cx="8" cy="-85" r="3.2" fill="#fef08a" />
+            <circle cx="-24" cy="-70" r="2.5" fill="#facc15" />
+            <circle cx="24" cy="-70" r="2.5" fill="#facc15" />
+            <circle cx="-36" cy="-45" r="2" fill="#f97316" />
+            <circle cx="36" cy="-45" r="2" fill="#f97316" />
+          </g>
+        </g>
+
+        {/* C. Chakri (Ground Spinner Firework) on the Center-Left Courtyard (x = 720) */}
+        <g id="chakri-spinner" transform="translate(720, 154)">
+          {/* Glowing Ground Burn Mark Ring */}
+          <ellipse cx="0" cy="0" rx="18" ry="7" fill="rgba(245, 158, 11, 0.35)" />
+
+          {/* Rapidly Spinning Chakri Disc & Fiery Spiral Jets */}
+          <g style={{ animation: 'chakriSpin 0.32s linear infinite' }}>
+            {/* Center Spiral Hub */}
+            <circle cx="0" cy="0" r="6" fill="#facc15" stroke="#ea580c" strokeWidth="1.5" />
+            <circle cx="0" cy="0" r="2.5" fill="#ffffff" />
+
+            {/* 4 Tangential Golden Fire Jets */}
+            <path d="M 0 -6 Q 14 -12, 22 -6" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+            <path d="M 6 0 Q 12 14, 6 22" stroke="#facc15" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+            <path d="M 0 6 Q -14 12, -22 6" stroke="#f59e0b" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+            <path d="M -6 0 Q -12 -14, -6 -22" stroke="#ea580c" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+
+            {/* Whirling Particle Dots */}
+            <circle cx="20" cy="-7" r="1.8" fill="#ffffff" />
+            <circle cx="7" cy="20" r="1.8" fill="#ffffff" />
+            <circle cx="-20" cy="7" r="1.8" fill="#ffffff" />
+            <circle cx="-7" cy="-20" r="1.8" fill="#ffffff" />
+          </g>
+        </g>
+      </svg>
+    </div>
   )
 }
 
@@ -665,6 +1104,11 @@ function AutumnHarvestHorizon({
 }) {
   const isNightOrDusk = phase === 'night' || phase === 'dusk'
   const isDiwali = isDiwaliSeason(seasonalDate)
+
+  // During Diwali season, display the majestic Indian Temple & Ghat skyline with 1000-wala string bomb & fireworks
+  if (isDiwali) {
+    return <DiwaliTempleHorizon seasonalDate={seasonalDate} phase={phase} />
+  }
 
   return (
     <div className="absolute bottom-0 left-0 right-0 h-44 pointer-events-none z-[2] select-none overflow-hidden">

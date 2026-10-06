@@ -392,6 +392,11 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
   resize()
   window.addEventListener('resize', resize)
 
+  const handleTriggerGeese = () => {
+    nextFlock = 0
+  }
+  window.addEventListener('trigger-geese', handleTriggerGeese)
+
   const seed = (w: number, h: number, density: number) => {
     drops = Array.from({ length: Math.round(130 * density) }, () => ({
       x: Math.random() * (w + 120) - 60,
@@ -540,44 +545,191 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     ctx.translate(x, y)
     ctx.scale(dir * scale, scale)
 
-    const s = Math.sin(flap)
-    const wingLift = s * 8.5
+    const s = Math.sin(flap) // -1 on upstroke, +1 on downstroke
+    // Subtle body pitch with flap
+    ctx.rotate(s * 0.04)
 
-    // Plump goose body
-    ctx.fillStyle = color
+    // Palette: Authentically colored Canada Goose with contrast
+    const isDark = color.includes('1e293b') || color.includes('rgba(20') || color.includes('rgba(30')
+    const bodyMantle = isDark ? '#332922' : '#524337'
+    const breastBelly = isDark ? '#64748b' : '#94a3b8'
+    const blackPlumage = isDark ? '#0f172a' : '#18181b'
+    const whitePatch = '#ffffff'
+    const farWingColor = isDark ? '#1e1915' : '#382e25'
+    const nearWingColor = isDark ? '#2a221b' : '#45382e'
+    const primaryFeatherColor = isDark ? '#14110e' : '#231d17'
+
+    // 1. Far Wing (behind body)
+    // Upstroke: sweeps high back; Downstroke: pushes down/back
+    ctx.save()
+    ctx.fillStyle = farWingColor
     ctx.beginPath()
-    ctx.ellipse(0, 0, 9.5, 4.2, 0, 0, Math.PI * 2)
+    ctx.moveTo(2, -2)
+    if (s < 0) {
+      // High upstroke
+      const lift = -s * 14
+      ctx.quadraticCurveTo(-2, -8 - lift * 0.5, -8, -14 - lift)
+      ctx.quadraticCurveTo(-15, -18 - lift, -18, -15 - lift)
+      ctx.quadraticCurveTo(-12, -8 - lift * 0.6, -6, -2)
+    } else {
+      // Downstroke
+      const drop = s * 10
+      ctx.quadraticCurveTo(-4, -6, -14, 2 + drop)
+      ctx.quadraticCurveTo(-18, 0 + drop, -16, -4)
+      ctx.quadraticCurveTo(-8, -6, -6, -2)
+    }
+    ctx.closePath()
+    ctx.fill()
+    ctx.restore()
+
+    // 2. Tucked Black Webbed Feet (under tail)
+    ctx.fillStyle = blackPlumage
+    ctx.beginPath()
+    ctx.ellipse(-15, 2.5, 3.5, 1.2, 0.1, 0, Math.PI * 2)
     ctx.fill()
 
-    // Outstretched migratory neck & head
+    // 3. Short Black Wedge Tail
+    ctx.fillStyle = blackPlumage
     ctx.beginPath()
-    ctx.moveTo(7, -1)
-    ctx.quadraticCurveTo(13, -2, 16.5, -3)
-    ctx.lineTo(20, -3.2)
-    ctx.lineTo(17, -0.5)
-    ctx.lineTo(7, 2)
+    ctx.moveTo(-13, 0)
+    ctx.lineTo(-20, 1.5)
+    ctx.lineTo(-14, 3.2)
     ctx.closePath()
     ctx.fill()
 
-    // Canada Goose white cheek patch
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
+    // 4. Iconic Pure White "U"-Shaped Rump Band (distinctive Canada Goose field mark!)
+    ctx.fillStyle = whitePatch
     ctx.beginPath()
-    ctx.ellipse(16.5, -2, 1.5, 1, 0.35, 0, Math.PI * 2)
-    ctx.fill()
-
-    // Long graceful wings flapping
-    ctx.fillStyle = color
-    ctx.beginPath()
-    // Top wing
-    ctx.moveTo(-1, -1.5)
-    ctx.quadraticCurveTo(-6, -10 - wingLift, -13, -19 - wingLift)
-    ctx.quadraticCurveTo(-3, -11 - wingLift * 0.5, 2, -2.5)
-    // Bottom wing
-    ctx.moveTo(-1, 1.5)
-    ctx.quadraticCurveTo(-6, 10 + wingLift, -13, 19 + wingLift)
-    ctx.quadraticCurveTo(-3, 11 + wingLift * 0.5, 2, 2.5)
+    ctx.moveTo(-10, -1.8)
+    ctx.lineTo(-14, 0)
+    ctx.lineTo(-14, 3.2)
+    ctx.lineTo(-10, 3.8)
     ctx.closePath()
     ctx.fill()
+
+    // 5. Main Streamlined Body (Mantle & Breast)
+    // Dark grayish-brown mantle back
+    ctx.fillStyle = bodyMantle
+    ctx.beginPath()
+    ctx.ellipse(-1, 0.8, 11, 4.2, 0.08, 0, Math.PI * 2)
+    ctx.fill()
+
+    // Paler buff/tan breast and underbelly
+    ctx.fillStyle = breastBelly
+    ctx.beginPath()
+    ctx.ellipse(2, 2.2, 7.5, 2.8, 0.05, 0, Math.PI * 2)
+    ctx.fill()
+
+    // 6. Long Outstretched Slender Jet-Black Neck & Head
+    ctx.fillStyle = blackPlumage
+    ctx.beginPath()
+    // Base of neck smoothly joining chest
+    ctx.moveTo(6, 3.5)
+    ctx.quadraticCurveTo(12, 1.5, 18, 0)
+    // Head crown
+    ctx.quadraticCurveTo(24, -1, 27, -1.5)
+    // Pointed bill tip
+    ctx.lineTo(33, -1.8)
+    ctx.lineTo(27, 0.8)
+    // Throat
+    ctx.quadraticCurveTo(18, 1.8, 8, -2)
+    ctx.closePath()
+    ctx.fill()
+
+    // 7. Bold Signature White Cheek Patch ("Chinstrap")
+    // Runs cleanly from throat under chin up the side of head behind eye
+    ctx.fillStyle = whitePatch
+    ctx.beginPath()
+    ctx.moveTo(22, 0.5)
+    ctx.lineTo(24, -1.8)
+    ctx.lineTo(26, -1.5)
+    ctx.lineTo(25, 0.6)
+    ctx.closePath()
+    ctx.fill()
+
+    // Tiny dark eye highlight
+    ctx.fillStyle = '#09090b'
+    ctx.beginPath()
+    ctx.arc(26.5, -0.8, 0.7, 0, Math.PI * 2)
+    ctx.fill()
+
+    // 8. Near Wing (in front of body with realistic avian joint and primary feather notches)
+    ctx.save()
+    ctx.beginPath()
+    ctx.moveTo(1, 0)
+
+    if (s < 0) {
+      // UPSTROKE: Wing rises gracefully with wrist arched and feathers trailing
+      const lift = -s * 18
+      const elbowX = 0
+      const elbowY = -8 - lift * 0.4
+      const wristX = -8
+      const wristY = -18 - lift * 0.9
+
+      // Leading edge to wing tip
+      ctx.quadraticCurveTo(elbowX, elbowY, wristX, wristY)
+
+      // Primary feather fingers at wing tip
+      ctx.lineTo(wristX - 6, wristY + 4)
+      ctx.lineTo(wristX - 4, wristY + 7)
+      ctx.lineTo(wristX - 8, wristY + 10)
+      ctx.lineTo(wristX - 5, wristY + 13)
+
+      // Trailing edge back to body
+      ctx.quadraticCurveTo(-6, -4, -8, 1)
+      ctx.closePath()
+
+      ctx.fillStyle = nearWingColor
+      ctx.fill()
+
+      // Darker primary flight feathers accent
+      ctx.fillStyle = primaryFeatherColor
+      ctx.beginPath()
+      ctx.moveTo(wristX, wristY)
+      ctx.lineTo(wristX - 6, wristY + 4)
+      ctx.lineTo(wristX - 4, wristY + 7)
+      ctx.lineTo(wristX - 8, wristY + 10)
+      ctx.lineTo(wristX - 5, wristY + 13)
+      ctx.lineTo(wristX + 3, wristY + 8)
+      ctx.closePath()
+      ctx.fill()
+    } else {
+      // DOWNSTROKE: Powerful broad wing pushing down and back
+      const drop = s * 14
+      const elbowX = 2
+      const elbowY = 6 + drop * 0.35
+      const wristX = -10
+      const wristY = 16 + drop * 0.85
+
+      // Leading edge curving down
+      ctx.quadraticCurveTo(elbowX, elbowY, wristX, wristY)
+
+      // Primary feather tip notches trailing back
+      ctx.lineTo(wristX - 5, wristY - 4)
+      ctx.lineTo(wristX - 3, wristY - 7)
+      ctx.lineTo(wristX - 7, wristY - 10)
+      ctx.lineTo(wristX - 4, wristY - 13)
+
+      // Trailing edge returning to shoulder
+      ctx.quadraticCurveTo(-4, 0, -6, 0)
+      ctx.closePath()
+
+      ctx.fillStyle = nearWingColor
+      ctx.fill()
+
+      // Primary feather tip accents
+      ctx.fillStyle = primaryFeatherColor
+      ctx.beginPath()
+      ctx.moveTo(wristX, wristY)
+      ctx.lineTo(wristX - 5, wristY - 4)
+      ctx.lineTo(wristX - 3, wristY - 7)
+      ctx.lineTo(wristX - 7, wristY - 10)
+      ctx.lineTo(wristX - 4, wristY - 13)
+      ctx.lineTo(wristX + 4, wristY - 8)
+      ctx.closePath()
+      ctx.fill()
+    }
+    ctx.restore()
 
     ctx.restore()
   }
@@ -1159,6 +1311,7 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     const wantsFlies = (phase === 'night' || phase === 'dusk') && calm
     const wantsLeaves = november && calm
     const wantsLanterns = diwali && (phase === 'night' || phase === 'dusk') && calm
+    const wantsDiwaliFireworks = diwali && (phase === 'night' || phase === 'dusk') && calm
     const creaturesPossible = calm && (october || daylight || november)
     const witchPossible = october && calm
     const santaPossible = christmasDay && calm
@@ -1168,6 +1321,7 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
       wantsFlies ||
       wantsLeaves ||
       wantsLanterns ||
+      wantsDiwaliFireworks ||
       flock !== null ||
       witch !== null ||
       santa !== null ||
@@ -1204,23 +1358,23 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     if (creaturesPossible) {
       if (!flock && t > nextFlock) {
         const dir: 1 | -1 = Math.random() < 0.5 ? 1 : -1
-        const scale = november ? rand(0.9, 1.3) : rand(0.8, 1.3)
+        const scale = november ? rand(1.2, 1.55) : rand(0.8, 1.3)
         const gooseCount = 7 + Math.floor(Math.random() * 4) // 7-10 geese in V
         flock = {
-          x: dir === 1 ? -140 : w + 140,
+          x: dir === 1 ? -160 : w + 160,
           y: h * rand(0.08, 0.32),
-          speed: october ? rand(105, 150) : november ? rand(95, 135) : rand(90, 130),
+          speed: october ? rand(105, 150) : november ? rand(90, 125) : rand(90, 130),
           dir,
           scale,
           birds: november
             ? Array.from({ length: gooseCount }, (_, i) => {
-                if (i === 0) return { dx: 0, dy: 0, flapOffset: rand(0, Math.PI * 2) } // Leader
+                if (i === 0) return { dx: 0, dy: 0, flapOffset: 0 } // Leader
                 const arm = i % 2 === 1 ? 1 : -1
                 const row = Math.ceil(i / 2)
                 return {
-                  dx: -row * rand(30, 40),
-                  dy: arm * row * rand(16, 24),
-                  flapOffset: rand(0, Math.PI * 2),
+                  dx: -row * rand(38, 48),
+                  dy: arm * row * rand(20, 28),
+                  flapOffset: row * 0.42, // Graceful aerodynamic wave
                 }
               })
             : Array.from({ length: 4 + Math.floor(Math.random() * (october ? 6 : 4)) }, (_, i) => ({
@@ -1232,7 +1386,7 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
       }
       if (flock) {
         flock.x += flock.dir * flock.speed * dt
-        const gone = flock.dir === 1 ? flock.x - 400 > w : flock.x + 400 < 0
+        const gone = flock.dir === 1 ? flock.x - 450 > w : flock.x + 450 < 0
         if (gone) {
           flock = null
           nextFlock = t + rand(50_000, 130_000)
@@ -1251,7 +1405,7 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
             if (october) {
               drawBat(bx, by, t / 45 + b.flapOffset, flock.scale, color, flock.dir)
             } else if (november) {
-              drawGoose(bx, by, t / 65 + b.flapOffset, flock.scale, color, flock.dir)
+              drawGoose(bx, by, t / 195 + b.flapOffset, flock.scale, color, flock.dir)
             } else {
               drawBird(bx, by, t / 90 + b.flapOffset, flock.scale, color)
             }
@@ -1445,25 +1599,36 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
       }
     }
 
-    // January 1st: New Year fireworks and explosions!
-    if (newYearsDay) {
+    // Festive Fireworks: New Year's Day & Diwali Nights (Pataka & Rockets)!
+    const wantsFireworks = newYearsDay || wantsDiwaliFireworks
+    if (wantsFireworks) {
       if (t > nextRocket) {
-        nextRocket = t + rand(650, 1500)
-        const fireworkColors = [
-          '#facc15', // Gold
-          '#f43f5e', // Ruby
-          '#22c55e', // Emerald
-          '#38bdf8', // Cyan
-          '#a855f7', // Violet
-          '#fb923c', // Amber
-          '#ffffff', // Diamond
-        ]
-        const launchCount = Math.random() < 0.3 ? 2 : 1
+        nextRocket = t + rand(diwali ? 450 : 650, diwali ? 1200 : 1500)
+        const fireworkColors = diwali
+          ? [
+              '#facc15', // Sparkling Diwali Gold (Zari)
+              '#ef4444', // Festive Crimson (Gulal)
+              '#22c55e', // Emerald Green (Hara)
+              '#f97316', // Saffron Orange (Kesari)
+              '#c084fc', // Vibrant Violet
+              '#38bdf8', // Sky Blue
+              '#ffffff', // Diamond Sparkler
+            ]
+          : [
+              '#facc15', // Gold
+              '#f43f5e', // Ruby
+              '#22c55e', // Emerald
+              '#38bdf8', // Cyan
+              '#a855f7', // Violet
+              '#fb923c', // Amber
+              '#ffffff', // Diamond
+            ]
+        const launchCount = Math.random() < 0.35 ? 2 : 1
         for (let l = 0; l < launchCount; l++) {
           rockets.push({
-            x: w * rand(0.12, 0.88),
+            x: w * rand(0.08, 0.92),
             y: h + 10,
-            targetY: h * rand(0.1, 0.45),
+            targetY: h * rand(0.08, 0.45),
             speed: rand(620, 880),
             color: fireworkColors[Math.floor(Math.random() * fireworkColors.length)],
             trail: [],
@@ -1639,5 +1804,6 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
   return () => {
     cancelAnimationFrame(raf)
     window.removeEventListener('resize', resize)
+    window.removeEventListener('trigger-geese', handleTriggerGeese)
   }
 }
