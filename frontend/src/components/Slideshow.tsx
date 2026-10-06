@@ -85,7 +85,13 @@ export { getQueryParam }
 
 const PHASES: SkyPhase[] = ['dawn', 'day', 'dusk', 'night']
 const KINDS: SkyKind[] = ['clear', 'cloudy', 'rainy', 'snowy', 'stormy']
-const getPhaseOverride = () => PHASES.find((p) => p === getQueryParam('sky')) ?? null
+const getPhaseOverride = () => {
+  const p = PHASES.find((x) => x === getQueryParam('sky'))
+  if (p) return p
+  const h = getHolidayOverride()?.toLowerCase()
+  if (h === 'spooky') return 'night'
+  return null
+}
 const getKindOverride = () => KINDS.find((k) => k === getQueryParam('skyfx')) ?? null
 
 /** True when the URL carries a valid sky/skyfx/holiday preview override. */
@@ -666,6 +672,478 @@ function RunningElf() {
         <Elf variant="running" flip={direction === -1} />
       </motion.div>
     </motion.div>
+  )
+}
+
+function Spider({ scale = 1, hourglassColor = '#ef4444' }: { scale?: number; hourglassColor?: string }) {
+  return (
+    <g
+      transform={`scale(${scale})`}
+      className="filter drop-shadow-[0_3px_6px_rgba(0,0,0,0.6)]"
+    >
+      {/* 8 Creepy jointed spider legs */}
+      <g stroke="#18181b" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none">
+        {/* Left Legs */}
+        <path d="M -2 -4 Q -12 -12 -16 -4 L -14 6" />
+        <path d="M -3 -1 Q -16 -6 -20 3 L -16 12" />
+        <path d="M -3 3 Q -17 5 -18 14 L -13 22" />
+        <path d="M -2 7 Q -14 12 -15 22 L -9 27" />
+        {/* Right Legs */}
+        <path d="M 2 -4 Q 12 -12 16 -4 L 14 6" />
+        <path d="M 3 -1 Q 16 -6 20 3 L 16 12" />
+        <path d="M 3 3 Q 17 5 18 14 L 13 22" />
+        <path d="M 2 7 Q 14 12 15 22 L 9 27" />
+      </g>
+
+      {/* Spider Abdomen */}
+      <ellipse cx="0" cy="8" rx="6.5" ry="8.5" fill="#18181b" stroke="#27272a" strokeWidth="0.8" />
+      {/* Hourglass/spooky marking on back */}
+      <path
+        d="M -2.2 4 L 2.2 4 L 0 8 L 2.2 12 L -2.2 12 L 0 8 Z"
+        fill={hourglassColor}
+        opacity="0.9"
+      />
+
+      {/* Cephalothorax (Head) */}
+      <circle cx="0" cy="-1" r="4.5" fill="#27272a" />
+
+      {/* Chelicerae / fangs */}
+      <path d="M -1.8 -5 L -1.5 -8 M 1.8 -5 L 1.5 -8" stroke="#3f3f46" strokeWidth="1.2" strokeLinecap="round" />
+
+      {/* Glowing beady eyes */}
+      <g style={{ animation: 'spiderEyesPulse 2.5s ease-in-out infinite' }}>
+        <circle cx="-1.8" cy="-2" r="1.1" fill="#f87171" style={{ filter: 'drop-shadow(0 0 2.5px #ef4444)' }} />
+        <circle cx="1.8" cy="-2" r="1.1" fill="#f87171" style={{ filter: 'drop-shadow(0 0 2.5px #ef4444)' }} />
+        <circle cx="-3.2" cy="-0.8" r="0.7" fill="#fca5a5" />
+        <circle cx="3.2" cy="-0.8" r="0.7" fill="#fca5a5" />
+      </g>
+    </g>
+  )
+}
+
+function SpookyWebsAndSpiders() {
+  return (
+    <div className="absolute top-0 left-0 right-0 h-64 pointer-events-none z-[2] select-none overflow-hidden">
+      <svg
+        viewBox="0 0 1920 256"
+        preserveAspectRatio="none"
+        className="w-full h-full"
+        aria-hidden="true"
+      >
+        <style>{`
+          @keyframes spiderFloat1 {
+            0%, 100% { transform: translateY(18px); }
+            45%, 60% { transform: translateY(135px); }
+            82% { transform: translateY(32px); }
+          }
+          @keyframes spiderFloat2 {
+            0%, 100% { transform: translateY(22px); }
+            42%, 65% { transform: translateY(170px); }
+            80% { transform: translateY(40px); }
+          }
+          @keyframes spiderFloat3 {
+            0%, 100% { transform: translateY(15px); }
+            40%, 62% { transform: translateY(145px); }
+            78% { transform: translateY(30px); }
+          }
+          @keyframes spiderFloat4 {
+            0%, 100% { transform: translateY(20px); }
+            46%, 64% { transform: translateY(120px); }
+            84% { transform: translateY(35px); }
+          }
+          @keyframes spiderSway1 {
+            0%, 100% { transform: rotate(-5deg); }
+            50% { transform: rotate(5deg); }
+          }
+          @keyframes spiderSway2 {
+            0%, 100% { transform: rotate(6deg); }
+            50% { transform: rotate(-5deg); }
+          }
+          @keyframes spiderEyesPulse {
+            0%, 100% { opacity: 0.95; }
+            50% { opacity: 0.45; }
+          }
+        `}</style>
+
+        {/* --- Cobweb in Top-Left Corner --- */}
+        <g stroke="rgba(241, 245, 249, 0.42)" strokeWidth="1.2" fill="none">
+          <line x1="0" y1="0" x2="0" y2="180" />
+          <line x1="0" y1="0" x2="45" y2="165" />
+          <line x1="0" y1="0" x2="90" y2="135" />
+          <line x1="0" y1="0" x2="135" y2="95" />
+          <line x1="0" y1="0" x2="170" y2="50" />
+          <line x1="0" y1="0" x2="195" y2="0" />
+
+          <path d="M 0 38 Q 12 36, 26 26 Q 36 12, 42 0" />
+          <path d="M 0 78 Q 24 72, 48 55 Q 68 32, 85 0" />
+          <path d="M 0 125 Q 36 116, 75 92 Q 112 55, 138 0" />
+          <path d="M 0 175 Q 45 160, 90 132 Q 135 90, 188 0" />
+        </g>
+
+        {/* --- Cobweb in Top-Right Corner --- */}
+        <g stroke="rgba(241, 245, 249, 0.42)" strokeWidth="1.2" fill="none">
+          <line x1="1920" y1="0" x2="1920" y2="170" />
+          <line x1="1920" y1="0" x2="1875" y2="155" />
+          <line x1="1920" y1="0" x2="1830" y2="125" />
+          <line x1="1920" y1="0" x2="1785" y2="88" />
+          <line x1="1920" y1="0" x2="1750" y2="45" />
+          <line x1="1920" y1="0" x2="1730" y2="0" />
+
+          <path d="M 1920 35 Q 1908 34, 1895 24 Q 1885 10, 1880 0" />
+          <path d="M 1920 72 Q 1898 68, 1874 52 Q 1855 30, 1840 0" />
+          <path d="M 1920 118 Q 1886 110, 1848 85 Q 1815 50, 1790 0" />
+          <path d="M 1920 165 Q 1878 152, 1832 122 Q 1788 84, 1735 0" />
+        </g>
+
+        {/* Gossamer Ceiling Silk Droops */}
+        <path
+          d="M 195 0 Q 360 22, 520 0 M 520 0 Q 720 28, 920 0 M 920 0 Q 1160 26, 1400 0 M 1400 0 Q 1565 24, 1730 0"
+          stroke="rgba(241, 245, 249, 0.32)"
+          strokeWidth="1.1"
+          fill="none"
+        />
+
+        {/* --- SPIDER 1 (Left near corner, x = 240) --- */}
+        <g transform="translate(240, 0)">
+          <g style={{ animation: 'spiderFloat1 8.5s ease-in-out infinite' }}>
+            <line x1="0" y1="-260" x2="0" y2="0" stroke="rgba(241, 245, 249, 0.55)" strokeWidth="1" />
+            <g style={{ transformOrigin: '0 0', animation: 'spiderSway1 3.2s ease-in-out infinite' }}>
+              <Spider scale={0.9} hourglassColor="#ef4444" />
+            </g>
+          </g>
+        </g>
+
+        {/* --- SPIDER 2 (Center-Left, x = 680) --- */}
+        <g transform="translate(680, 0)">
+          <g style={{ animation: 'spiderFloat2 11s ease-in-out infinite', animationDelay: '1.8s' }}>
+            <line x1="0" y1="-260" x2="0" y2="0" stroke="rgba(241, 245, 249, 0.55)" strokeWidth="1" />
+            <g style={{ transformOrigin: '0 0', animation: 'spiderSway2 3.6s ease-in-out infinite' }}>
+              <Spider scale={1.05} hourglassColor="#f97316" />
+            </g>
+          </g>
+        </g>
+
+        {/* --- SPIDER 3 (Center-Right, x = 1260) --- */}
+        <g transform="translate(1260, 0)">
+          <g style={{ animation: 'spiderFloat3 9.8s ease-in-out infinite', animationDelay: '4.2s' }}>
+            <line x1="0" y1="-260" x2="0" y2="0" stroke="rgba(241, 245, 249, 0.55)" strokeWidth="1" />
+            <g style={{ transformOrigin: '0 0', animation: 'spiderSway1 2.9s ease-in-out infinite' }}>
+              <Spider scale={0.95} hourglassColor="#ef4444" />
+            </g>
+          </g>
+        </g>
+
+        {/* --- SPIDER 4 (Right near corner, x = 1710) --- */}
+        <g transform="translate(1710, 0)">
+          <g style={{ animation: 'spiderFloat4 8.2s ease-in-out infinite', animationDelay: '0.8s' }}>
+            <line x1="0" y1="-260" x2="0" y2="0" stroke="rgba(241, 245, 249, 0.55)" strokeWidth="1" />
+            <g style={{ transformOrigin: '0 0', animation: 'spiderSway2 3.4s ease-in-out infinite' }}>
+              <Spider scale={0.88} hourglassColor="#eab308" />
+            </g>
+          </g>
+        </g>
+      </svg>
+    </div>
+  )
+}
+
+function SpookyGraveyard() {
+  return (
+    <div className="absolute bottom-0 left-0 right-0 h-44 pointer-events-none z-[2] select-none overflow-hidden">
+      <svg
+        viewBox="0 0 1920 176"
+        preserveAspectRatio="none"
+        className="w-full h-full"
+        aria-hidden="true"
+      >
+        <style>{`
+          @keyframes skeletonArmWave {
+            0%, 100% { transform: rotate(0deg); }
+            35% { transform: rotate(-24deg); }
+            65% { transform: rotate(18deg); }
+          }
+          @keyframes skeletonLegSwingLeft {
+            0%, 100% { transform: rotate(-15deg); }
+            50% { transform: rotate(12deg); }
+          }
+          @keyframes skeletonLegSwingRight {
+            0%, 100% { transform: rotate(12deg); }
+            50% { transform: rotate(-15deg); }
+          }
+          @keyframes jackFlicker {
+            0%, 100% { opacity: 0.95; filter: drop-shadow(0 0 10px rgba(249, 115, 22, 0.95)); }
+            30% { opacity: 0.72; filter: drop-shadow(0 0 6px rgba(249, 115, 22, 0.7)); }
+            65% { opacity: 1; filter: drop-shadow(0 0 14px rgba(251, 146, 60, 1)); }
+            85% { opacity: 0.8; filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.75)); }
+          }
+          @keyframes ravenHeadTilt {
+            0%, 80%, 100% { transform: rotate(0deg); }
+            85% { transform: rotate(-18deg); }
+            92% { transform: rotate(15deg); }
+          }
+          @keyframes groundFogDrift {
+            0%, 100% { transform: translateX(0); opacity: 0.35; }
+            50% { transform: translateX(25px); opacity: 0.55; }
+          }
+          @keyframes ghostWisp {
+            0%, 100% { transform: translate(0, 0); opacity: 0.45; }
+            35% { transform: translate(35px, -14px); opacity: 0.75; }
+            70% { transform: translate(-25px, -8px); opacity: 0.4; }
+          }
+        `}</style>
+
+        {/* --- Background Rolling Hill Silhouette --- */}
+        <path
+          d="M 0 176 L 0 120 Q 300 102, 600 115 Q 900 128, 1200 106 Q 1500 92, 1920 110 L 1920 176 Z"
+          fill="#060813"
+          opacity="0.9"
+        />
+
+        {/* --- Victorian Iron Fence with Spiked Spears --- */}
+        <g stroke="#1e293b" strokeWidth="2" strokeLinecap="round">
+          {[270, 290, 310, 330, 350, 750, 770, 790, 810, 830, 850, 1370, 1390, 1410, 1430, 1530, 1550, 1570].map((fx) => (
+            <g key={fx}>
+              <line x1={fx} y1="140" x2={fx} y2="108" />
+              <path d={`M ${fx - 2} 108 L ${fx} 100 L ${fx + 2} 108 Z`} fill="#1e293b" />
+            </g>
+          ))}
+          <path d="M 265 118 L 355 118 M 265 132 L 355 132" />
+          <path d="M 745 118 L 855 118 M 745 132 L 855 132" />
+          <path d="M 1365 118 L 1435 118 M 1365 132 L 1435 132" />
+          <path d="M 1525 118 L 1575 118 M 1525 132 L 1575 132" />
+        </g>
+
+        {/* --- Foreground Hill Silhouette --- */}
+        <path
+          d="M 0 176 L 0 106 Q 240 92, 480 104 Q 720 116, 960 98 Q 1200 84, 1440 102 Q 1680 114, 1920 96 L 1920 176 Z"
+          fill="#0a0a0f"
+        />
+
+        {/* --- Spooky Gnarly Dead Tree (Left, x = 80) --- */}
+        <g fill="#09090b" stroke="#09090b" strokeLinejoin="round" strokeLinecap="round">
+          <path d="M 65 176 Q 78 135 84 100 Q 88 70 82 48 Q 92 68 96 100 Q 104 140 112 176 Z" />
+          <path d="M 85 85 Q 60 70 42 62 Q 32 58 24 64 M 42 62 Q 40 48 32 38" strokeWidth="3" fill="none" />
+          <path d="M 86 65 Q 108 52 135 56 Q 148 58 158 50 M 135 56 Q 145 42 160 38" strokeWidth="2.5" fill="none" />
+          <path d="M 82 48 Q 78 30 68 18 Q 62 10 52 8 M 68 18 Q 78 12 85 4" strokeWidth="2" fill="none" />
+        </g>
+
+        {/* --- Spooky Gnarly Dead Tree (Right, x = 1840) --- */}
+        <g fill="#09090b" stroke="#09090b" strokeLinejoin="round" strokeLinecap="round">
+          <path d="M 1822 176 Q 1836 135 1842 100 Q 1845 72 1840 52 Q 1850 72 1854 100 Q 1862 140 1870 176 Z" />
+          <path d="M 1842 85 Q 1820 68 1800 62 Q 1785 58 1774 65 M 1800 62 Q 1795 48 1785 40" strokeWidth="3" fill="none" />
+          <path d="M 1844 65 Q 1865 52 1888 56 Q 1902 58 1912 50" strokeWidth="2.5" fill="none" />
+          <path d="M 1840 52 Q 1834 30 1822 20 Q 1814 12 1804 10 M 1822 20 Q 1832 12 1840 6" strokeWidth="2" fill="none" />
+        </g>
+
+        {/* --- Tombstones & Headstones --- */}
+        {/* Tombstone 1: Classic "R.I.P." Headstone (x = 180, tilted) */}
+        <g transform="translate(180, 96) rotate(-5)">
+          <path d="M 0 45 L 0 16 C 0 2, 34 2, 34 16 L 34 45 Z" fill="#1e293b" stroke="#334155" strokeWidth="1" />
+          <path d="M 28 6 L 22 14 L 26 20" stroke="#0f172a" strokeWidth="0.8" fill="none" />
+          <text x="17" y="24" textAnchor="middle" fill="#64748b" fontSize="7.5" fontWeight="bold" fontFamily="serif" letterSpacing="1">
+            R.I.P.
+          </text>
+        </g>
+
+        {/* Tombstone 2: Celtic Cross (x = 380) with Perched Raven */}
+        <g transform="translate(380, 84)">
+          <rect x="-14" y="44" width="28" height="12" fill="#1e293b" />
+          <rect x="-11" y="38" width="22" height="7" fill="#334155" />
+          <rect x="-4" y="0" width="8" height="40" fill="#334155" />
+          <rect x="-14" y="10" width="28" height="7" fill="#334155" />
+          <circle cx="0" cy="13.5" r="9" stroke="#475569" strokeWidth="2" fill="none" />
+          <g transform="translate(0, -1)" style={{ transformOrigin: '0 0', animation: 'ravenHeadTilt 4s ease-in-out infinite' }}>
+            <ellipse cx="2" cy="-4" rx="4.5" ry="3.5" fill="#020617" />
+            <ellipse cx="6" cy="-7" rx="2.5" ry="2.5" fill="#020617" />
+            <path d="M 8 -7 L 13 -6.5 L 8 -5.5 Z" fill="#020617" />
+            <circle cx="6.5" cy="-7.5" r="0.6" fill="#facc15" />
+            <path d="M -2 -3 L -8 -1 L -3 -5 Z" fill="#020617" />
+          </g>
+        </g>
+
+        {/* Tombstone 3: Gothic Arched Headstone (x = 720) */}
+        <g transform="translate(720, 94)">
+          <path d="M 0 45 L 0 18 C 0 5, 30 5, 30 18 L 30 45 Z" fill="#1e293b" stroke="#334155" strokeWidth="1" />
+          <path d="M 15 12 L 15 28 M 9 18 L 21 18" stroke="#475569" strokeWidth="1.2" />
+        </g>
+
+        {/* Tombstone 4: Weathered Arched Stone with Crack (x = 980) */}
+        <g transform="translate(980, 90)">
+          <path d="M 0 45 L 0 16 C 0 4, 32 4, 32 16 L 32 45 Z" fill="#1e293b" stroke="#334155" strokeWidth="1" />
+          <path d="M 8 10 L 14 20 L 11 28" stroke="#0f172a" strokeWidth="0.8" fill="none" />
+          <circle cx="16" cy="18" r="4" fill="#334155" />
+          <circle cx="14.5" cy="17.5" r="1.1" fill="#0f172a" />
+          <circle cx="17.5" cy="17.5" r="1.1" fill="#0f172a" />
+        </g>
+
+        {/* Tombstone 5: Obelisk Monument (x = 1140) */}
+        <g transform="translate(1140, 80)">
+          <rect x="-10" y="52" width="20" height="10" fill="#1e293b" />
+          <polygon points="-7,52 7,52 4,6 -4,6" fill="#334155" />
+          <polygon points="-4,6 4,6 0,0" fill="#475569" />
+        </g>
+
+        {/* Tombstone 6: Tilted Sunken Grave (x = 1350) */}
+        <g transform="translate(1350, 98) rotate(10)">
+          <path d="M 0 45 L 0 14 C 0 2, 28 2, 28 14 L 28 45 Z" fill="#1e293b" stroke="#334155" strokeWidth="1" />
+          <text x="14" y="22" textAnchor="middle" fill="#64748b" fontSize="6.5" fontWeight="bold" fontFamily="serif">
+            RIP
+          </text>
+        </g>
+
+        {/* Tombstone 7 & Crypt: Wide stone slab where Skeleton 2 sits (x = 1440) */}
+        <g transform="translate(1440, 102)">
+          <rect x="0" y="10" width="56" height="30" rx="1" fill="#1e293b" stroke="#334155" strokeWidth="1" />
+          <rect x="-3" y="6" width="62" height="6" rx="1" fill="#334155" />
+        </g>
+
+        {/* Tombstone 8: Rounded Headstone (x = 1620) */}
+        <g transform="translate(1620, 92) rotate(-4)">
+          <path d="M 0 45 L 0 15 C 0 3, 26 3, 26 15 L 26 45 Z" fill="#1e293b" stroke="#334155" strokeWidth="1" />
+          <path d="M 13 10 L 13 22 M 8 14 L 18 14" stroke="#475569" strokeWidth="1" />
+        </g>
+
+        {/* --- SKELETON 1 (Rising from Grave & Waving Bony Arm, x = 480) --- */}
+        <g transform="translate(480, 95)">
+          <ellipse cx="0" cy="22" rx="26" ry="7" fill="#1c1917" />
+
+          {/* Ribcage & Spine */}
+          <line x1="0" y1="0" x2="0" y2="20" stroke="#f1f5f9" strokeWidth="2.5" />
+          <path d="M -7 6 Q 0 8 7 6" stroke="#f1f5f9" strokeWidth="1.8" fill="none" />
+          <path d="M -8 11 Q 0 13 8 11" stroke="#f1f5f9" strokeWidth="1.8" fill="none" />
+          <path d="M -7 16 Q 0 18 7 16" stroke="#f1f5f9" strokeWidth="1.8" fill="none" />
+
+          {/* Left Arm resting on dirt */}
+          <path d="M -8 4 L -16 12 L -22 17" stroke="#f1f5f9" strokeWidth="2" strokeLinecap="round" fill="none" />
+
+          {/* Skull */}
+          <ellipse cx="0" cy="-10" rx="8" ry="9" fill="#f1f5f9" />
+          <rect x="-4.5" y="-3" width="9" height="5" fill="#f1f5f9" rx="1" />
+          <ellipse cx="-2.8" cy="-11" rx="2.2" ry="2.6" fill="#09090b" />
+          <ellipse cx="2.8" cy="-11" rx="2.2" ry="2.6" fill="#09090b" />
+          <circle cx="-2.8" cy="-11" r="1.1" fill="#a3e635" style={{ filter: 'drop-shadow(0 0 3px #84cc16)' }} />
+          <circle cx="2.8" cy="-11" r="1.1" fill="#a3e635" style={{ filter: 'drop-shadow(0 0 3px #84cc16)' }} />
+          <polygon points="0,-7 -1,-5 1,-5" fill="#09090b" />
+          <path d="M -3 -0.5 L 3 -0.5 M -2 -2 L -2 1 M 0 -2 L 0 1 M 2 -2 L 2 1" stroke="#09090b" strokeWidth="0.8" />
+
+          {/* Right Arm raised from grave, waving clawed hand */}
+          <g style={{ transformOrigin: '8px 4px', animation: 'skeletonArmWave 3.6s ease-in-out infinite' }}>
+            <path d="M 8 4 L 18 -6 L 22 -18" stroke="#f1f5f9" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+            <path d="M 22 -18 L 20 -24 M 22 -18 L 23 -25 M 22 -18 L 26 -23" stroke="#f1f5f9" strokeWidth="1.4" strokeLinecap="round" />
+          </g>
+        </g>
+
+        {/* --- SKELETON 2 (Sitting on Crypt Slab & Swinging Bony Legs, x = 1468) --- */}
+        <g transform="translate(1468, 86)">
+          <line x1="0" y1="0" x2="0" y2="18" stroke="#f1f5f9" strokeWidth="2.2" />
+          <path d="M -6 5 Q 0 7 6 5" stroke="#f1f5f9" strokeWidth="1.6" fill="none" />
+          <path d="M -7 10 Q 0 12 7 10" stroke="#f1f5f9" strokeWidth="1.6" fill="none" />
+          <path d="M -6 15 Q 0 17 6 15" stroke="#f1f5f9" strokeWidth="1.6" fill="none" />
+
+          {/* Skull */}
+          <ellipse cx="0" cy="-9" rx="7.5" ry="8.5" fill="#f1f5f9" />
+          <rect x="-4" y="-2" width="8" height="4.5" fill="#f1f5f9" rx="1" />
+          <circle cx="-2.5" cy="-10" r="1.9" fill="#09090b" />
+          <circle cx="2.5" cy="-10" r="1.9" fill="#09090b" />
+          <circle cx="-2.5" cy="-10" r="1" fill="#a3e635" style={{ filter: 'drop-shadow(0 0 3px #84cc16)' }} />
+          <circle cx="2.5" cy="-10" r="1" fill="#a3e635" style={{ filter: 'drop-shadow(0 0 3px #84cc16)' }} />
+          <polygon points="0,-6 -0.8,-4.5 0.8,-4.5" fill="#09090b" />
+          <path d="M -2.5 0 L 2.5 0 M -1.5 -1.5 L -1.5 1 M 0 -1.5 L 0 1 M 1.5 -1.5 L 1.5 1" stroke="#09090b" strokeWidth="0.7" />
+
+          {/* Arms resting on stone */}
+          <path d="M -7 4 L -14 12 L -12 22" stroke="#f1f5f9" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+          <path d="M 7 4 L 14 12 L 12 22" stroke="#f1f5f9" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+
+          {/* Dangling Bony Legs swinging */}
+          <g style={{ transformOrigin: '-3px 20px', animation: 'skeletonLegSwingLeft 2.4s ease-in-out infinite' }}>
+            <path d="M -3 20 L -4 34 L -4 46 M -4 46 L 2 48" stroke="#f1f5f9" strokeWidth="2" strokeLinecap="round" fill="none" />
+          </g>
+          <g style={{ transformOrigin: '3px 20px', animation: 'skeletonLegSwingRight 2.4s ease-in-out infinite' }}>
+            <path d="M 3 20 L 4 34 L 5 46 M 5 46 L 11 48" stroke="#f1f5f9" strokeWidth="2" strokeLinecap="round" fill="none" />
+          </g>
+        </g>
+
+        {/* --- Half-buried skulls in grass --- */}
+        <g transform="translate(225, 136)">
+          <circle cx="0" cy="0" r="5" fill="#cbd5e1" />
+          <circle cx="-1.5" cy="-0.5" r="1.2" fill="#09090b" />
+          <circle cx="1.5" cy="-0.5" r="1.2" fill="#09090b" />
+          <circle cx="-1.5" cy="-0.5" r="0.6" fill="#a3e635" />
+          <circle cx="1.5" cy="-0.5" r="0.6" fill="#a3e635" />
+        </g>
+        <g transform="translate(1180, 128) rotate(-15)">
+          <circle cx="0" cy="0" r="4.5" fill="#cbd5e1" />
+          <circle cx="-1.4" cy="-0.5" r="1.1" fill="#09090b" />
+          <circle cx="1.4" cy="-0.5" r="1.1" fill="#09090b" />
+          <circle cx="-1.4" cy="-0.5" r="0.6" fill="#a3e635" />
+          <circle cx="1.4" cy="-0.5" r="0.6" fill="#a3e635" />
+        </g>
+
+        {/* --- Glowing Ground Jack-o'-Lanterns (3 Flickering Pumpkins) --- */}
+        <g transform="translate(260, 132)">
+          <path d="M 0 -8 Q -1 -12 2 -14" stroke="#15803d" strokeWidth="2" strokeLinecap="round" fill="none" />
+          <ellipse cx="0" cy="0" rx="11" ry="8.5" fill="#ea580c" stroke="#c2410c" strokeWidth="0.8" />
+          <ellipse cx="-4" cy="0" rx="6" ry="8" fill="#ea580c" />
+          <ellipse cx="4" cy="0" rx="6" ry="8" fill="#ea580c" />
+          <g style={{ animation: 'jackFlicker 2.8s ease-in-out infinite' }}>
+            <polygon points="-5,-3 -2,-1 -5,1" fill="#fef08a" />
+            <polygon points="5,-3 2,-1 5,1" fill="#fef08a" />
+            <polygon points="0,-1 -1.5,1 1.5,1" fill="#fef08a" />
+            <path d="M -6 3 L -3 5 L 0 3 L 3 5 L 6 3 Q 0 8 -6 3 Z" fill="#fef08a" />
+          </g>
+        </g>
+
+        <g transform="translate(880, 126)">
+          <path d="M 0 -9 Q 1 -13 -2 -15" stroke="#15803d" strokeWidth="2" strokeLinecap="round" fill="none" />
+          <ellipse cx="0" cy="0" rx="12" ry="9" fill="#c2410c" stroke="#9a3412" strokeWidth="0.8" />
+          <ellipse cx="-4.5" cy="0" rx="7" ry="8.5" fill="#ea580c" />
+          <ellipse cx="4.5" cy="0" rx="7" ry="8.5" fill="#ea580c" />
+          <g style={{ animation: 'jackFlicker 3.2s ease-in-out infinite', animationDelay: '0.9s' }}>
+            <polygon points="-5,-3 -2,-1 -5,1" fill="#fef08a" />
+            <polygon points="5,-3 2,-1 5,1" fill="#fef08a" />
+            <polygon points="0,-1 -1.5,1 1.5,1" fill="#fef08a" />
+            <path d="M -6 3 L -3 5 L 0 3 L 3 5 L 6 3 Q 0 8 -6 3 Z" fill="#fef08a" />
+          </g>
+        </g>
+
+        <g transform="translate(1700, 128)">
+          <path d="M 0 -8 Q -1 -12 2 -14" stroke="#15803d" strokeWidth="2" strokeLinecap="round" fill="none" />
+          <ellipse cx="0" cy="0" rx="10.5" ry="8" fill="#ea580c" stroke="#c2410c" strokeWidth="0.8" />
+          <ellipse cx="-4" cy="0" rx="5.5" ry="7.5" fill="#ea580c" />
+          <ellipse cx="4" cy="0" rx="5.5" ry="7.5" fill="#ea580c" />
+          <g style={{ animation: 'jackFlicker 2.6s ease-in-out infinite', animationDelay: '1.5s' }}>
+            <polygon points="-4.5,-2.5 -2,-0.5 -4.5,1.5" fill="#fef08a" />
+            <polygon points="4.5,-2.5 2,-0.5 4.5,1.5" fill="#fef08a" />
+            <path d="M -5 2.5 L -2 4.5 L 0 2.5 L 2 4.5 L 5 2.5 Q 0 7 -5 2.5 Z" fill="#fef08a" />
+          </g>
+        </g>
+
+        {/* --- Eerie Floating Will-o'-the-Wisp Ghost (x = 610, y = 80) --- */}
+        <g transform="translate(610, 80)">
+          <g style={{ animation: 'ghostWisp 6.5s ease-in-out infinite' }}>
+            <path
+              d="M -8 16 C -8 4, -8 -8, 0 -8 C 8 -8, 8 4, 8 16 C 5 13, 2 15, 0 12 C -2 15, -5 13, -8 16 Z"
+              fill="rgba(165, 243, 252, 0.55)"
+              style={{ filter: 'drop-shadow(0 0 8px rgba(34, 211, 238, 0.7))' }}
+            />
+            <circle cx="-2.5" cy="-1" r="1.1" fill="#083344" />
+            <circle cx="2.5" cy="-1" r="1.1" fill="#083344" />
+          </g>
+        </g>
+
+        {/* --- Rolling Eerie Ground Fog / Mist Layers --- */}
+        <g style={{ animation: 'groundFogDrift 8s ease-in-out infinite' }}>
+          <path
+            d="M 0 176 L 0 148 Q 240 138, 480 145 Q 720 152, 960 142 Q 1200 132, 1440 144 Q 1680 152, 1920 140 L 1920 176 Z"
+            fill="rgba(168, 85, 247, 0.12)"
+          />
+          <path
+            d="M 0 176 L 0 154 Q 300 146, 600 152 Q 900 158, 1200 148 Q 1500 142, 1920 150 L 1920 176 Z"
+            fill="rgba(56, 189, 248, 0.10)"
+          />
+        </g>
+      </svg>
+    </div>
   )
 }
 
@@ -1465,6 +1943,14 @@ export default function Slideshow({
 
       {/* String lights along the top sky background (behind photos & decorations) */}
       {isDecember(seasonalDate) && <StringLights />}
+
+      {/* October dusk/night spooky delights: webs & spiders dangling from ceiling, skeletons & graveyard at bottom */}
+      {isOctober(seasonalDate) && (phase === 'dusk' || phase === 'night') && (
+        <>
+          <SpookyWebsAndSpiders />
+          <SpookyGraveyard />
+        </>
+      )}
 
       {/* Photos. Plain sync presence: every layer here is already absolutely
           positioned, so popLayout's layout projection was measuring for
