@@ -323,6 +323,9 @@ interface FireworksRocket {
   speed: number
   color: string
   trail: { x: number; y: number; alpha: number }[]
+  isBottleRocket?: boolean
+  stickLength?: number
+  tilt?: number
 }
 
 interface FireworksSpark {
@@ -1311,7 +1314,7 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     const wantsFlies = (phase === 'night' || phase === 'dusk') && calm
     const wantsLeaves = november && calm
     const wantsLanterns = diwali && (phase === 'night' || phase === 'dusk') && calm
-    const wantsDiwaliFireworks = diwali && (phase === 'night' || phase === 'dusk') && calm
+    const wantsDiwaliFireworks = diwali && calm
     const creaturesPossible = calm && (october || daylight || november)
     const witchPossible = october && calm
     const santaPossible = christmasDay && calm
@@ -1625,13 +1628,34 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
             ]
         const launchCount = Math.random() < 0.35 ? 2 : 1
         for (let l = 0; l < launchCount; l++) {
+          let rx: number
+          let tilt = 0
+          const isBottle = diwali && Math.random() < 0.85
+          if (diwali) {
+            // Strictly constrain to side columns so central photo frame is never obstructed
+            const side = Math.random() < 0.5 ? 'left' : 'right'
+            if (side === 'left') {
+              rx = w * rand(0.03, 0.14)
+              tilt = rand(0.02, 0.06)
+            } else {
+              rx = w * rand(0.86, 0.97)
+              tilt = rand(-0.06, -0.02)
+            }
+          } else {
+            rx = w * rand(0.08, 0.92)
+            tilt = rand(-0.03, 0.03)
+          }
+
           rockets.push({
-            x: w * rand(0.08, 0.92),
-            y: h + 10,
-            targetY: h * rand(0.08, 0.45),
-            speed: rand(620, 880),
+            x: rx,
+            y: h + 15,
+            targetY: h * rand(0.08, 0.40),
+            speed: isBottle ? rand(720, 960) : rand(620, 880),
             color: fireworkColors[Math.floor(Math.random() * fireworkColors.length)],
             trail: [],
+            isBottleRocket: isBottle,
+            stickLength: rand(24, 30),
+            tilt,
           })
         }
       }
@@ -1639,7 +1663,22 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
       for (let i = rockets.length - 1; i >= 0; i--) {
         const r = rockets[i]
         r.y -= r.speed * dt
+        r.x += (r.tilt ?? 0) * r.speed * dt * 0.35
         r.trail.push({ x: r.x, y: r.y, alpha: 1 })
+
+        // Sputtering exhaust sparks shooting down behind bottle rocket
+        if (r.isBottleRocket && Math.random() < 0.55) {
+          sparks.push({
+            x: r.x + rand(-2, 2),
+            y: r.y + (r.stickLength || 26),
+            vx: rand(-16, 16),
+            vy: rand(60, 140),
+            color: Math.random() < 0.65 ? '#facc15' : '#ffffff',
+            alpha: 0.9,
+            decay: rand(3.0, 5.0),
+            size: rand(1.2, 2.4),
+          })
+        }
 
         if (r.y <= r.targetY) {
           // Burst apex: Flash
@@ -1673,10 +1712,69 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
 
       // Rocket heads & fizzing trails
       for (const r of rockets) {
-        ctx.fillStyle = '#ffffff'
-        ctx.beginPath()
-        ctx.arc(r.x, r.y, 2.4, 0, Math.PI * 2)
-        ctx.fill()
+        if (r.isBottleRocket) {
+          ctx.save()
+          ctx.translate(r.x, r.y)
+          ctx.rotate(r.tilt || 0)
+
+          const sl = r.stickLength || 26
+          // 1. Bamboo guide stick
+          ctx.strokeStyle = '#d97706'
+          ctx.lineWidth = 1.3
+          ctx.lineCap = 'round'
+          ctx.beginPath()
+          ctx.moveTo(0, 0)
+          ctx.lineTo(0, sl)
+          ctx.stroke()
+
+          // 2. Rocket Cartridge Body
+          ctx.fillStyle = r.color
+          ctx.fillRect(-2.5, -14, 5, 14)
+
+          // Metallic / Gold brand band
+          ctx.fillStyle = '#facc15'
+          ctx.fillRect(-2.5, -9, 5, 4)
+
+          // 3. Conical Nose Cone
+          ctx.fillStyle = '#ef4444'
+          ctx.beginPath()
+          ctx.moveTo(-3, -14)
+          ctx.lineTo(0, -22)
+          ctx.lineTo(3, -14)
+          ctx.closePath()
+          ctx.fill()
+
+          ctx.fillStyle = '#fef08a'
+          ctx.beginPath()
+          ctx.arc(0, -21, 1, 0, Math.PI * 2)
+          ctx.fill()
+
+          // 4. White-gold fiery exhaust jet at base nozzle
+          const fl = rand(7, 13)
+          const fw = rand(3, 5)
+          ctx.fillStyle = '#ffffff'
+          ctx.beginPath()
+          ctx.moveTo(-fw * 0.5, 0)
+          ctx.lineTo(0, fl)
+          ctx.lineTo(fw * 0.5, 0)
+          ctx.closePath()
+          ctx.fill()
+
+          ctx.fillStyle = '#f97316'
+          ctx.beginPath()
+          ctx.moveTo(-fw, 0)
+          ctx.lineTo(0, fl * 1.6)
+          ctx.lineTo(fw, 0)
+          ctx.closePath()
+          ctx.fill()
+
+          ctx.restore()
+        } else {
+          ctx.fillStyle = '#ffffff'
+          ctx.beginPath()
+          ctx.arc(r.x, r.y, 2.4, 0, Math.PI * 2)
+          ctx.fill()
+        }
 
         for (let k = r.trail.length - 1; k >= 0; k--) {
           const pt = r.trail[k]
@@ -1684,7 +1782,9 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
           if (pt.alpha <= 0) {
             r.trail.splice(k, 1)
           } else {
-            ctx.fillStyle = `rgba(254, 240, 138, ${pt.alpha})`
+            ctx.fillStyle = r.isBottleRocket
+              ? `rgba(251, 191, 36, ${pt.alpha * 0.85})`
+              : `rgba(254, 240, 138, ${pt.alpha})`
             ctx.fillRect(pt.x - 1, pt.y - 1, 2, 4)
           }
         }

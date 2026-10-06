@@ -778,6 +778,40 @@ function DiwaliTempleHorizon({
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
           }
+          @keyframes bottleFuseSpark {
+            0%, 100% { opacity: 0.3; transform: scale(0.7); }
+            50% { opacity: 1; transform: scale(1.4); }
+          }
+          @keyframes bottleRocketLaunch1 {
+            0%, 65% { transform: translateY(0); opacity: 1; }
+            70% { transform: translateY(-8px); opacity: 1; }
+            76% { transform: translateY(-45px); opacity: 0.95; }
+            82% { transform: translateY(-110px); opacity: 0.7; }
+            85% { transform: translateY(-170px); opacity: 0; }
+            86%, 100% { transform: translateY(0); opacity: 0; }
+          }
+          @keyframes bottleRocketLaunch2 {
+            0%, 65% { transform: translateY(0); opacity: 1; }
+            70% { transform: translateY(-8px); opacity: 1; }
+            76% { transform: translateY(-45px); opacity: 0.95; }
+            82% { transform: translateY(-110px); opacity: 0.7; }
+            85% { transform: translateY(-170px); opacity: 0; }
+            86%, 100% { transform: translateY(0); opacity: 0; }
+          }
+          @keyframes bottleExhaustBlast1 {
+            0%, 68% { opacity: 0; transform: scale(0.3); }
+            70% { opacity: 1; transform: scale(1.3); }
+            75% { opacity: 0.85; transform: translateY(-10px) scale(1.5); }
+            82% { opacity: 0; transform: translateY(-24px) scale(0.5); }
+            100% { opacity: 0; transform: scale(0.3); }
+          }
+          @keyframes bottleExhaustBlast2 {
+            0%, 68% { opacity: 0; transform: scale(0.3); }
+            70% { opacity: 1; transform: scale(1.3); }
+            75% { opacity: 0.85; transform: translateY(-10px) scale(1.5); }
+            82% { opacity: 0; transform: translateY(-24px) scale(0.5); }
+            100% { opacity: 0; transform: scale(0.3); }
+          }
         `}</style>
 
         {/* --- LAYER 1: Distant Indian Temple & Palace Skyline --- */}
@@ -1091,6 +1125,156 @@ function DiwaliTempleHorizon({
             <circle cx="7" cy="20" r="1.8" fill="#ffffff" />
             <circle cx="-20" cy="7" r="1.8" fill="#ffffff" />
             <circle cx="-7" cy="-20" r="1.8" fill="#ffffff" />
+          </g>
+        </g>
+
+        {/* D. Bottle Rocket Station 1: Left Open Terrace (x = 85, on Step 2 Terrace y = 144) */}
+        <g id="bottle-rocket-station-left" transform="translate(85, 144)">
+          {/* Stone step burn mark / ground ash */}
+          <ellipse cx="0" cy="0" rx="14" ry="4" fill="rgba(30, 20, 20, 0.4)" />
+
+          {/* Spare Rockets leaning beside the bottle */}
+          {/* Spare 1: Green cartridge, leaning back against bottle */}
+          <g transform="translate(-12, 0) rotate(14)">
+            <line x1="0" y1="0" x2="0" y2="-36" stroke="#b45309" strokeWidth="1.2" />
+            <rect x="-2" y="-36" width="4" height="12" rx="1" fill="#15803d" />
+            <rect x="-2" y="-31" width="4" height="3" fill="#facc15" />
+            <polygon points="-2.5,-36 0,-44 2.5,-36" fill="#dc2626" />
+          </g>
+          {/* Spare 2: Red cartridge, lying on stone terrace */}
+          <g transform="translate(10, -1) rotate(78)">
+            <line x1="0" y1="0" x2="0" y2="-32" stroke="#b45309" strokeWidth="1.1" />
+            <rect x="-2" y="-32" width="4" height="11" rx="1" fill="#dc2626" />
+            <rect x="-2" y="-28" width="4" height="2.5" fill="#facc15" />
+            <polygon points="-2,-32 0,-39 2,-32" fill="#ef4444" />
+          </g>
+
+          {/* Authentic Translucent Green Glass Soda Bottle */}
+          <g>
+            {/* Bottle Foot / Base */}
+            <path
+              d="M -6 0 L -6 -16 C -6 -21, -3 -24, -2.5 -27 L -2.5 -33 L -4 -33 L -4 -35 L 4 -35 L 4 -33 L 2.5 -33 L 2.5 -27 C 3 -24, 6 -21, 6 -16 L 6 0 Z"
+              fill="#065f46"
+              stroke="#047857"
+              strokeWidth="0.8"
+              opacity="0.92"
+            />
+            {/* Bottle Liquid / Dark Glass depth */}
+            <path
+              d="M -4.5 -1 L -4.5 -15 C -4.5 -19, -2 -22, -1.8 -25 L -1.8 -32 L 1.8 -32 L 1.8 -25 C 2 -22, 4.5 -19, 4.5 -15 L 4.5 -1 Z"
+              fill="#022c22"
+              opacity="0.45"
+            />
+            {/* Glass Specular Highlight Curve */}
+            <path
+              d="M -4.5 -2 L -4.5 -15 C -4.5 -19, -2.5 -22, -1.8 -26 L -1.8 -32"
+              stroke="rgba(255, 255, 255, 0.55)"
+              strokeWidth="0.8"
+              strokeLinecap="round"
+              fill="none"
+            />
+          </g>
+
+          {/* Active Bottle Rocket Inside Bottle Neck with Launch Cycle */}
+          <g style={{ animation: 'bottleRocketLaunch1 4.5s ease-in infinite' }}>
+            {/* Bamboo Guide Stick extending down into bottle and up */}
+            <line x1="0" y1="-8" x2="0" y2="-48" stroke="#d97706" strokeWidth="1.3" />
+            {/* Cylindrical Red Rocket Cartridge */}
+            <rect x="-3" y="-52" width="6" height="16" rx="1.5" fill="#dc2626" stroke="#b91c1c" strokeWidth="0.5" />
+            {/* Golden Label Band */}
+            <rect x="-3" y="-46" width="6" height="4.5" fill="#facc15" />
+            {/* Conical Red Nose Cone */}
+            <polygon points="-3.5,-52 0,-63 3.5,-52" fill="#ef4444" />
+            <circle cx="0" cy="-62" r="0.8" fill="#fef08a" />
+
+            {/* Sputtering Green Fuse Wire & Sparkling Fuse Tip */}
+            <path d="M 0 -36 Q 3.5 -34 4 -31" stroke="#22c55e" strokeWidth="0.9" fill="none" />
+            <g transform="translate(4, -31)">
+              <circle cx="0" cy="0" r="2.4" fill="#ffffff" style={{ animation: 'bottleFuseSpark 0.22s infinite' }} />
+              <circle cx="0" cy="0" r="4.5" fill="#facc15" opacity="0.6" style={{ animation: 'bottleFuseSpark 0.22s infinite' }} />
+            </g>
+          </g>
+
+          {/* Fiery Launch Blast at Bottle Rim (Erupts when rocket blasts off!) */}
+          <g transform="translate(0, -35)" style={{ animation: 'bottleExhaustBlast1 4.5s ease-out infinite' }}>
+            {/* Central White Flash */}
+            <circle cx="0" cy="0" r="7" fill="#ffffff" />
+            <ellipse cx="0" cy="0" rx="11" ry="6" fill="#facc15" opacity="0.8" />
+            {/* Sprays of golden sparks down & around bottle lip */}
+            <line x1="0" y1="0" x2="-8" y2="8" stroke="#facc15" strokeWidth="1.8" strokeLinecap="round" />
+            <line x1="0" y1="0" x2="8" y2="7" stroke="#facc15" strokeWidth="1.8" strokeLinecap="round" />
+            <line x1="0" y1="0" x2="-4" y2="12" stroke="#ea580c" strokeWidth="1.6" strokeLinecap="round" />
+            <line x1="0" y1="0" x2="5" y2="11" stroke="#ea580c" strokeWidth="1.6" strokeLinecap="round" />
+            <line x1="0" y1="0" x2="0" y2="14" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" />
+            {/* Smoke plume */}
+            <circle cx="-3" cy="-3" r="6" fill="rgba(241, 245, 249, 0.45)" />
+            <circle cx="4" cy="-5" r="7" fill="rgba(241, 245, 249, 0.35)" />
+          </g>
+        </g>
+
+        {/* E. Bottle Rocket Station 2: Right Open Terrace (x = 1825, on Step 2 Terrace y = 144) */}
+        <g id="bottle-rocket-station-right" transform="translate(1825, 144)">
+          {/* Ground ash */}
+          <ellipse cx="0" cy="0" rx="14" ry="4" fill="rgba(30, 20, 20, 0.4)" />
+
+          {/* Spare Rocket leaning to the right */}
+          <g transform="translate(11, 0) rotate(-16)">
+            <line x1="0" y1="0" x2="0" y2="-36" stroke="#b45309" strokeWidth="1.2" />
+            <rect x="-2" y="-36" width="4" height="12" rx="1" fill="#dc2626" />
+            <rect x="-2" y="-31" width="4" height="3" fill="#facc15" />
+            <polygon points="-2.5,-36 0,-44 2.5,-36" fill="#ef4444" />
+          </g>
+
+          {/* Authentic Translucent Amber Glass Soda Bottle */}
+          <g>
+            <path
+              d="M -6 0 L -6 -16 C -6 -21, -3 -24, -2.5 -27 L -2.5 -33 L -4 -33 L -4 -35 L 4 -35 L 4 -33 L 2.5 -33 L 2.5 -27 C 3 -24, 6 -21, 6 -16 L 6 0 Z"
+              fill="#92400e"
+              stroke="#78350f"
+              strokeWidth="0.8"
+              opacity="0.94"
+            />
+            <path
+              d="M -4.5 -1 L -4.5 -15 C -4.5 -19, -2 -22, -1.8 -25 L -1.8 -32 L 1.8 -32 L 1.8 -25 C 2 -22, 4.5 -19, 4.5 -15 L 4.5 -1 Z"
+              fill="#451a03"
+              opacity="0.45"
+            />
+            <path
+              d="M -4.5 -2 L -4.5 -15 C -4.5 -19, -2.5 -22, -1.8 -26 L -1.8 -32"
+              stroke="rgba(255, 255, 255, 0.5)"
+              strokeWidth="0.8"
+              strokeLinecap="round"
+              fill="none"
+            />
+          </g>
+
+          {/* Active Bottle Rocket Inside Bottle Neck with Staggered Launch Cycle */}
+          <g style={{ animation: 'bottleRocketLaunch2 4.8s ease-in infinite', animationDelay: '2.2s' }}>
+            <line x1="0" y1="-8" x2="0" y2="-48" stroke="#d97706" strokeWidth="1.3" />
+            {/* Cylindrical Saffron Rocket Cartridge */}
+            <rect x="-3" y="-52" width="6" height="16" rx="1.5" fill="#ea580c" stroke="#c2410c" strokeWidth="0.5" />
+            <rect x="-3" y="-46" width="6" height="4.5" fill="#16a34a" />
+            <polygon points="-3.5,-52 0,-63 3.5,-52" fill="#facc15" />
+            <circle cx="0" cy="-62" r="0.8" fill="#ffffff" />
+
+            {/* Sputtering Fuse Wire & Sparkling Fuse Tip */}
+            <path d="M 0 -36 Q -3.5 -34 -4 -31" stroke="#22c55e" strokeWidth="0.9" fill="none" />
+            <g transform="translate(-4, -31)">
+              <circle cx="0" cy="0" r="2.4" fill="#ffffff" style={{ animation: 'bottleFuseSpark 0.22s infinite', animationDelay: '0.1s' }} />
+              <circle cx="0" cy="0" r="4.5" fill="#facc15" opacity="0.6" style={{ animation: 'bottleFuseSpark 0.22s infinite', animationDelay: '0.1s' }} />
+            </g>
+          </g>
+
+          {/* Fiery Launch Blast at Bottle Rim (Staggered) */}
+          <g transform="translate(0, -35)" style={{ animation: 'bottleExhaustBlast2 4.8s ease-out infinite', animationDelay: '2.2s' }}>
+            <circle cx="0" cy="0" r="7" fill="#ffffff" />
+            <ellipse cx="0" cy="0" rx="11" ry="6" fill="#facc15" opacity="0.8" />
+            <line x1="0" y1="0" x2="-8" y2="8" stroke="#facc15" strokeWidth="1.8" strokeLinecap="round" />
+            <line x1="0" y1="0" x2="8" y2="7" stroke="#facc15" strokeWidth="1.8" strokeLinecap="round" />
+            <line x1="0" y1="0" x2="-4" y2="12" stroke="#ea580c" strokeWidth="1.6" strokeLinecap="round" />
+            <line x1="0" y1="0" x2="5" y2="11" stroke="#ea580c" strokeWidth="1.6" strokeLinecap="round" />
+            <circle cx="-3" cy="-3" r="6" fill="rgba(241, 245, 249, 0.45)" />
+            <circle cx="4" cy="-5" r="7" fill="rgba(241, 245, 249, 0.35)" />
           </g>
         </g>
       </svg>
