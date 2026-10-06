@@ -34,6 +34,15 @@ export function getSeasonalDate(now: Date = new Date()): Date {
     if (o === 'october' || o === 'oct' || o === 'halloween' || o === 'spooky') {
       return new Date(2026, 9, 15)
     }
+    if (o === 'november' || o === 'nov' || o === 'autumn') {
+      return new Date(2026, 10, 15)
+    }
+    if (o === 'diwali') {
+      return new Date(2026, 10, 8)
+    }
+    if (o === 'thanksgiving' || o === 'turkey') {
+      return new Date(2026, 10, 26)
+    }
     if (o === 'december' || o === 'dec' || o === 'elves' || o === 'elf') {
       return new Date(2026, 11, 15)
     }
@@ -50,6 +59,27 @@ export function getSeasonalDate(now: Date = new Date()): Date {
 export function isOctober(d?: Date): boolean {
   const date = d ?? getSeasonalDate()
   return date.getMonth() === 9
+}
+
+export function isNovember(d?: Date): boolean {
+  const date = d ?? getSeasonalDate()
+  return date.getMonth() === 10
+}
+
+export function isDiwaliSeason(d?: Date): boolean {
+  const date = d ?? getSeasonalDate()
+  const override = getHolidayOverride()?.toLowerCase()
+  if (override === 'diwali') return true
+  // In November, celebrate Diwali festival window (Nov 1 - Nov 12)
+  return date.getMonth() === 10 && date.getDate() >= 1 && date.getDate() <= 12
+}
+
+export function isThanksgivingWeek(d?: Date): boolean {
+  const date = d ?? getSeasonalDate()
+  const override = getHolidayOverride()?.toLowerCase()
+  if (override === 'thanksgiving' || override === 'turkey') return true
+  if (date.getMonth() !== 10) return false
+  return date.getDate() >= 22 && date.getDate() <= 30
 }
 
 export function isDecember(d?: Date): boolean {

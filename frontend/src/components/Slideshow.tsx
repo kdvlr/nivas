@@ -10,6 +10,9 @@ import {
   getSeasonalDate,
   getHolidayOverride,
   isOctober,
+  isNovember,
+  isDiwaliSeason,
+  isThanksgivingWeek,
   isDecember,
   isElfSeason,
   isChristmasDay,
@@ -360,6 +363,707 @@ function CandyCane({ seed = 0 }: { seed?: number }) {
         fill="none"
       />
     </svg>
+  )
+}
+
+function AutumnLeafTopper({ seed = 0 }: { seed?: number }) {
+  const flip = seed % 2 === 0
+  return (
+    <svg
+      width="112"
+      height="181"
+      viewBox="0 0 96 155"
+      className="pointer-events-none filter drop-shadow-[0_4px_12px_rgba(0,0,0,0.3)]"
+      aria-hidden="true"
+    >
+      <g transform={flip ? 'translate(96, 0) scale(-1, 1)' : undefined}>
+        {/* Amber Birch Leaf (Background tilted right) */}
+        <g transform="translate(56, 52) rotate(28)">
+          <path
+            d="M 0 0 C 12 -12, 18 -26, 0 -38 C -18 -26, -12 -12, 0 0 Z"
+            fill="#d97706"
+          />
+          <path d="M 0 0 L 0 -34" stroke="#92400e" strokeWidth="0.8" fill="none" />
+        </g>
+
+        {/* Golden Oak Leaf (Background tilted left) */}
+        <g transform="translate(38, 54) rotate(-32)">
+          <path
+            d="M 0 0 C -10 -8, -14 -16, -6 -20 C -15 -25, -12 -34, -2 -38 C -8 -44, 2 -50, 0 -52 C -2 -50, 8 -44, 2 -38 C 12 -34, 15 -25, 6 -20 C 14 -16, 10 -8, 0 0 Z"
+            fill="#eab308"
+          />
+          <path d="M 0 0 L 0 -48" stroke="#ca8a04" strokeWidth="1" fill="none" />
+        </g>
+
+        {/* Crimson Sugar Maple Leaf (Foreground Center) */}
+        <g transform="translate(48, 56) rotate(-4)">
+          <path
+            d="M 0 0 L 0 -8 
+               L -10 -4 L -18 -8 L -12 -14 
+               L -22 -22 L -10 -22 
+               L 0 -36 
+               L 10 -22 L 22 -22 
+               L 12 -14 L 18 -8 L 10 -4 
+               L 0 -8 Z"
+            fill="#dc2626"
+          />
+          {/* Maple veins */}
+          <path d="M 0 0 L 0 -32 M 0 -12 L -15 -19 M 0 -12 L 15 -19" stroke="#991b1b" strokeWidth="1.2" fill="none" />
+        </g>
+
+        {/* Acorn clustered in front */}
+        <g transform="translate(48, 62)">
+          {/* Nut */}
+          <path
+            d="M -7 4 C -7 14, 7 14, 7 4 Z"
+            fill="#78350f"
+          />
+          {/* Nut highlight */}
+          <ellipse cx="-2.5" cy="7" rx="1.5" ry="3" fill="#92400e" opacity="0.6" />
+          {/* Textured Cupule Cap */}
+          <ellipse cx="0" cy="3" rx="8" ry="4" fill="#451a03" />
+          <path d="M -6 3 Q 0 1 6 3 M -5 4 Q 0 2 5 4" stroke="#5c2607" strokeWidth="0.8" fill="none" />
+          {/* Stem */}
+          <path d="M 0 0 Q -2 -5 -4 -7" stroke="#451a03" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+        </g>
+
+        {/* Rustic Twine Bow */}
+        <g transform="translate(48, 60)">
+          <path d="M 0 0 C -12 -6, -14 4, 0 2 Z" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" />
+          <path d="M 0 0 C 12 -6, 14 4, 0 2 Z" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" />
+          <circle cx="0" cy="1" r="2.2" fill="#b45309" />
+          {/* Bow tails */}
+          <path d="M -2 2 Q -8 10 -10 16" stroke="#d97706" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+          <path d="M 2 2 Q 8 10 11 15" stroke="#d97706" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+        </g>
+
+        {/* Tether Knot & Rustic Twine lifting photo */}
+        <ellipse cx="48" cy="88" rx="3.5" ry="2.2" fill="#92400e" />
+        <path
+          d="M 48 88 C 43 108 53 128 48 153"
+          stroke="#ca8a04"
+          strokeWidth="1.8"
+          strokeDasharray="4 2"
+          fill="none"
+        />
+      </g>
+    </svg>
+  )
+}
+
+function DiyaTopper({ seed = 0 }: { seed?: number }) {
+  const diyaGradId = useId()
+  const flameGradId = useId()
+
+  return (
+    <svg
+      width="112"
+      height="181"
+      viewBox="0 0 96 155"
+      className="pointer-events-none filter drop-shadow-[0_0_18px_rgba(251,191,36,0.95)] drop-shadow-[0_0_32px_rgba(249,115,22,0.6)]"
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id={diyaGradId} x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#ea580c" />
+          <stop offset="60%" stopColor="#c2410c" />
+          <stop offset="100%" stopColor="#7c2d12" />
+        </linearGradient>
+        <radialGradient id={flameGradId} cx="50%" cy="60%" r="50%">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="25%" stopColor="#fef08a" />
+          <stop offset="65%" stopColor="#f59e0b" />
+          <stop offset="100%" stopColor="#dc2626" />
+        </radialGradient>
+      </defs>
+
+      <style>{`
+        @keyframes diyaFlameDance {
+          0%, 100% { transform: scale(1) rotate(-1deg); }
+          50% { transform: scale(1.08, 0.94) rotate(2deg); }
+        }
+        @keyframes diyaGlowPulse {
+          0%, 100% { opacity: 0.85; }
+          50% { opacity: 1; }
+        }
+      `}</style>
+
+      {/* Radiant ambient glow halo */}
+      <circle cx="48" cy="38" r="24" fill="rgba(251, 191, 36, 0.25)" style={{ animation: 'diyaGlowPulse 2.4s ease-in-out infinite' }} />
+
+      {/* Dancing Teardrop Flame */}
+      <g style={{ transformOrigin: '48px 46px', animation: 'diyaFlameDance 1.8s ease-in-out infinite' }}>
+        {/* Outer flame */}
+        <path
+          d="M 48 20 C 42 30, 40 42, 48 46 C 56 42, 54 30, 48 20 Z"
+          fill={`url(#${flameGradId})`}
+        />
+        {/* Inner white flame core */}
+        <ellipse cx="48" cy="40" rx="3.5" ry="5.5" fill="#ffffff" opacity="0.9" />
+      </g>
+
+      {/* Cotton wick */}
+      <path d="M 48 46 L 48 50" stroke="#451a03" strokeWidth="2.2" strokeLinecap="round" />
+
+      {/* Ornate Terracotta Diya Bowl */}
+      <g>
+        {/* Base shadow / foot */}
+        <ellipse cx="48" cy="74" rx="14" ry="4" fill="#5c1d06" />
+
+        {/* Diya Clay Body */}
+        <path
+          d="M 22 56 
+             C 22 72, 34 76, 48 76 
+             C 62 76, 74 72, 74 56 
+             C 74 54, 70 52, 65 52 
+             C 56 52, 52 48, 48 48 
+             C 44 48, 40 52, 31 52 
+             C 26 52, 22 54, 22 56 Z"
+          fill={`url(#${diyaGradId})`}
+        />
+
+        {/* Diya Rim Beading / Gold Filigree */}
+        <path
+          d="M 23 54 Q 48 58 73 54"
+          stroke="#facc15"
+          strokeWidth="1.8"
+          strokeDasharray="2.5 2.5"
+          fill="none"
+        />
+
+        {/* Decorative floral carving on bowl */}
+        <path
+          d="M 38 64 Q 48 70 58 64 M 44 67 Q 48 71 52 67"
+          stroke="#fbbf24"
+          strokeWidth="1.4"
+          strokeLinecap="round"
+          fill="none"
+        />
+        <circle cx="48" cy="62" r="2" fill="#facc15" />
+      </g>
+
+      {/* Golden Bead Tether Suspender lifting photo */}
+      <ellipse cx="48" cy="78" rx="3.5" ry="2" fill="#ca8a04" />
+      <g stroke="#facc15" strokeWidth="1.6" fill="none">
+        <path d="M 48 79 C 45 98 52 118 48 153" stroke="#f59e0b" strokeWidth="1.8" strokeDasharray="3 3" />
+        <circle cx="48" cy="85" r="1.6" fill="#facc15" />
+        <circle cx="47" cy="102" r="1.6" fill="#facc15" />
+        <circle cx="49" cy="120" r="1.6" fill="#facc15" />
+        <circle cx="48" cy="138" r="1.6" fill="#facc15" />
+      </g>
+    </svg>
+  )
+}
+
+function ThanksgivingTopper({ seed = 0 }: { seed?: number }) {
+  const flip = seed % 2 === 0
+  return (
+    <svg
+      width="112"
+      height="181"
+      viewBox="0 0 96 155"
+      className="pointer-events-none filter drop-shadow-[0_4px_12px_rgba(0,0,0,0.35)]"
+      aria-hidden="true"
+    >
+      <g transform={flip ? 'translate(96, 0) scale(-1, 1)' : undefined}>
+        {/* Cornucopia Woven Horn Basket */}
+        <path
+          d="M 22 24 
+             C 14 30, 16 46, 26 50 
+             C 34 54, 46 56, 56 60 
+             C 68 64, 76 68, 78 72 
+             C 74 74, 52 74, 38 68 
+             C 24 62, 14 50, 12 36 
+             C 10 26, 16 18, 22 24 Z"
+          fill="#78350f"
+        />
+        {/* Curled horn tip */}
+        <path
+          d="M 22 24 C 26 20, 24 14, 18 16 C 14 18, 14 24, 18 26"
+          stroke="#451a03"
+          strokeWidth="3.5"
+          strokeLinecap="round"
+          fill="none"
+        />
+        {/* Wicker Weave Texture Ribs */}
+        <path
+          d="M 18 34 Q 24 40 28 48 
+             M 28 38 Q 36 46 42 54 
+             M 38 44 Q 48 52 56 60 
+             M 50 50 Q 62 58 70 66"
+          stroke="#92400e"
+          strokeWidth="1.6"
+          fill="none"
+        />
+        {/* Cornucopia Rim Opening */}
+        <ellipse cx="64" cy="62" rx="16" ry="12" fill="#451a03" transform="rotate(-25 64 62)" />
+        <ellipse cx="64" cy="62" rx="16" ry="12" stroke="#b45309" strokeWidth="2.5" fill="none" transform="rotate(-25 64 62)" />
+
+        {/* Harvest Bounty overflowing from horn opening */}
+        {/* Flint/Indian Corn */}
+        <g transform="translate(62, 44) rotate(35)">
+          <path d="M 0 0 C 4 -8, 10 -16, 12 -24 C 10 -26, 6 -26, 4 -22 C 2 -14, -2 -8, 0 0 Z" fill="#eab308" />
+          <circle cx="6" cy="-14" r="1.2" fill="#b91c1c" />
+          <circle cx="4" cy="-8" r="1.2" fill="#78350f" />
+          <circle cx="8" cy="-18" r="1.2" fill="#ea580c" />
+          <path d="M 0 0 C -4 -4, -6 -12, -4 -16 M 2 0 C 6 -4, 10 -8, 12 -12" stroke="#ca8a04" strokeWidth="1.2" fill="none" />
+        </g>
+
+        {/* Mini Pumpkin Gourd */}
+        <g transform="translate(60, 62)">
+          <ellipse cx="0" cy="0" rx="9" ry="8" fill="#ea580c" />
+          <ellipse cx="-4" cy="0" rx="6" ry="7.5" fill="#f97316" />
+          <ellipse cx="4" cy="0" rx="6" ry="7.5" fill="#f97316" />
+          <ellipse cx="0" cy="0" rx="4" ry="8" fill="#fb923c" />
+          <path d="M 0 -8 C 0 -11, 2 -13, 4 -14" stroke="#16a34a" strokeWidth="1.6" strokeLinecap="round" fill="none" />
+        </g>
+
+        {/* Red Apple */}
+        <g transform="translate(74, 56)">
+          <ellipse cx="0" cy="0" rx="6.5" ry="6" fill="#dc2626" />
+          <path d="M 0 -6 L 1 -9" stroke="#78350f" strokeWidth="1.2" strokeLinecap="round" />
+          <ellipse cx="-2" cy="-2" rx="1.5" ry="3" fill="#ffffff" opacity="0.4" transform="rotate(-20 -2 -2)" />
+        </g>
+
+        {/* Purple Grapes Cluster */}
+        <g transform="translate(72, 70)">
+          <circle cx="-5" cy="0" r="3.2" fill="#7e22ce" />
+          <circle cx="0" cy="0" r="3.2" fill="#9333ea" />
+          <circle cx="5" cy="0" r="3.2" fill="#7e22ce" />
+          <circle cx="-2.5" cy="4" r="3" fill="#6b21a8" />
+          <circle cx="2.5" cy="4" r="3" fill="#7e22ce" />
+          <circle cx="0" cy="8" r="2.8" fill="#581c87" />
+        </g>
+
+        {/* Tied Ribbon Knot at Horn Neck */}
+        <g transform="translate(36, 62)">
+          <ellipse cx="0" cy="0" rx="3.5" ry="2.5" fill="#b45309" />
+          <path d="M -3 0 Q -8 8 -11 14" stroke="#d97706" strokeWidth="2" strokeLinecap="round" fill="none" />
+          <path d="M 3 0 Q 7 8 9 14" stroke="#d97706" strokeWidth="2" strokeLinecap="round" fill="none" />
+        </g>
+
+        {/* Tether Knot & String lifting photo card */}
+        <ellipse cx="48" cy="88" rx="4" ry="2.5" fill="#78350f" />
+        <path
+          d="M 48 88 C 44 107 52 126 48 153"
+          stroke="#d97706"
+          strokeWidth="1.8"
+          strokeDasharray="4 2"
+          fill="none"
+        />
+      </g>
+    </svg>
+  )
+}
+
+function AutumnHarvestHorizon({
+  seasonalDate,
+  phase,
+}: {
+  seasonalDate?: Date
+  phase: SkyPhase
+}) {
+  const isNightOrDusk = phase === 'night' || phase === 'dusk'
+  const isDiwali = isDiwaliSeason(seasonalDate)
+
+  return (
+    <div className="absolute bottom-0 left-0 right-0 h-44 pointer-events-none z-[2] select-none overflow-hidden">
+      <svg
+        viewBox="0 0 1920 176"
+        preserveAspectRatio="none"
+        className="w-full h-full"
+        aria-hidden="true"
+      >
+        <style>{`
+          @keyframes harvestDiyaFlicker {
+            0%, 100% { opacity: 0.95; filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.9)); }
+            50% { opacity: 0.7; filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.6)); }
+          }
+          @keyframes rangoliGlow {
+            0%, 100% { opacity: 0.85; filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.7)); }
+            50% { opacity: 0.55; filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.4)); }
+          }
+          @keyframes treeSway {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(1.2deg); }
+          }
+        `}</style>
+
+        {/* --- Background Rolling Hills Silhouette --- */}
+        <path
+          d="M 0 176 L 0 115 Q 320 85, 640 105 Q 960 125, 1280 95 Q 1600 80, 1920 102 L 1920 176 Z"
+          fill={isNightOrDusk ? '#1c1008' : '#78350f'}
+          opacity={isNightOrDusk ? '0.85' : '0.65'}
+        />
+
+        {/* Distant Rustic Barn on distant ridge */}
+        <g transform="translate(1120, 84)" opacity="0.8">
+          <polygon points="0,20 18,6 36,20 36,36 0,36" fill={isNightOrDusk ? '#2a140a' : '#991b1b'} />
+          <polygon points="12,14 18,9 24,14 24,22 12,22" fill={isNightOrDusk ? '#160a04' : '#ffffff'} />
+          <rect x="39" y="10" width="10" height="26" fill={isNightOrDusk ? '#201006' : '#64748b'} />
+          <ellipse cx="44" cy="10" rx="5" ry="3" fill={isNightOrDusk ? '#2a140a' : '#94a3b8'} />
+        </g>
+
+        {/* --- Foreground Rolling Ridge --- */}
+        <path
+          d="M 0 176 L 0 108 Q 280 88, 560 104 Q 840 120, 1120 98 Q 1400 82, 1680 100 Q 1820 106, 1920 94 L 1920 176 Z"
+          fill={isNightOrDusk ? '#0d0703' : '#451a03'}
+        />
+
+        {/* --- Autumn Trees (Oak, Maple, Birch) --- */}
+        {/* Tree 1: Golden Birch (Left, x = 110) */}
+        <g transform="translate(110, 110)">
+          <path d="M -3 45 Q 0 20 -2 0 Q 3 20 5 45 Z" fill="#e2e8f0" stroke="#64748b" strokeWidth="0.8" />
+          <path d="M 0 25 L -8 18 M 2 15 L 10 8" stroke="#64748b" strokeWidth="1.2" />
+          <g style={{ transformOrigin: '0 0', animation: 'treeSway 6s ease-in-out infinite' }}>
+            <circle cx="0" cy="-22" r="28" fill="#eab308" opacity="0.9" />
+            <circle cx="-16" cy="-15" r="20" fill="#facc15" opacity="0.95" />
+            <circle cx="16" cy="-18" r="22" fill="#ca8a04" opacity="0.9" />
+            <circle cx="0" cy="-34" r="18" fill="#fef08a" opacity="0.85" />
+          </g>
+        </g>
+
+        {/* Tree 2: Crimson Sugar Maple (x = 340) */}
+        <g transform="translate(340, 106)">
+          <path d="M -4 48 Q 0 22 -2 0 Q 4 22 6 48 Z" fill="#291206" />
+          <g style={{ transformOrigin: '0 0', animation: 'treeSway 7.5s ease-in-out infinite', animationDelay: '1.2s' }}>
+            <circle cx="0" cy="-24" r="32" fill="#b91c1c" opacity="0.92" />
+            <circle cx="-18" cy="-16" r="24" fill="#dc2626" opacity="0.95" />
+            <circle cx="18" cy="-20" r="24" fill="#991b1b" opacity="0.9" />
+            <circle cx="0" cy="-38" r="20" fill="#ef4444" opacity="0.85" />
+          </g>
+        </g>
+
+        {/* Tree 3: Amber Oak (Right, x = 1580) */}
+        <g transform="translate(1580, 102)">
+          <path d="M -5 50 Q 0 24 -2 0 Q 5 24 7 50 Z" fill="#291206" />
+          <g style={{ transformOrigin: '0 0', animation: 'treeSway 6.8s ease-in-out infinite', animationDelay: '0.6s' }}>
+            <circle cx="0" cy="-26" r="34" fill="#d97706" opacity="0.92" />
+            <circle cx="-20" cy="-18" r="26" fill="#f59e0b" opacity="0.95" />
+            <circle cx="20" cy="-22" r="26" fill="#b45309" opacity="0.9" />
+            <circle cx="0" cy="-42" r="22" fill="#fbbf24" opacity="0.85" />
+          </g>
+        </g>
+
+        {/* Tree 4: Deep Rust Maple (Right edge, x = 1820) */}
+        <g transform="translate(1820, 108)">
+          <path d="M -4 46 Q 0 22 -2 0 Q 4 22 6 46 Z" fill="#291206" />
+          <g style={{ transformOrigin: '0 0', animation: 'treeSway 7s ease-in-out infinite', animationDelay: '2s' }}>
+            <circle cx="0" cy="-22" r="28" fill="#9a3412" opacity="0.92" />
+            <circle cx="-16" cy="-14" r="22" fill="#c2410c" opacity="0.95" />
+            <circle cx="16" cy="-18" r="22" fill="#7c2d12" opacity="0.9" />
+          </g>
+        </g>
+
+        {/* --- Rustic Split-Rail Wooden Fence --- */}
+        <g stroke={isNightOrDusk ? '#3b2314' : '#78350f'} strokeWidth="2.5" strokeLinecap="round">
+          {[220, 260, 300, 480, 520, 560, 600, 1260, 1300, 1340, 1380, 1680, 1720, 1760].map((px) => (
+            <g key={px}>
+              <line x1={px} y1="134" x2={px} y2="100" />
+              <line x1={px - 4} y1="130" x2={px + 4} y2="104" strokeWidth="1.5" opacity="0.75" />
+            </g>
+          ))}
+          <path d="M 215 108 L 305 108 M 215 122 L 305 122" />
+          <path d="M 475 108 L 605 108 M 475 122 L 605 122" />
+          <path d="M 1255 108 L 1385 108 M 1255 122 L 1385 122" />
+          <path d="M 1675 108 L 1765 108 M 1675 122 L 1765 122" />
+        </g>
+
+        {/* --- Golden Round Hay Bales in the field --- */}
+        <g transform="translate(440, 118)">
+          <ellipse cx="0" cy="0" rx="14" ry="10" fill={isNightOrDusk ? '#5c3a1e' : '#b45309'} />
+          <ellipse cx="6" cy="0" rx="14" ry="10" fill={isNightOrDusk ? '#784d28' : '#d97706'} />
+          <ellipse cx="6" cy="0" rx="11" ry="8" stroke={isNightOrDusk ? '#5c3a1e' : '#b45309'} strokeWidth="1.2" fill="none" />
+        </g>
+        <g transform="translate(1420, 114)">
+          <ellipse cx="0" cy="0" rx="15" ry="11" fill={isNightOrDusk ? '#5c3a1e' : '#b45309'} />
+          <ellipse cx="7" cy="0" rx="15" ry="11" fill={isNightOrDusk ? '#784d28' : '#d97706'} />
+          <ellipse cx="7" cy="0" rx="12" ry="9" stroke={isNightOrDusk ? '#5c3a1e' : '#b45309'} strokeWidth="1.2" fill="none" />
+        </g>
+
+        {/* --- Harvest Field Pumpkins Scattered Around --- */}
+        <g>
+          <ellipse cx="236" cy="132" rx="7" ry="5.5" fill="#ea580c" />
+          <ellipse cx="244" cy="133" rx="6" ry="5" fill="#f97316" />
+          <path d="M 236 127 L 235 124 M 244 128 L 245 125" stroke="#15803d" strokeWidth="1.2" strokeLinecap="round" />
+
+          <ellipse cx="582" cy="130" rx="8" ry="6.2" fill="#c2410c" />
+          <ellipse cx="574" cy="132" rx="6.5" ry="5.2" fill="#ea580c" />
+
+          <ellipse cx="1320" cy="128" rx="8" ry="6" fill="#ea580c" />
+          <ellipse cx="1328" cy="129" rx="6.5" ry="5.2" fill="#f97316" />
+
+          <ellipse cx="1704" cy="128" rx="7.5" ry="5.8" fill="#c2410c" />
+        </g>
+
+        {/* --- DIWALI SPECIAL: Glowing Diyas & Radiant Rangoli --- */}
+        {isDiwali && (
+          <g>
+            {/* Glowing Clay Diyas on Fence Posts & Hill Crests */}
+            {[220, 300, 480, 600, 800, 960, 1120, 1260, 1380, 1680, 1760].map((dx, i) => (
+              <g key={dx} transform={`translate(${dx}, ${dx === 800 || dx === 960 || dx === 1120 ? 116 : 98})`}>
+                <path d="M -6 4 Q 0 7 6 4 Q 0 0 -6 4 Z" fill="#9a3412" stroke="#ea580c" strokeWidth="0.8" />
+                <g style={{ transformOrigin: '0 3px', animation: `harvestDiyaFlicker ${1.6 + (i % 4) * 0.3}s ease-in-out infinite`, animationDelay: `${(i % 5) * 0.25}s` }}>
+                  <path d="M 0 -5 C -2.5 -1, -2.5 3, 0 3 C 2.5 3, 2.5 -1, 0 -5 Z" fill="#facc15" />
+                  <ellipse cx="0" cy="1" rx="1.2" ry="2" fill="#ffffff" />
+                </g>
+              </g>
+            ))}
+
+            {/* Radiant Glowing Rangoli Geometric Mandala in Bottom Center (x = 960) */}
+            <g transform="translate(960, 142)" style={{ animation: 'rangoliGlow 3.5s ease-in-out infinite' }}>
+              <circle cx="0" cy="0" r="28" stroke="#facc15" strokeWidth="1.2" strokeDasharray="3 3" fill="none" opacity="0.85" />
+              <circle cx="0" cy="0" r="20" stroke="#f97316" strokeWidth="1.5" fill="none" opacity="0.9" />
+              <polygon points="0,-18 5,-7 17,-7 8,1 12,12 0,6 -12,12 -8,1 -17,-7 -5,-7" fill="#fbbf24" opacity="0.6" />
+              <polygon points="0,18 -5,7 -17,7 -8,-1 -12,-12 0,-6 12,-12 8,-1 17,7 5,7" fill="#f43f5e" opacity="0.5" />
+              <circle cx="0" cy="0" r="8" fill="#ea580c" opacity="0.85" />
+              <ellipse cx="0" cy="1" rx="4.5" ry="2.5" fill="#fef08a" />
+              <g style={{ transformOrigin: '0 0', animation: 'harvestDiyaFlicker 1.8s ease-in-out infinite' }}>
+                <path d="M 0 -8 C -2 -3, -2 0, 0 0 C 2 0, 2 -3, 0 -8 Z" fill="#ffffff" />
+              </g>
+            </g>
+          </g>
+        )}
+      </svg>
+    </div>
+  )
+}
+
+function Squirrel({ flip = false }: { flip?: boolean }) {
+  return (
+    <svg
+      width="72"
+      height="56"
+      viewBox="0 0 64 48"
+      className="pointer-events-none select-none filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)]"
+      style={{ transform: flip ? 'scaleX(-1)' : undefined }}
+      aria-hidden="true"
+    >
+      <style>{`
+        @keyframes squirrelTailWiggle {
+          0%, 100% { transform: rotate(0deg); }
+          50% { transform: rotate(8deg); }
+        }
+        @keyframes squirrelChew {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-1.2px); }
+        }
+      `}</style>
+
+      {/* Fluffy Bushy Tail arching over back */}
+      <g style={{ transformOrigin: '14px 34px', animation: 'squirrelTailWiggle 1.4s ease-in-out infinite' }}>
+        <path
+          d="M 14 34 
+             C 6 36, 0 28, 2 18 
+             C 4 8, 14 2, 22 4 
+             C 28 6, 26 14, 20 18 
+             C 14 22, 16 30, 20 34 Z"
+          fill="#b45309"
+        />
+        <path
+          d="M 10 24 C 6 16, 12 10, 18 10 C 20 12, 16 18, 14 24 Z"
+          fill="#d97706"
+        />
+      </g>
+
+      {/* Squirrel Body */}
+      <ellipse cx="28" cy="32" rx="14" ry="10" fill="#92400e" />
+      <ellipse cx="32" cy="34" rx="8" ry="6" fill="#fef3c7" opacity="0.85" />
+
+      {/* Scampering back leg & paw */}
+      <ellipse cx="18" cy="36" rx="6" ry="5" fill="#78350f" />
+      <path d="M 14 39 L 10 42 L 15 42 Z" fill="#78350f" />
+
+      {/* Squirrel Head & Ears */}
+      <g style={{ animation: 'squirrelChew 0.8s ease-in-out infinite' }}>
+        <ellipse cx="44" cy="24" rx="8" ry="7" fill="#92400e" />
+        <circle cx="48" cy="27" r="4.2" fill="#b45309" />
+        <path d="M 40 18 C 38 12, 42 12, 44 18 Z" fill="#78350f" />
+        <path d="M 41 17 C 40 14, 42 14, 43 17 Z" fill="#fef3c7" />
+        <circle cx="45" cy="22" r="1.8" fill="#1c1917" />
+        <circle cx="44.5" cy="21.5" r="0.6" fill="#ffffff" />
+        <circle cx="51" cy="25" r="1.1" fill="#1c1917" />
+      </g>
+
+      {/* Front Paws holding Acorn */}
+      <g>
+        <g transform="translate(48, 30)">
+          <ellipse cx="0" cy="2" rx="3.2" ry="4" fill="#78350f" />
+          <ellipse cx="0" cy="-1" rx="3.8" ry="2" fill="#451a03" />
+        </g>
+        <ellipse cx="45" cy="31" rx="3.5" ry="2.2" fill="#92400e" />
+        <ellipse cx="48" cy="34" rx="3.5" ry="2.2" fill="#92400e" />
+      </g>
+    </svg>
+  )
+}
+
+function RunningSquirrel() {
+  const [running, setRunning] = useState(false)
+  const [direction, setDirection] = useState<1 | -1>(1)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    timerRef.current = setTimeout(() => {
+      setDirection(Math.random() < 0.5 ? 1 : -1)
+      setRunning(true)
+    }, 18_000)
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [])
+
+  const handleAnimationComplete = () => {
+    setRunning(false)
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => {
+      setDirection(Math.random() < 0.5 ? 1 : -1)
+      setRunning(true)
+    }, 35_000 + Math.random() * 45_000)
+  }
+
+  if (!running) return null
+
+  return (
+    <motion.div
+      initial={{ x: direction === 1 ? -80 : window.innerWidth + 80 }}
+      animate={{ x: direction === 1 ? window.innerWidth + 80 : -80 }}
+      transition={{ duration: 6.8, ease: 'linear' }}
+      onAnimationComplete={handleAnimationComplete}
+      className="fixed bottom-1 pointer-events-none z-30 select-none"
+    >
+      <motion.div
+        animate={{ y: [0, -6, 0] }}
+        transition={{ duration: 0.24, repeat: Infinity, ease: 'easeInOut' }}
+      >
+        <Squirrel flip={direction === -1} />
+      </motion.div>
+    </motion.div>
+  )
+}
+
+function Turkey({ flip = false }: { flip?: boolean }) {
+  return (
+    <svg
+      width="84"
+      height="80"
+      viewBox="0 0 76 72"
+      className="pointer-events-none select-none filter drop-shadow-[0_3px_8px_rgba(0,0,0,0.35)]"
+      style={{ transform: flip ? 'scaleX(-1)' : undefined }}
+      aria-hidden="true"
+    >
+      <style>{`
+        @keyframes turkeyWattleSway {
+          0%, 100% { transform: rotate(0deg); }
+          50% { transform: rotate(14deg); }
+        }
+        @keyframes turkeyTailFan {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.05, 0.98); }
+        }
+      `}</style>
+
+      {/* Magnificent Fanned Tail Feathers */}
+      <g style={{ transformOrigin: '24px 44px', animation: 'turkeyTailFan 2s ease-in-out infinite' }}>
+        {[-50, -35, -20, -5, 10, 25, 40].map((deg, i) => (
+          <g key={deg} transform={`translate(24, 44) rotate(${deg}) translate(0, -32)`}>
+            <path d="M -4 16 L -5 -6 Q 0 -12 5 -6 L 4 16 Z" fill={i % 2 === 0 ? '#78350f' : '#b45309'} />
+            <path d="M -4.5 4 L 4.5 4 L 4.8 -2 L -4.8 -2 Z" fill="#d97706" />
+            <path d="M -4.8 -2 L 4.8 -2 Q 0 -10 -4.8 -2 Z" fill="#fde047" />
+          </g>
+        ))}
+      </g>
+
+      {/* Plump Turkey Body */}
+      <ellipse cx="36" cy="46" rx="16" ry="14" fill="#451a03" />
+      <path
+        d="M 28 42 C 26 50, 36 56, 44 48 C 42 42, 34 38, 28 42 Z"
+        fill="#78350f"
+      />
+
+      {/* Turkey Neck and Head */}
+      <path
+        d="M 44 44 C 48 36, 52 28, 50 20 C 53 22, 56 28, 52 44 Z"
+        fill="#b91c1c"
+      />
+      <circle cx="50" cy="20" r="7" fill="#b91c1c" />
+
+      {/* Pilgrim Hat on Turkey's Head */}
+      <g transform="translate(50, 14)">
+        <ellipse cx="0" cy="0" rx="10" ry="2.5" fill="#18181b" />
+        <polygon points="-6,0 6,0 4.5,-12 -4.5,-12" fill="#27272a" />
+        <rect x="-5" y="-3.5" width="10" height="3" fill="#ca8a04" />
+        <rect x="-2" y="-4.5" width="4" height="4.5" fill="#facc15" stroke="#18181b" strokeWidth="0.8" />
+      </g>
+
+      {/* Eye & Beak */}
+      <circle cx="53" cy="19" r="1.8" fill="#ffffff" />
+      <circle cx="54" cy="19" r="1" fill="#18181b" />
+      <polygon points="56,19 63,22 56,24" fill="#f59e0b" />
+
+      {/* Red Wattle & Snood */}
+      <g style={{ transformOrigin: '55px 22px', animation: 'turkeyWattleSway 1.2s ease-in-out infinite' }}>
+        <path
+          d="M 55 21 C 58 20, 60 26, 57 32 C 55 36, 52 34, 54 28 Z"
+          fill="#dc2626"
+        />
+      </g>
+
+      {/* Big Yellow Turkey Legs & Strutting Feet */}
+      <g stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round">
+        <line x1="32" y1="58" x2="30" y2="67" />
+        <path d="M 24 67 L 30 67 L 33 65 M 30 67 L 32 69" fill="none" />
+
+        <line x1="42" y1="58" x2="44" y2="67" />
+        <path d="M 38 67 L 44 67 L 47 65 M 44 67 L 46 69" fill="none" />
+      </g>
+    </svg>
+  )
+}
+
+function StruttingTurkey() {
+  const [strutting, setStrutting] = useState(false)
+  const [direction, setDirection] = useState<1 | -1>(1)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    timerRef.current = setTimeout(() => {
+      setDirection(Math.random() < 0.5 ? 1 : -1)
+      setStrutting(true)
+    }, 15_000)
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [])
+
+  const handleAnimationComplete = () => {
+    setStrutting(false)
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => {
+      setDirection(Math.random() < 0.5 ? 1 : -1)
+      setStrutting(true)
+    }, 30_000 + Math.random() * 40_000)
+  }
+
+  if (!strutting) return null
+
+  return (
+    <motion.div
+      initial={{ x: direction === 1 ? -90 : window.innerWidth + 90 }}
+      animate={{ x: direction === 1 ? window.innerWidth + 90 : -90 }}
+      transition={{ duration: 8.5, ease: 'linear' }}
+      onAnimationComplete={handleAnimationComplete}
+      className="fixed bottom-1 pointer-events-none z-30 select-none"
+    >
+      <motion.div
+        animate={{ y: [0, -7, 0] }}
+        transition={{ duration: 0.38, repeat: Infinity, ease: 'easeInOut' }}
+      >
+        <Turkey flip={direction === -1} />
+      </motion.div>
+    </motion.div>
   )
 }
 
@@ -1485,6 +2189,26 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
         </div>
       )
     }
+  } else if (isNovember(seasonalNow)) {
+    if (isDiwaliSeason(seasonalNow)) {
+      topElement = (
+        <div className="absolute bottom-[calc(100%-12px)] pointer-events-none select-none z-10">
+          <DiyaTopper seed={seedOffset} />
+        </div>
+      )
+    } else if (isThanksgivingWeek(seasonalNow)) {
+      topElement = (
+        <div className="absolute bottom-[calc(100%-12px)] pointer-events-none select-none z-10">
+          <ThanksgivingTopper seed={seedOffset} />
+        </div>
+      )
+    } else {
+      topElement = (
+        <div className="absolute bottom-[calc(100%-12px)] pointer-events-none select-none z-10">
+          <AutumnLeafTopper seed={seedOffset} />
+        </div>
+      )
+    }
   } else if (isDecember(seasonalNow)) {
     topElement = (
       <div className="absolute bottom-[calc(100%-12px)] pointer-events-none select-none z-10">
@@ -1964,6 +2688,11 @@ export default function Slideshow({
         <SpookyGraveyard />
       )}
 
+      {/* November autumn harvest countryside horizon (behind photos) */}
+      {isNovember(seasonalDate) && (
+        <AutumnHarvestHorizon seasonalDate={seasonalDate} phase={phase} />
+      )}
+
       {/* Photos. Plain sync presence: every layer here is already absolutely
           positioned, so popLayout's layout projection was measuring for
           nothing on every frame. */}
@@ -2001,6 +2730,12 @@ export default function Slideshow({
 
       {/* Holiday Delights (Running Elf across bottom bezel) */}
       {isElfSeason(seasonalDate) && <RunningElf />}
+
+      {/* November Autumn Delights: Running Squirrel (when not Thanksgiving week) */}
+      {isNovember(seasonalDate) && !isThanksgivingWeek(seasonalDate) && <RunningSquirrel />}
+
+      {/* Thanksgiving Week: Strutting Cartoon Turkey */}
+      {isThanksgivingWeek(seasonalDate) && <StruttingTurkey />}
 
       {/* Bottom right controls & Now Playing dock */}
       <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 z-[110] flex flex-col items-end gap-3 pointer-events-none">

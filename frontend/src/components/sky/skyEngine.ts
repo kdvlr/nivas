@@ -18,6 +18,8 @@ const rand = (a: number, b: number) => a + Math.random() * (b - a)
 import {
   getSeasonalDate,
   isOctober,
+  isNovember,
+  isDiwaliSeason,
   isDecember,
   isElfSeason,
   isChristmasDay,
@@ -288,6 +290,32 @@ interface FallingGift {
   ribbonColor: string
 }
 
+interface FallingLeaf {
+  x: number
+  baseX: number
+  y: number
+  size: number
+  speed: number
+  sway: number
+  angle: number
+  rotSpeed: number
+  flipSpeed: number
+  offset: number
+  leafType: 'maple' | 'oak' | 'birch'
+  color: string
+}
+
+interface SkyLantern {
+  x: number
+  baseX: number
+  y: number
+  size: number
+  speed: number
+  sway: number
+  offset: number
+  color: string
+}
+
 interface FireworksRocket {
   x: number
   y: number
@@ -326,6 +354,8 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
   let flakes: Flake[] = []
   let flies: Firefly[] = []
   let gifts: FallingGift[] = []
+  let leaves: FallingLeaf[] = []
+  let lanterns: SkyLantern[] = []
   let rockets: FireworksRocket[] = []
   let sparks: FireworksSpark[] = []
   let flashes: FireworksFlash[] = []
@@ -408,6 +438,35 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
         ribbonColor: pal.ribbon,
       }
     })
+
+    const leafColors = ['#dc2626', '#b91c1c', '#ea580c', '#c2410c', '#d97706', '#b45309', '#f59e0b']
+    const leafTypes: ('maple' | 'oak' | 'birch')[] = ['maple', 'oak', 'birch']
+    leaves = Array.from({ length: Math.round(26 * density) }, () => ({
+      x: Math.random() * w,
+      baseX: Math.random() * w,
+      y: Math.random() * h,
+      size: rand(14, 24),
+      speed: rand(34, 68),
+      sway: rand(22, 50),
+      angle: rand(0, Math.PI * 2),
+      rotSpeed: rand(-0.8, 0.8),
+      flipSpeed: rand(1.2, 2.4),
+      offset: rand(0, Math.PI * 2),
+      leafType: leafTypes[Math.floor(Math.random() * leafTypes.length)],
+      color: leafColors[Math.floor(Math.random() * leafColors.length)],
+    }))
+
+    const lanternColors = ['#f97316', '#ea580c', '#f59e0b', '#dc2626', '#eab308']
+    lanterns = Array.from({ length: Math.round(12 * density) }, () => ({
+      x: Math.random() * w,
+      baseX: Math.random() * w,
+      y: Math.random() * h,
+      size: rand(16, 26),
+      speed: rand(18, 36),
+      sway: rand(12, 28),
+      offset: rand(0, Math.PI * 2),
+      color: lanternColors[Math.floor(Math.random() * lanternColors.length)],
+    }))
   }
 
   const drawBird = (x: number, y: number, flap: number, scale: number, color: string) => {
@@ -464,6 +523,198 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     ctx.quadraticCurveTo(11, 3 - wingLift * 0.4, 15, -2 - wingLift)
     ctx.quadraticCurveTo(8, -4 - wingLift * 0.7, 3, -1)
     ctx.closePath()
+    ctx.fill()
+
+    ctx.restore()
+  }
+
+  const drawGoose = (
+    x: number,
+    y: number,
+    flap: number,
+    scale: number,
+    color: string,
+    dir: 1 | -1
+  ) => {
+    ctx.save()
+    ctx.translate(x, y)
+    ctx.scale(dir * scale, scale)
+
+    const s = Math.sin(flap)
+    const wingLift = s * 8.5
+
+    // Plump goose body
+    ctx.fillStyle = color
+    ctx.beginPath()
+    ctx.ellipse(0, 0, 9.5, 4.2, 0, 0, Math.PI * 2)
+    ctx.fill()
+
+    // Outstretched migratory neck & head
+    ctx.beginPath()
+    ctx.moveTo(7, -1)
+    ctx.quadraticCurveTo(13, -2, 16.5, -3)
+    ctx.lineTo(20, -3.2)
+    ctx.lineTo(17, -0.5)
+    ctx.lineTo(7, 2)
+    ctx.closePath()
+    ctx.fill()
+
+    // Canada Goose white cheek patch
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
+    ctx.beginPath()
+    ctx.ellipse(16.5, -2, 1.5, 1, 0.35, 0, Math.PI * 2)
+    ctx.fill()
+
+    // Long graceful wings flapping
+    ctx.fillStyle = color
+    ctx.beginPath()
+    // Top wing
+    ctx.moveTo(-1, -1.5)
+    ctx.quadraticCurveTo(-6, -10 - wingLift, -13, -19 - wingLift)
+    ctx.quadraticCurveTo(-3, -11 - wingLift * 0.5, 2, -2.5)
+    // Bottom wing
+    ctx.moveTo(-1, 1.5)
+    ctx.quadraticCurveTo(-6, 10 + wingLift, -13, 19 + wingLift)
+    ctx.quadraticCurveTo(-3, 11 + wingLift * 0.5, 2, 2.5)
+    ctx.closePath()
+    ctx.fill()
+
+    ctx.restore()
+  }
+
+  const drawLeaf = (leaf: FallingLeaf, t: number) => {
+    ctx.save()
+    ctx.translate(leaf.x, leaf.y)
+    ctx.rotate(leaf.angle)
+    // 3D tumble flip
+    const flip = Math.cos((t / 800) * leaf.flipSpeed + leaf.offset)
+    ctx.scale(1, flip)
+
+    const s = leaf.size
+    ctx.fillStyle = leaf.color
+    ctx.strokeStyle = 'rgba(60, 20, 5, 0.4)'
+    ctx.lineWidth = 0.8
+
+    if (leaf.leafType === 'maple') {
+      // Canadian Maple leaf: 5 lobes
+      ctx.beginPath()
+      ctx.moveTo(0, s * 0.45)
+      ctx.lineTo(0, s * 0.25)
+      // left lower lobe
+      ctx.lineTo(-s * 0.28, s * 0.15)
+      ctx.lineTo(-s * 0.42, s * 0.05)
+      ctx.lineTo(-s * 0.25, -s * 0.08)
+      // left middle lobe
+      ctx.lineTo(-s * 0.48, -s * 0.25)
+      ctx.lineTo(-s * 0.22, -s * 0.25)
+      // center lobe
+      ctx.lineTo(0, -s * 0.5)
+      // right middle lobe
+      ctx.lineTo(s * 0.22, -s * 0.25)
+      ctx.lineTo(s * 0.48, -s * 0.25)
+      // right lower lobe
+      ctx.lineTo(s * 0.25, -s * 0.08)
+      ctx.lineTo(s * 0.42, s * 0.05)
+      ctx.lineTo(s * 0.28, s * 0.15)
+      ctx.lineTo(0, s * 0.25)
+      ctx.closePath()
+      ctx.fill()
+
+      // Vein lines
+      ctx.beginPath()
+      ctx.moveTo(0, s * 0.45)
+      ctx.lineTo(0, -s * 0.42)
+      ctx.moveTo(0, 0)
+      ctx.lineTo(-s * 0.35, -s * 0.18)
+      ctx.moveTo(0, 0)
+      ctx.lineTo(s * 0.35, -s * 0.18)
+      ctx.stroke()
+    } else if (leaf.leafType === 'oak') {
+      // Rounded lobed oak leaf
+      ctx.beginPath()
+      ctx.moveTo(0, s * 0.5)
+      ctx.lineTo(0, s * 0.35)
+      ctx.bezierCurveTo(-s * 0.25, s * 0.28, -s * 0.35, s * 0.1, -s * 0.15, s * 0.02)
+      ctx.bezierCurveTo(-s * 0.4, -s * 0.08, -s * 0.42, -s * 0.26, -s * 0.18, -s * 0.3)
+      ctx.bezierCurveTo(-s * 0.3, -s * 0.42, -s * 0.15, -s * 0.55, 0, -s * 0.52)
+      ctx.bezierCurveTo(s * 0.15, -s * 0.55, s * 0.3, -s * 0.42, s * 0.18, -s * 0.3)
+      ctx.bezierCurveTo(s * 0.42, -s * 0.26, s * 0.4, -s * 0.08, s * 0.15, s * 0.02)
+      ctx.bezierCurveTo(s * 0.35, s * 0.1, s * 0.25, s * 0.28, 0, s * 0.35)
+      ctx.closePath()
+      ctx.fill()
+
+      // Central vein
+      ctx.beginPath()
+      ctx.moveTo(0, s * 0.5)
+      ctx.lineTo(0, -s * 0.45)
+      ctx.stroke()
+    } else {
+      // Birch: teardrop / heart serrated leaf
+      ctx.beginPath()
+      ctx.moveTo(0, s * 0.45)
+      ctx.lineTo(0, s * 0.3)
+      ctx.bezierCurveTo(-s * 0.38, s * 0.18, -s * 0.42, -s * 0.12, 0, -s * 0.5)
+      ctx.bezierCurveTo(s * 0.42, -s * 0.12, s * 0.38, s * 0.18, 0, s * 0.3)
+      ctx.closePath()
+      ctx.fill()
+
+      // Central vein
+      ctx.beginPath()
+      ctx.moveTo(0, s * 0.45)
+      ctx.lineTo(0, -s * 0.42)
+      ctx.stroke()
+    }
+
+    ctx.restore()
+  }
+
+  const drawLantern = (lantern: SkyLantern, t: number) => {
+    ctx.save()
+    ctx.translate(lantern.x, lantern.y)
+    const s = lantern.size
+    const flicker = Math.sin(t / 110 + lantern.offset) * 0.15 + 0.85
+
+    // Outer warm ambient glow halo
+    const glowRad = s * 1.5
+    const glow = ctx.createRadialGradient(0, -s * 0.1, s * 0.2, 0, -s * 0.1, glowRad)
+    glow.addColorStop(0, `rgba(251, 191, 36, ${0.45 * flicker})`)
+    glow.addColorStop(0.5, `rgba(249, 115, 22, ${0.2 * flicker})`)
+    glow.addColorStop(1, 'rgba(249, 115, 22, 0)')
+    ctx.fillStyle = glow
+    ctx.beginPath()
+    ctx.arc(0, -s * 0.1, glowRad, 0, Math.PI * 2)
+    ctx.fill()
+
+    // Lantern paper body (slightly tapered cylinder/dome)
+    const bodyGrad = ctx.createLinearGradient(-s * 0.5, -s * 0.7, s * 0.5, s * 0.5)
+    bodyGrad.addColorStop(0, '#fef08a') // bright warm yellow center
+    bodyGrad.addColorStop(0.3, '#f59e0b') // warm amber
+    bodyGrad.addColorStop(0.8, lantern.color) // festive orange/red
+    bodyGrad.addColorStop(1, '#b45309')
+
+    ctx.fillStyle = bodyGrad
+    ctx.beginPath()
+    // Domed top
+    ctx.moveTo(-s * 0.32, -s * 0.5)
+    ctx.quadraticCurveTo(0, -s * 0.72, s * 0.32, -s * 0.5)
+    // Tapering curved sides down to base
+    ctx.quadraticCurveTo(s * 0.46, 0, s * 0.28, s * 0.45)
+    ctx.lineTo(-s * 0.28, s * 0.45)
+    ctx.quadraticCurveTo(-s * 0.46, 0, -s * 0.32, -s * 0.5)
+    ctx.closePath()
+    ctx.fill()
+
+    // Bamboo/wire rim bottom opening
+    ctx.strokeStyle = '#78350f'
+    ctx.lineWidth = 1.2
+    ctx.beginPath()
+    ctx.ellipse(0, s * 0.45, s * 0.28, s * 0.08, 0, 0, Math.PI * 2)
+    ctx.stroke()
+
+    // Flame / inner light at bottom opening
+    ctx.fillStyle = `rgba(255, 255, 220, ${0.9 * flicker})`
+    ctx.beginPath()
+    ctx.ellipse(0, s * 0.38, s * 0.12, s * 0.16, 0, 0, Math.PI * 2)
     ctx.fill()
 
     ctx.restore()
@@ -895,6 +1146,8 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
 
     const seasonalDate = getSeasonalDate()
     const october = isOctober(seasonalDate)
+    const november = isNovember(seasonalDate)
+    const diwali = isDiwaliSeason(seasonalDate)
     const christmasDay = isChristmasDay(seasonalDate)
     const newYearsDay = isNewYearsDay(seasonalDate)
 
@@ -904,13 +1157,17 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     // element entirely in that case so the compositor skips it.
     const wantsWeather = kind === 'rainy' || kind === 'stormy' || kind === 'snowy'
     const wantsFlies = (phase === 'night' || phase === 'dusk') && calm
-    const creaturesPossible = calm && (october || daylight)
+    const wantsLeaves = november && calm
+    const wantsLanterns = diwali && (phase === 'night' || phase === 'dusk') && calm
+    const creaturesPossible = calm && (october || daylight || november)
     const witchPossible = october && calm
     const santaPossible = christmasDay && calm
 
     const active =
       wantsWeather ||
       wantsFlies ||
+      wantsLeaves ||
+      wantsLanterns ||
       flock !== null ||
       witch !== null ||
       santa !== null ||
@@ -943,44 +1200,58 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
       seed(w, h, densityFor(state))
     }
 
-    // Birds (non-October) or Bats (October)
+    // Birds (daylight), Bats (October), or Canada Geese in V-formation (November)
     if (creaturesPossible) {
       if (!flock && t > nextFlock) {
         const dir: 1 | -1 = Math.random() < 0.5 ? 1 : -1
-        const scale = rand(0.8, 1.3)
+        const scale = november ? rand(0.9, 1.3) : rand(0.8, 1.3)
+        const gooseCount = 7 + Math.floor(Math.random() * 4) // 7-10 geese in V
         flock = {
-          x: dir === 1 ? -120 : w + 120,
-          y: h * rand(0.08, 0.35),
-          speed: october ? rand(105, 150) : rand(90, 130),
+          x: dir === 1 ? -140 : w + 140,
+          y: h * rand(0.08, 0.32),
+          speed: october ? rand(105, 150) : november ? rand(95, 135) : rand(90, 130),
           dir,
           scale,
-          birds: Array.from({ length: 4 + Math.floor(Math.random() * (october ? 6 : 4)) }, (_, i) => ({
-            dx: -i * rand(24, 38),
-            dy: (i % 2 === 0 ? 1 : -1) * i * rand(6, 14),
-            flapOffset: rand(0, Math.PI * 2),
-          })),
+          birds: november
+            ? Array.from({ length: gooseCount }, (_, i) => {
+                if (i === 0) return { dx: 0, dy: 0, flapOffset: rand(0, Math.PI * 2) } // Leader
+                const arm = i % 2 === 1 ? 1 : -1
+                const row = Math.ceil(i / 2)
+                return {
+                  dx: -row * rand(30, 40),
+                  dy: arm * row * rand(16, 24),
+                  flapOffset: rand(0, Math.PI * 2),
+                }
+              })
+            : Array.from({ length: 4 + Math.floor(Math.random() * (october ? 6 : 4)) }, (_, i) => ({
+                dx: -i * rand(24, 38),
+                dy: (i % 2 === 0 ? 1 : -1) * i * rand(6, 14),
+                flapOffset: rand(0, Math.PI * 2),
+              })),
         }
       }
       if (flock) {
         flock.x += flock.dir * flock.speed * dt
-        const gone = flock.dir === 1 ? flock.x - 300 > w : flock.x + 300 < 0
+        const gone = flock.dir === 1 ? flock.x - 400 > w : flock.x + 400 < 0
         if (gone) {
           flock = null
-          nextFlock = t + rand(60_000, 140_000)
+          nextFlock = t + rand(50_000, 130_000)
         } else {
           const color =
             phase === 'night'
-              ? (october ? 'rgba(20,16,30,0.92)' : 'rgba(30,45,60,0.8)')
+              ? (october ? 'rgba(20,16,30,0.92)' : november ? '#1e293b' : 'rgba(30,45,60,0.8)')
               : phase === 'dusk'
-              ? (october ? 'rgba(35,20,45,0.88)' : 'rgba(30,45,60,0.8)')
+              ? (october ? 'rgba(35,20,45,0.88)' : november ? '#334155' : 'rgba(30,45,60,0.8)')
               : phase === 'dawn'
-              ? (october ? 'rgba(45,30,55,0.85)' : 'rgba(50,40,60,0.75)')
-              : (october ? 'rgba(30,30,40,0.85)' : 'rgba(30,45,60,0.8)')
+              ? (october ? 'rgba(45,30,55,0.85)' : november ? '#334155' : 'rgba(50,40,60,0.75)')
+              : (october ? 'rgba(30,30,40,0.85)' : november ? '#1e293b' : 'rgba(30,45,60,0.8)')
           for (const b of flock.birds) {
             const bx = flock.x + b.dx * flock.dir
-            const by = flock.y + b.dy + Math.sin(t / (october ? 450 : 900) + b.flapOffset) * (october ? 6 : 4)
+            const by = flock.y + b.dy + Math.sin(t / (october ? 450 : 800) + b.flapOffset) * (october ? 6 : 4)
             if (october) {
               drawBat(bx, by, t / 45 + b.flapOffset, flock.scale, color, flock.dir)
+            } else if (november) {
+              drawGoose(bx, by, t / 65 + b.flapOffset, flock.scale, color, flock.dir)
             } else {
               drawBird(bx, by, t / 90 + b.flapOffset, flock.scale, color)
             }
@@ -1144,6 +1415,33 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
         ctx.ellipse(s / 4, -s / 2 - 2, s / 4, s / 6, 0.4, 0, Math.PI * 2)
         ctx.fill()
         ctx.restore()
+      }
+    }
+
+    // November: swirling falling autumn leaves
+    if (wantsLeaves) {
+      for (const l of leaves) {
+        l.y += l.speed * dt
+        if (l.y > h + 30) {
+          l.y = -35
+          l.baseX = Math.random() * w
+        }
+        l.x = l.baseX + Math.sin(t / 1200 + l.offset) * l.sway
+        l.angle += l.rotSpeed * dt
+        drawLeaf(l, t)
+      }
+    }
+
+    // Diwali: floating sky lanterns gently ascending into the night sky
+    if (wantsLanterns) {
+      for (const lan of lanterns) {
+        lan.y -= lan.speed * dt
+        if (lan.y < -40) {
+          lan.y = h + 40
+          lan.baseX = Math.random() * w
+        }
+        lan.x = lan.baseX + Math.sin(t / 1800 + lan.offset) * lan.sway
+        drawLantern(lan, t)
       }
     }
 
