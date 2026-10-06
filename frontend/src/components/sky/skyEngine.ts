@@ -481,7 +481,7 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     ctx.translate(x, y)
     ctx.scale(dir * scale, scale)
 
-    const outlineColor = 'rgba(255, 255, 255, 0.8)'
+    const outlineColor = 'rgba(156, 163, 175, 0.95)' // Clean crisp neutral gray (#9ca3af)
 
     // 1. Broomstick
     ctx.strokeStyle = '#5c3a21'
@@ -492,9 +492,9 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     ctx.lineTo(30, -5)
     ctx.stroke()
 
-    // Broomstick thin light white outline highlight
+    // Broomstick thin gray outline highlight
     ctx.strokeStyle = outlineColor
-    ctx.lineWidth = 0.8
+    ctx.lineWidth = 0.6
     ctx.beginPath()
     ctx.moveTo(-32, 4.8)
     ctx.lineTo(30, -6.2)
@@ -511,7 +511,7 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     ctx.closePath()
     ctx.fill()
     ctx.strokeStyle = outlineColor
-    ctx.lineWidth = 1
+    ctx.lineWidth = 0.7
     ctx.stroke()
 
     // Straw twigs detail strokes
@@ -545,7 +545,7 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     ctx.closePath()
     ctx.fill()
     ctx.strokeStyle = outlineColor
-    ctx.lineWidth = 1
+    ctx.lineWidth = 0.7
     ctx.stroke()
 
     // Torso & sitting legs
@@ -561,12 +561,12 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     ctx.closePath()
     ctx.fill()
     ctx.strokeStyle = outlineColor
-    ctx.lineWidth = 1
+    ctx.lineWidth = 0.7
     ctx.stroke()
 
     // Arm reaching forward holding broomstick (outline undercoat + dark fill)
     ctx.strokeStyle = outlineColor
-    ctx.lineWidth = 3.6
+    ctx.lineWidth = 3.2
     ctx.lineCap = 'round'
     ctx.beginPath()
     ctx.moveTo(4, -13)
@@ -575,7 +575,7 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     ctx.stroke()
 
     ctx.strokeStyle = color
-    ctx.lineWidth = 2.2
+    ctx.lineWidth = 2.0
     ctx.beginPath()
     ctx.moveTo(4, -13)
     ctx.lineTo(9, -7)
@@ -587,7 +587,7 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     ctx.arc(8, -19, 4.5, 0, Math.PI * 2)
     ctx.fill()
     ctx.strokeStyle = outlineColor
-    ctx.lineWidth = 1
+    ctx.lineWidth = 0.7
     ctx.stroke()
 
     // Pointed nose & chin profile
@@ -600,7 +600,7 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     ctx.closePath()
     ctx.fill()
     ctx.strokeStyle = outlineColor
-    ctx.lineWidth = 1
+    ctx.lineWidth = 0.7
     ctx.stroke()
 
     // 4. Iconic Witch Hat
@@ -614,7 +614,7 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     ctx.ellipse(0, 0, 11, 2.5, 0, 0, Math.PI * 2)
     ctx.fill()
     ctx.strokeStyle = outlineColor
-    ctx.lineWidth = 1
+    ctx.lineWidth = 0.7
     ctx.stroke()
 
     // Hat Band (orange ribbon)
@@ -632,7 +632,7 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     ctx.closePath()
     ctx.fill()
     ctx.strokeStyle = outlineColor
-    ctx.lineWidth = 1
+    ctx.lineWidth = 0.7
     ctx.stroke()
 
     ctx.restore()
@@ -643,14 +643,14 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     ctx.ellipse(-14, 2, 3.5, 2.5, -0.2, 0, Math.PI * 2)
     ctx.fill()
     ctx.strokeStyle = outlineColor
-    ctx.lineWidth = 0.8
+    ctx.lineWidth = 0.6
     ctx.stroke()
 
     ctx.beginPath()
     ctx.arc(-11, -1, 2.2, 0, Math.PI * 2)
     ctx.fill()
     ctx.strokeStyle = outlineColor
-    ctx.lineWidth = 0.8
+    ctx.lineWidth = 0.6
     ctx.stroke()
 
     ctx.beginPath()
@@ -662,11 +662,11 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     ctx.lineTo(-9, -2)
     ctx.fill()
     ctx.strokeStyle = outlineColor
-    ctx.lineWidth = 0.8
+    ctx.lineWidth = 0.6
     ctx.stroke()
 
     ctx.strokeStyle = outlineColor
-    ctx.lineWidth = 2.2
+    ctx.lineWidth = 2.0
     ctx.beginPath()
     ctx.moveTo(-17, 3)
     ctx.quadraticCurveTo(-22, 1, -20, -3)
@@ -995,10 +995,10 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     if (witchPossible) {
       if (!witch && t > nextWitch) {
         const dir: 1 | -1 = Math.random() < 0.5 ? 1 : -1
-        const scale = rand(0.85, 1.25)
-        const baseY = h * rand(0.1, 0.3)
+        const scale = rand(1.9, 2.3) // 2 sizes bigger (was 0.85-1.25)
+        const baseY = h * rand(0.08, 0.28)
         witch = {
-          x: dir === 1 ? -120 : w + 120,
+          x: dir === 1 ? -240 : w + 240,
           y: baseY,
           baseY,
           speed: rand(105, 145),
@@ -1014,10 +1014,10 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
         // Trailing stardust sparkles behind broom
         if (Math.random() < 0.35) {
           witch.sparkles.push({
-            x: witch.x - witch.dir * 44 * witch.scale + rand(-4, 4),
+            x: witch.x - witch.dir * 46 * witch.scale + rand(-4, 4),
             y: witch.y + 4 * witch.scale + rand(-3, 3),
             alpha: rand(0.65, 0.95),
-            size: rand(1.6, 2.8),
+            size: rand(2.0, 3.8),
           })
         }
 
@@ -1031,7 +1031,7 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
           }
         }
 
-        const gone = witch.dir === 1 ? witch.x - 160 > w : witch.x + 160 < 0
+        const gone = witch.dir === 1 ? witch.x - 260 > w : witch.x + 260 < 0
         if (gone) {
           witch = null
           nextWitch = t + rand(80_000, 180_000)
