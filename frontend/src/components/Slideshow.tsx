@@ -8,6 +8,7 @@ import { useQuality, Quality } from './sky/useQuality'
 import {
   getQueryParam,
   getSeasonalDate,
+  getHolidayOverride,
   isOctober,
   isDecember,
   isElfSeason,
@@ -87,8 +88,11 @@ const KINDS: SkyKind[] = ['clear', 'cloudy', 'rainy', 'snowy', 'stormy']
 const getPhaseOverride = () => PHASES.find((p) => p === getQueryParam('sky')) ?? null
 const getKindOverride = () => KINDS.find((k) => k === getQueryParam('skyfx')) ?? null
 
-/** True when the URL carries a valid sky/skyfx preview override. */
-export const hasSkyOverride = () => getPhaseOverride() !== null || getKindOverride() !== null
+/** True when the URL carries a valid sky/skyfx/holiday preview override. */
+export const hasSkyOverride = () =>
+  getPhaseOverride() !== null ||
+  getKindOverride() !== null ||
+  getHolidayOverride() !== null
 
 const toKind = (k?: string | null): SkyKind => {
   if (k === 'sunny') return 'clear'
@@ -255,8 +259,14 @@ function JackOLantern({ seed = 0 }: { seed?: number }) {
 }
 
 function CandyCane({ seed = 0 }: { seed?: number }) {
-  const clipId = useId()
   const flip = seed % 2 === 0
+  const canePath = flip
+    ? 'M 36 94 L 36 38 C 36 12, 68 12, 68 36'
+    : 'M 60 94 L 60 38 C 60 12, 28 12, 28 36'
+
+  // Safe sanitized mask ID with NO colons (Android WebView / WebKit compatibility)
+  const maskId = useMemo(() => `cc_mask_${seed}_${flip ? 'l' : 'r'}`, [seed, flip])
+
   return (
     <svg
       width="112"
@@ -266,30 +276,54 @@ function CandyCane({ seed = 0 }: { seed?: number }) {
       aria-hidden="true"
     >
       <defs>
-        <clipPath id={clipId}>
+        <mask id={maskId}>
           <path
-            d={flip ? 'M 36 94 L 36 38 C 36 12, 68 12, 68 34' : 'M 60 94 L 60 38 C 60 12, 28 12, 28 34'}
+            d={canePath}
             stroke="white"
-            strokeWidth="15"
+            strokeWidth="16"
             strokeLinecap="round"
             fill="none"
           />
-        </clipPath>
+        </mask>
       </defs>
 
-      {/* Candy Cane Body clipped with diagonal peppermint stripes */}
-      <g clipPath={`url(#${clipId})`}>
-        <rect x="0" y="0" width="96" height="155" fill="#f8fafc" />
-        {[-30, -14, 2, 18, 34, 50, 66, 82, 98, 114].map((offset) => (
-          <rect
-            key={offset}
-            x="-20"
-            y={offset}
-            width="140"
-            height="8"
-            fill="#dc2626"
-            transform="rotate(-35 48 48)"
-          />
+      {/* Guaranteed base path with direct red and white stripes */}
+      <path
+        d={canePath}
+        stroke="#dc2626"
+        strokeWidth="16"
+        strokeLinecap="round"
+        fill="none"
+      />
+      <path
+        d={canePath}
+        stroke="#ffffff"
+        strokeWidth="16"
+        strokeDasharray="12 12"
+        strokeLinecap="butt"
+        fill="none"
+      />
+
+      {/* Masked diagonal peppermint candy stripes with green pin-stripe accents */}
+      <g mask={`url(#${maskId})`}>
+        <rect x="0" y="0" width="96" height="155" fill="#ffffff" />
+        {[-36, -20, -4, 12, 28, 44, 60, 76, 92, 108, 124].map((offset) => (
+          <g key={offset} transform="rotate(-35 48 48)">
+            <rect
+              x="-20"
+              y={offset}
+              width="140"
+              height="8"
+              fill="#dc2626"
+            />
+            <rect
+              x="-20"
+              y={offset + 9.5}
+              width="140"
+              height="2"
+              fill="#15803d"
+            />
+          </g>
         ))}
         {/* Gloss highlight */}
         <path
@@ -298,11 +332,11 @@ function CandyCane({ seed = 0 }: { seed?: number }) {
           strokeWidth="2.5"
           strokeLinecap="round"
           fill="none"
-          opacity="0.65"
+          opacity="0.75"
         />
       </g>
 
-      {/* Satin Ribbon Bow tied around the cane */}
+      {/* Satin Ribbon Bow tied around the cane at y=62 */}
       <g transform={`translate(${flip ? 36 : 60}, 62)`}>
         <path d="M -4 2 Q -12 16 -16 28 L -8 24 Q -6 14 -2 4 Z" fill="#15803d" />
         <path d="M 4 2 Q 12 16 16 28 L 8 24 Q 6 14 2 4 Z" fill="#15803d" />
@@ -326,84 +360,212 @@ function CandyCane({ seed = 0 }: { seed?: number }) {
 function StringLights() {
   const bulbs = useMemo(() => {
     const colors = [
-      { fill: '#ef4444', glow: 'rgba(239,68,68,0.85)' },
-      { fill: '#22c55e', glow: 'rgba(34,197,94,0.85)' },
-      { fill: '#eab308', glow: 'rgba(234,179,8,0.9)' },
-      { fill: '#3b82f6', glow: 'rgba(59,130,246,0.85)' },
-      { fill: '#f97316', glow: 'rgba(249,115,22,0.85)' },
-      { fill: '#ec4899', glow: 'rgba(236,72,153,0.85)' },
+      { fill: '#ef4444', glow: 'rgba(239,68,68,0.9)' },
+      { fill: '#22c55e', glow: 'rgba(34,197,94,0.9)' },
+      { fill: '#eab308', glow: 'rgba(234,179,8,0.95)' },
+      { fill: '#3b82f6', glow: 'rgba(59,130,246,0.9)' },
+      { fill: '#f97316', glow: 'rgba(249,115,22,0.9)' },
+      { fill: '#ec4899', glow: 'rgba(236,72,153,0.9)' },
     ]
     const list = []
-    const totalBulbs = 34
+    const totalBulbs = 36
+    const numScallops = 18
+    const scallopWidth = 1920 / numScallops
     for (let i = 0; i <= totalBulbs; i++) {
-      const xPercent = (i / totalBulbs) * 100
-      const scallopPhase = i % 2 === 1 ? 18 : 6
+      const px = (i / totalBulbs) * 1920
+      const scallopIdx = Math.floor(px / scallopWidth)
+      const xInScallop = (px - scallopIdx * scallopWidth) / scallopWidth
+      const py = 6 + 18 * Math.sin(xInScallop * Math.PI)
       const color = colors[i % colors.length]
       list.push({
         id: i,
-        xPercent,
-        y: scallopPhase,
+        px: Math.round(px),
+        py: Math.round(py),
         color,
-        dur: 1.6 + ((i * 3) % 7) * 0.25,
-        delay: ((i * 5) % 9) * 0.3,
+        dur: (1.5 + ((i * 7) % 5) * 0.25).toFixed(2),
+        delay: (((i * 11) % 9) * 0.25).toFixed(2),
       })
     }
     return list
   }, [])
 
   return (
-    <div className="fixed top-0 left-0 right-0 h-14 pointer-events-none z-30 select-none overflow-hidden">
+    <div className="fixed top-0 left-0 right-0 h-16 pointer-events-none z-30 select-none overflow-hidden">
       <svg
-        viewBox="0 0 1920 54"
+        viewBox="0 0 1920 60"
         preserveAspectRatio="none"
         className="w-full h-full"
         aria-hidden="true"
       >
         <style>{`
-          @keyframes lightTwinkle {
-            0%, 100% { opacity: 0.95; transform: scale(1); }
-            50% { opacity: 0.35; transform: scale(0.92); }
+          @keyframes stringBulbTwinkle {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.25; }
           }
         `}</style>
+        {/* Scalloped pine-green cord */}
         <path
-          d={Array.from({ length: 17 }, (_, i) => {
-            const startX = i * (1920 / 17)
-            const endX = (i + 1) * (1920 / 17)
+          d={Array.from({ length: 18 }, (_, i) => {
+            const startX = i * (1920 / 18)
+            const endX = (i + 1) * (1920 / 18)
             const midX = (startX + endX) / 2
-            return `${i === 0 ? `M ${startX} 0` : ''} Q ${midX} 22, ${endX} 0`
+            return `${i === 0 ? `M ${startX} 6` : ''} Q ${midX} 26, ${endX} 6`
           }).join(' ')}
           stroke="#14532d"
-          strokeWidth="2.2"
+          strokeWidth="2.5"
           fill="none"
         />
-        {bulbs.map((b) => {
-          const px = (b.xPercent / 100) * 1920
-          return (
+        {/* Twinkling C9 Holiday Bulbs */}
+        {bulbs.map((b) => (
+          <g key={b.id} transform={`translate(${b.px}, ${b.py})`}>
+            {/* Green socket fixture */}
+            <rect x="-3" y="0" width="6" height="5" rx="1" fill="#166534" />
+            {/* Bulb body with pure opacity animation (no CSS transform conflicts) */}
             <g
-              key={b.id}
-              transform={`translate(${px}, ${b.y})`}
               style={{
-                animation: `lightTwinkle ${b.dur}s ease-in-out infinite`,
+                animation: `stringBulbTwinkle ${b.dur}s ease-in-out infinite`,
                 animationDelay: `${b.delay}s`,
-                transformOrigin: `${px}px ${b.y}px`,
               }}
             >
-              <rect x="-3" y="0" width="6" height="5" rx="1" fill="#166534" />
               <path
-                d="M 0 4 C -5 8, -5 16, 0 22 C 5 16, 5 8, 0 4 Z"
+                d="M 0 4 C -5 8, -5 17, 0 23 C 5 17, 5 8, 0 4 Z"
                 fill={b.color.fill}
                 style={{ filter: `drop-shadow(0 0 7px ${b.color.glow})` }}
               />
-              <ellipse cx="-1" cy="11" rx="1.5" ry="3.5" fill="white" opacity="0.6" />
+              <ellipse cx="-1.2" cy="11" rx="1.4" ry="3.5" fill="white" opacity="0.65" />
             </g>
-          )
-        })}
+          </g>
+        ))}
       </svg>
     </div>
   )
 }
 
-function Elf({ variant = 'sitting', flip = false }: { variant?: 'sitting' | 'standing' | 'running'; flip?: boolean }) {
+function SittingElf({
+  seed = 0,
+  flip = false,
+}: {
+  seed?: number
+  flip?: boolean
+}) {
+  const isAlt = seed % 2 === 1
+  const tunicColor = isAlt ? '#dc2626' : '#16a34a'
+  const collarColor = isAlt ? '#16a34a' : '#dc2626'
+  const hatTrim = isAlt ? '#16a34a' : '#dc2626'
+  const hatMain = isAlt ? '#dc2626' : '#16a34a'
+
+  return (
+    <svg
+      width="78"
+      height="88"
+      viewBox="0 0 78 88"
+      className="pointer-events-none select-none filter drop-shadow-[0_4px_12px_rgba(0,0,0,0.35)]"
+      style={{ transform: flip ? 'scaleX(-1)' : undefined }}
+      aria-hidden="true"
+    >
+      <style>{`
+        @keyframes elfLegLeft {
+          0%, 100% { transform: rotate(-16deg); }
+          50% { transform: rotate(14deg); }
+        }
+        @keyframes elfLegRight {
+          0%, 100% { transform: rotate(14deg); }
+          50% { transform: rotate(-16deg); }
+        }
+        @keyframes elfHandWave {
+          0%, 65%, 100% { transform: rotate(0deg); }
+          72% { transform: rotate(-28deg); }
+          78% { transform: rotate(12deg); }
+          84% { transform: rotate(-24deg); }
+          90% { transform: rotate(8deg); }
+        }
+        @keyframes elfBellJiggle {
+          0%, 75%, 100% { transform: rotate(0deg); }
+          80% { transform: rotate(-18deg); }
+          85% { transform: rotate(18deg); }
+          90% { transform: rotate(-12deg); }
+          95% { transform: rotate(6deg); }
+        }
+        @keyframes elfTorsoSway {
+          0%, 100% { transform: rotate(-1.5deg); }
+          50% { transform: rotate(1.5deg); }
+        }
+      `}</style>
+
+      {/* Dangling Legs swinging back and forth in front of photo card mat (y=52 is photo card top edge) */}
+      <g style={{ transformOrigin: '30px 50px', animation: 'elfLegLeft 2.2s ease-in-out infinite' }}>
+        <path d="M 30 50 L 30 68" stroke="#dc2626" strokeWidth="5.5" strokeLinecap="round" />
+        <path d="M 30 53 L 30 55" stroke="#ffffff" strokeWidth="5.5" />
+        <path d="M 30 61 L 30 63" stroke="#ffffff" strokeWidth="5.5" />
+        {/* Curled green elf boot with bell */}
+        <path d="M 27 68 Q 23 71 18 70 Q 14 67 17 64 Q 22 65 28 66 Z" fill="#15803d" />
+        <circle cx="15" cy="65" r="1.8" fill="#facc15" stroke="#ca8a04" strokeWidth="0.5" />
+      </g>
+
+      <g style={{ transformOrigin: '48px 50px', animation: 'elfLegRight 2.2s ease-in-out infinite' }}>
+        <path d="M 48 50 L 48 68" stroke="#dc2626" strokeWidth="5.5" strokeLinecap="round" />
+        <path d="M 48 53 L 48 55" stroke="#ffffff" strokeWidth="5.5" />
+        <path d="M 48 61 L 48 63" stroke="#ffffff" strokeWidth="5.5" />
+        {/* Curled green elf boot with bell */}
+        <path d="M 45 68 Q 41 71 36 70 Q 32 67 35 64 Q 40 65 46 66 Z" fill="#15803d" />
+        <circle cx="33" cy="65" r="1.8" fill="#facc15" stroke="#ca8a04" strokeWidth="0.5" />
+      </g>
+
+      {/* Torso & Head resting on top of the photo card */}
+      <g style={{ transformOrigin: '39px 52px', animation: 'elfTorsoSway 3.2s ease-in-out infinite' }}>
+        {/* Tunic & buttocks resting on frame */}
+        <path d="M 23 38 Q 20 52 24 53 L 54 53 Q 58 52 55 38 Z" fill={tunicColor} />
+        {/* Black belt with gold buckle */}
+        <rect x="23" y="47" width="32" height="5" fill="#18181b" />
+        <rect x="35" y="46" width="8" height="7" rx="1.5" fill="#facc15" stroke="#18181b" strokeWidth="1" />
+
+        {/* Scalloped festive collar with golden bells */}
+        <path d="M 25 37 L 29 43 L 39 38 L 49 43 L 53 37 Z" fill={collarColor} />
+        <circle cx="29" cy="43" r="1.2" fill="#facc15" />
+        <circle cx="49" cy="43" r="1.2" fill="#facc15" />
+
+        {/* Left hand resting on photo card top border */}
+        <path d="M 25 40 Q 18 46 22 52" stroke={tunicColor} strokeWidth="4.5" strokeLinecap="round" fill="none" />
+        <circle cx="22" cy="52" r="3" fill="#fde68a" />
+
+        {/* Right arm & waving hand */}
+        <g style={{ transformOrigin: '53px 40px', animation: 'elfHandWave 4.5s ease-in-out infinite' }}>
+          <path d="M 53 40 Q 61 46 56 52" stroke={tunicColor} strokeWidth="4.5" strokeLinecap="round" fill="none" />
+          <circle cx="56" cy="52" r="3" fill="#fde68a" />
+        </g>
+
+        {/* Pointy Elf Ears */}
+        <path d="M 27 28 C 17 26, 14 20, 26 23 Z" fill="#fde68a" />
+        <path d="M 51 28 C 61 26, 64 20, 52 23 Z" fill="#fde68a" />
+
+        {/* Head & Face */}
+        <ellipse cx="39" cy="29" rx="12" ry="12.5" fill="#fde68a" />
+        {/* Rosy cheeks */}
+        <circle cx="31" cy="32" r="3" fill="#f43f5e" opacity="0.45" />
+        <circle cx="47" cy="32" r="3" fill="#f43f5e" opacity="0.45" />
+        {/* Happy smiling eyes */}
+        <path d="M 31 27 Q 34 24 37 27" stroke="#1c1917" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+        <path d="M 41 27 Q 44 24 47 27" stroke="#1c1917" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+        {/* Button nose */}
+        <circle cx="39" cy="30" r="1.3" fill="#f59e0b" />
+        {/* Merry smile */}
+        <path d="M 35 33 Q 39 37 43 33" stroke="#b91c1c" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+
+        {/* Floppy Hat */}
+        <path d="M 23 23 Q 39 19 55 23" stroke={hatTrim} strokeWidth="5.5" strokeLinecap="round" />
+        <path d="M 25 21 C 29 8, 45 4, 61 8 C 66 10, 67 15, 63 19 Z" fill={hatMain} />
+
+        {/* Hat Tip & Gold Jingle Bell (jiggling animation) */}
+        <g style={{ transformOrigin: '63px 19px', animation: 'elfBellJiggle 3.2s ease-in-out infinite' }}>
+          <circle cx="64" cy="19" r="4" fill="#facc15" stroke="#ca8a04" strokeWidth="1" />
+          <path d="M 62 19 L 66 19" stroke="#854d0e" strokeWidth="0.8" />
+        </g>
+      </g>
+    </svg>
+  )
+}
+
+function Elf({ variant = 'running', flip = false }: { variant?: 'running'; flip?: boolean }) {
   return (
     <svg
       width="64"
@@ -413,51 +575,17 @@ function Elf({ variant = 'sitting', flip = false }: { variant?: 'sitting' | 'sta
       style={{ transform: flip ? 'scaleX(-1)' : undefined }}
       aria-hidden="true"
     >
-      {variant === 'sitting' && (
-        <g>
-          <path d="M 21 44 L 21 58" stroke="#dc2626" strokeWidth="5" strokeLinecap="round" />
-          <path d="M 21 46 L 21 48" stroke="#ffffff" strokeWidth="5" />
-          <path d="M 21 52 L 21 54" stroke="#ffffff" strokeWidth="5" />
-          <path d="M 19 58 Q 15 60 11 59 Q 8 57 10 54 Q 14 55 19 56 Z" fill="#15803d" />
-          <circle cx="9" cy="55" r="1.5" fill="#facc15" />
+      <g>
+        <path d="M 20 44 L 10 56" stroke="#dc2626" strokeWidth="5" strokeLinecap="round" />
+        <path d="M 17 48 L 15 50" stroke="#ffffff" strokeWidth="5" />
+        <path d="M 8 56 Q 3 55 1 51 Q 3 48 7 51 Z" fill="#15803d" />
+        <circle cx="2" cy="50" r="1.5" fill="#facc15" />
 
-          <path d="M 31 44 L 31 59" stroke="#dc2626" strokeWidth="5" strokeLinecap="round" />
-          <path d="M 31 47 L 31 49" stroke="#ffffff" strokeWidth="5" />
-          <path d="M 31 53 L 31 55" stroke="#ffffff" strokeWidth="5" />
-          <path d="M 29 59 Q 25 61 21 60 Q 18 58 20 55 Q 24 56 29 57 Z" fill="#15803d" />
-          <circle cx="19" cy="56" r="1.5" fill="#facc15" />
-        </g>
-      )}
-
-      {variant === 'standing' && (
-        <g>
-          <path d="M 22 46 L 22 62" stroke="#dc2626" strokeWidth="5" strokeLinecap="round" />
-          <path d="M 22 48 L 22 50" stroke="#ffffff" strokeWidth="5" />
-          <path d="M 22 54 L 22 56" stroke="#ffffff" strokeWidth="5" />
-          <path d="M 20 62 Q 15 64 10 63 Q 7 60 10 58 Q 15 59 20 60 Z" fill="#15803d" />
-          <circle cx="8" cy="59" r="1.6" fill="#facc15" />
-
-          <path d="M 32 46 L 32 62" stroke="#dc2626" strokeWidth="5" strokeLinecap="round" />
-          <path d="M 32 48 L 32 50" stroke="#ffffff" strokeWidth="5" />
-          <path d="M 32 54 L 32 56" stroke="#ffffff" strokeWidth="5" />
-          <path d="M 34 62 Q 39 64 44 63 Q 47 60 44 58 Q 39 59 34 60 Z" fill="#15803d" />
-          <circle cx="46" cy="59" r="1.6" fill="#facc15" />
-        </g>
-      )}
-
-      {variant === 'running' && (
-        <g>
-          <path d="M 20 44 L 10 56" stroke="#dc2626" strokeWidth="5" strokeLinecap="round" />
-          <path d="M 17 48 L 15 50" stroke="#ffffff" strokeWidth="5" />
-          <path d="M 8 56 Q 3 55 1 51 Q 3 48 7 51 Z" fill="#15803d" />
-          <circle cx="2" cy="50" r="1.5" fill="#facc15" />
-
-          <path d="M 30 44 L 40 56" stroke="#dc2626" strokeWidth="5" strokeLinecap="round" />
-          <path d="M 34 49 L 36 51" stroke="#ffffff" strokeWidth="5" />
-          <path d="M 40 56 Q 46 60 50 58 Q 51 55 46 54 Z" fill="#15803d" />
-          <circle cx="50" cy="57" r="1.5" fill="#facc15" />
-        </g>
-      )}
+        <path d="M 30 44 L 40 56" stroke="#dc2626" strokeWidth="5" strokeLinecap="round" />
+        <path d="M 34 49 L 36 51" stroke="#ffffff" strokeWidth="5" />
+        <path d="M 40 56 Q 46 60 50 58 Q 51 55 46 54 Z" fill="#15803d" />
+        <circle cx="50" cy="57" r="1.5" fill="#facc15" />
+      </g>
 
       {/* Elf Tunic */}
       <path d="M 18 34 Q 14 46 17 47 L 37 47 Q 40 46 36 34 Z" fill="#16a34a" />
@@ -469,33 +597,13 @@ function Elf({ variant = 'sitting', flip = false }: { variant?: 'sitting' | 'sta
       <circle cx="21" cy="38" r="1" fill="#facc15" />
       <circle cx="33" cy="38" r="1" fill="#facc15" />
 
-      {/* Arms */}
-      {variant === 'sitting' && (
-        <g>
-          <path d="M 18 36 Q 13 42 16 45" stroke="#16a34a" strokeWidth="4" strokeLinecap="round" fill="none" />
-          <circle cx="16" cy="45" r="2.5" fill="#fde68a" />
-          <path d="M 36 36 Q 41 42 38 45" stroke="#16a34a" strokeWidth="4" strokeLinecap="round" fill="none" />
-          <circle cx="38" cy="45" r="2.5" fill="#fde68a" />
-        </g>
-      )}
-
-      {variant === 'standing' && (
-        <g>
-          <path d="M 18 36 Q 13 40 14 44" stroke="#16a34a" strokeWidth="4" strokeLinecap="round" fill="none" />
-          <circle cx="14" cy="44" r="2.5" fill="#fde68a" />
-          <path d="M 36 36 Q 44 32 45 24" stroke="#16a34a" strokeWidth="4" strokeLinecap="round" fill="none" />
-          <circle cx="45" cy="24" r="2.5" fill="#fde68a" />
-        </g>
-      )}
-
-      {variant === 'running' && (
-        <g>
-          <path d="M 22 36 L 30 40" stroke="#16a34a" strokeWidth="4" strokeLinecap="round" />
-          <rect x="30" y="34" width="11" height="11" rx="1.5" fill="#eab308" />
-          <path d="M 35.5 34 L 35.5 45 M 30 39.5 L 41 39.5" stroke="#dc2626" strokeWidth="1.8" />
-          <circle cx="35.5" cy="33" r="2" fill="#dc2626" />
-        </g>
-      )}
+      {/* Running Arms holding gift */}
+      <g>
+        <path d="M 22 36 L 30 40" stroke="#16a34a" strokeWidth="4" strokeLinecap="round" />
+        <rect x="30" y="34" width="11" height="11" rx="1.5" fill="#eab308" />
+        <path d="M 35.5 34 L 35.5 45 M 30 39.5 L 41 39.5" stroke="#dc2626" strokeWidth="1.8" />
+        <circle cx="35.5" cy="33" r="2" fill="#dc2626" />
+      </g>
 
       {/* Head, Ears & Face */}
       <path d="M 19 24 C 11 22, 9 17, 18 19 Z" fill="#fde68a" />
@@ -728,10 +836,11 @@ interface RigProps {
   pair: boolean
   pairIdx: number
   quality: Quality
+  seasonalDate?: Date
   onOpenVideo: (url: string) => void
 }
 
-function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVideo }: RigProps) {
+function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDate, onOpenVideo }: RigProps) {
   const [mediaFailed, setMediaFailed] = useState(false)
   // On the lowest tier the perpetual sway is dropped: the entrance drift still
   // reads as floating, but nothing animates once a photo has settled.
@@ -835,9 +944,11 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVide
     </div>
   )
 
-  const seasonalNow = getSeasonalDate()
-  const hasSittingElf = isElfSeason(seasonalNow) && ((seed + pairIdx * 5 + index) % 3 === 0)
-  const elfFlip = (seed + index) % 2 === 0
+  const seasonalNow = seasonalDate ?? getSeasonalDate()
+  const hasSittingElf = isElfSeason(seasonalNow)
+  const seedOffset = seed + pairIdx * 3 + index
+  const elfPosition = pair ? (pairIdx === 0 ? 'left' : 'right') : 'right'
+  const elfFlip = pair ? pairIdx === 0 : false
 
   const card = (
     <div
@@ -853,8 +964,10 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVide
       }}
     >
       {hasSittingElf && (
-        <div className={`absolute -top-[42px] ${elfFlip ? '-left-3' : '-right-3'} pointer-events-none z-20`}>
-          <Elf variant="sitting" flip={elfFlip} />
+        <div
+          className={`absolute -top-[50px] ${elfPosition === 'left' ? 'left-6' : 'right-6'} pointer-events-none z-20 select-none`}
+        >
+          <SittingElf seed={seedOffset} flip={elfFlip} />
         </div>
       )}
       {media}
@@ -864,7 +977,6 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVide
 
   // Select the top attachment element based on weather kind & sky phase
   let topElement: React.ReactNode = null
-  const seedOffset = seed + pairIdx * 3 + index
 
   if (isOctober(seasonalNow)) {
     if (phase === 'dusk' || phase === 'night') {
@@ -1012,7 +1124,7 @@ export default function Slideshow({
     }
   }, [])
 
-  const seasonalNow = getSeasonalDate(now)
+  const [seasonalDate] = useState(() => getSeasonalDate(now))
   const phase: SkyPhase = override.phase ?? computePhase(now, sun.sunrise, sun.sunset)
   const skyState: SkyState = { phase, kind, paused: !!selectedVideo || hidden, quality }
   const stateRef = useRef<SkyState>(skyState)
@@ -1371,6 +1483,7 @@ export default function Slideshow({
               pair={pair}
               pairIdx={idx}
               quality={quality}
+              seasonalDate={seasonalDate}
               onOpenVideo={setSelectedVideo}
             />
           ))}
@@ -1380,16 +1493,9 @@ export default function Slideshow({
       {/* Weather + delights (rain, snow, fireflies, birds — in front of photos) */}
       <canvas ref={fxRef} className="absolute inset-0 w-full h-full pointer-events-none z-20" />
 
-      {/* Holiday Delights (December String Lights & Elves) */}
-      {isDecember(seasonalNow) && <StringLights />}
-      {isElfSeason(seasonalNow) && (
-        <>
-          <div className="fixed bottom-2 left-10 pointer-events-none z-30 select-none animate-[bounce_4s_ease-in-out_infinite]">
-            <Elf variant="standing" />
-          </div>
-          <RunningElf />
-        </>
-      )}
+      {/* Holiday Delights (December String Lights & Running Elf) */}
+      {isDecember(seasonalDate) && <StringLights />}
+      {isElfSeason(seasonalDate) && <RunningElf />}
 
       {/* Bottom right controls & Now Playing dock */}
       <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 z-[110] flex flex-col items-end gap-3 pointer-events-none">
