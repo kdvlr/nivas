@@ -304,12 +304,36 @@ class YTMusicService:
                     elif top_raw.get("browseId") or top_raw.get("playlistId"):
                         top_result = self.normalize_album(top_raw)
 
+                # If top result is a video cut, check if it can be resolved to a studio audio release
+                if top_result and top_result.get("videoId") and not top_result.get("isPureAudio"):
+                    resolved_top = self.resolve_pure_audio_song(top_result)
+                    if resolved_top and resolved_top.get("isPureAudio"):
+                        top_result = resolved_top
+
                 normalized_songs = [self.normalize_song(i) for i in song_results if self.normalize_song(i)]
                 normalized_songs.sort(key=lambda x: 0 if x.get("isPureAudio") else 1)
 
                 normalized_albums = [self.normalize_album(i) for i in album_results if self.normalize_album(i)]
 
                 normalized_videos = [self.normalize_song(i) for i in video_results if self.normalize_song(i)]
+
+                # Surface video-only tracks: If a video has no matching audio version in normalized_songs,
+                # it is an artist's video-only release. Surface it directly in normalized_songs!
+                existing_ids = {s["videoId"] for s in normalized_songs}
+                video_only_tracks = []
+                for vid in normalized_videos:
+                    if vid["videoId"] in existing_ids:
+                        continue
+                    has_audio_match = any(
+                        s.get("isPureAudio") and self._is_matching_song(vid, s)
+                        for s in normalized_songs
+                    )
+                    if not has_audio_match:
+                        video_only_tracks.append(vid)
+                        existing_ids.add(vid["videoId"])
+
+                if video_only_tracks:
+                    normalized_songs.extend(video_only_tracks)
 
                 if not top_result:
                     if normalized_songs:
@@ -464,13 +488,9 @@ class YTMusicService:
                     clean_c_title = re.sub(r"\s*\[(?:Official|Lyrical|Video|4K|Audio|feat|ft)[^\]]*\]", "", clean_c_title, flags=re.IGNORECASE).strip()
                     clean_c_title = re.split(r"[-|–|—|:|\|]", clean_c_title)[0].strip()
 
+                    # 1. Base title similarity check (requires >= 80% similarity)
                     title_sim = SequenceMatcher(None, clean_title.lower(), clean_c_title.lower()).ratio()
-                    title_matches = (
-                        (title_sim >= 0.65)
-                        or (clean_title.lower() in clean_c_title.lower())
-                        or (clean_c_title.lower() in clean_title.lower())
-                    )
-                    if not title_matches:
+                    if title_sim < 0.80:
                         continue
 
                     # 2. Strict Artist / Movie album match check
@@ -510,8 +530,8 @@ class YTMusicService:
                     if not artist_matched:
                         continue
 
-                    # 3. Duration compatibility check (within 60s tolerance for music video dialogues)
-                    if target_dur > 0 and c_dur > 0 and abs(c_dur - target_dur) > 60:
+                    # 3. Duration compatibility check (within 30s tolerance for music video dialogues)
+                    if target_dur > 0 and c_dur > 0 and abs(c_dur - target_dur) > 30:
                         continue
 
                     res = dict(cand_norm)
@@ -633,6 +653,43 @@ class YTMusicService:
         except Exception as e:
             logger.error(f"YTMusic get_watch_playlist error: {e}")
             return {}
+
+    @staticmethod
+    def _is_matching_song(video_item: Dict[str, Any], audio_item: Dict[str, Any]) -> bool:
+        """Check if a video item matches an audio item using >=80% title similarity and 30s duration tolerance."""
+        v_title = str(video_item.get("title") or "")
+        a_title = str(audio_item.get("title") or "")
+        clean_v = re.sub(r"\s*\((?:From|Official|Lyrical|Video|Teaser|Full|feat|ft)[^\)]*\)", "", v_title, flags=re.IGNORECASE).strip()
+        clean_v = re.sub(r"\s*\[(?:Official|Lyrical|Video|4K|Audio|feat|ft)[^\]]*\]", "", clean_v, flags=re.IGNORECASE).strip()
+        clean_v = re.split(r"[-|–|—|:|\|]", clean_v)[0].strip()
+
+        clean_a = re.sub(r"\s*\((?:From|Official|Lyrical|Video|Teaser|Full|feat|ft)[^\)]*\)", "", a_title, flags=re.IGNORECASE).strip()
+        clean_a = re.sub(r"\s*\[(?:Official|Lyrical|Video|4K|Audio|feat|ft)[^\]]*\]", "", clean_a, flags=re.IGNORECASE).strip()
+        clean_a = re.split(r"[-|–|—|:|\|]", clean_a)[0].strip()
+
+        if not clean_v or not clean_a:
+            return False
+
+        sim = SequenceMatcher(None, clean_v.lower(), clean_a.lower()).ratio()
+        if sim < 0.80:
+            return False
+
+        # Artist check if both are present
+        v_artist = str(video_item.get("artist") or "").lower()
+        a_artist = str(audio_item.get("artist") or "").lower()
+        if v_artist and a_artist and v_artist not in ("unknown artist", "various artists") and a_artist not in ("unknown artist", "various artists"):
+            v_words = [w for w in re.split(r"[\s,;&/]+", v_artist) if len(w) >= 4]
+            a_words = [w for w in re.split(r"[\s,;&/]+", a_artist) if len(w) >= 4]
+            if v_words and a_words and not any(w in a_artist for w in v_words) and not any(w in v_artist for w in a_words):
+                return False
+
+        # Duration tolerance check (30s)
+        v_dur = video_item.get("duration", 0) or 0
+        a_dur = audio_item.get("duration", 0) or 0
+        if v_dur > 0 and a_dur > 0 and abs(v_dur - a_dur) > 30:
+            return False
+
+        return True
 
     @staticmethod
     def is_pure_audio(item: Dict[str, Any]) -> bool:

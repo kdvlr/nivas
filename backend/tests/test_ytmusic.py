@@ -217,3 +217,89 @@ def test_init_client_falls_back_to_guest_mode_on_invalid_file(tmp_path, monkeypa
     assert status["authenticated"] is False
     assert status["has_client"] is True
 
+
+def test_resolve_pure_audio_song_thresholds():
+    service = YTMusicService()
+
+    # Video track: 200 seconds duration
+    video_song = {
+        "videoId": "vid_123",
+        "title": "Main Song (Official Music Video)",
+        "artist": "Famous Artist",
+        "duration": 200,
+        "isPureAudio": False,
+    }
+
+    # 1. Candidate with < 80% title similarity (e.g. "Main Remix" vs "Main Song") -> Rejected, stays video
+    service.search = lambda q, filter_type=None: [{
+        "videoId": "aud_low_sim",
+        "title": "Main Unrelated Remix",
+        "artist": "Famous Artist",
+        "duration": 200,
+        "isPureAudio": True,
+    }]
+    res = service.resolve_pure_audio_song(video_song)
+    assert res["videoId"] == "vid_123"
+    assert res["isPureAudio"] is False
+
+    # 2. Candidate with > 30s duration difference (e.g. 240s vs 200s, diff=40s > 30s) -> Rejected, stays video
+    service.search = lambda q, filter_type=None: [{
+        "videoId": "aud_high_dur",
+        "title": "Main Song",
+        "artist": "Famous Artist",
+        "duration": 240,
+        "isPureAudio": True,
+    }]
+    res = service.resolve_pure_audio_song(video_song)
+    assert res["videoId"] == "vid_123"
+    assert res["isPureAudio"] is False
+
+    # 3. Candidate with >= 80% title similarity and <= 30s duration difference (e.g. 215s vs 200s, diff=15s) -> Resolved to audio
+    service.search = lambda q, filter_type=None: [{
+        "videoId": "aud_valid",
+        "title": "Main Song",
+        "artist": "Famous Artist",
+        "duration": 215,
+        "isPureAudio": True,
+    }]
+    res = service.resolve_pure_audio_song(video_song)
+    assert res["videoId"] == "aud_valid"
+    assert res["isPureAudio"] is True
+
+
+def test_search_surfaces_video_only_and_deduplicates_audio_matches():
+    class FakeClient:
+        def search(self, query, filter=None, limit=None):
+            if filter == "songs":
+                return [
+                    {"videoId": "aud_1", "resultType": "song", "title": "Audio Track 1", "artists": [{"name": "Artist A"}], "duration": "3:20"},
+                ]
+            elif filter == "videos":
+                return [
+                    # Duplicate video of existing Audio Track 1 -> should NOT be added to songs
+                    {"videoId": "vid_dup", "resultType": "video", "title": "Audio Track 1 (Official Video)", "artists": [{"name": "Artist A"}], "duration": "3:25"},
+                    # Video-only track by Artist A -> SHOULD be surfaced in songs
+                    {"videoId": "vid_only", "resultType": "video", "title": "Video Only Exclusive", "artists": [{"name": "Artist A"}], "duration": "4:10"},
+                ]
+            elif filter == "albums":
+                return []
+            else:
+                return [{"videoId": "aud_1", "resultType": "song", "title": "Audio Track 1", "category": "Top result"}]
+
+    service = YTMusicService()
+    service._ytmusic = FakeClient()
+
+    results = service.search("Artist A")
+
+    # Song list should contain Audio Track 1 (audio) AND Video Only Exclusive (video-only)
+    song_ids = [s["videoId"] for s in results["songs"]]
+    assert "aud_1" in song_ids
+    assert "vid_only" in song_ids
+    # Duplicate video should not be in songs
+    assert "vid_dup" not in song_ids
+
+    # Video Only Exclusive is marked with isPureAudio: False
+    vid_item = next(s for s in results["songs"] if s["videoId"] == "vid_only")
+    assert vid_item["isPureAudio"] is False
+
+

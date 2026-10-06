@@ -1378,8 +1378,8 @@ export default function YTMusicView({
                     </section>
                   )}
 
-                  {/* Videos List */}
-                  {(searchCategory === 'all' || searchCategory === 'videos') && searchVideos.length > 0 && (
+                  {/* Videos List: only on the dedicated 'videos' tab or on 'all' when no songs/albums exist */}
+                  {(searchCategory === 'videos' || (searchCategory === 'all' && searchSongs.length === 0 && searchAlbums.length === 0)) && searchVideos.length > 0 && (
                     <section>
                       <div className="mb-3 flex items-center justify-between">
                         <h2 className="flex items-center gap-2 text-lg font-bold text-ink">
