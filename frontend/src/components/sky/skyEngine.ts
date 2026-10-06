@@ -1362,7 +1362,7 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
         const gooseCount = 7 + Math.floor(Math.random() * 4) // 7-10 geese in V
         flock = {
           x: dir === 1 ? -160 : w + 160,
-          y: h * rand(0.08, 0.32),
+          y: november ? h * rand(0.04, 0.14) : h * rand(0.08, 0.32),
           speed: october ? rand(105, 150) : november ? rand(90, 125) : rand(90, 130),
           dir,
           scale,

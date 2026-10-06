@@ -576,140 +576,143 @@ function ThanksgivingTopper({ seed = 0 }: { seed?: number }) {
         }
       `}</style>
       <g transform={flip ? 'translate(96, 0) scale(-1, 1)' : undefined}>
-        {/* 1. Magnificent Fanned Tail Feathers (Warm Autumn Radiance) */}
-        <g style={{ transformOrigin: '48px 62px', animation: 'turkeyPlumagePulse 2.8s ease-in-out infinite' }}>
-          {[-60, -43, -26, -9, 9, 26, 43, 60].map((deg, i) => (
-            <g key={deg} transform={`translate(48, 62) rotate(${deg}) translate(0, -38)`}>
-              {/* Outer feather shaft & vane */}
-              <path
-                d="M -5 20 L -6 0 Q 0 -10 6 0 L 5 20 Z"
-                fill={i % 2 === 0 ? '#78350f' : '#92400e'}
-              />
-              {/* Vibrant Cinnamon-Orange chevron band */}
-              <path
-                d="M -5.8 8 L 5.8 8 L 6.2 1 L -6.2 1 Z"
-                fill="#ea580c"
-              />
-              {/* Golden Yellow feather tip */}
-              <path
-                d="M -6.2 1 L 6.2 1 Q 0 -9 -6.2 1 Z"
-                fill="#facc15"
-              />
-              {/* White tip accent outline */}
-              <path
-                d="M -3 -3 Q 0 -8 3 -3"
-                stroke="#ffffff"
-                strokeWidth="1.2"
-                strokeLinecap="round"
-                fill="none"
-              />
-            </g>
-          ))}
-        </g>
-
-        {/* 2. Plump Roasted-Chestnut Turkey Body */}
-        <g>
-          {/* Main Body */}
-          <ellipse cx="48" cy="58" rx="16" ry="15" fill="#78350f" />
-          {/* Layered Warm Brown Breast */}
-          <ellipse cx="48" cy="60" rx="12" ry="11" fill="#92400e" />
-          {/* Scalloped Breast Plumage Details */}
-          <path
-            d="M 42 56 Q 48 60 54 56 M 40 62 Q 48 67 56 62 M 43 68 Q 48 72 53 68"
-            stroke="#d97706"
-            strokeWidth="1.2"
-            strokeLinecap="round"
-            fill="none"
-          />
-
-          {/* Left and Right Folded Wings */}
-          <path
-            d="M 33 48 C 26 56, 30 68, 38 68 C 36 60, 36 52, 33 48 Z"
-            fill="#5c2607"
-          />
-          <path
-            d="M 63 48 C 70 56, 66 68, 58 68 C 60 60, 60 52, 63 48 Z"
-            fill="#5c2607"
-          />
-        </g>
-
-        {/* 3. Perched Golden Feet & Harvest Base */}
-        <g>
-          {/* Turkey Feet Perched at base */}
-          <path d="M 41 72 L 41 78 M 38 78 L 44 78 M 39 76 L 41 78" stroke="#f59e0b" strokeWidth="2.2" strokeLinecap="round" fill="none" />
-          <path d="M 55 72 L 55 78 M 52 78 L 58 78 M 57 76 L 55 78" stroke="#f59e0b" strokeWidth="2.2" strokeLinecap="round" fill="none" />
-
-          {/* Rustic Harvest Perch Bar */}
-          <rect x="22" y="78" width="52" height="4.5" rx="2.2" fill="#451a03" />
-          <rect x="24" y="79" width="48" height="1.8" fill="#78350f" opacity="0.6" />
-
-          {/* Mini Autumn Leaves at the perch ends */}
-          {/* Golden Oak Leaf (Left) */}
-          <g transform="translate(24, 79) rotate(-35)">
-            <path d="M 0 0 C -6 -4, -8 -10, 0 -14 C 8 -10, 6 -4, 0 0 Z" fill="#eab308" />
+        {/* Turkey Body, Fan & Hat lowered by 24px so hat & fan are 100% visible on screen */}
+        <g transform="translate(0, 24)">
+          {/* 1. Magnificent Fanned Tail Feathers (Warm Autumn Radiance) */}
+          <g style={{ transformOrigin: '48px 62px', animation: 'turkeyPlumagePulse 2.8s ease-in-out infinite' }}>
+            {[-60, -43, -26, -9, 9, 26, 43, 60].map((deg, i) => (
+              <g key={deg} transform={`translate(48, 62) rotate(${deg}) translate(0, -38)`}>
+                {/* Outer feather shaft & vane */}
+                <path
+                  d="M -5 20 L -6 0 Q 0 -10 6 0 L 5 20 Z"
+                  fill={i % 2 === 0 ? '#78350f' : '#92400e'}
+                />
+                {/* Vibrant Cinnamon-Orange chevron band */}
+                <path
+                  d="M -5.8 8 L 5.8 8 L 6.2 1 L -6.2 1 Z"
+                  fill="#ea580c"
+                />
+                {/* Golden Yellow feather tip */}
+                <path
+                  d="M -6.2 1 L 6.2 1 Q 0 -9 -6.2 1 Z"
+                  fill="#facc15"
+                />
+                {/* White tip accent outline */}
+                <path
+                  d="M -3 -3 Q 0 -8 3 -3"
+                  stroke="#ffffff"
+                  strokeWidth="1.2"
+                  strokeLinecap="round"
+                  fill="none"
+                />
+              </g>
+            ))}
           </g>
-          {/* Crimson Maple Leaf (Right) */}
-          <g transform="translate(72, 79) rotate(35)">
-            <path d="M 0 0 C -5 -5, -8 -12, 0 -16 C 8 -12, 5 -5, 0 0 Z" fill="#dc2626" />
-          </g>
-          {/* Central Harvest Acorn */}
-          <ellipse cx="48" cy="80" rx="3.5" ry="2" fill="#451a03" />
-          <path d="M 45 80 C 45 85, 51 85, 51 80 Z" fill="#78350f" />
-        </g>
 
-        {/* 4. Turkey Head, Face & Pilgrim Hat */}
-        <g>
-          {/* Head */}
-          <circle cx="48" cy="38" r="9.5" fill="#92400e" />
-
-          {/* Rosy/Red Caruncle Cheeks */}
-          <circle cx="42" cy="40" r="3" fill="#dc2626" opacity="0.75" />
-          <circle cx="54" cy="40" r="3" fill="#dc2626" opacity="0.75" />
-
-          {/* Big Expressive Friendly Eyes */}
-          <ellipse cx="44" cy="36" rx="2.4" ry="3.2" fill="#ffffff" />
-          <circle cx="44.5" cy="36" r="1.5" fill="#1c1917" />
-          <circle cx="43.8" cy="35.2" r="0.6" fill="#ffffff" />
-
-          <ellipse cx="52" cy="36" rx="2.4" ry="3.2" fill="#ffffff" />
-          <circle cx="51.5" cy="36" r="1.5" fill="#1c1917" />
-          <circle cx="50.8" cy="35.2" r="0.6" fill="#ffffff" />
-
-          {/* Cute Pointed Golden Beak */}
-          <polygon points="45,38 51,38 48,46" fill="#f59e0b" stroke="#d97706" strokeWidth="0.8" />
-
-          {/* Wobbling Ruby-Red Snood / Wattle */}
-          <g style={{ transformOrigin: '46px 38px', animation: 'turkeySnoodSway 1.8s ease-in-out infinite' }}>
+          {/* 2. Plump Roasted-Chestnut Turkey Body */}
+          <g>
+            {/* Main Body */}
+            <ellipse cx="48" cy="58" rx="16" ry="15" fill="#78350f" />
+            {/* Layered Warm Brown Breast */}
+            <ellipse cx="48" cy="60" rx="12" ry="11" fill="#92400e" />
+            {/* Scalloped Breast Plumage Details */}
             <path
-              d="M 46 38 C 42 41, 41 48, 45 51 C 48 51, 48 45, 47 41 Z"
-              fill="#dc2626"
+              d="M 42 56 Q 48 60 54 56 M 40 62 Q 48 67 56 62 M 43 68 Q 48 72 53 68"
+              stroke="#d97706"
+              strokeWidth="1.2"
+              strokeLinecap="round"
+              fill="none"
+            />
+
+            {/* Left and Right Folded Wings */}
+            <path
+              d="M 33 48 C 26 56, 30 68, 38 68 C 36 60, 36 52, 33 48 Z"
+              fill="#5c2607"
+            />
+            <path
+              d="M 63 48 C 70 56, 66 68, 58 68 C 60 60, 60 52, 63 48 Z"
+              fill="#5c2607"
             />
           </g>
 
-          {/* Classic Pilgrim Hat */}
-          {/* Wide Flat Brim */}
-          <ellipse cx="48" cy="29" rx="16" ry="3.5" fill="#18181b" />
-          {/* Tapered Crown */}
-          <path d="M 39 29 L 41 12 L 55 12 L 57 29 Z" fill="#27272a" />
-          {/* Festive Orange Hatband */}
-          <rect x="40" y="24" width="16" height="5" fill="#ea580c" />
-          {/* Golden Square Buckle */}
-          <rect x="45" y="23" width="6" height="7" rx="1" fill="#facc15" stroke="#18181b" strokeWidth="1" />
+          {/* 3. Perched Golden Feet & Harvest Base */}
+          <g>
+            {/* Turkey Feet Perched at base */}
+            <path d="M 41 72 L 41 78 M 38 78 L 44 78 M 39 76 L 41 78" stroke="#f59e0b" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+            <path d="M 55 72 L 55 78 M 52 78 L 58 78 M 57 76 L 55 78" stroke="#f59e0b" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+
+            {/* Rustic Harvest Perch Bar */}
+            <rect x="22" y="78" width="52" height="4.5" rx="2.2" fill="#451a03" />
+            <rect x="24" y="79" width="48" height="1.8" fill="#78350f" opacity="0.6" />
+
+            {/* Mini Autumn Leaves at the perch ends */}
+            {/* Golden Oak Leaf (Left) */}
+            <g transform="translate(24, 79) rotate(-35)">
+              <path d="M 0 0 C -6 -4, -8 -10, 0 -14 C 8 -10, 6 -4, 0 0 Z" fill="#eab308" />
+            </g>
+            {/* Crimson Maple Leaf (Right) */}
+            <g transform="translate(72, 79) rotate(35)">
+              <path d="M 0 0 C -5 -5, -8 -12, 0 -16 C 8 -12, 5 -5, 0 0 Z" fill="#dc2626" />
+            </g>
+            {/* Central Harvest Acorn */}
+            <ellipse cx="48" cy="80" rx="3.5" ry="2" fill="#451a03" />
+            <path d="M 45 80 C 45 85, 51 85, 51 80 Z" fill="#78350f" />
+          </g>
+
+          {/* 4. Turkey Head, Face & Pilgrim Hat */}
+          <g>
+            {/* Head */}
+            <circle cx="48" cy="38" r="9.5" fill="#92400e" />
+
+            {/* Rosy/Red Caruncle Cheeks */}
+            <circle cx="42" cy="40" r="3" fill="#dc2626" opacity="0.75" />
+            <circle cx="54" cy="40" r="3" fill="#dc2626" opacity="0.75" />
+
+            {/* Big Expressive Friendly Eyes */}
+            <ellipse cx="44" cy="36" rx="2.4" ry="3.2" fill="#ffffff" />
+            <circle cx="44.5" cy="36" r="1.5" fill="#1c1917" />
+            <circle cx="43.8" cy="35.2" r="0.6" fill="#ffffff" />
+
+            <ellipse cx="52" cy="36" rx="2.4" ry="3.2" fill="#ffffff" />
+            <circle cx="51.5" cy="36" r="1.5" fill="#1c1917" />
+            <circle cx="50.8" cy="35.2" r="0.6" fill="#ffffff" />
+
+            {/* Cute Pointed Golden Beak */}
+            <polygon points="45,38 51,38 48,46" fill="#f59e0b" stroke="#d97706" strokeWidth="0.8" />
+
+            {/* Wobbling Ruby-Red Snood / Wattle */}
+            <g style={{ transformOrigin: '46px 38px', animation: 'turkeySnoodSway 1.8s ease-in-out infinite' }}>
+              <path
+                d="M 46 38 C 42 41, 41 48, 45 51 C 48 51, 48 45, 47 41 Z"
+                fill="#dc2626"
+              />
+            </g>
+
+            {/* Classic Pilgrim Hat */}
+            {/* Wide Flat Brim */}
+            <ellipse cx="48" cy="29" rx="16" ry="3.5" fill="#18181b" />
+            {/* Tapered Crown */}
+            <path d="M 39 29 L 41 12 L 55 12 L 57 29 Z" fill="#27272a" />
+            {/* Festive Orange Hatband */}
+            <rect x="40" y="24" width="16" height="5" fill="#ea580c" />
+            {/* Golden Square Buckle */}
+            <rect x="45" y="23" width="6" height="7" rx="1" fill="#facc15" stroke="#18181b" strokeWidth="1" />
+          </g>
         </g>
 
         {/* 5. Clean Golden Braided Suspension Cords lifting Photo Frame */}
         <g stroke="#f59e0b" strokeWidth="1.8" fill="none">
           {/* Left Cord */}
-          <path d="M 34 82 L 34 153" strokeDasharray="3 2" />
-          <circle cx="34" cy="84" r="2" fill="#facc15" />
-          <circle cx="34" cy="116" r="1.8" fill="#facc15" />
-          <circle cx="34" cy="148" r="2.2" fill="#facc15" />
+          <path d="M 34 104 L 34 153" strokeDasharray="3 2" />
+          <circle cx="34" cy="106" r="2" fill="#facc15" />
+          <circle cx="34" cy="128" r="1.8" fill="#facc15" />
+          <circle cx="34" cy="150" r="2.2" fill="#facc15" />
 
           {/* Right Cord */}
-          <path d="M 62 82 L 62 153" strokeDasharray="3 2" />
-          <circle cx="62" cy="84" r="2" fill="#facc15" />
-          <circle cx="62" cy="116" r="1.8" fill="#facc15" />
-          <circle cx="62" cy="148" r="2.2" fill="#facc15" />
+          <path d="M 62 104 L 62 153" strokeDasharray="3 2" />
+          <circle cx="62" cy="106" r="2" fill="#facc15" />
+          <circle cx="62" cy="128" r="1.8" fill="#facc15" />
+          <circle cx="62" cy="150" r="2.2" fill="#facc15" />
         </g>
       </g>
     </svg>
