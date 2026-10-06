@@ -654,6 +654,17 @@ class PlayerEngine:
         generation_id = self._play_generation_id
 
         parsed_duration = ytmusic_service._parse_duration_seconds(track.get("duration"))
+        if not parsed_duration:
+            cached_path = self._media_cache.audio_path(str(video_id))
+            if cached_path.exists() and cached_path.stat().st_size > 44:
+                try:
+                    import mutagen
+                    audio_meta = mutagen.File(str(cached_path))
+                    if audio_meta and hasattr(audio_meta, "info") and hasattr(audio_meta.info, "length") and audio_meta.info.length > 0:
+                        parsed_duration = int(round(audio_meta.info.length))
+                except Exception:
+                    pass
+
         is_local = str(video_id).startswith("local:")
         self.current_track = {
             "videoId": video_id,
@@ -1009,6 +1020,40 @@ class PlayerEngine:
                 elif track_info.get("duration_seconds"):
                     self.duration_seconds = float(track_info["duration_seconds"])
                 audio_path = str(audio_path_obj)
+
+            # Probe ground-truth audio length from cached/local file on disk
+            # especially if duration is missing, zero, or defaulted to 180s
+            if audio_path and os.path.exists(audio_path):
+                try:
+                    import mutagen
+                    audio_meta = mutagen.File(audio_path)
+                    if (
+                        audio_meta
+                        and hasattr(audio_meta, "info")
+                        and hasattr(audio_meta.info, "length")
+                        and audio_meta.info.length > 0
+                    ):
+                        file_duration = float(audio_meta.info.length)
+                        if (
+                            not self.duration_seconds
+                            or self.duration_seconds <= 0
+                            or self.duration_seconds == 180.0
+                            or not track_info.get("duration")
+                            or abs(self.duration_seconds - file_duration) > 5.0
+                        ):
+                            logger.info(
+                                "Probed exact audio file duration for '%s': %.1fs (was %s)",
+                                track_info.get("title"),
+                                file_duration,
+                                self.duration_seconds,
+                            )
+                            self.duration_seconds = file_duration
+                            if self.current_track and generation_id == self._play_generation_id:
+                                self.current_track["duration"] = int(round(file_duration))
+                            track_info["duration"] = int(round(file_duration))
+                            self._broadcast_state()
+                except Exception as meta_err:
+                    logger.debug("Could not inspect audio duration via mutagen for %s: %s", audio_path, meta_err)
 
             artwork_path = self._media_cache.artwork_path(video_id)
             thumbnail_url = track_info.get("thumbnail")
