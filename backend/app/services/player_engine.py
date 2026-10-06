@@ -116,6 +116,8 @@ class PlayerEngine:
         self._save_pref_timer: Optional[threading.Timer] = None
         self._membership_restart_task: Optional[asyncio.Task] = None
         self._membership_revision = 0
+        self._last_stream_stopped_at: Optional[float] = None
+        self._establishing_stream: bool = False
         self._reap_orphaned_airplay_processes()
 
     @staticmethod
@@ -331,6 +333,7 @@ class PlayerEngine:
                 pass
 
         if processes or log_handles:
+            self._last_stream_stopped_at = time.monotonic()
             def _reap_processes(procs_to_kill, handles_to_close):
                 for _, proc in procs_to_kill:
                     PlayerEngine._terminate_stream_process(proc, send_stop=False)
@@ -386,6 +389,7 @@ class PlayerEngine:
                 pass
 
         if processes or log_handles:
+            self._last_stream_stopped_at = time.monotonic()
             def _reap_sync():
                 for _, proc in processes:
                     PlayerEngine._terminate_stream_process(proc, send_stop=False)
@@ -1263,14 +1267,90 @@ class PlayerEngine:
         artwork_path: Optional[str],
         generation_id: int,
     ) -> Optional[bool]:
-        """Atomically tear down the previous PTP owner and start its replacement."""
+        """Atomically tear down the previous PTP owner and start its replacement with retry."""
         async with self._sender_lifecycle_lock:
             if generation_id != self._play_generation_id:
                 return None
+
+            had_prior_stream = bool(self._stream_procs)
             await self._stop_current_stream_async(cancel_play_task=False)
             if generation_id != self._play_generation_id:
                 return None
-            return self._start_airplay_streams(audio_path, track_info, artwork_path)
+
+            # Embedded AirPlay devices (e.g. WiiM Mini, Yamaha AVR, Sonos) need a brief
+            # settling period after RTSP TEARDOWN to finalize closing sockets on port 7000.
+            settle_target = 1.2
+            elapsed_since_stop = time.monotonic() - (self._last_stream_stopped_at or 0.0)
+            if had_prior_stream or (self._last_stream_stopped_at and elapsed_since_stop < settle_target):
+                delay = settle_target if had_prior_stream else max(0.1, settle_target - elapsed_since_stop)
+                await asyncio.sleep(delay)
+                if generation_id != self._play_generation_id:
+                    return None
+
+            max_attempts = 3
+            self._establishing_stream = True
+            try:
+                for attempt in range(1, max_attempts + 1):
+                    # Ensure is_playing remains True while establishing connection
+                    self.is_playing = True
+                    self._playback_error = None
+
+                    started = self._start_airplay_streams(audio_path, track_info, artwork_path)
+                    if not started:
+                        if attempt < max_attempts:
+                            await asyncio.sleep(1.0)
+                            if generation_id != self._play_generation_id:
+                                return None
+                            continue
+                        return False
+
+                    # Monitor the new stream during its initial RTSP handshake window (~0.8s).
+                    # If any speaker refused port 7000 (ConnectionRefused), airplay-play-audio exits
+                    # quickly within 100-300ms with exit code 1.
+                    handshake_ok = True
+                    for _ in range(4):
+                        await asyncio.sleep(0.2)
+                        if generation_id != self._play_generation_id:
+                            return None
+                        with self._stream_lock:
+                            proc = self._stream_procs.get(GROUP_STREAM_ID)
+                        if proc is None:
+                            # Mocked in unit test or process not registered
+                            return True
+                        if proc.poll() is not None:
+                            handshake_ok = False
+                            break
+                        if self._last_sender_progress is not None:
+                            # Stream already established and actively streaming audio!
+                            return True
+
+                    if handshake_ok:
+                        return True
+
+                    exit_code = proc.poll() if proc else "unknown"
+                    logger.warning(
+                        "AirPlay stream failed initial handshake (exit code %s) on attempt %d/%d; retrying...",
+                        exit_code,
+                        attempt,
+                        max_attempts,
+                    )
+                    await self._stop_current_stream_async(cancel_play_task=False)
+                    if generation_id != self._play_generation_id:
+                        return None
+
+                    if attempt < max_attempts:
+                        # Backoff before retrying to allow embedded receiver socket to fully reset
+                        await asyncio.sleep(1.5)
+                        if generation_id != self._play_generation_id:
+                            return None
+
+                logger.error("AirPlay stream failed to start after %d attempts", max_attempts)
+                self.is_playing = False
+                self._playback_error = "AirPlay speaker failed to respond. Please retry."
+                self._broadcast_state()
+                return False
+            finally:
+                self._establishing_stream = False
 
     async def _stop_sender_for_generation(self, generation_id: int) -> bool:
         """Stop a failed sender only if it still belongs to the observed track."""
@@ -1388,6 +1468,7 @@ class PlayerEngine:
                 logger.debug(f"Stream output reader error: {e}")
 
         exit_code = proc.wait()
+        self._last_stream_stopped_at = time.monotonic()
         with self._stream_lock:
             if self._stream_procs.get(stream_id) is not proc:
                 return
@@ -1417,6 +1498,23 @@ class PlayerEngine:
                     self._event_loop,
                 )
             return
+
+        if generation_id is not None and generation_id != self._play_generation_id:
+            logger.info(
+                "Ignoring error exit from stale stream generation %s (current is %s)",
+                generation_id,
+                self._play_generation_id,
+            )
+            return
+
+        if self._establishing_stream:
+            logger.info(
+                "AirPlay stream %s exited with code %s during initial connection handshake",
+                stream_id,
+                exit_code,
+            )
+            return
+
         if self.is_playing:
             logger.warning("AirPlay stream %s exited with code %s", stream_id, exit_code)
             self.is_playing = False

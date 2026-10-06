@@ -897,6 +897,58 @@ async def test_sender_replacement_waits_for_teardown():
 
 
 @pytest.mark.asyncio
+async def test_replace_sender_retries_on_handshake_failure():
+    engine = PlayerEngine()
+    engine._play_generation_id = 1
+    engine.is_playing = True
+
+    proc_fail = FakeProcess()
+    proc_fail.returncode = 1  # Fails immediately with ConnectionRefused
+    proc_ok = FakeProcess()
+    proc_ok.returncode = None  # Survives handshake
+
+    call_count = 0
+
+    def mock_start(*_):
+        nonlocal call_count
+        call_count += 1
+        proc = proc_fail if call_count == 1 else proc_ok
+        with engine._stream_lock:
+            engine._stream_procs[GROUP_STREAM_ID] = proc
+        return True
+
+    with patch.object(engine, "_stop_current_stream_async", AsyncMock()), \
+         patch.object(engine, "_start_airplay_streams", side_effect=mock_start), \
+         patch("asyncio.sleep", AsyncMock()):
+        started = await engine._replace_sender(
+            "/tmp/song.m4a", {"videoId": "song"}, None, 1
+        )
+
+    assert started is True
+    assert call_count == 2
+    assert engine.is_playing is True
+
+
+def test_watch_stream_process_does_not_stop_playback_during_stream_establishment():
+    engine = PlayerEngine()
+    engine.is_playing = True
+    engine._establishing_stream = True
+
+    failed_proc = SimpleNamespace(
+        stdout=None,
+        wait=lambda: 1,
+    )
+    with engine._stream_lock:
+        engine._stream_procs[GROUP_STREAM_ID] = failed_proc
+
+    engine._watch_stream_process(GROUP_STREAM_ID, failed_proc, ["dev1"])
+
+    # is_playing must not be set to False while stream establishment is retrying
+    assert engine.is_playing is True
+
+
+
+@pytest.mark.asyncio
 async def test_mono_audio_triggers_stereo_transcoding():
     engine = PlayerEngine()
     track_info = {
