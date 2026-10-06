@@ -15,6 +15,7 @@ export interface SkyState {
 }
 
 const rand = (a: number, b: number) => a + Math.random() * (b - a)
+const isOctober = () => new Date().getMonth() === 9
 
 // Cap the frame rate: full-screen 60fps canvas work is wasted on ambient
 // weather. rAF still schedules, we just skip paints.
@@ -239,6 +240,23 @@ interface Flock {
   birds: { dx: number; dy: number; flapOffset: number }[]
 }
 
+interface WitchSparkle {
+  x: number
+  y: number
+  alpha: number
+  size: number
+}
+
+interface Witch {
+  x: number
+  y: number
+  baseY: number
+  speed: number
+  dir: 1 | -1
+  scale: number
+  sparkles: WitchSparkle[]
+}
+
 export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): () => void {
   const ctx = canvas.getContext('2d')
   if (!ctx) return () => {}
@@ -251,6 +269,8 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
   let sizeKey = ''
   let flock: Flock | null = null
   let nextFlock = performance.now() + rand(15_000, 60_000)
+  let witch: Witch | null = null
+  let nextWitch = performance.now() + rand(20_000, 50_000)
   let flashUntil = 0
   let nextFlash = performance.now() + rand(8_000, 20_000)
   let lastDraw = performance.now()
@@ -314,6 +334,207 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     ctx.stroke()
   }
 
+  const drawBat = (
+    x: number,
+    y: number,
+    flap: number,
+    scale: number,
+    color: string,
+    dir: 1 | -1
+  ) => {
+    ctx.save()
+    ctx.translate(x, y)
+    ctx.scale(dir * scale, scale)
+
+    const s = Math.sin(flap)
+    const wingLift = s * 7
+
+    ctx.fillStyle = color
+    ctx.beginPath()
+
+    // Head and ears
+    ctx.moveTo(0, -3)
+    ctx.lineTo(-2, -6)
+    ctx.lineTo(-1, -3)
+    ctx.lineTo(1, -3)
+    ctx.lineTo(2, -6)
+    ctx.lineTo(0, -3)
+
+    // Left wing
+    ctx.lineTo(-3, -1)
+    ctx.quadraticCurveTo(-8, -4 - wingLift * 0.7, -15, -2 - wingLift)
+    ctx.quadraticCurveTo(-11, 3 - wingLift * 0.4, -8, 2 - wingLift * 0.3)
+    ctx.quadraticCurveTo(-5, 4 - wingLift * 0.1, -2, 3)
+
+    // Body bottom
+    ctx.lineTo(0, 5)
+
+    // Right wing
+    ctx.lineTo(2, 3)
+    ctx.quadraticCurveTo(5, 4 - wingLift * 0.1, 8, 2 - wingLift * 0.3)
+    ctx.quadraticCurveTo(11, 3 - wingLift * 0.4, 15, -2 - wingLift)
+    ctx.quadraticCurveTo(8, -4 - wingLift * 0.7, 3, -1)
+    ctx.closePath()
+    ctx.fill()
+
+    ctx.restore()
+  }
+
+  const drawWitch = (
+    x: number,
+    y: number,
+    scale: number,
+    color: string,
+    dir: 1 | -1,
+    t: number
+  ) => {
+    ctx.save()
+    ctx.translate(x, y)
+    ctx.scale(dir * scale, scale)
+
+    // 1. Broomstick
+    ctx.strokeStyle = '#5c3a21'
+    ctx.lineWidth = 2.4
+    ctx.lineCap = 'round'
+    ctx.beginPath()
+    ctx.moveTo(-32, 6)
+    ctx.lineTo(30, -5)
+    ctx.stroke()
+
+    // 2. Straw bristles at rear of broom
+    ctx.fillStyle = '#b45309'
+    ctx.beginPath()
+    ctx.moveTo(-28, 5)
+    ctx.lineTo(-46, -3)
+    ctx.lineTo(-50, 6)
+    ctx.lineTo(-45, 14)
+    ctx.lineTo(-29, 8)
+    ctx.closePath()
+    ctx.fill()
+
+    // Straw twigs detail strokes
+    ctx.strokeStyle = '#78350f'
+    ctx.lineWidth = 1.2
+    ctx.beginPath()
+    ctx.moveTo(-28, 6)
+    ctx.lineTo(-52, 2)
+    ctx.moveTo(-28, 6.5)
+    ctx.lineTo(-48, 10)
+    ctx.stroke()
+
+    // Twine band binding the broom bristles
+    ctx.strokeStyle = '#d97706'
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.moveTo(-30, 4)
+    ctx.lineTo(-29, 8)
+    ctx.stroke()
+
+    // 3. Witch silhouette (body, dress, cape, hat)
+    ctx.fillStyle = color
+
+    // Billowing cloak behind her
+    const capeWave = Math.sin(t / 140) * 3
+    ctx.beginPath()
+    ctx.moveTo(3, -15)
+    ctx.quadraticCurveTo(-10, -10, -22 + capeWave, -2)
+    ctx.quadraticCurveTo(-15, 6, -2, 5)
+    ctx.lineTo(3, -15)
+    ctx.closePath()
+    ctx.fill()
+
+    // Torso & sitting legs
+    ctx.beginPath()
+    ctx.moveTo(-2, 4)
+    ctx.lineTo(4, -15)
+    ctx.lineTo(8, -13)
+    ctx.lineTo(12, 2)
+    ctx.lineTo(17, 3)
+    ctx.lineTo(14, 5)
+    ctx.lineTo(5, 5)
+    ctx.lineTo(-2, 4)
+    ctx.closePath()
+    ctx.fill()
+
+    // Arm reaching forward holding broomstick
+    ctx.strokeStyle = color
+    ctx.lineWidth = 2.5
+    ctx.lineCap = 'round'
+    ctx.beginPath()
+    ctx.moveTo(4, -13)
+    ctx.lineTo(9, -7)
+    ctx.lineTo(15, -2)
+    ctx.stroke()
+
+    // Head and profile (hooked nose & chin)
+    ctx.beginPath()
+    ctx.arc(8, -19, 4.5, 0, Math.PI * 2)
+    ctx.fill()
+
+    // Pointed nose & chin profile
+    ctx.beginPath()
+    ctx.moveTo(11, -21)
+    ctx.lineTo(15, -19)
+    ctx.lineTo(11, -17)
+    ctx.lineTo(14, -15)
+    ctx.lineTo(9, -15)
+    ctx.closePath()
+    ctx.fill()
+
+    // 4. Iconic Witch Hat
+    ctx.save()
+    ctx.translate(8, -22)
+    ctx.rotate(-0.2)
+
+    // Wide Brim
+    ctx.fillStyle = color
+    ctx.beginPath()
+    ctx.ellipse(0, 0, 11, 2.5, 0, 0, Math.PI * 2)
+    ctx.fill()
+
+    // Hat Band (orange ribbon)
+    ctx.fillStyle = '#ea580c'
+    ctx.fillRect(-5, -3, 10, 2)
+
+    // Cone of hat bending backward
+    ctx.fillStyle = color
+    ctx.beginPath()
+    ctx.moveTo(-5, -2)
+    ctx.lineTo(5, -2)
+    ctx.quadraticCurveTo(3, -12, -2, -18)
+    ctx.lineTo(-6, -17)
+    ctx.quadraticCurveTo(-1, -10, -5, -2)
+    ctx.closePath()
+    ctx.fill()
+
+    ctx.restore()
+
+    // 5. Tiny black cat riding behind her on the broom
+    ctx.fillStyle = color
+    ctx.beginPath()
+    ctx.ellipse(-14, 2, 3.5, 2.5, -0.2, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.beginPath()
+    ctx.arc(-11, -1, 2.2, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.beginPath()
+    ctx.moveTo(-12, -2)
+    ctx.lineTo(-12.5, -4.5)
+    ctx.lineTo(-10.5, -3)
+    ctx.moveTo(-10.5, -3)
+    ctx.lineTo(-9.5, -4.5)
+    ctx.lineTo(-9, -2)
+    ctx.fill()
+    ctx.strokeStyle = color
+    ctx.lineWidth = 1.2
+    ctx.beginPath()
+    ctx.moveTo(-17, 3)
+    ctx.quadraticCurveTo(-22, 1, -20, -3)
+    ctx.stroke()
+
+    ctx.restore()
+  }
+
   const frame = (t: number) => {
     raf = requestAnimationFrame(frame)
     const state = get()
@@ -326,6 +547,7 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     const { phase, kind } = state
     const daylight = phase === 'day' || phase === 'dawn'
     const calm = kind === 'clear' || kind === 'cloudy'
+    const october = isOctober()
 
     // Decide whether this layer has anything to render at all. A clear day has
     // no weather and no fireflies, so the canvas would otherwise clear and
@@ -333,8 +555,15 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     // element entirely in that case so the compositor skips it.
     const wantsWeather = kind === 'rainy' || kind === 'stormy' || kind === 'snowy'
     const wantsFlies = (phase === 'night' || phase === 'dusk') && calm
-    const birdsPossible = daylight && calm
-    const active = wantsWeather || wantsFlies || flock !== null || (birdsPossible && t > nextFlock)
+    const creaturesPossible = calm && (october || daylight)
+    const witchPossible = october && calm
+    const active =
+      wantsWeather ||
+      wantsFlies ||
+      flock !== null ||
+      witch !== null ||
+      (creaturesPossible && t > nextFlock) ||
+      (witchPossible && t > nextWitch)
 
     if (!active) {
       if (!blanked) {
@@ -359,20 +588,20 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
       seed(w, h, densityFor(state))
     }
 
-    // Birds: occasional flock crossing the sky on nice days.
-    if (birdsPossible) {
+    // Birds (non-October) or Bats (October)
+    if (creaturesPossible) {
       if (!flock && t > nextFlock) {
         const dir: 1 | -1 = Math.random() < 0.5 ? 1 : -1
         const scale = rand(0.8, 1.3)
         flock = {
           x: dir === 1 ? -120 : w + 120,
-          y: h * rand(0.08, 0.3),
-          speed: rand(90, 130),
+          y: h * rand(0.08, 0.35),
+          speed: october ? rand(105, 150) : rand(90, 130),
           dir,
           scale,
-          birds: Array.from({ length: 4 + Math.floor(Math.random() * 4) }, (_, i) => ({
-            dx: -i * rand(26, 40),
-            dy: (i % 2 === 0 ? 1 : -1) * i * rand(6, 12),
+          birds: Array.from({ length: 4 + Math.floor(Math.random() * (october ? 6 : 4)) }, (_, i) => ({
+            dx: -i * rand(24, 38),
+            dy: (i % 2 === 0 ? 1 : -1) * i * rand(6, 14),
             flapOffset: rand(0, Math.PI * 2),
           })),
         }
@@ -382,18 +611,97 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
         const gone = flock.dir === 1 ? flock.x - 300 > w : flock.x + 300 < 0
         if (gone) {
           flock = null
-          nextFlock = t + rand(70_000, 160_000)
+          nextFlock = t + rand(60_000, 140_000)
         } else {
-          const color = phase === 'dawn' ? 'rgba(50,40,60,0.75)' : 'rgba(30,45,60,0.8)'
+          const color =
+            phase === 'night'
+              ? (october ? 'rgba(20,16,30,0.92)' : 'rgba(30,45,60,0.8)')
+              : phase === 'dusk'
+              ? (october ? 'rgba(35,20,45,0.88)' : 'rgba(30,45,60,0.8)')
+              : phase === 'dawn'
+              ? (october ? 'rgba(45,30,55,0.85)' : 'rgba(50,40,60,0.75)')
+              : (october ? 'rgba(30,30,40,0.85)' : 'rgba(30,45,60,0.8)')
           for (const b of flock.birds) {
             const bx = flock.x + b.dx * flock.dir
-            const by = flock.y + b.dy + Math.sin(t / 900 + b.flapOffset) * 4
-            drawBird(bx, by, t / 90 + b.flapOffset, flock.scale, color)
+            const by = flock.y + b.dy + Math.sin(t / (october ? 450 : 900) + b.flapOffset) * (october ? 6 : 4)
+            if (october) {
+              drawBat(bx, by, t / 45 + b.flapOffset, flock.scale, color, flock.dir)
+            } else {
+              drawBird(bx, by, t / 90 + b.flapOffset, flock.scale, color)
+            }
           }
         }
       }
     } else {
       flock = null
+    }
+
+    // Witch: occasional October flight across the sky on a broomstick.
+    if (witchPossible) {
+      if (!witch && t > nextWitch) {
+        const dir: 1 | -1 = Math.random() < 0.5 ? 1 : -1
+        const scale = rand(0.85, 1.25)
+        const baseY = h * rand(0.1, 0.3)
+        witch = {
+          x: dir === 1 ? -120 : w + 120,
+          y: baseY,
+          baseY,
+          speed: rand(105, 145),
+          dir,
+          scale,
+          sparkles: [],
+        }
+      }
+      if (witch) {
+        witch.x += witch.dir * witch.speed * dt
+        witch.y = witch.baseY + Math.sin(t / 550) * 10
+
+        // Trailing stardust sparkles behind broom
+        if (Math.random() < 0.35) {
+          witch.sparkles.push({
+            x: witch.x - witch.dir * 44 * witch.scale + rand(-4, 4),
+            y: witch.y + 4 * witch.scale + rand(-3, 3),
+            alpha: rand(0.65, 0.95),
+            size: rand(1.6, 2.8),
+          })
+        }
+
+        // Update sparkles
+        for (let i = witch.sparkles.length - 1; i >= 0; i--) {
+          const sp = witch.sparkles[i]
+          sp.alpha -= dt * 1.3
+          sp.y += dt * 6
+          if (sp.alpha <= 0) {
+            witch.sparkles.splice(i, 1)
+          }
+        }
+
+        const gone = witch.dir === 1 ? witch.x - 160 > w : witch.x + 160 < 0
+        if (gone) {
+          witch = null
+          nextWitch = t + rand(80_000, 180_000)
+        } else {
+          // Draw sparkles
+          for (const sp of witch.sparkles) {
+            ctx.fillStyle = `rgba(253, 224, 71, ${sp.alpha})`
+            ctx.beginPath()
+            ctx.arc(sp.x, sp.y, sp.size, 0, Math.PI * 2)
+            ctx.fill()
+          }
+
+          const witchColor =
+            phase === 'night'
+              ? 'rgba(18, 14, 28, 0.95)'
+              : phase === 'dusk'
+              ? 'rgba(28, 16, 38, 0.92)'
+              : phase === 'dawn'
+              ? 'rgba(38, 22, 48, 0.9)'
+              : 'rgba(32, 28, 38, 0.88)'
+          drawWitch(witch.x, witch.y, witch.scale, witchColor, witch.dir, t)
+        }
+      }
+    } else {
+      witch = null
     }
 
     // Fireflies: calm nights and dusk.

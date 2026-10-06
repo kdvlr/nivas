@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react'
+import React, { useState, useEffect, useMemo, useRef, useId } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Icon from './Icon'
 import { api } from '../lib/api'
@@ -136,6 +136,112 @@ function Balloon({ color }: { color: string }) {
       <ellipse cx="30" cy="30" rx="9" ry="15" fill="white" opacity="0.28" transform="rotate(-18 30 30)" />
       <path d="M39 86 L49 86 L44 97 Z" fill={color} />
       <path d="M44 97 C 39 113, 50 126, 44 148" stroke="rgba(255,255,255,0.7)" strokeWidth="1.6" fill="none" />
+    </svg>
+  )
+}
+
+const PUMPKIN_PALETTES = [
+  // Classic harvest orange
+  { base: '#ea580c', mid: '#f97316', light: '#fb923c', rib: '#c2410c' },
+  // Deep autumnal gourd
+  { base: '#c2410c', mid: '#ea580c', light: '#f97316', rib: '#9a3412' },
+  // Golden autumn squash
+  { base: '#d97706', mid: '#f59e0b', light: '#fbbf24', rib: '#b45309' },
+]
+
+function Pumpkin({ seed = 0 }: { seed?: number }) {
+  const p = PUMPKIN_PALETTES[Math.abs(seed) % PUMPKIN_PALETTES.length]
+  return (
+    <svg width="112" height="181" viewBox="0 0 96 155" className="pointer-events-none" aria-hidden="true">
+      {/* Stem & tendril */}
+      <path d="M48 30 C46 17 53 10 59 8 C57 8 51 13 48 20 C46 24 45 30 45 30 Z" fill="#2d6a4f" />
+      <path
+        d="M51 14 C54 12 57 13 58 15 C59 18 57 20 55 20 C53 20 51 18 52 16"
+        stroke="#52b788"
+        strokeWidth="1.2"
+        fill="none"
+        strokeLinecap="round"
+      />
+
+      {/* Pumpkin Lobes */}
+      <ellipse cx="27" cy="59" rx="16" ry="24" fill={p.base} />
+      <ellipse cx="69" cy="59" rx="16" ry="24" fill={p.base} />
+      <ellipse cx="37" cy="61" rx="17" ry="26" fill={p.mid} />
+      <ellipse cx="59" cy="61" rx="17" ry="26" fill={p.mid} />
+      <ellipse cx="48" cy="62" rx="17" ry="27" fill={p.light} />
+
+      {/* Rib Creases */}
+      <path d="M37 36 C31 46 30 73 37 85" stroke={p.rib} strokeWidth="1.5" fill="none" opacity="0.65" />
+      <path d="M59 36 C65 46 66 73 59 85" stroke={p.rib} strokeWidth="1.5" fill="none" opacity="0.65" />
+      <path d="M48 35 C47 45 47 75 48 88" stroke={p.rib} strokeWidth="1.1" fill="none" opacity="0.4" />
+
+      {/* Highlight on front lobe */}
+      <ellipse cx="42" cy="50" rx="6" ry="13" fill="white" opacity="0.25" transform="rotate(-18 42 50)" />
+
+      {/* Tether Knot & String lifting photo */}
+      <ellipse cx="48" cy="89" rx="4" ry="2.5" fill={p.rib} />
+      <path d="M48 89 C44 107 52 126 48 153" stroke="rgba(255,255,255,0.72)" strokeWidth="1.6" fill="none" />
+    </svg>
+  )
+}
+
+function JackOLantern({ seed = 0 }: { seed?: number }) {
+  const gradId = useId()
+  return (
+    <svg
+      width="112"
+      height="181"
+      viewBox="0 0 96 155"
+      className="pointer-events-none filter drop-shadow-[0_0_14px_rgba(251,146,60,0.9)] drop-shadow-[0_0_28px_rgba(234,88,12,0.5)]"
+      aria-hidden="true"
+    >
+      <defs>
+        <radialGradient id={gradId} cx="50%" cy="55%" r="50%">
+          <stop offset="0%" stopColor="#fffbeb" />
+          <stop offset="30%" stopColor="#fef08a" />
+          <stop offset="68%" stopColor="#f59e0b" />
+          <stop offset="100%" stopColor="#d97706" />
+        </radialGradient>
+      </defs>
+
+      {/* Stem */}
+      <path d="M48 30 C46 17 53 10 59 8 C57 8 51 13 48 20 C46 24 45 30 45 30 Z" fill="#1e3a1f" />
+
+      {/* Darker Night Pumpkin Lobes */}
+      <ellipse cx="27" cy="59" rx="16" ry="24" fill="#9a3412" />
+      <ellipse cx="69" cy="59" rx="16" ry="24" fill="#9a3412" />
+      <ellipse cx="37" cy="61" rx="17" ry="26" fill="#c2410c" />
+      <ellipse cx="59" cy="61" rx="17" ry="26" fill="#c2410c" />
+      <ellipse cx="48" cy="62" rx="17" ry="27" fill="#ea580c" />
+
+      {/* Rib Shadows */}
+      <path d="M37 36 C31 46 30 73 37 85" stroke="#7c2d12" strokeWidth="1.6" fill="none" opacity="0.75" />
+      <path d="M59 36 C65 46 66 73 59 85" stroke="#7c2d12" strokeWidth="1.6" fill="none" opacity="0.75" />
+
+      {/* Glowing Carved Eyes */}
+      <polygon points="32,50 43,55 36,63" fill={`url(#${gradId})`} />
+      <polygon points="64,50 53,55 60,63" fill={`url(#${gradId})`} />
+
+      {/* Glowing Carved Nose */}
+      <polygon points="48,60 43,68 53,68" fill={`url(#${gradId})`} />
+
+      {/* Glowing Carved Toothy Mouth */}
+      <path
+        d="M26 72 
+           L32 77 L32 74 
+           L39 78 L39 74 
+           L48 80 
+           L57 74 L57 78 
+           L64 74 L64 77 
+           L70 72 
+           C65 84 57 88 48 88 
+           C39 88 31 84 26 72 Z"
+        fill={`url(#${gradId})`}
+      />
+
+      {/* Tether Knot & String lifting photo */}
+      <ellipse cx="48" cy="89" rx="4" ry="2.5" fill="#7c2d12" />
+      <path d="M48 89 C44 107 52 126 48 153" stroke="rgba(255,255,255,0.72)" strokeWidth="1.6" fill="none" />
     </svg>
   )
 }
@@ -434,7 +540,24 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, onOpenVide
 
   // Select the top attachment element based on weather kind & sky phase
   let topElement: React.ReactNode = null
-  if (kind === 'snowy') {
+  const isOctober = new Date().getMonth() === 9
+
+  if (isOctober) {
+    const seedOffset = seed + pairIdx * 3 + index
+    if (phase === 'dusk' || phase === 'night') {
+      topElement = (
+        <div className="absolute bottom-[calc(100%-12px)] pointer-events-none select-none z-10">
+          <JackOLantern seed={seedOffset} />
+        </div>
+      )
+    } else {
+      topElement = (
+        <div className="absolute bottom-[calc(100%-12px)] pointer-events-none select-none z-10">
+          <Pumpkin seed={seedOffset} />
+        </div>
+      )
+    }
+  } else if (kind === 'snowy') {
     topElement = (
       <div className="absolute bottom-[calc(100%-16px)] pointer-events-none select-none z-10 text-[96px] filter drop-shadow-[0_0_16px_rgba(255,255,255,0.8)] animate-pulse">
         ❄️
