@@ -723,33 +723,33 @@ function Spider({ scale = 1, hourglassColor = '#ef4444' }: { scale?: number; hou
 
 function SpookyWebsAndSpiders() {
   return (
-    <div className="absolute top-0 left-0 right-0 h-64 pointer-events-none z-[2] select-none overflow-hidden">
+    <div className="absolute top-0 left-0 right-0 h-[480px] pointer-events-none z-30 select-none overflow-hidden">
       <svg
-        viewBox="0 0 1920 256"
+        viewBox="0 0 1920 480"
         preserveAspectRatio="none"
         className="w-full h-full"
         aria-hidden="true"
       >
         <style>{`
           @keyframes spiderFloat1 {
-            0%, 100% { transform: translateY(18px); }
-            45%, 60% { transform: translateY(135px); }
-            82% { transform: translateY(32px); }
+            0%, 100% { transform: translateY(28px); }
+            45%, 60% { transform: translateY(220px); }
+            82% { transform: translateY(48px); }
           }
           @keyframes spiderFloat2 {
-            0%, 100% { transform: translateY(22px); }
-            42%, 65% { transform: translateY(170px); }
-            80% { transform: translateY(40px); }
+            0%, 100% { transform: translateY(35px); }
+            42%, 65% { transform: translateY(330px); }
+            80% { transform: translateY(65px); }
           }
           @keyframes spiderFloat3 {
-            0%, 100% { transform: translateY(15px); }
-            40%, 62% { transform: translateY(145px); }
-            78% { transform: translateY(30px); }
+            0%, 100% { transform: translateY(24px); }
+            40%, 62% { transform: translateY(275px); }
+            78% { transform: translateY(52px); }
           }
           @keyframes spiderFloat4 {
-            0%, 100% { transform: translateY(20px); }
-            46%, 64% { transform: translateY(120px); }
-            84% { transform: translateY(35px); }
+            0%, 100% { transform: translateY(30px); }
+            46%, 64% { transform: translateY(215px); }
+            84% { transform: translateY(58px); }
           }
           @keyframes spiderSway1 {
             0%, 100% { transform: rotate(-5deg); }
@@ -806,9 +806,9 @@ function SpookyWebsAndSpiders() {
         {/* --- SPIDER 1 (Left near corner, x = 240) --- */}
         <g transform="translate(240, 0)">
           <g style={{ animation: 'spiderFloat1 8.5s ease-in-out infinite' }}>
-            <line x1="0" y1="-260" x2="0" y2="0" stroke="rgba(241, 245, 249, 0.55)" strokeWidth="1" />
+            <line x1="0" y1="-500" x2="0" y2="0" stroke="rgba(241, 245, 249, 0.65)" strokeWidth="1.2" />
             <g style={{ transformOrigin: '0 0', animation: 'spiderSway1 3.2s ease-in-out infinite' }}>
-              <Spider scale={0.9} hourglassColor="#ef4444" />
+              <Spider scale={1.05} hourglassColor="#ef4444" />
             </g>
           </g>
         </g>
@@ -816,9 +816,9 @@ function SpookyWebsAndSpiders() {
         {/* --- SPIDER 2 (Center-Left, x = 680) --- */}
         <g transform="translate(680, 0)">
           <g style={{ animation: 'spiderFloat2 11s ease-in-out infinite', animationDelay: '1.8s' }}>
-            <line x1="0" y1="-260" x2="0" y2="0" stroke="rgba(241, 245, 249, 0.55)" strokeWidth="1" />
+            <line x1="0" y1="-500" x2="0" y2="0" stroke="rgba(241, 245, 249, 0.65)" strokeWidth="1.2" />
             <g style={{ transformOrigin: '0 0', animation: 'spiderSway2 3.6s ease-in-out infinite' }}>
-              <Spider scale={1.05} hourglassColor="#f97316" />
+              <Spider scale={1.25} hourglassColor="#f97316" />
             </g>
           </g>
         </g>
@@ -826,9 +826,9 @@ function SpookyWebsAndSpiders() {
         {/* --- SPIDER 3 (Center-Right, x = 1260) --- */}
         <g transform="translate(1260, 0)">
           <g style={{ animation: 'spiderFloat3 9.8s ease-in-out infinite', animationDelay: '4.2s' }}>
-            <line x1="0" y1="-260" x2="0" y2="0" stroke="rgba(241, 245, 249, 0.55)" strokeWidth="1" />
+            <line x1="0" y1="-500" x2="0" y2="0" stroke="rgba(241, 245, 249, 0.65)" strokeWidth="1.2" />
             <g style={{ transformOrigin: '0 0', animation: 'spiderSway1 2.9s ease-in-out infinite' }}>
-              <Spider scale={0.95} hourglassColor="#ef4444" />
+              <Spider scale={1.15} hourglassColor="#ef4444" />
             </g>
           </g>
         </g>
@@ -836,9 +836,9 @@ function SpookyWebsAndSpiders() {
         {/* --- SPIDER 4 (Right near corner, x = 1710) --- */}
         <g transform="translate(1710, 0)">
           <g style={{ animation: 'spiderFloat4 8.2s ease-in-out infinite', animationDelay: '0.8s' }}>
-            <line x1="0" y1="-260" x2="0" y2="0" stroke="rgba(241, 245, 249, 0.55)" strokeWidth="1" />
+            <line x1="0" y1="-500" x2="0" y2="0" stroke="rgba(241, 245, 249, 0.65)" strokeWidth="1.2" />
             <g style={{ transformOrigin: '0 0', animation: 'spiderSway2 3.4s ease-in-out infinite' }}>
-              <Spider scale={0.88} hourglassColor="#eab308" />
+              <Spider scale={1.0} hourglassColor="#eab308" />
             </g>
           </g>
         </g>
@@ -1944,12 +1944,9 @@ export default function Slideshow({
       {/* String lights along the top sky background (behind photos & decorations) */}
       {isDecember(seasonalDate) && <StringLights />}
 
-      {/* October dusk/night spooky delights: webs & spiders dangling from ceiling, skeletons & graveyard at bottom */}
+      {/* October dusk/night spooky delights: skeletons & graveyard at bottom (behind photos) */}
       {isOctober(seasonalDate) && (phase === 'dusk' || phase === 'night') && (
-        <>
-          <SpookyWebsAndSpiders />
-          <SpookyGraveyard />
-        </>
+        <SpookyGraveyard />
       )}
 
       {/* Photos. Plain sync presence: every layer here is already absolutely
@@ -1981,6 +1978,11 @@ export default function Slideshow({
 
       {/* Weather + delights (rain, snow, fireflies, birds — in front of photos) */}
       <canvas ref={fxRef} className="absolute inset-0 w-full h-full pointer-events-none z-20" />
+
+      {/* October dusk/night spooky delights: webs & spiders dangling in FRONT of photos */}
+      {isOctober(seasonalDate) && (phase === 'dusk' || phase === 'night') && (
+        <SpookyWebsAndSpiders />
+      )}
 
       {/* Holiday Delights (Running Elf across bottom bezel) */}
       {isElfSeason(seasonalDate) && <RunningElf />}
