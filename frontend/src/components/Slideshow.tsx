@@ -390,7 +390,7 @@ function StringLights() {
   }, [])
 
   return (
-    <div className="fixed top-0 left-0 right-0 h-16 pointer-events-none z-30 select-none overflow-hidden">
+    <div className="absolute top-0 left-0 right-0 h-16 pointer-events-none z-[2] select-none overflow-hidden">
       <svg
         viewBox="0 0 1920 60"
         preserveAspectRatio="none"
@@ -1463,6 +1463,9 @@ export default function Slideshow({
 
       <CloudLayer phase={phase} kind={kind} quality={quality} />
 
+      {/* String lights along the top sky background (behind photos & decorations) */}
+      {isDecember(seasonalDate) && <StringLights />}
+
       {/* Photos. Plain sync presence: every layer here is already absolutely
           positioned, so popLayout's layout projection was measuring for
           nothing on every frame. */}
@@ -1493,8 +1496,7 @@ export default function Slideshow({
       {/* Weather + delights (rain, snow, fireflies, birds — in front of photos) */}
       <canvas ref={fxRef} className="absolute inset-0 w-full h-full pointer-events-none z-20" />
 
-      {/* Holiday Delights (December String Lights & Running Elf) */}
-      {isDecember(seasonalDate) && <StringLights />}
+      {/* Holiday Delights (Running Elf across bottom bezel) */}
       {isElfSeason(seasonalDate) && <RunningElf />}
 
       {/* Bottom right controls & Now Playing dock */}
