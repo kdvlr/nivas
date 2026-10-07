@@ -2224,7 +2224,7 @@ function SpookyWebsAndSpiders() {
 function SpookyGraveyard() {
   return (
     <div
-      className="absolute bottom-0 left-0 right-0 h-44 pointer-events-none z-[2] select-none overflow-hidden"
+      className="absolute bottom-0 left-0 right-0 h-44 pointer-events-none z-[25] select-none overflow-hidden"
       style={{ willChange: 'transform', transform: 'translateZ(0)' }}
     >
       <svg
@@ -3814,11 +3814,6 @@ export default function Slideshow({
       {/* String lights along the top sky background (behind photos & decorations) */}
       {isDecember(seasonalDate) && <StringLights />}
 
-      {/* October dusk/night spooky delights: skeletons & graveyard at bottom (behind photos) */}
-      {isOctober(seasonalDate) && (phase === 'dusk' || phase === 'night') && (
-        <SpookyGraveyard />
-      )}
-
       {/* November autumn harvest countryside horizon (behind photos) */}
       {isNovember(seasonalDate) && (
         <AutumnHarvestHorizon seasonalDate={seasonalDate} phase={phase} />
@@ -3853,6 +3848,11 @@ export default function Slideshow({
 
       {/* Weather + delights (rain, snow, fireflies, birds — in front of photos) */}
       <canvas ref={fxRef} className="absolute inset-0 w-full h-full pointer-events-none z-20" />
+
+      {/* October dusk/night spooky delights: graveyard & skeletons in FOREGROUND (photos float up from behind) */}
+      {isOctober(seasonalDate) && (phase === 'dusk' || phase === 'night') && (
+        <SpookyGraveyard />
+      )}
 
       {/* October dusk/night spooky delights: webs & spiders dangling in FRONT of photos */}
       {isOctober(seasonalDate) && (phase === 'dusk' || phase === 'night') && (

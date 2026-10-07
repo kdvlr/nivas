@@ -11,6 +11,7 @@ import { useCelebration } from '../components/celebrations/CelebrationContext'
 import Modal from '../components/Modal'
 import ConfirmModal from '../components/ConfirmModal'
 import PageHeader from '../components/PageHeader'
+import LeadCelebrationModal from '../components/celebrations/LeadCelebrationModal'
 
 interface Person {
   id: number
@@ -349,6 +350,73 @@ export default function Chores() {
   const { celebrate } = useCelebration()
 
   const [completingId, setCompletingId] = useState<number | null>(null)
+  const [leadCelebration, setLeadCelebration] = useState<{
+    open: boolean
+    name: string
+    avatar?: string
+    avatarEmoji?: string
+    color?: string
+  }>({ open: false, name: '' })
+
+  const prevRankingsRef = useRef<Map<string, number> | null>(null)
+
+  useEffect(() => {
+    if (!balances || balances.length === 0) return
+
+    const uniqueBalances = Array.from(new Set(balances.map((sb) => sb.balance))).sort((x, y) => y - x)
+    const currentRanks = new Map<string, { tier: number; name: string; avatar?: string; avatarEmoji?: string; color?: string }>()
+
+    for (const b of balances) {
+      const tier = uniqueBalances.indexOf(b.balance)
+      const p = people?.find((per) => per.name.toLowerCase() === b.person_name.toLowerCase())
+      currentRanks.set(b.person_name.toLowerCase(), {
+        tier,
+        name: b.person_name,
+        avatar: b.avatar || p?.avatar,
+        avatarEmoji: b.avatar_emoji || p?.avatar_emoji,
+        color: p?.color || personColor(b.person_name),
+      })
+    }
+
+    if (!prevRankingsRef.current) {
+      prevRankingsRef.current = new Map(Array.from(currentRanks.entries()).map(([k, v]) => [k, v.tier]))
+      return
+    }
+
+    // Check if anyone moved from 2nd spot (tier === 1) to 1st spot (tier === 0)
+    for (const [key, cur] of currentRanks.entries()) {
+      const prevTier = prevRankingsRef.current.get(key)
+      if (prevTier === 1 && cur.tier === 0) {
+        setLeadCelebration({
+          open: true,
+          name: cur.name,
+          avatar: cur.avatar,
+          avatarEmoji: cur.avatarEmoji,
+          color: cur.color,
+        })
+        break
+      }
+    }
+
+    prevRankingsRef.current = new Map(Array.from(currentRanks.entries()).map(([k, v]) => [k, v.tier]))
+  }, [balances, people])
+
+  useEffect(() => {
+    const handleTestLead = (e: any) => {
+      const name = e.detail?.name || (people && people[0]?.name) || 'Leader'
+      const p = people?.find((per) => per.name.toLowerCase() === name.toLowerCase())
+      const b = balances?.find((sb) => sb.person_name.toLowerCase() === name.toLowerCase())
+      setLeadCelebration({
+        open: true,
+        name,
+        avatar: b?.avatar || p?.avatar,
+        avatarEmoji: b?.avatar_emoji || p?.avatar_emoji,
+        color: p?.color || personColor(name),
+      })
+    }
+    window.addEventListener('nivas:test-lead-celebration', handleTestLead)
+    return () => window.removeEventListener('nivas:test-lead-celebration', handleTestLead)
+  }, [people, balances])
 
   const toggle = async (chore: ChoreItem) => {
     if (completingId !== null) return
@@ -366,9 +434,20 @@ export default function Chores() {
         return
       }
 
+      // Check if this chore moves assignee from 2nd place to 1st
+      const assignee = chore.assigned_to
+      const b = balances?.find((sb) => sb.person_name.toLowerCase() === (assignee || '').toLowerCase())
+      const uniqueBalances = Array.from(new Set((balances || []).map((sb) => sb.balance))).sort((x, y) => y - x)
+      const currentTier = b ? uniqueBalances.indexOf(b.balance) : -1
+      const isCurrentlySecond = currentTier === 1
+      const maxBalance = uniqueBalances[0] ?? 0
+      const willTakeLead = isCurrentlySecond && b && (b.balance + chore.coins >= maxBalance)
+
       // Visual confirmation hold period on the card before celebration and list reorder
       await new Promise((resolve) => setTimeout(resolve, 650))
-      celebrate()
+      if (!willTakeLead) {
+        celebrate()
+      }
       setCompletingId(null)
       reload()
     } else {
@@ -978,6 +1057,16 @@ export default function Chores() {
           onCancel={() => setConfirmDelete(null)}
         />
       )}
+
+      {/* Big Flashing #1 Medal and Fireworks when moving from 2nd spot to 1st */}
+      <LeadCelebrationModal
+        isOpen={leadCelebration.open}
+        personName={leadCelebration.name}
+        avatar={leadCelebration.avatar}
+        avatarEmoji={leadCelebration.avatarEmoji}
+        color={leadCelebration.color}
+        onClose={() => setLeadCelebration((prev) => ({ ...prev, open: false }))}
+      />
     </div>
   )
 }
