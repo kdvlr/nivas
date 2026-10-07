@@ -31,7 +31,7 @@ export function getSeasonalDate(now: Date = new Date()): Date {
   const override = getHolidayOverride()
   if (override) {
     const o = override.toLowerCase()
-    if (o === 'october' || o === 'oct' || o === 'halloween' || o === 'spooky') {
+    if (o === 'october' || o === 'oct' || o === 'halloween' || o === 'spooky' || o === 'skeleton') {
       return new Date(2026, 9, 15)
     }
     if (o === 'november' || o === 'nov' || o === 'autumn') {

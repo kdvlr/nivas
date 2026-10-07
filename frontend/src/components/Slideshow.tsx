@@ -2531,6 +2531,467 @@ function SpookyGraveyard() {
   )
 }
 
+function DancingSkeletonFigure({
+  phase,
+  flip = false,
+}: {
+  phase: 'entering' | 'dancing' | 'startled' | 'running'
+  flip?: boolean
+}) {
+  const bodyStyle = useMemo<React.CSSProperties>(() => {
+    switch (phase) {
+      case 'entering':
+        return { animation: 'skelWalkBounce 0.36s ease-in-out infinite' }
+      case 'dancing':
+        return { animation: 'skelDanceBody 0.48s ease-in-out infinite' }
+      case 'startled':
+        return { transform: 'translateY(-6px)' }
+      case 'running':
+        return {
+          animation: 'skelRunSprint 0.18s ease-in-out infinite',
+          transformOrigin: '48px 80px',
+        }
+      default:
+        return {}
+    }
+  }, [phase])
+
+  const skullStyle = useMemo<React.CSSProperties>(() => {
+    switch (phase) {
+      case 'entering':
+        return { animation: 'skelWalkHead 0.72s ease-in-out infinite', transformOrigin: '48px 38px' }
+      case 'dancing':
+        return { animation: 'skelDanceHead 0.48s ease-in-out infinite', transformOrigin: '48px 38px' }
+      case 'startled':
+        return { animation: 'skelStartleHead 0.25s ease-out forwards', transformOrigin: '48px 38px' }
+      case 'running':
+        return { animation: 'skelRunHead 0.18s ease-in-out infinite', transformOrigin: '48px 38px' }
+      default:
+        return {}
+    }
+  }, [phase])
+
+  const ribsStyle = useMemo<React.CSSProperties>(() => {
+    if (phase === 'dancing') {
+      return { animation: 'skelDanceRibs 0.48s ease-in-out infinite', transformOrigin: '48px 56px' }
+    }
+    return {}
+  }, [phase])
+
+  const leftArmStyle = useMemo<React.CSSProperties>(() => {
+    switch (phase) {
+      case 'entering':
+        return { animation: 'skelWalkArmL 0.36s ease-in-out infinite', transformOrigin: '32px 44px' }
+      case 'dancing':
+        return { animation: 'skelDanceArmL 0.48s ease-in-out infinite', transformOrigin: '32px 44px' }
+      case 'startled':
+        return { animation: 'skelStartleArmL 0.2s ease-out forwards', transformOrigin: '32px 44px' }
+      case 'running':
+        return { animation: 'skelRunArmL 0.18s ease-in-out infinite', transformOrigin: '32px 44px' }
+      default:
+        return {}
+    }
+  }, [phase])
+
+  const rightArmStyle = useMemo<React.CSSProperties>(() => {
+    switch (phase) {
+      case 'entering':
+        return { animation: 'skelWalkArmR 0.36s ease-in-out infinite', transformOrigin: '64px 44px' }
+      case 'dancing':
+        return { animation: 'skelDanceArmR 0.48s ease-in-out infinite', transformOrigin: '64px 44px' }
+      case 'startled':
+        return { animation: 'skelStartleArmR 0.2s ease-out forwards', transformOrigin: '64px 44px' }
+      case 'running':
+        return { animation: 'skelRunArmR 0.18s ease-in-out infinite', transformOrigin: '64px 44px' }
+      default:
+        return {}
+    }
+  }, [phase])
+
+  const leftLegStyle = useMemo<React.CSSProperties>(() => {
+    switch (phase) {
+      case 'entering':
+        return { animation: 'skelWalkLegL 0.36s ease-in-out infinite', transformOrigin: '42px 80px' }
+      case 'dancing':
+        return { animation: 'skelDanceLegL 0.48s ease-in-out infinite', transformOrigin: '42px 80px' }
+      case 'startled':
+        return { transform: 'rotate(-10deg)', transformOrigin: '42px 80px' }
+      case 'running':
+        return { animation: 'skelRunLegL 0.18s ease-in-out infinite', transformOrigin: '42px 80px' }
+      default:
+        return {}
+    }
+  }, [phase])
+
+  const rightLegStyle = useMemo<React.CSSProperties>(() => {
+    switch (phase) {
+      case 'entering':
+        return { animation: 'skelWalkLegR 0.36s ease-in-out infinite', transformOrigin: '54px 80px' }
+      case 'dancing':
+        return { animation: 'skelDanceLegR 0.48s ease-in-out infinite', transformOrigin: '54px 80px' }
+      case 'startled':
+        return { transform: 'rotate(10deg)', transformOrigin: '54px 80px' }
+      case 'running':
+        return { animation: 'skelRunLegR 0.18s ease-in-out infinite', transformOrigin: '54px 80px' }
+      default:
+        return {}
+    }
+  }, [phase])
+
+  return (
+    <svg
+      width={84}
+      height={114}
+      viewBox="0 0 96 130"
+      className="pointer-events-none select-none"
+      style={{
+        transform: flip ? 'scaleX(-1)' : undefined,
+        transformOrigin: '48px 65px',
+        willChange: 'transform',
+      }}
+      aria-hidden="true"
+    >
+      <style>{`
+        @keyframes skelWalkBounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-7px); }
+        }
+        @keyframes skelWalkLegL {
+          0%, 100% { transform: rotate(-24deg); }
+          50% { transform: rotate(24deg); }
+        }
+        @keyframes skelWalkLegR {
+          0%, 100% { transform: rotate(24deg); }
+          50% { transform: rotate(-24deg); }
+        }
+        @keyframes skelWalkArmL {
+          0%, 100% { transform: rotate(32deg); }
+          50% { transform: rotate(-32deg); }
+        }
+        @keyframes skelWalkArmR {
+          0%, 100% { transform: rotate(-32deg); }
+          50% { transform: rotate(32deg); }
+        }
+        @keyframes skelWalkHead {
+          0%, 100% { transform: rotate(-6deg); }
+          50% { transform: rotate(6deg); }
+        }
+
+        @keyframes skelDanceBody {
+          0%, 100% { transform: translateY(0) rotate(-7deg); }
+          25% { transform: translateY(-12px) rotate(0deg); }
+          50% { transform: translateY(0) rotate(7deg); }
+          75% { transform: translateY(-12px) rotate(0deg); }
+        }
+        @keyframes skelDanceRibs {
+          0%, 100% { transform: rotate(-10deg) scaleX(0.9); }
+          50% { transform: rotate(10deg) scaleX(1.1); }
+        }
+        @keyframes skelDanceArmL {
+          0%, 100% { transform: rotate(-125deg); }
+          50% { transform: rotate(-35deg); }
+        }
+        @keyframes skelDanceArmR {
+          0%, 100% { transform: rotate(25deg); }
+          50% { transform: rotate(-110deg); }
+        }
+        @keyframes skelDanceLegL {
+          0%, 100% { transform: rotate(-20deg); }
+          50% { transform: rotate(38deg); }
+        }
+        @keyframes skelDanceLegR {
+          0%, 100% { transform: rotate(32deg); }
+          50% { transform: rotate(-20deg); }
+        }
+        @keyframes skelDanceHead {
+          0%, 100% { transform: rotate(-14deg) translateY(0); }
+          50% { transform: rotate(14deg) translateY(-5px); }
+        }
+        @keyframes skelHeartPulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.4); }
+        }
+
+        @keyframes skelStartleHead {
+          0% { transform: translateY(0); }
+          100% { transform: translateY(-12px) rotate(6deg); }
+        }
+        @keyframes skelJawDrop {
+          0% { transform: translateY(0); }
+          100% { transform: translateY(6px); }
+        }
+        @keyframes skelStartleArmL {
+          0% { transform: rotate(-30deg); }
+          100% { transform: rotate(-130deg); }
+        }
+        @keyframes skelStartleArmR {
+          0% { transform: rotate(30deg); }
+          100% { transform: rotate(-130deg); }
+        }
+        @keyframes skelStartlePop {
+          0% { opacity: 0; transform: scale(0.2) translateY(10px); }
+          60% { opacity: 1; transform: scale(1.3) translateY(-4px); }
+          100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        @keyframes skelRunSprint {
+          0%, 100% { transform: translateY(0) rotate(22deg); }
+          50% { transform: translateY(-9px) rotate(26deg); }
+        }
+        @keyframes skelRunLegL {
+          0%, 100% { transform: rotate(-60deg); }
+          50% { transform: rotate(55deg); }
+        }
+        @keyframes skelRunLegR {
+          0%, 100% { transform: rotate(55deg); }
+          50% { transform: rotate(-60deg); }
+        }
+        @keyframes skelRunArmL {
+          0%, 100% { transform: rotate(75deg); }
+          50% { transform: rotate(-75deg); }
+        }
+        @keyframes skelRunArmR {
+          0%, 100% { transform: rotate(-75deg); }
+          50% { transform: rotate(75deg); }
+        }
+        @keyframes skelRunHead {
+          0%, 100% { transform: rotate(16deg) translateY(0); }
+          50% { transform: rotate(24deg) translateY(-4px); }
+        }
+        @keyframes skelDustPuff1 {
+          0% { opacity: 0.85; transform: translate(0, 0) scale(0.6); }
+          100% { opacity: 0; transform: translate(-26px, -10px) scale(1.5); }
+        }
+        @keyframes skelDustPuff2 {
+          0% { opacity: 0.85; transform: translate(0, 0) scale(0.5); }
+          100% { opacity: 0; transform: translate(-20px, -14px) scale(1.3); }
+        }
+      `}</style>
+
+      {/* Trailing Dust Puffs in Running Phase */}
+      {phase === 'running' && (
+        <g>
+          <g style={{ animation: 'skelDustPuff1 0.22s ease-out infinite', transformOrigin: '24px 115px' }}>
+            <circle cx="24" cy="115" r="4.5" fill="rgba(241, 245, 249, 0.7)" />
+            <circle cx="18" cy="118" r="3" fill="rgba(203, 213, 225, 0.6)" />
+          </g>
+          <g style={{ animation: 'skelDustPuff2 0.22s ease-out infinite', animationDelay: '0.11s', transformOrigin: '28px 117px' }}>
+            <circle cx="28" cy="117" r="4" fill="rgba(241, 245, 249, 0.7)" />
+            <circle cx="22" cy="120" r="2.8" fill="rgba(203, 213, 225, 0.6)" />
+          </g>
+        </g>
+      )}
+
+      {/* Main Skeleton Body */}
+      <g style={bodyStyle}>
+        {/* Left Leg (Behind Pelvis) */}
+        <g style={leftLegStyle}>
+          <line x1="42" y1="80" x2="38" y2="98" stroke="#f8fafc" strokeWidth="3.2" strokeLinecap="round" />
+          <circle cx="38" cy="98" r="2.2" fill="#f8fafc" />
+          <line x1="38" y1="98" x2="38" y2="115" stroke="#f8fafc" strokeWidth="2.8" strokeLinecap="round" />
+          {/* Left Foot */}
+          <path d="M 36 115 L 45 115 M 45 115 L 48 113 M 45 115 L 49 115 M 45 115 L 48 117" stroke="#f8fafc" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+        </g>
+
+        {/* Right Leg */}
+        <g style={rightLegStyle}>
+          <line x1="54" y1="80" x2="58" y2="98" stroke="#f8fafc" strokeWidth="3.2" strokeLinecap="round" />
+          <circle cx="58" cy="98" r="2.2" fill="#f8fafc" />
+          <line x1="58" y1="98" x2="58" y2="115" stroke="#f8fafc" strokeWidth="2.8" strokeLinecap="round" />
+          {/* Right Foot */}
+          <path d="M 56 115 L 65 115 M 65 115 L 68 113 M 65 115 L 69 115 M 65 115 L 68 117" stroke="#f8fafc" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+        </g>
+
+        {/* Pelvis */}
+        <g>
+          <path
+            d="M 37 70 C 34 74, 38 82, 48 82 C 58 82, 62 74, 59 70 C 54 69, 48 71, 48 71 C 48 71, 42 69, 37 70 Z"
+            fill="#f8fafc"
+            stroke="#09090b"
+            strokeWidth="1.2"
+          />
+          <ellipse cx="42" cy="76" rx="2.2" ry="3" fill="#09090b" />
+          <ellipse cx="54" cy="76" rx="2.2" ry="3" fill="#09090b" />
+        </g>
+
+        {/* Spine Column */}
+        <line x1="48" y1="42" x2="48" y2="72" stroke="#f8fafc" strokeWidth="4" strokeLinecap="round" />
+
+        {/* Clavicle / Collarbone */}
+        <path d="M 32 44 Q 48 46 64 44" stroke="#f8fafc" strokeWidth="3.2" strokeLinecap="round" fill="none" />
+
+        {/* Ribcage */}
+        <g style={ribsStyle}>
+          <path d="M 36 48 Q 48 51 60 48" stroke="#f8fafc" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+          <path d="M 34 54 Q 48 58 62 54" stroke="#f8fafc" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+          <path d="M 37 61 Q 48 65 59 61" stroke="#f8fafc" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+
+          {/* Tiny Beating Heart */}
+          <g style={{ animation: 'skelHeartPulse 0.5s ease-in-out infinite', transformOrigin: '48px 54px' }}>
+            <path d="M 48 51 C 46 48, 43 49, 44 52 C 45 55, 48 57, 48 57 C 48 57, 51 55, 52 52 C 53 49, 50 48, 48 51 Z" fill="#ec4899" />
+          </g>
+        </g>
+
+        {/* Left Arm (Shoulder at 32, 44) */}
+        <g style={leftArmStyle}>
+          <line x1="32" y1="44" x2="24" y2="58" stroke="#f8fafc" strokeWidth="2.8" strokeLinecap="round" />
+          <circle cx="24" cy="58" r="2" fill="#f8fafc" />
+          <line x1="24" y1="58" x2="18" y2="72" stroke="#f8fafc" strokeWidth="2.4" strokeLinecap="round" />
+          {/* Left Bony Hand */}
+          <path d="M 18 72 L 14 75 M 18 72 L 15 78 M 18 72 L 18 80 M 18 72 L 21 78" stroke="#f8fafc" strokeWidth="1.5" strokeLinecap="round" />
+        </g>
+
+        {/* Right Arm (Shoulder at 64, 44) */}
+        <g style={rightArmStyle}>
+          <line x1="64" y1="44" x2="72" y2="58" stroke="#f8fafc" strokeWidth="2.8" strokeLinecap="round" />
+          <circle cx="72" cy="58" r="2" fill="#f8fafc" />
+          <line x1="72" y1="58" x2="78" y2="72" stroke="#f8fafc" strokeWidth="2.4" strokeLinecap="round" />
+          {/* Right Bony Hand */}
+          <path d="M 78 72 L 82 75 M 78 72 L 81 78 M 78 72 L 78 80 M 78 72 L 75 78" stroke="#f8fafc" strokeWidth="1.5" strokeLinecap="round" />
+        </g>
+
+        {/* Skull Group */}
+        <g style={skullStyle}>
+          {/* Startled '!' Comic Badge */}
+          {phase === 'startled' && (
+            <g style={{ animation: 'skelStartlePop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards', transformOrigin: '66px -2px' }}>
+              <circle cx="66" cy="-2" r="9" fill="#ef4444" stroke="#ffffff" strokeWidth="1.5" />
+              <text x="66" y="2" textAnchor="middle" fill="#ffffff" fontSize="12" fontWeight="900" fontFamily="sans-serif">!</text>
+            </g>
+          )}
+
+          {/* Dapper Top Hat */}
+          <g transform="translate(0, 0)">
+            <ellipse cx="48" cy="12" rx="15" ry="3.5" fill="#09090b" />
+            <path d="M 38 12 L 40 -2 L 56 -2 L 58 12 Z" fill="#18181b" stroke="#09090b" strokeWidth="1" />
+            <ellipse cx="48" cy="-2" rx="8" ry="2.2" fill="#27272a" />
+            <path d="M 38.5 10 L 39 5 L 57 5 L 57.5 10 Z" fill="#f97316" />
+          </g>
+
+          {/* Cranium */}
+          <ellipse cx="48" cy="24" rx="13" ry="14" fill="#f8fafc" stroke="#09090b" strokeWidth="1.4" />
+          <path d="M 38 27 C 37 34, 41 36, 48 36 C 55 36, 59 34, 58 27 Z" fill="#f8fafc" stroke="#09090b" strokeWidth="1.2" />
+
+          {/* Eye Sockets */}
+          <ellipse cx="43" cy="23" rx="4" ry="5" fill="#09090b" />
+          <ellipse cx="53" cy="23" rx="4" ry="5" fill="#09090b" />
+
+          {/* Glowing Eye Embers */}
+          {phase === 'startled' ? (
+            <>
+              <circle cx="43" cy="23" r="2.8" fill="#facc15" />
+              <circle cx="53" cy="23" r="2.8" fill="#facc15" />
+            </>
+          ) : (
+            <>
+              <circle cx="43" cy="23" r="1.8" fill="#84cc16" opacity="0.4" />
+              <circle cx="53" cy="23" r="1.8" fill="#84cc16" opacity="0.4" />
+              <circle cx="43" cy="23" r="1.1" fill="#bef264" />
+              <circle cx="53" cy="23" r="1.1" fill="#bef264" />
+            </>
+          )}
+
+          {/* Nose Cavity */}
+          <polygon points="48,27 46.5,31 49.5,31" fill="#09090b" />
+
+          {/* Grinning Upper Teeth */}
+          <path d="M 42 35 L 54 35" stroke="#09090b" strokeWidth="1" />
+          <line x1="44" y1="33" x2="44" y2="37" stroke="#09090b" strokeWidth="0.8" />
+          <line x1="46.5" y1="33" x2="46.5" y2="37" stroke="#09090b" strokeWidth="0.8" />
+          <line x1="49.5" y1="33" x2="49.5" y2="37" stroke="#09090b" strokeWidth="0.8" />
+          <line x1="52" y1="33" x2="52" y2="37" stroke="#09090b" strokeWidth="0.8" />
+
+          {/* Lower Jaw (drops in startled phase) */}
+          <g style={phase === 'startled' ? { animation: 'skelJawDrop 0.25s ease-out forwards' } : undefined}>
+            <path d="M 42 38 C 42 43, 54 43, 54 38 Z" fill="#f8fafc" stroke="#09090b" strokeWidth="1" />
+          </g>
+        </g>
+      </g>
+    </svg>
+  )
+}
+
+function DancingSkeleton() {
+  const [active, setActive] = useState(false)
+  const [direction, setDirection] = useState<1 | -1>(1)
+  const [phase, setPhase] = useState<'entering' | 'dancing' | 'startled' | 'running'>('entering')
+  const [coords, setCoords] = useState<{ startX: number; danceX: number; exitX: number } | null>(null)
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
+
+  const clearAllTimers = () => {
+    timersRef.current.forEach((t) => clearTimeout(t))
+    timersRef.current = []
+  }
+
+  const trigger = () => {
+    clearAllTimers()
+    const w = typeof window !== 'undefined' ? window.innerWidth : 1920
+    const dir: 1 | -1 = Math.random() < 0.5 ? 1 : -1
+    setDirection(dir)
+    const startX = dir === 1 ? -110 : w + 110
+    const danceX = dir === 1 ? Math.round(w * 0.26) : Math.round(w * 0.52)
+    const exitX = dir === 1 ? w + 130 : -130
+    setCoords({ startX, danceX, exitX })
+    setPhase('entering')
+    setActive(true)
+
+    timersRef.current.push(
+      setTimeout(() => {
+        setPhase('dancing')
+      }, 2400)
+    )
+    timersRef.current.push(
+      setTimeout(() => {
+        setPhase('startled')
+      }, 5400)
+    )
+    timersRef.current.push(
+      setTimeout(() => {
+        setPhase('running')
+      }, 6000)
+    )
+  }
+
+  useEffect(() => {
+    window.addEventListener('trigger-skeleton', trigger)
+    const initialTimer = setTimeout(trigger, 6_000)
+    timersRef.current.push(initialTimer)
+
+    return () => {
+      window.removeEventListener('trigger-skeleton', trigger)
+      clearAllTimers()
+    }
+  }, [])
+
+  const handleAnimationComplete = () => {
+    setActive(false)
+    clearAllTimers()
+    const nextTimer = setTimeout(trigger, 25_000 + Math.random() * 30_000)
+    timersRef.current.push(nextTimer)
+  }
+
+  if (!active || !coords) return null
+
+  return (
+    <motion.div
+      initial={{ x: coords.startX }}
+      animate={{
+        x: [coords.startX, coords.danceX, coords.danceX, coords.danceX, coords.exitX],
+      }}
+      transition={{
+        duration: 8.0,
+        times: [0, 0.30, 0.675, 0.75, 1],
+        ease: ['easeOut', 'linear', 'linear', 'easeIn'],
+      }}
+      onAnimationComplete={handleAnimationComplete}
+      className="fixed bottom-2 pointer-events-none z-30 select-none"
+      style={{ willChange: 'transform', transform: 'translateZ(0)' }}
+    >
+      <DancingSkeletonFigure phase={phase} flip={direction === -1} />
+    </motion.div>
+  )
+}
+
 function CloudLayer({ phase, kind, quality }: SkyState) {
   const overcast = kind !== 'clear'
   const lite = quality === 'low'
@@ -3397,6 +3858,9 @@ export default function Slideshow({
       {isOctober(seasonalDate) && (phase === 'dusk' || phase === 'night') && (
         <SpookyWebsAndSpiders />
       )}
+
+      {/* October Spooky Delight: Dancing and running away skeleton */}
+      {isOctober(seasonalDate) && <DancingSkeleton />}
 
       {/* Holiday Delights (Running Elf across bottom bezel) */}
       {isElfSeason(seasonalDate) && <RunningElf />}
