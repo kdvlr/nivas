@@ -213,7 +213,8 @@ function JackOLantern({ seed = 0 }: { seed?: number }) {
       width="112"
       height="181"
       viewBox="0 0 96 155"
-      className="pointer-events-none filter drop-shadow-[0_0_14px_rgba(251,146,60,0.9)] drop-shadow-[0_0_28px_rgba(234,88,12,0.5)]"
+      className="pointer-events-none filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.35)]"
+      style={{ willChange: 'transform' }}
       aria-hidden="true"
     >
       <defs>
@@ -224,6 +225,9 @@ function JackOLantern({ seed = 0 }: { seed?: number }) {
           <stop offset="100%" stopColor="#d97706" />
         </radialGradient>
       </defs>
+
+      {/* Soft warm aura glow behind lantern (clean SVG vector, zero blur filter overhead) */}
+      <circle cx="48" cy="62" r="42" fill="rgba(251, 146, 60, 0.22)" />
 
       {/* Stem */}
       <path d="M48 30 C46 17 53 10 59 8 C57 8 51 13 48 20 C46 24 45 30 45 30 Z" fill="#1e3a1f" />
@@ -460,9 +464,12 @@ function DiyaTopper({ seed = 0 }: { seed?: number }) {
       width="112"
       height="181"
       viewBox="0 0 96 155"
-      className="pointer-events-none filter drop-shadow-[0_0_18px_rgba(251,191,36,0.95)] drop-shadow-[0_0_32px_rgba(249,115,22,0.6)]"
+      className="pointer-events-none filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.35)]"
+      style={{ willChange: 'transform' }}
       aria-hidden="true"
     >
+      {/* Soft warm flame aura glow (clean SVG vector, zero blur filter overhead) */}
+      <circle cx="48" cy="50" r="38" fill="rgba(251, 191, 36, 0.22)" />
       <defs>
         <linearGradient id={diyaGradId} x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stopColor="#ea580c" />
@@ -738,12 +745,12 @@ function DiwaliTempleHorizon({
       >
         <style>{`
           @keyframes templeDiyaFlicker {
-            0%, 100% { opacity: 0.95; filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.95)); }
-            50% { opacity: 0.7; filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.65)); }
+            0%, 100% { opacity: 0.95; }
+            50% { opacity: 0.65; }
           }
           @keyframes rangoliGlow {
-            0%, 100% { opacity: 0.9; filter: drop-shadow(0 0 14px rgba(251, 191, 36, 0.85)); }
-            50% { opacity: 0.6; filter: drop-shadow(0 0 7px rgba(245, 158, 11, 0.5)); }
+            0%, 100% { opacity: 0.9; }
+            50% { opacity: 0.6; }
           }
           @keyframes flagFlutter {
             0%, 100% { transform: skewY(-3deg) scaleY(1); }
@@ -1093,7 +1100,8 @@ function DiwaliTempleHorizon({
             />
 
             {/* Glowing Apex Sparkle Burst */}
-            <circle cx="0" cy="-95" r="4.5" fill="#ffffff" style={{ filter: 'drop-shadow(0 0 6px #facc15)' }} />
+            <circle cx="0" cy="-95" r="7.5" fill="#facc15" opacity="0.35" />
+            <circle cx="0" cy="-95" r="4.5" fill="#ffffff" />
             <circle cx="-8" cy="-85" r="3.2" fill="#fef08a" />
             <circle cx="8" cy="-85" r="3.2" fill="#fef08a" />
             <circle cx="-24" cy="-70" r="2.5" fill="#facc15" />
@@ -1307,12 +1315,12 @@ function AutumnHarvestHorizon({
       >
         <style>{`
           @keyframes harvestDiyaFlicker {
-            0%, 100% { opacity: 0.95; filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.9)); }
-            50% { opacity: 0.7; filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.6)); }
+            0%, 100% { opacity: 0.95; }
+            50% { opacity: 0.65; }
           }
           @keyframes rangoliGlow {
-            0%, 100% { opacity: 0.85; filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.7)); }
-            50% { opacity: 0.55; filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.4)); }
+            0%, 100% { opacity: 0.85; }
+            50% { opacity: 0.55; }
           }
           @keyframes treeSway {
             0%, 100% { transform: rotate(0deg); }
@@ -1774,10 +1782,15 @@ function StringLights() {
                 animationDelay: `${b.delay}s`,
               }}
             >
+              {/* Outer soft vector aura */}
+              <path
+                d="M 0 3 C -6.5 7.5, -6.5 18, 0 24.5 C 6.5 18, 6.5 7.5, 0 3 Z"
+                fill={b.color.glow}
+                opacity="0.32"
+              />
               <path
                 d="M 0 4 C -5 8, -5 17, 0 23 C 5 17, 5 8, 0 4 Z"
                 fill={b.color.fill}
-                style={{ filter: `drop-shadow(0 0 7px ${b.color.glow})` }}
               />
               <ellipse cx="-1.2" cy="11" rx="1.4" ry="3.5" fill="white" opacity="0.65" />
             </g>
@@ -2018,10 +2031,10 @@ function RunningElf() {
 
 function Spider({ scale = 1, hourglassColor = '#ef4444' }: { scale?: number; hourglassColor?: string }) {
   return (
-    <g
-      transform={`scale(${scale})`}
-      className="filter drop-shadow-[0_0_2px_rgba(255,255,255,0.4)] drop-shadow-[0_3px_6px_rgba(0,0,0,0.6)]"
-    >
+    <g transform={`scale(${scale})`}>
+      {/* Subtle depth shadow behind spider body (zero blur filter cost) */}
+      <ellipse cx="1" cy="9" rx="7" ry="9" fill="rgba(0,0,0,0.4)" />
+
       {/* 8 Creepy jointed spider legs - thin light white outline */}
       <g stroke="rgba(255, 255, 255, 0.85)" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" fill="none">
         {/* Left Legs */}
@@ -2066,10 +2079,12 @@ function Spider({ scale = 1, hourglassColor = '#ef4444' }: { scale?: number; hou
       <path d="M -1.8 -5 L -1.5 -8 M 1.8 -5 L 1.5 -8" stroke="rgba(255, 255, 255, 0.85)" strokeWidth="2.2" strokeLinecap="round" />
       <path d="M -1.8 -5 L -1.5 -8 M 1.8 -5 L 1.5 -8" stroke="#3f3f46" strokeWidth="1.2" strokeLinecap="round" />
 
-      {/* Glowing beady eyes */}
+      {/* Glowing beady eyes (layered vector glow, 0 blur filter overhead) */}
       <g style={{ animation: 'spiderEyesPulse 2.5s ease-in-out infinite' }}>
-        <circle cx="-1.8" cy="-2" r="1.1" fill="#f87171" style={{ filter: 'drop-shadow(0 0 2.5px #ef4444)' }} />
-        <circle cx="1.8" cy="-2" r="1.1" fill="#f87171" style={{ filter: 'drop-shadow(0 0 2.5px #ef4444)' }} />
+        <circle cx="-1.8" cy="-2" r="2.0" fill="#ef4444" opacity="0.35" />
+        <circle cx="1.8" cy="-2" r="2.0" fill="#ef4444" opacity="0.35" />
+        <circle cx="-1.8" cy="-2" r="1.1" fill="#f87171" />
+        <circle cx="1.8" cy="-2" r="1.1" fill="#f87171" />
         <circle cx="-3.2" cy="-0.8" r="0.7" fill="#fca5a5" />
         <circle cx="3.2" cy="-0.8" r="0.7" fill="#fca5a5" />
       </g>
@@ -2079,7 +2094,10 @@ function Spider({ scale = 1, hourglassColor = '#ef4444' }: { scale?: number; hou
 
 function SpookyWebsAndSpiders() {
   return (
-    <div className="absolute top-0 left-0 right-0 h-[480px] pointer-events-none z-30 select-none overflow-hidden">
+    <div
+      className="absolute top-0 left-0 right-0 h-[480px] pointer-events-none z-30 select-none overflow-hidden"
+      style={{ willChange: 'transform', transform: 'translateZ(0)' }}
+    >
       <svg
         viewBox="0 0 1920 480"
         preserveAspectRatio="none"
@@ -2088,24 +2106,24 @@ function SpookyWebsAndSpiders() {
       >
         <style>{`
           @keyframes spiderFloat1 {
-            0%, 100% { transform: translateY(28px); }
-            45%, 60% { transform: translateY(220px); }
-            82% { transform: translateY(48px); }
+            0%, 100% { transform: translate3d(0, 28px, 0); }
+            45%, 60% { transform: translate3d(0, 220px, 0); }
+            82% { transform: translate3d(0, 48px, 0); }
           }
           @keyframes spiderFloat2 {
-            0%, 100% { transform: translateY(35px); }
-            42%, 65% { transform: translateY(330px); }
-            80% { transform: translateY(65px); }
+            0%, 100% { transform: translate3d(0, 35px, 0); }
+            42%, 65% { transform: translate3d(0, 330px, 0); }
+            80% { transform: translate3d(0, 65px, 0); }
           }
           @keyframes spiderFloat3 {
-            0%, 100% { transform: translateY(24px); }
-            40%, 62% { transform: translateY(275px); }
-            78% { transform: translateY(52px); }
+            0%, 100% { transform: translate3d(0, 24px, 0); }
+            40%, 62% { transform: translate3d(0, 275px, 0); }
+            78% { transform: translate3d(0, 52px, 0); }
           }
           @keyframes spiderFloat4 {
-            0%, 100% { transform: translateY(30px); }
-            46%, 64% { transform: translateY(215px); }
-            84% { transform: translateY(58px); }
+            0%, 100% { transform: translate3d(0, 30px, 0); }
+            46%, 64% { transform: translate3d(0, 215px, 0); }
+            84% { transform: translate3d(0, 58px, 0); }
           }
           @keyframes spiderSway1 {
             0%, 100% { transform: rotate(-5deg); }
@@ -2160,7 +2178,7 @@ function SpookyWebsAndSpiders() {
         />
 
         {/* --- SPIDER 1 (Left near corner, x = 240) --- */}
-        <g transform="translate(240, 0)">
+        <g transform="translate(240, 0)" style={{ willChange: 'transform' }}>
           <g style={{ animation: 'spiderFloat1 8.5s ease-in-out infinite' }}>
             <line x1="0" y1="-500" x2="0" y2="0" stroke="rgba(241, 245, 249, 0.65)" strokeWidth="1.2" />
             <g style={{ transformOrigin: '0 0', animation: 'spiderSway1 3.2s ease-in-out infinite' }}>
@@ -2170,7 +2188,7 @@ function SpookyWebsAndSpiders() {
         </g>
 
         {/* --- SPIDER 2 (Center-Left, x = 680) --- */}
-        <g transform="translate(680, 0)">
+        <g transform="translate(680, 0)" style={{ willChange: 'transform' }}>
           <g style={{ animation: 'spiderFloat2 11s ease-in-out infinite', animationDelay: '1.8s' }}>
             <line x1="0" y1="-500" x2="0" y2="0" stroke="rgba(241, 245, 249, 0.65)" strokeWidth="1.2" />
             <g style={{ transformOrigin: '0 0', animation: 'spiderSway2 3.6s ease-in-out infinite' }}>
@@ -2180,7 +2198,7 @@ function SpookyWebsAndSpiders() {
         </g>
 
         {/* --- SPIDER 3 (Center-Right, x = 1260) --- */}
-        <g transform="translate(1260, 0)">
+        <g transform="translate(1260, 0)" style={{ willChange: 'transform' }}>
           <g style={{ animation: 'spiderFloat3 9.8s ease-in-out infinite', animationDelay: '4.2s' }}>
             <line x1="0" y1="-500" x2="0" y2="0" stroke="rgba(241, 245, 249, 0.65)" strokeWidth="1.2" />
             <g style={{ transformOrigin: '0 0', animation: 'spiderSway1 2.9s ease-in-out infinite' }}>
@@ -2190,7 +2208,7 @@ function SpookyWebsAndSpiders() {
         </g>
 
         {/* --- SPIDER 4 (Right near corner, x = 1710) --- */}
-        <g transform="translate(1710, 0)">
+        <g transform="translate(1710, 0)" style={{ willChange: 'transform' }}>
           <g style={{ animation: 'spiderFloat4 8.2s ease-in-out infinite', animationDelay: '0.8s' }}>
             <line x1="0" y1="-500" x2="0" y2="0" stroke="rgba(241, 245, 249, 0.65)" strokeWidth="1.2" />
             <g style={{ transformOrigin: '0 0', animation: 'spiderSway2 3.4s ease-in-out infinite' }}>
@@ -2205,7 +2223,10 @@ function SpookyWebsAndSpiders() {
 
 function SpookyGraveyard() {
   return (
-    <div className="absolute bottom-0 left-0 right-0 h-44 pointer-events-none z-[2] select-none overflow-hidden">
+    <div
+      className="absolute bottom-0 left-0 right-0 h-44 pointer-events-none z-[2] select-none overflow-hidden"
+      style={{ willChange: 'transform', transform: 'translateZ(0)' }}
+    >
       <svg
         viewBox="0 0 1920 176"
         preserveAspectRatio="none"
@@ -2227,10 +2248,10 @@ function SpookyGraveyard() {
             50% { transform: rotate(-15deg); }
           }
           @keyframes jackFlicker {
-            0%, 100% { opacity: 0.95; filter: drop-shadow(0 0 10px rgba(249, 115, 22, 0.95)); }
-            30% { opacity: 0.72; filter: drop-shadow(0 0 6px rgba(249, 115, 22, 0.7)); }
-            65% { opacity: 1; filter: drop-shadow(0 0 14px rgba(251, 146, 60, 1)); }
-            85% { opacity: 0.8; filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.75)); }
+            0%, 100% { opacity: 0.95; }
+            30% { opacity: 0.65; }
+            65% { opacity: 1; }
+            85% { opacity: 0.75; }
           }
           @keyframes ravenHeadTilt {
             0%, 80%, 100% { transform: rotate(0deg); }
@@ -2377,8 +2398,10 @@ function SpookyGraveyard() {
           <rect x="-4.5" y="-3" width="9" height="5" fill="#f1f5f9" rx="1" />
           <ellipse cx="-2.8" cy="-11" rx="2.2" ry="2.6" fill="#09090b" />
           <ellipse cx="2.8" cy="-11" rx="2.2" ry="2.6" fill="#09090b" />
-          <circle cx="-2.8" cy="-11" r="1.1" fill="#a3e635" style={{ filter: 'drop-shadow(0 0 3px #84cc16)' }} />
-          <circle cx="2.8" cy="-11" r="1.1" fill="#a3e635" style={{ filter: 'drop-shadow(0 0 3px #84cc16)' }} />
+          <circle cx="-2.8" cy="-11" r="2.2" fill="#84cc16" opacity="0.35" />
+          <circle cx="2.8" cy="-11" r="2.2" fill="#84cc16" opacity="0.35" />
+          <circle cx="-2.8" cy="-11" r="1.1" fill="#a3e635" />
+          <circle cx="2.8" cy="-11" r="1.1" fill="#a3e635" />
           <polygon points="0,-7 -1,-5 1,-5" fill="#09090b" />
           <path d="M -3 -0.5 L 3 -0.5 M -2 -2 L -2 1 M 0 -2 L 0 1 M 2 -2 L 2 1" stroke="#09090b" strokeWidth="0.8" />
 
@@ -2401,8 +2424,10 @@ function SpookyGraveyard() {
           <rect x="-4" y="-2" width="8" height="4.5" fill="#f1f5f9" rx="1" />
           <circle cx="-2.5" cy="-10" r="1.9" fill="#09090b" />
           <circle cx="2.5" cy="-10" r="1.9" fill="#09090b" />
-          <circle cx="-2.5" cy="-10" r="1" fill="#a3e635" style={{ filter: 'drop-shadow(0 0 3px #84cc16)' }} />
-          <circle cx="2.5" cy="-10" r="1" fill="#a3e635" style={{ filter: 'drop-shadow(0 0 3px #84cc16)' }} />
+          <circle cx="-2.5" cy="-10" r="2.0" fill="#84cc16" opacity="0.35" />
+          <circle cx="2.5" cy="-10" r="2.0" fill="#84cc16" opacity="0.35" />
+          <circle cx="-2.5" cy="-10" r="1" fill="#a3e635" />
+          <circle cx="2.5" cy="-10" r="1" fill="#a3e635" />
           <polygon points="0,-6 -0.8,-4.5 0.8,-4.5" fill="#09090b" />
           <path d="M -2.5 0 L 2.5 0 M -1.5 -1.5 L -1.5 1 M 0 -1.5 L 0 1 M 1.5 -1.5 L 1.5 1" stroke="#09090b" strokeWidth="0.7" />
 
@@ -2478,9 +2503,12 @@ function SpookyGraveyard() {
         <g transform="translate(610, 80)">
           <g style={{ animation: 'ghostWisp 6.5s ease-in-out infinite' }}>
             <path
+              d="M -9 17 C -9 3, -9 -9, 0 -9 C 9 -9, 9 3, 9 17 C 6 14, 2 16, 0 13 C -2 16, -6 14, -9 17 Z"
+              fill="rgba(34, 211, 238, 0.22)"
+            />
+            <path
               d="M -8 16 C -8 4, -8 -8, 0 -8 C 8 -8, 8 4, 8 16 C 5 13, 2 15, 0 12 C -2 15, -5 13, -8 16 Z"
-              fill="rgba(165, 243, 252, 0.55)"
-              style={{ filter: 'drop-shadow(0 0 8px rgba(34, 211, 238, 0.7))' }}
+              fill="rgba(165, 243, 252, 0.65)"
             />
             <circle cx="-2.5" cy="-1" r="1.1" fill="#083344" />
             <circle cx="2.5" cy="-1" r="1.1" fill="#083344" />
@@ -2694,11 +2722,11 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
   // cheap even on weak GPUs (unlike backdrop blur).
   const ambient =
     phase === 'dusk'
-      ? '0 0 44px 6px rgba(255,170,80,0.30), '
+      ? '0 0 24px 4px rgba(255,170,80,0.25), '
       : phase === 'night'
-        ? '0 0 44px 6px rgba(150,185,255,0.22), '
+        ? '0 0 24px 4px rgba(150,185,255,0.18), '
         : ''
-  const matShadow = `${ambient}0 4px 10px rgba(0,0,0,0.35), 0 30px 70px rgba(0,0,0,0.5)`
+  const matShadow = `${ambient}0 4px 10px rgba(0,0,0,0.3), 0 16px 36px rgba(0,0,0,0.4)`
   // Original camera clips are never autoplayed. A verified playback derivative
   // is the only video source eligible for unattended slideshow playback.
   const autoplayable = quality !== 'low' && !!item.playbackUrl
@@ -2787,7 +2815,11 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
   const card = (
     <div
       className="relative bg-[#faf8f5] p-3.5 pb-4 rounded-[4px] border border-neutral-200/60 flex flex-col items-center pointer-events-auto cursor-pointer"
-      style={{ boxShadow: matShadow, transform: `rotate(${tilt.toFixed(1)}deg)` }}
+      style={{
+        boxShadow: matShadow,
+        transform: `rotate(${tilt.toFixed(1)}deg) translateZ(0)`,
+        willChange: 'transform',
+      }}
       onClick={(e) => {
         // Prefer the transcoded copy: ~10x smaller and quick to start.
         const full = item.playbackUrl || (item.type === 'live_photo' ? item.videoUrl : item.url)
@@ -2854,14 +2886,14 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
     )
   } else if (kind === 'snowy') {
     topElement = (
-      <div className="absolute bottom-[calc(100%-16px)] pointer-events-none select-none z-10 text-[96px] filter drop-shadow-[0_0_16px_rgba(255,255,255,0.8)] animate-pulse">
+      <div className="absolute bottom-[calc(100%-16px)] pointer-events-none select-none z-10 text-[96px] filter drop-shadow-[0_4px_10px_rgba(255,255,255,0.6)] animate-pulse">
         ❄️
       </div>
     )
   } else if (rainy) {
     topElement = (
       <div
-        className="absolute bottom-[calc(100%-20px)] pointer-events-none select-none z-10 filter drop-shadow-[0_4px_12px_rgba(0,0,0,0.35)] flex items-center justify-center"
+        className="absolute bottom-[calc(100%-20px)] pointer-events-none select-none z-10 filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)] flex items-center justify-center"
         style={{ width: '144px', height: '168px', fontSize: '140px', lineHeight: '168px' }}
       >
         ☂️
@@ -2869,19 +2901,19 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
     )
   } else if (phase === 'night') {
     topElement = (
-      <div className="absolute bottom-[calc(100%-16px)] pointer-events-none select-none z-10 text-[92px] filter drop-shadow-[0_0_24px_rgba(255,160,50,0.95)]">
+      <div className="absolute bottom-[calc(100%-16px)] pointer-events-none select-none z-10 text-[92px] filter drop-shadow-[0_4px_12px_rgba(255,160,50,0.7)]">
         🏮
       </div>
     )
   } else if (phase === 'dawn') {
     topElement = (
-      <div className="absolute bottom-[calc(100%-16px)] pointer-events-none select-none z-10 text-[92px] filter drop-shadow-[0_4px_10px_rgba(0,0,0,0.3)]">
+      <div className="absolute bottom-[calc(100%-16px)] pointer-events-none select-none z-10 text-[92px] filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.25)]">
         🐓
       </div>
     )
   } else if (phase === 'dusk') {
     topElement = (
-      <div className="absolute bottom-[calc(100%-16px)] pointer-events-none select-none z-10 text-[92px] filter drop-shadow-[0_0_20px_rgba(255,200,80,0.9)]">
+      <div className="absolute bottom-[calc(100%-16px)] pointer-events-none select-none z-10 text-[92px] filter drop-shadow-[0_4px_12px_rgba(255,200,80,0.7)]">
         🪔
       </div>
     )
@@ -2904,12 +2936,13 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
         y: { duration: 9 + f * 1.5, times: [0, 0.42, 1], ease: ['easeOut', 'easeInOut'], delay },
         opacity: { duration: 1.0, delay },
       }}
+      style={{ transform: 'translateZ(0)', willChange: 'transform' }}
       className="relative"
     >
       <motion.div
         animate={sway ? { rotate: [-(1.5 + f * 1.0), 1.5 + g * 1.0] } : undefined}
         transition={{ repeat: Infinity, repeatType: 'mirror', duration: 3.3 + g * 1.4, ease: 'easeInOut', delay: f * 2.2 }}
-        style={{ transformOrigin: 'top center' }}
+        style={{ transformOrigin: 'top center', transform: 'translateZ(0)', willChange: 'transform' }}
         className="relative flex flex-col items-center"
       >
         {topElement}
