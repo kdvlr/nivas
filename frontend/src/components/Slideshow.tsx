@@ -14,9 +14,11 @@ import {
   isDiwaliSeason,
   isThanksgivingWeek,
   isDecember,
+  isChristmasSeason,
   isElfSeason,
   isChristmasDay,
   isNewYearsDay,
+  isNewYearSeason,
 } from './sky/queryParam'
 import AmbientCalendarOverlay, { ReminderPayload } from './AmbientCalendarOverlay'
 import MiniPlayerBar, { Track } from './ytmusic/MiniPlayerBar'
@@ -267,6 +269,304 @@ function JackOLantern({ seed = 0 }: { seed?: number }) {
       {/* Tether Knot & String lifting photo */}
       <ellipse cx="48" cy="89" rx="4" ry="2.5" fill="#7c2d12" />
       <path d="M48 89 C44 107 52 126 48 153" stroke="rgba(255,255,255,0.72)" strokeWidth="1.6" fill="none" />
+    </svg>
+  )
+}
+
+function NewYearBallDropTopper({ seed = 0 }: { seed?: number }) {
+  const p = seed % 3
+  const spireGradId = useMemo(() => `ny_spire_${seed}`, [seed])
+  const baseGradId = useMemo(() => `ny_base_${seed}`, [seed])
+  const auraGradId = useMemo(() => `ny_aura_${seed}`, [seed])
+
+  // Sparkle tone themes:
+  // 0: Classic Waterford Crystal (Diamond / Ice Blue / Silver)
+  // 1: Champagne Gold (24K Gold / Warm Amber / Diamond)
+  // 2: Prismatic Neon Aurora (Cyan / Magenta / Diamond)
+  const theme = useMemo(() => {
+    if (p === 1) {
+      return {
+        aura: 'rgba(245, 158, 11, 0.45)',
+        baseCore: '#fef08a',
+        baseRim: '#b45309',
+        facet1: '#fde047',
+        facet2: '#f59e0b',
+        facet3: '#ffffff',
+        accentGlint: '#fbbf24',
+        ribbon1: '#f59e0b',
+        ribbon2: '#d97706',
+      }
+    }
+    if (p === 2) {
+      return {
+        aura: 'rgba(236, 72, 153, 0.4)',
+        baseCore: '#e0e7ff',
+        baseRim: '#4338ca',
+        facet1: '#38bdf8',
+        facet2: '#ec4899',
+        facet3: '#ffffff',
+        accentGlint: '#a855f7',
+        ribbon1: '#a855f7',
+        ribbon2: '#38bdf8',
+      }
+    }
+    return {
+      aura: 'rgba(186, 230, 253, 0.45)',
+      baseCore: '#ffffff',
+      baseRim: '#334155',
+      facet1: '#e0f2fe',
+      facet2: '#cbd5e1',
+      facet3: '#ffffff',
+      accentGlint: '#38bdf8',
+      ribbon1: '#e2e8f0',
+      ribbon2: '#94a3b8',
+    }
+  }, [p])
+
+  return (
+    <svg
+      width="116"
+      height="184"
+      viewBox="0 0 96 155"
+      className="pointer-events-none filter drop-shadow-[0_6px_16px_rgba(0,0,0,0.35)]"
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id={spireGradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="50%" stopColor="#e2e8f0" />
+          <stop offset="100%" stopColor="#94a3b8" />
+        </linearGradient>
+
+        <radialGradient id={baseGradId} cx="35%" cy="32%" r="65%">
+          <stop offset="0%" stopColor={theme.baseCore} />
+          <stop offset="60%" stopColor="#94a3b8" />
+          <stop offset="100%" stopColor={theme.baseRim} />
+        </radialGradient>
+
+        <radialGradient id={auraGradId} cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor={theme.aura} />
+          <stop offset="65%" stopColor={theme.aura} stopOpacity="0.4" />
+          <stop offset="100%" stopColor={theme.aura} stopOpacity="0" />
+        </radialGradient>
+      </defs>
+
+      <style>{`
+        @keyframes nyGlintSpin {
+          0% { transform: rotate(0deg) scale(0.85); opacity: 0.7; }
+          50% { transform: rotate(90deg) scale(1.35); opacity: 1; }
+          100% { transform: rotate(180deg) scale(0.85); opacity: 0.7; }
+        }
+        @keyframes nyFacetTwinkle1 {
+          0%, 100% { opacity: 0.45; }
+          50% { opacity: 0.98; }
+        }
+        @keyframes nyFacetTwinkle2 {
+          0%, 100% { opacity: 0.9; }
+          50% { opacity: 0.35; }
+        }
+        @keyframes nyFacetTwinkle3 {
+          0%, 100% { opacity: 0.8; }
+          25% { opacity: 0.3; }
+          75% { opacity: 1; }
+        }
+        @keyframes nyBeaconPulse {
+          0%, 100% { transform: scale(1); opacity: 0.6; }
+          50% { transform: scale(1.45); opacity: 1; }
+        }
+        @keyframes nyStreamerWave {
+          0%, 100% { transform: rotate(0deg); }
+          50% { transform: rotate(2.5deg); }
+        }
+      `}</style>
+
+      {/* --- 1. Top Spire & Mast Flagpole --- */}
+      <line x1="48" y1="2" x2="48" y2="28" stroke={`url(#${spireGradId})`} strokeWidth="3.2" strokeLinecap="round" />
+      <line x1="48" y1="4" x2="48" y2="28" stroke="#ffffff" strokeWidth="1" strokeLinecap="round" opacity="0.8" />
+      {/* Finial Beacon Light */}
+      <g transform="translate(48, 5)">
+        <circle cx="0" cy="0" r="7" fill={theme.accentGlint} opacity="0.4" style={{ animation: 'nyBeaconPulse 1.6s ease-in-out infinite' }} />
+        <circle cx="0" cy="0" r="3.2" fill="#ffffff" />
+        <circle cx="0" cy="0" r="1.5" fill="#fef08a" />
+      </g>
+      {/* Spire Collar */}
+      <ellipse cx="48" cy="27" rx="7" ry="2.6" fill="#e2e8f0" stroke="#64748b" strokeWidth="0.8" />
+
+      {/* --- 2. The Geodesic Crystal Ball (Waterford Crystal Ball Drop) --- */}
+      {/* Radiant Glowing Aura Behind Sphere */}
+      <circle cx="48" cy="58" r="33" fill={`url(#${auraGradId})`} />
+
+      {/* Base Spherical Core */}
+      <circle cx="48" cy="58" r="26.5" fill={`url(#${baseGradId})`} stroke="#e2e8f0" strokeWidth="1" />
+
+      {/* Geodesic Crystalline Facet Lattice */}
+      <g stroke="#ffffff" strokeWidth="0.65" strokeLinejoin="round" opacity="0.95">
+        {/* Top Dome Facets */}
+        <polygon points="48,31.5 41,39 48,43" fill="#ffffff" opacity="0.9" style={{ animation: 'nyFacetTwinkle1 1.4s ease-in-out infinite' }} />
+        <polygon points="48,31.5 48,43 55,39" fill={theme.facet1} opacity="0.85" style={{ animation: 'nyFacetTwinkle2 1.8s ease-in-out infinite' }} />
+        <polygon points="48,31.5 55,39 65,42" fill={theme.facet2} opacity="0.75" />
+        <polygon points="48,31.5 31,42 41,39" fill={theme.facet1} opacity="0.8" />
+        <polygon points="48,31.5 24,46 31,42" fill={theme.facet2} opacity="0.7" />
+        <polygon points="48,31.5 65,42 72,46" fill="#ffffff" opacity="0.85" />
+
+        {/* Upper Equator Row */}
+        <polygon points="41,39 48,43 42,52" fill={theme.facet3} opacity="0.95" />
+        <polygon points="48,43 55,39 54,52" fill="#ffffff" opacity="0.9" style={{ animation: 'nyFacetTwinkle3 1.2s ease-in-out infinite' }} />
+        <polygon points="48,43 42,52 54,52" fill={theme.facet1} opacity="0.9" style={{ animation: 'nyFacetTwinkle1 1.5s ease-in-out infinite' }} />
+        <polygon points="31,42 41,39 33,52" fill={theme.facet2} opacity="0.8" />
+        <polygon points="41,39 42,52 33,52" fill="#ffffff" opacity="0.85" />
+        <polygon points="55,39 65,42 63,52" fill={theme.facet2} opacity="0.8" />
+        <polygon points="55,39 54,52 63,52" fill="#ffffff" opacity="0.85" />
+        <polygon points="24,46 31,42 24,56" fill={theme.facet1} opacity="0.75" />
+        <polygon points="31,42 33,52 24,56" fill={theme.facet3} opacity="0.8" />
+        <polygon points="65,42 72,46 72,56" fill={theme.facet1} opacity="0.75" />
+        <polygon points="65,42 63,52 72,56" fill={theme.facet3} opacity="0.8" />
+
+        {/* Equator Center Belt */}
+        <polygon points="24,56 33,52 34,64" fill="#ffffff" opacity="0.9" style={{ animation: 'nyFacetTwinkle2 1.6s ease-in-out infinite' }} />
+        <polygon points="33,52 42,52 39,64" fill={theme.facet1} opacity="0.85" />
+        <polygon points="33,52 39,64 34,64" fill={theme.facet2} opacity="0.8" />
+        <polygon points="42,52 54,52 48,64" fill="#ffffff" opacity="0.95" style={{ animation: 'nyFacetTwinkle1 1.3s ease-in-out infinite' }} />
+        <polygon points="42,52 48,64 39,64" fill={theme.facet3} opacity="0.9" />
+        <polygon points="54,52 63,52 57,64" fill={theme.facet1} opacity="0.85" />
+        <polygon points="54,52 48,64 57,64" fill={theme.facet2} opacity="0.85" style={{ animation: 'nyFacetTwinkle3 1.7s ease-in-out infinite' }} />
+        <polygon points="63,52 72,56 62,64" fill="#ffffff" opacity="0.9" />
+        <polygon points="63,52 62,64 57,64" fill={theme.facet3} opacity="0.8" />
+
+        {/* Lower Equator & Lower Dome */}
+        <polygon points="34,64 39,64 41,74" fill={theme.facet2} opacity="0.8" />
+        <polygon points="39,64 48,64 45,74" fill="#ffffff" opacity="0.9" style={{ animation: 'nyFacetTwinkle2 1.5s ease-in-out infinite' }} />
+        <polygon points="39,64 45,74 41,74" fill={theme.facet1} opacity="0.85" />
+        <polygon points="48,64 57,64 51,74" fill="#ffffff" opacity="0.9" style={{ animation: 'nyFacetTwinkle1 1.6s ease-in-out infinite' }} />
+        <polygon points="48,64 51,74 45,74" fill={theme.facet3} opacity="0.85" />
+        <polygon points="57,64 62,64 55,74" fill={theme.facet2} opacity="0.8" />
+        <polygon points="57,64 55,74 51,74" fill={theme.facet1} opacity="0.85" />
+
+        {/* Bottom Cap Facets */}
+        <polygon points="41,74 45,74 48,84.5" fill="#ffffff" opacity="0.9" />
+        <polygon points="45,74 51,74 48,84.5" fill={theme.facet1} opacity="0.85" />
+        <polygon points="51,74 55,74 48,84.5" fill={theme.facet2} opacity="0.8" />
+        <polygon points="34,64 41,74 48,84.5" fill={theme.facet3} opacity="0.75" />
+        <polygon points="55,74 62,64 48,84.5" fill={theme.facet3} opacity="0.75" />
+      </g>
+
+      {/* Gloss Specular Arc on Left Edge */}
+      <path
+        d="M 27 44 C 23 52 23 64 27 72"
+        stroke="#ffffff"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        fill="none"
+        opacity="0.85"
+      />
+
+      {/* --- 3. Dazzling Starburst Glints (Diamond Reflections) --- */}
+      {/* Major 8-Point Diamond Star Glint (Upper Left, x=36, y=46) */}
+      <g transform="translate(36, 46)">
+        <g style={{ animation: 'nyGlintSpin 3.2s ease-in-out infinite' }}>
+          <path
+            d="M 0 -11 Q 0 0 -11 0 Q 0 0 0 11 Q 0 0 11 0 Q 0 0 0 -11 Z"
+            fill="#ffffff"
+          />
+          <path
+            d="M -6 -6 Q 0 0 6 -6 Q 0 0 6 6 Q 0 0 -6 6 Q 0 0 -6 -6 Z"
+            fill={theme.accentGlint}
+            opacity="0.75"
+          />
+          <circle cx="0" cy="0" r="2.2" fill="#ffffff" />
+        </g>
+      </g>
+
+      {/* Secondary 4-Point Star Glint (Right Equator, x=58, y=60) */}
+      <g transform="translate(58, 60)">
+        <g style={{ animation: 'nyGlintSpin 2.6s ease-in-out infinite', animationDelay: '0.9s' }}>
+          <path
+            d="M 0 -8 Q 0 0 -8 0 Q 0 0 0 8 Q 0 0 8 0 Q 0 0 0 -8 Z"
+            fill="#ffffff"
+          />
+          <circle cx="0" cy="0" r="1.6" fill={theme.accentGlint} />
+        </g>
+      </g>
+
+      {/* Tertiary 4-Point Star Glint (Top Center, x=48, y=36) */}
+      <g transform="translate(48, 36)">
+        <g style={{ animation: 'nyGlintSpin 2.2s ease-in-out infinite', animationDelay: '1.5s' }}>
+          <path
+            d="M 0 -6 Q 0 0 -6 0 Q 0 0 0 6 Q 0 0 6 0 Q 0 0 0 -6 Z"
+            fill="#ffffff"
+          />
+          <circle cx="0" cy="0" r="1.2" fill="#ffffff" />
+        </g>
+      </g>
+
+      {/* Scattered Diamond Sparkle Dust */}
+      <circle cx="21" cy="42" r="1.2" fill="#ffffff" opacity="0.8" style={{ animation: 'nyFacetTwinkle1 1.5s infinite' }} />
+      <circle cx="74" cy="48" r="1.4" fill={theme.accentGlint} opacity="0.85" style={{ animation: 'nyFacetTwinkle2 1.7s infinite' }} />
+      <circle cx="26" cy="74" r="1.3" fill="#ffffff" opacity="0.75" style={{ animation: 'nyFacetTwinkle3 1.9s infinite' }} />
+      <circle cx="70" cy="68" r="1.1" fill={theme.accentGlint} opacity="0.8" style={{ animation: 'nyFacetTwinkle1 2.1s infinite' }} />
+
+      {/* --- 4. Base Collar & Celebratory New Year Streamers --- */}
+      <ellipse cx="48" cy="86" rx="7.5" ry="2.8" fill="#e2e8f0" stroke="#64748b" strokeWidth="0.8" />
+
+      {/* Metallic Party Ribbon Streamers */}
+      <g style={{ animation: 'nyStreamerWave 4.5s ease-in-out infinite', transformOrigin: '48px 88px' }}>
+        {/* Left Curled Ribbon */}
+        <path
+          d="M 45 88 Q 32 96 28 108 Q 24 118 30 126"
+          stroke={theme.ribbon1}
+          strokeWidth="2.4"
+          strokeLinecap="round"
+          fill="none"
+        />
+        <path
+          d="M 46 89 Q 34 97 30 109"
+          stroke="#ffffff"
+          strokeWidth="0.8"
+          strokeLinecap="round"
+          fill="none"
+          opacity="0.85"
+        />
+
+        {/* Right Curled Ribbon */}
+        <path
+          d="M 51 88 Q 64 96 68 108 Q 72 118 66 126"
+          stroke={theme.ribbon2}
+          strokeWidth="2.4"
+          strokeLinecap="round"
+          fill="none"
+        />
+        <path
+          d="M 50 89 Q 62 97 66 109"
+          stroke="#ffffff"
+          strokeWidth="0.8"
+          strokeLinecap="round"
+          fill="none"
+          opacity="0.85"
+        />
+
+        {/* Center Rosette Knot Medallion */}
+        <circle cx="48" cy="89.5" r="4.2" fill={theme.ribbon1} stroke="#ffffff" strokeWidth="1" />
+        <circle cx="48" cy="89.5" r="2" fill="#ffffff" />
+      </g>
+
+      {/* --- 5. Suspension Cable Lifting Photo Card --- */}
+      {/* Anchor knot at bottom of ribbons */}
+      <ellipse cx="48" cy="94" rx="3.5" ry="2" fill="#94a3b8" />
+      {/* Metallic Twisted Silver/Gold Cable */}
+      <path
+        d="M 48 94 C 44 114 52 134 48 153"
+        stroke="rgba(255,255,255,0.9)"
+        strokeWidth="1.8"
+        fill="none"
+      />
+      <path
+        d="M 48 94 C 44 114 52 134 48 153"
+        stroke={theme.accentGlint}
+        strokeWidth="1.8"
+        strokeDasharray="3 3"
+        fill="none"
+        opacity="0.75"
+      />
     </svg>
   )
 }
@@ -3274,7 +3574,7 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
   )
 
   const seasonalNow = seasonalDate ?? getSeasonalDate()
-  const hasSittingElf = isElfSeason(seasonalNow)
+  const hasSittingElf = isElfSeason(seasonalNow) && !isNewYearSeason(seasonalNow)
   const seedOffset = seed + pairIdx * 3 + index
   const elfPosition = pair ? (pairIdx === 0 ? 'left' : 'right') : 'right'
   const elfFlip = pair ? pairIdx === 0 : false
@@ -3345,7 +3645,13 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
         </div>
       )
     }
-  } else if (isDecember(seasonalNow)) {
+  } else if (isNewYearSeason(seasonalNow)) {
+    topElement = (
+      <div className="absolute bottom-[calc(100%-14px)] pointer-events-none select-none z-10">
+        <NewYearBallDropTopper seed={seedOffset} />
+      </div>
+    )
+  } else if (isChristmasSeason(seasonalNow)) {
     topElement = (
       <div className="absolute bottom-[calc(100%-12px)] pointer-events-none select-none z-10">
         <CandyCane seed={seedOffset} />
@@ -3817,8 +4123,8 @@ export default function Slideshow({
 
       <CloudLayer phase={phase} kind={kind} quality={quality} />
 
-      {/* String lights along the top sky background (behind photos & decorations) */}
-      {isDecember(seasonalDate) && <StringLights />}
+      {/* String lights along the top sky background (behind photos & decorations, Dec 1-25) */}
+      {isChristmasSeason(seasonalDate) && <StringLights />}
 
       {/* Photos. Plain sync presence: every layer here is already absolutely
           positioned, so popLayout's layout projection was measuring for
@@ -3868,8 +4174,8 @@ export default function Slideshow({
       {/* October Spooky Delight: Dancing and running away skeleton */}
       {isOctober(seasonalDate) && <DancingSkeleton />}
 
-      {/* Holiday Delights (Running Elf across bottom bezel) */}
-      {isElfSeason(seasonalDate) && <RunningElf />}
+      {/* Holiday Delights (Running Elf across bottom bezel, Dec 1-24) */}
+      {isElfSeason(seasonalDate) && !isNewYearSeason(seasonalDate) && <RunningElf />}
 
       {/* November Autumn Delights: Running Squirrel (when not Thanksgiving week) */}
       {isNovember(seasonalDate) && !isThanksgivingWeek(seasonalDate) && <RunningSquirrel />}

@@ -24,6 +24,7 @@ import {
   isElfSeason,
   isChristmasDay,
   isNewYearsDay,
+  isNewYearSeason,
 } from './queryParam'
 
 // Cap the frame rate: full-screen 60fps canvas work is wasted on ambient
@@ -1304,7 +1305,7 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     const november = isNovember(seasonalDate)
     const diwali = isDiwaliSeason(seasonalDate)
     const christmasDay = isChristmasDay(seasonalDate)
-    const newYearsDay = isNewYearsDay(seasonalDate)
+    const newYearSeason = isNewYearSeason(seasonalDate)
 
     // Decide whether this layer has anything to render at all. A clear day has
     // no weather and no fireflies, so the canvas would otherwise clear and
@@ -1329,7 +1330,7 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
       witch !== null ||
       santa !== null ||
       christmasDay ||
-      newYearsDay ||
+      newYearSeason ||
       (creaturesPossible && t > nextFlock) ||
       (witchPossible && t > nextWitch) ||
       (santaPossible && t > nextSanta)
@@ -1602,8 +1603,8 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
       }
     }
 
-    // Festive Fireworks: New Year's Day & Diwali Nights (Pataka & Rockets)!
-    const wantsFireworks = newYearsDay || wantsDiwaliFireworks
+    // Festive Fireworks: New Year's Season & Diwali Nights (Pataka & Rockets)!
+    const wantsFireworks = newYearSeason || wantsDiwaliFireworks
     if (wantsFireworks) {
       if (t > nextRocket) {
         nextRocket = t + rand(diwali ? 450 : 650, diwali ? 1200 : 1500)

@@ -49,8 +49,8 @@ export function getSeasonalDate(now: Date = new Date()): Date {
     if (o === 'christmas' || o === 'dec25' || o === 'santa') {
       return new Date(2026, 11, 25)
     }
-    if (o === 'newyear' || o === 'jan1' || o === 'fireworks') {
-      return new Date(2026, 0, 1)
+    if (o === 'newyear' || o === 'jan1' || o === 'fireworks' || o === 'balldrop' || o === 'nye') {
+      return new Date(2026, 11, 31)
     }
   }
   return now
@@ -87,8 +87,19 @@ export function isDecember(d?: Date): boolean {
   return date.getMonth() === 11
 }
 
+export function isChristmasSeason(d?: Date): boolean {
+  const date = d ?? getSeasonalDate()
+  const override = getHolidayOverride()?.toLowerCase()
+  if (override === 'christmas' || override === 'santa') return true
+  // Christmas season with string lights runs Dec 1 through Dec 25 (removed on Dec 26)
+  return date.getMonth() === 11 && date.getDate() >= 1 && date.getDate() <= 25
+}
+
 export function isElfSeason(d?: Date): boolean {
   const date = d ?? getSeasonalDate()
+  const override = getHolidayOverride()?.toLowerCase()
+  if (override === 'elves' || override === 'elf') return true
+  // Elves run Dec 1 through Dec 24, strictly removed on Dec 25/26
   return date.getMonth() === 11 && date.getDate() >= 1 && date.getDate() <= 24
 }
 
@@ -100,4 +111,14 @@ export function isChristmasDay(d?: Date): boolean {
 export function isNewYearsDay(d?: Date): boolean {
   const date = d ?? getSeasonalDate()
   return date.getMonth() === 0 && date.getDate() === 1
+}
+
+export function isNewYearSeason(d?: Date): boolean {
+  const date = d ?? getSeasonalDate()
+  const override = getHolidayOverride()?.toLowerCase()
+  if (override === 'newyear' || override === 'balldrop' || override === 'nye' || override === 'jan1') return true
+  const m = date.getMonth()
+  const day = date.getDate()
+  // Dec 26 through Jan 2: New Year celebrations and Ball Drop
+  return (m === 11 && day >= 26) || (m === 0 && day <= 2)
 }
