@@ -14,9 +14,11 @@ const DURATION_MS = 4500
 interface Ctx {
   /** Play a random (or specific) reward redemption animation. */
   celebrateReward: (name?: RewardAnimationName) => void
+  /** Immediately halt any ongoing reward celebration and optionally suppress new ones. */
+  stop: (suppressDurationMs?: number) => void
 }
 
-const RewardCelebrationContext = createContext<Ctx>({ celebrateReward: () => {} })
+const RewardCelebrationContext = createContext<Ctx>({ celebrateReward: () => {}, stop: () => {} })
 
 export const useRewardCelebration = () => useContext(RewardCelebrationContext)
 
@@ -28,8 +30,12 @@ export function RewardCelebrationProvider({ children }: { children: ReactNode })
   const cleanupRef = useRef<(() => void) | null>(null)
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
   const lastRef = useRef<RewardAnimationName | null>(null)
+  const suppressedUntilRef = useRef<number>(0)
 
-  const stop = useCallback(() => {
+  const stop = useCallback((suppressDurationMs = 0) => {
+    if (suppressDurationMs > 0) {
+      suppressedUntilRef.current = Date.now() + suppressDurationMs
+    }
     timersRef.current.forEach(clearTimeout)
     timersRef.current = []
     cleanupRef.current?.()
@@ -40,6 +46,9 @@ export function RewardCelebrationProvider({ children }: { children: ReactNode })
 
   const celebrateReward = useCallback(
     (name?: RewardAnimationName) => {
+      if (Date.now() < suppressedUntilRef.current) {
+        return
+      }
       stop()
       let pool = REWARD_ANIMATIONS
       if (name) {
@@ -56,11 +65,20 @@ export function RewardCelebrationProvider({ children }: { children: ReactNode })
   )
 
   useEffect(() => {
+    const handleStop = (e: any) => {
+      const suppress = typeof e?.detail?.suppressDurationMs === 'number' ? e.detail.suppressDurationMs : 8000
+      stop(suppress)
+    }
+    window.addEventListener('nivas:stop-celebration', handleStop)
+    return () => window.removeEventListener('nivas:stop-celebration', handleStop)
+  }, [stop])
+
+  useEffect(() => {
     if (!active || !canvasRef.current) return
     cleanupRef.current = active.run(canvasRef.current)
     timersRef.current = [
       setTimeout(() => setFading(true), DURATION_MS - 600),
-      setTimeout(stop, DURATION_MS),
+      setTimeout(() => stop(), DURATION_MS),
     ]
     return () => {
       timersRef.current.forEach(clearTimeout)
@@ -70,13 +88,13 @@ export function RewardCelebrationProvider({ children }: { children: ReactNode })
   }, [active, stop])
 
   return (
-    <RewardCelebrationContext.Provider value={{ celebrateReward }}>
+    <RewardCelebrationContext.Provider value={{ celebrateReward, stop }}>
       {children}
       {active && (
         <div
           className={`fixed inset-0 z-50 transition-opacity duration-500 ${fading ? 'opacity-0' : 'opacity-100'}`}
           style={{ background: active.backdrop }}
-          onClick={stop}
+          onClick={() => stop()}
         >
           <canvas ref={canvasRef} className="h-full w-full" />
           {active.name !== 'fairy' && (

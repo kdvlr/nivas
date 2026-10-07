@@ -158,7 +158,7 @@ export default function Home() {
     '/api/setup/config',
     ['setup'],
   )
-  const { celebrate } = useCelebration()
+  const { celebrate, stop: stopCelebration } = useCelebration()
 
 
   // Reset completing/removed tracking when data reloads
@@ -335,8 +335,24 @@ export default function Home() {
       setRemovedIds((prev) => [...prev, itemId])
     }, 450)
 
+    // Check if this chore moves assignee into the lead
+    const assignee = (c.assigned_to || '').trim().toLowerCase()
+    const b = balances?.find((sb) => sb.person_name.toLowerCase() === assignee)
+    const uniqueBalances = Array.from(new Set((balances || []).map((sb) => sb.balance))).sort((x, y) => y - x)
+    const maxBalance = uniqueBalances[0] ?? 0
+    const currentBalance = b?.balance ?? 0
+    const leaders = (balances || []).filter((sb) => sb.balance === maxBalance)
+    const isSoleLeader = leaders.length === 1 && leaders[0].person_name.toLowerCase() === assignee
+    const willTakeLead = !isSoleLeader && (currentBalance + c.coins >= maxBalance)
+
+    if (willTakeLead) {
+      stopCelebration(8000)
+    }
+
     await api.patch(`/api/chores/${c.id}`, { completed: true })
-    celebrate()
+    if (!willTakeLead) {
+      celebrate()
+    }
     reloadChores()
   }
   // no celebration for to-dos on the home screen — they're grown-up chores

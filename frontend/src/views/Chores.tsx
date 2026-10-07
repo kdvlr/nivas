@@ -347,7 +347,7 @@ export default function Chores() {
   const { data: chores, reload } = useData<ChoreItem[]>('/api/chores', ['chores'])
   const { data: people } = useData<Person[]>('/api/setup/people', ['chores'])
   const { data: balances } = useData<CoinBalance[]>('/api/rewards/balances', ['chores', 'rewards'])
-  const { celebrate } = useCelebration()
+  const { celebrate, stop: stopCelebration } = useCelebration()
 
   const [completingId, setCompletingId] = useState<number | null>(null)
   const [leadCelebration, setLeadCelebration] = useState<{
@@ -359,6 +359,12 @@ export default function Chores() {
   }>({ open: false, name: '' })
 
   const prevRankingsRef = useRef<Map<string, number> | null>(null)
+  const pendingLeadRef = useRef(false)
+  const leadCelebrationRef = useRef(false)
+
+  useEffect(() => {
+    leadCelebrationRef.current = leadCelebration.open
+  }, [leadCelebration.open])
 
   useEffect(() => {
     if (!balances || balances.length === 0) return
@@ -383,10 +389,21 @@ export default function Chores() {
       return
     }
 
-    // Check if anyone moved from 2nd spot (tier === 1) to 1st spot (tier === 0)
+    // Check if anyone moved into the lead:
+    // 1) Moved from behind (prevTier > 0) to 1st place (tier === 0)
+    // 2) Or broke a 1st place tie to become the sole leader
+    const prevLeaders = Array.from(prevRankingsRef.current.entries()).filter(([_, tier]) => tier === 0)
+    const curLeaders = Array.from(currentRanks.entries()).filter(([_, item]) => item.tier === 0)
+
     for (const [key, cur] of currentRanks.entries()) {
       const prevTier = prevRankingsRef.current.get(key)
-      if (prevTier === 1 && cur.tier === 0) {
+      const movedFromBehind = prevTier !== undefined && prevTier > 0 && cur.tier === 0
+      const brokeTieForLead = prevTier === 0 && prevLeaders.length > 1 && curLeaders.length === 1 && cur.tier === 0
+
+      if (movedFromBehind || brokeTieForLead) {
+        // STOP normal celebration immediately so it does not override lead animation
+        stopCelebration(8000)
+        pendingLeadRef.current = false
         setLeadCelebration({
           open: true,
           name: cur.name,
@@ -399,10 +416,11 @@ export default function Chores() {
     }
 
     prevRankingsRef.current = new Map(Array.from(currentRanks.entries()).map(([k, v]) => [k, v.tier]))
-  }, [balances, people])
+  }, [balances, people, stopCelebration])
 
   useEffect(() => {
     const handleTestLead = (e: any) => {
+      stopCelebration(8000)
       const name = e.detail?.name || (people && people[0]?.name) || 'Leader'
       const p = people?.find((per) => per.name.toLowerCase() === name.toLowerCase())
       const b = balances?.find((sb) => sb.person_name.toLowerCase() === name.toLowerCase())
@@ -416,7 +434,7 @@ export default function Chores() {
     }
     window.addEventListener('nivas:test-lead-celebration', handleTestLead)
     return () => window.removeEventListener('nivas:test-lead-celebration', handleTestLead)
-  }, [people, balances])
+  }, [people, balances, stopCelebration])
 
   const toggle = async (chore: ChoreItem) => {
     if (completingId !== null) return
@@ -426,26 +444,37 @@ export default function Chores() {
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
         navigator.vibrate([40, 60, 40])
       }
+
+      // Check if this chore moves assignee into the lead BEFORE any asynchronous calls
+      const assignee = (chore.assigned_to || '').trim().toLowerCase()
+      const b = balances?.find((sb) => sb.person_name.toLowerCase() === assignee)
+      const uniqueBalances = Array.from(new Set((balances || []).map((sb) => sb.balance))).sort((x, y) => y - x)
+      const maxBalance = uniqueBalances[0] ?? 0
+      const currentBalance = b?.balance ?? 0
+      const leaders = (balances || []).filter((sb) => sb.balance === maxBalance)
+      const isSoleLeader = leaders.length === 1 && leaders[0].person_name.toLowerCase() === assignee
+
+      const willTakeLead = !isSoleLeader && (currentBalance + chore.coins >= maxBalance)
+
+      if (willTakeLead) {
+        pendingLeadRef.current = true
+        stopCelebration(8000)
+      }
+
       try {
         await api.patch(`/api/chores/${chore.id}`, { completed: true })
       } catch (err) {
         console.error('Failed to complete chore', err)
         setCompletingId(null)
+        pendingLeadRef.current = false
         return
       }
 
-      // Check if this chore moves assignee from 2nd place to 1st
-      const assignee = chore.assigned_to
-      const b = balances?.find((sb) => sb.person_name.toLowerCase() === (assignee || '').toLowerCase())
-      const uniqueBalances = Array.from(new Set((balances || []).map((sb) => sb.balance))).sort((x, y) => y - x)
-      const currentTier = b ? uniqueBalances.indexOf(b.balance) : -1
-      const isCurrentlySecond = currentTier === 1
-      const maxBalance = uniqueBalances[0] ?? 0
-      const willTakeLead = isCurrentlySecond && b && (b.balance + chore.coins >= maxBalance)
-
       // Visual confirmation hold period on the card before celebration and list reorder
       await new Promise((resolve) => setTimeout(resolve, 650))
-      if (!willTakeLead) {
+      if (pendingLeadRef.current || willTakeLead || leadCelebrationRef.current) {
+        stopCelebration(8000)
+      } else {
         celebrate()
       }
       setCompletingId(null)

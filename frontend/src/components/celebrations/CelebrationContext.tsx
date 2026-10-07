@@ -14,9 +14,11 @@ const DURATION_MS = 3800
 interface Ctx {
   /** Play a random (or specific) fullscreen celebration. */
   celebrate: (name?: CelebrationName) => void
+  /** Immediately halt any ongoing fullscreen celebration and optionally suppress new ones. */
+  stop: (suppressDurationMs?: number) => void
 }
 
-const CelebrationContext = createContext<Ctx>({ celebrate: () => {} })
+const CelebrationContext = createContext<Ctx>({ celebrate: () => {}, stop: () => {} })
 
 export const useCelebration = () => useContext(CelebrationContext)
 
@@ -28,8 +30,12 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
   const cleanupRef = useRef<(() => void) | null>(null)
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
   const lastRef = useRef<CelebrationName | null>(null)
+  const suppressedUntilRef = useRef<number>(0)
 
-  const stop = useCallback(() => {
+  const stop = useCallback((suppressDurationMs = 0) => {
+    if (suppressDurationMs > 0) {
+      suppressedUntilRef.current = Date.now() + suppressDurationMs
+    }
     timersRef.current.forEach(clearTimeout)
     timersRef.current = []
     cleanupRef.current?.()
@@ -40,6 +46,9 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
 
   const celebrate = useCallback(
     (name?: CelebrationName) => {
+      if (Date.now() < suppressedUntilRef.current) {
+        return
+      }
       stop()
       let pool = CELEBRATIONS
       if (name) {
@@ -57,6 +66,15 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
   )
 
   useEffect(() => {
+    const handleStop = (e: any) => {
+      const suppress = typeof e?.detail?.suppressDurationMs === 'number' ? e.detail.suppressDurationMs : 8000
+      stop(suppress)
+    }
+    window.addEventListener('nivas:stop-celebration', handleStop)
+    return () => window.removeEventListener('nivas:stop-celebration', handleStop)
+  }, [stop])
+
+  useEffect(() => {
     if (!active) return
     if (active.run && canvasRef.current) {
       cleanupRef.current = active.run(canvasRef.current)
@@ -64,7 +82,7 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
     const duration = active.durationMs || DURATION_MS
     timersRef.current = [
       setTimeout(() => setFading(true), Math.max(duration - 600, 0)),
-      setTimeout(stop, duration),
+      setTimeout(() => stop(), duration),
     ]
     return () => {
       timersRef.current.forEach(clearTimeout)
@@ -74,13 +92,13 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
   }, [active, stop])
 
   return (
-    <CelebrationContext.Provider value={{ celebrate }}>
+    <CelebrationContext.Provider value={{ celebrate, stop }}>
       {children}
       {active && (
         <div
           className={`fixed inset-0 z-50 transition-opacity duration-500 ${fading ? 'opacity-0' : 'opacity-100'}`}
           style={{ background: active.backdrop }}
-          onClick={stop}
+          onClick={() => stop()}
         >
           {active.iframeSrc ? (
             <iframe

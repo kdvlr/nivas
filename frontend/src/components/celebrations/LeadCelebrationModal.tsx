@@ -48,6 +48,15 @@ export default function LeadCelebrationModal({
   useEffect(() => {
     if (!isOpen) return
 
+    // Immediately stop and suppress any normal chore celebration
+    try {
+      window.dispatchEvent(
+        new CustomEvent('nivas:stop-celebration', {
+          detail: { suppressDurationMs: 8000 },
+        }),
+      )
+    } catch {}
+
     // 1. Trigger celebratory side cannons with canvas-confetti
     try {
       confetti({
@@ -210,20 +219,24 @@ export default function LeadCelebrationModal({
     }
   }, [isOpen, onClose])
 
-  if (!isOpen) return null
-
   const isSelf = personName.toLowerCase() === 'you' || personName.toLowerCase() === "you're"
 
   return (
     <AnimatePresence>
-      <div
-        className="fixed inset-0 z-[150] flex flex-col items-center justify-center pointer-events-auto select-none bg-black/80 backdrop-blur-md overflow-hidden cursor-pointer"
-        onClick={onClose}
-      >
-        {/* Fullscreen fireworks canvas */}
-        <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none" />
+      {isOpen && (
+        <motion.div
+          key="lead-celebration-backdrop"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.25 }}
+          className="fixed inset-0 z-[150] flex flex-col items-center justify-center pointer-events-auto select-none bg-black/80 backdrop-blur-md overflow-hidden cursor-pointer"
+          onClick={onClose}
+        >
+          {/* Fullscreen fireworks canvas */}
+          <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none" />
 
-        {/* Modal Content */}
+          {/* Modal Content */}
         <motion.div
           initial={{ scale: 0.4, opacity: 0, y: 50 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -412,7 +425,8 @@ export default function LeadCelebrationModal({
             Let's Go! 🎉
           </button>
         </motion.div>
-      </div>
-    </AnimatePresence>
-  )
+      </motion.div>
+    )}
+  </AnimatePresence>
+)
 }
