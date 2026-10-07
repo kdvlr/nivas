@@ -736,7 +736,10 @@ function DiwaliTempleHorizon({
   const isNightOrDusk = phase === 'night' || phase === 'dusk'
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 h-48 pointer-events-none z-[2] select-none overflow-hidden">
+    <div
+      className="absolute bottom-0 left-0 right-0 h-48 pointer-events-none z-[25] select-none overflow-hidden"
+      style={{ willChange: 'transform', transform: 'translateZ(0)' }}
+    >
       <svg
         viewBox="0 0 1920 188"
         preserveAspectRatio="none"
@@ -1306,7 +1309,10 @@ function AutumnHarvestHorizon({
   }
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 h-44 pointer-events-none z-[2] select-none overflow-hidden">
+    <div
+      className="absolute bottom-0 left-0 right-0 h-44 pointer-events-none z-[25] select-none overflow-hidden"
+      style={{ willChange: 'transform', transform: 'translateZ(0)' }}
+    >
       <svg
         viewBox="0 0 1920 176"
         preserveAspectRatio="none"
@@ -3814,11 +3820,6 @@ export default function Slideshow({
       {/* String lights along the top sky background (behind photos & decorations) */}
       {isDecember(seasonalDate) && <StringLights />}
 
-      {/* November autumn harvest countryside horizon (behind photos) */}
-      {isNovember(seasonalDate) && (
-        <AutumnHarvestHorizon seasonalDate={seasonalDate} phase={phase} />
-      )}
-
       {/* Photos. Plain sync presence: every layer here is already absolutely
           positioned, so popLayout's layout projection was measuring for
           nothing on every frame. */}
@@ -3852,6 +3853,11 @@ export default function Slideshow({
       {/* October dusk/night spooky delights: graveyard & skeletons in FOREGROUND (photos float up from behind) */}
       {isOctober(seasonalDate) && (phase === 'dusk' || phase === 'night') && (
         <SpookyGraveyard />
+      )}
+
+      {/* November autumn harvest & Thanksgiving / Diwali horizon in FOREGROUND (photos float up from behind) */}
+      {(isNovember(seasonalDate) || isDiwaliSeason(seasonalDate) || isThanksgivingWeek(seasonalDate)) && (
+        <AutumnHarvestHorizon seasonalDate={seasonalDate} phase={phase} />
       )}
 
       {/* October dusk/night spooky delights: webs & spiders dangling in FRONT of photos */}
