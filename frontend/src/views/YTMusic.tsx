@@ -250,6 +250,8 @@ export default function YTMusicView({
   const [localGenres, setLocalGenres] = useState<any[]>([])
   const [selectedArtist, setSelectedArtist] = useState<string | null>(null)
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null)
+  const [openingArtistOrGenre, setOpeningArtistOrGenre] = useState<string | null>(null)
+  const [queueingArtistOrGenre, setQueueingArtistOrGenre] = useState<string | null>(null)
   const [localStatus, setLocalStatus] = useState<any>(null)
   const [scanningStatus, setScanningStatus] = useState<boolean>(false)
   const [reshuffleKey, setReshuffleKey] = useState<number>(0)
@@ -573,6 +575,100 @@ export default function YTMusicView({
     }
   }
 
+  // Play all songs by an artist immediately (optionally shuffled)
+  const playArtist = async (artist: string, shuffle: boolean = false, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation()
+    setOpeningArtistOrGenre(artist)
+    try {
+      const res = await api.get<any>(`/api/ytmusic/local/artist/tracks?artist=${encodeURIComponent(artist)}`)
+      let tracks = (Array.isArray(res?.tracks) ? res.tracks : []).map(toTrack).filter((t: Track | null): t is Track => Boolean(t))
+      if (tracks && tracks.length) {
+        if (shuffle) {
+          tracks = [...tracks].sort(() => Math.random() - 0.5)
+        }
+        syncUrlSubView('now-playing')
+        onPlayTrack(tracks[0], tracks.slice(1))
+      }
+    } catch (err) {
+      console.error('Failed to play artist tracks:', err)
+    } finally {
+      setOpeningArtistOrGenre(null)
+    }
+  }
+
+  // Queue all songs by an artist (either play next or append)
+  const queueArtist = async (artist: string, playNext: boolean = false, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation()
+    setQueueingArtistOrGenre(artist)
+    try {
+      const res = await api.get<any>(`/api/ytmusic/local/artist/tracks?artist=${encodeURIComponent(artist)}`)
+      const tracks = (Array.isArray(res?.tracks) ? res.tracks : []).map(toTrack).filter((t: Track | null): t is Track => Boolean(t))
+      if (tracks && tracks.length) {
+        if (!currentTrack) {
+          syncUrlSubView('now-playing')
+          onPlayTrack(tracks[0], tracks.slice(1))
+        } else {
+          await api.post<any>(`/api/ytmusic/player/queue/batch?play_next=${playNext}`, { tracks })
+          if (onQueueChange) {
+            const nextQueue = playNext ? [...tracks, ...queue] : [...queue, ...tracks]
+            onQueueChange(nextQueue)
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to queue artist tracks:', err)
+    } finally {
+      setQueueingArtistOrGenre(null)
+    }
+  }
+
+  // Play all songs in a genre immediately (optionally shuffled)
+  const playGenre = async (genre: string, shuffle: boolean = false, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation()
+    setOpeningArtistOrGenre(genre)
+    try {
+      const res = await api.get<any>(`/api/ytmusic/local/genre/tracks?genre=${encodeURIComponent(genre)}`)
+      let tracks = (Array.isArray(res?.tracks) ? res.tracks : []).map(toTrack).filter((t: Track | null): t is Track => Boolean(t))
+      if (tracks && tracks.length) {
+        if (shuffle) {
+          tracks = [...tracks].sort(() => Math.random() - 0.5)
+        }
+        syncUrlSubView('now-playing')
+        onPlayTrack(tracks[0], tracks.slice(1))
+      }
+    } catch (err) {
+      console.error('Failed to play genre tracks:', err)
+    } finally {
+      setOpeningArtistOrGenre(null)
+    }
+  }
+
+  // Queue all songs in a genre (either play next or append)
+  const queueGenre = async (genre: string, playNext: boolean = false, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation()
+    setQueueingArtistOrGenre(genre)
+    try {
+      const res = await api.get<any>(`/api/ytmusic/local/genre/tracks?genre=${encodeURIComponent(genre)}`)
+      const tracks = (Array.isArray(res?.tracks) ? res.tracks : []).map(toTrack).filter((t: Track | null): t is Track => Boolean(t))
+      if (tracks && tracks.length) {
+        if (!currentTrack) {
+          syncUrlSubView('now-playing')
+          onPlayTrack(tracks[0], tracks.slice(1))
+        } else {
+          await api.post<any>(`/api/ytmusic/player/queue/batch?play_next=${playNext}`, { tracks })
+          if (onQueueChange) {
+            const nextQueue = playNext ? [...tracks, ...queue] : [...queue, ...tracks]
+            onQueueChange(nextQueue)
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to queue genre tracks:', err)
+    } finally {
+      setQueueingArtistOrGenre(null)
+    }
+  }
+
   const renderAlbumDetailView = () => {
     if (!selectedAlbum) return null
     const tracks = albumSongs
@@ -633,7 +729,22 @@ export default function YTMusicView({
               <h1 className="mt-3 text-2xl sm:text-3xl lg:text-4xl font-extrabold text-ink tracking-tight line-clamp-2">
                 {selectedAlbum.title}
               </h1>
-              <p className="mt-2 text-base sm:text-lg font-semibold text-ink-soft">
+              <p
+                onClick={() => {
+                  if (selectedAlbum.source === 'local') {
+                    setSelectedAlbum(null)
+                    setAlbumSongs([])
+                    setSelectedArtist(selectedAlbum.artist)
+                    setSelectedGenre(null)
+                    setLocalTab('albums')
+                    loadLocalLibrary(selectedAlbum.artist, null)
+                  }
+                }}
+                className={`mt-2 text-base sm:text-lg font-semibold text-ink-soft ${
+                  selectedAlbum.source === 'local' ? 'cursor-pointer hover:text-[var(--primary)] hover:underline inline-block' : ''
+                }`}
+                title={selectedAlbum.source === 'local' ? `View all albums and songs by ${selectedAlbum.artist}` : undefined}
+              >
                 {selectedAlbum.artist}
               </p>
               <p className="mt-1 text-xs sm:text-sm text-ink-soft/80">
@@ -1485,46 +1596,180 @@ export default function YTMusicView({
               </div>
 
               {/* Filter by artist banner */}
-              {selectedArtist && (
-                <div className="flex items-center justify-between bg-[var(--sc-high)] border border-[var(--outline-var)] rounded-2xl px-5 py-3 shadow-sm">
-                  <div className="flex items-center gap-2">
-                    <Icon name="person" className="text-xl text-[var(--primary)]" />
-                    <span className="text-sm sm:text-base font-semibold text-ink">
-                      Showing albums by <span className="text-[var(--primary)] font-bold">{selectedArtist}</span>
-                    </span>
+              {selectedArtist && (() => {
+                const artistMeta = localArtists.find((a) => (a.artist || '').toLowerCase() === selectedArtist.toLowerCase())
+                const albumCount = artistMeta?.albumCount ?? localAlbums.filter((a) => a.artist.toLowerCase() === selectedArtist.toLowerCase()).length
+                const trackCount = artistMeta?.trackCount
+                const isOpening = openingArtistOrGenre === selectedArtist
+                const isQueueing = queueingArtistOrGenre === selectedArtist
+
+                return (
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[var(--sc-high)] border border-[var(--outline-var)] rounded-2xl p-4 sm:p-5 shadow-sm">
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--primary-container)] text-[var(--on-primary-container)] border border-[var(--primary)]/30 shadow-sm">
+                        <Icon name="person" className="text-2xl" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] uppercase font-bold tracking-wider text-ink-soft">
+                            Artist
+                          </span>
+                        </div>
+                        <h2 className="text-lg sm:text-xl font-bold text-ink truncate">
+                          {selectedArtist}
+                        </h2>
+                        <p className="text-xs sm:text-sm text-ink-soft">
+                          {albumCount} {albumCount === 1 ? 'album' : 'albums'}{trackCount !== undefined ? ` · ${trackCount} tracks` : ''}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+                      <button
+                        onClick={(e) => playArtist(selectedArtist, false, e)}
+                        disabled={isOpening || isQueueing}
+                        className="flex items-center gap-1.5 rounded-full bg-[var(--primary)] hover:brightness-110 px-4 sm:px-5 py-2 text-xs sm:text-sm font-bold text-[var(--on-primary)] transition active:scale-95 shadow-md disabled:opacity-50 cursor-pointer"
+                      >
+                        {isOpening ? (
+                          <Icon name="sync" className="text-base animate-spin" />
+                        ) : (
+                          <Icon name="play_arrow" filled className="text-lg" />
+                        )}
+                        <span>Play All</span>
+                      </button>
+
+                      <button
+                        onClick={(e) => playArtist(selectedArtist, true, e)}
+                        disabled={isOpening || isQueueing}
+                        className="flex items-center gap-1.5 rounded-full border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-ink transition active:scale-95 disabled:opacity-50 cursor-pointer shadow-sm"
+                      >
+                        <Icon name="shuffle" className="text-base" />
+                        <span>Shuffle</span>
+                      </button>
+
+                      <button
+                        onClick={(e) => queueArtist(selectedArtist, true, e)}
+                        disabled={isOpening || isQueueing}
+                        title="Play artist next"
+                        className="flex items-center gap-1 rounded-full border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] px-3 py-2 text-xs sm:text-sm font-semibold text-ink transition active:scale-95 disabled:opacity-50 cursor-pointer shadow-sm"
+                      >
+                        <Icon name="playlist_play" className="text-lg" />
+                        <span className="hidden sm:inline">Play Next</span>
+                      </button>
+
+                      <button
+                        onClick={(e) => queueArtist(selectedArtist, false, e)}
+                        disabled={isOpening || isQueueing}
+                        title="Add all songs by artist to queue"
+                        className="flex items-center gap-1 rounded-full border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] px-3 py-2 text-xs sm:text-sm font-semibold text-ink transition active:scale-95 disabled:opacity-50 cursor-pointer shadow-sm"
+                      >
+                        <Icon name="playlist_add" className="text-lg" />
+                        <span className="hidden sm:inline">Queue</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setSelectedArtist(null)
+                          loadLocalLibrary(null, selectedGenre)
+                        }}
+                        title="Show all albums"
+                        className="flex items-center gap-1 rounded-full border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] px-3 py-2 text-xs sm:text-sm font-semibold text-ink-soft hover:text-ink transition active:scale-95 cursor-pointer shadow-sm ml-auto sm:ml-0"
+                      >
+                        <Icon name="close" className="text-base" />
+                        <span>All Albums</span>
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => {
-                      setSelectedArtist(null)
-                      loadLocalLibrary(null, selectedGenre)
-                    }}
-                    className="text-xs sm:text-sm font-semibold text-ink-soft hover:text-ink underline cursor-pointer"
-                  >
-                    Show all albums
-                  </button>
-                </div>
-              )}
+                )
+              })()}
 
               {/* Filter by genre banner */}
-              {selectedGenre && (
-                <div className="flex items-center justify-between bg-[var(--sc-high)] border border-[var(--outline-var)] rounded-2xl px-5 py-3 shadow-sm">
-                  <div className="flex items-center gap-2">
-                    <Icon name="style" className="text-xl text-[var(--primary)]" />
-                    <span className="text-sm sm:text-base font-semibold text-ink">
-                      Showing albums in genre <span className="text-[var(--primary)] font-bold">{selectedGenre}</span>
-                    </span>
+              {selectedGenre && (() => {
+                const genreMeta = localGenres.find((g) => (g.genre || '').toLowerCase() === selectedGenre.toLowerCase())
+                const albumCount = genreMeta?.albumCount ?? localAlbums.length
+                const trackCount = genreMeta?.trackCount
+                const isOpening = openingArtistOrGenre === selectedGenre
+                const isQueueing = queueingArtistOrGenre === selectedGenre
+
+                return (
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[var(--sc-high)] border border-[var(--outline-var)] rounded-2xl p-4 sm:p-5 shadow-sm">
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--primary-container)] text-[var(--on-primary-container)] border border-[var(--primary)]/30 shadow-sm">
+                        <Icon name="style" className="text-2xl" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] uppercase font-bold tracking-wider text-ink-soft">
+                            Genre
+                          </span>
+                        </div>
+                        <h2 className="text-lg sm:text-xl font-bold text-ink truncate">
+                          {selectedGenre}
+                        </h2>
+                        <p className="text-xs sm:text-sm text-ink-soft">
+                          {albumCount} {albumCount === 1 ? 'album' : 'albums'}{trackCount !== undefined ? ` · ${trackCount} tracks` : ''}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+                      <button
+                        onClick={(e) => playGenre(selectedGenre, false, e)}
+                        disabled={isOpening || isQueueing}
+                        className="flex items-center gap-1.5 rounded-full bg-[var(--primary)] hover:brightness-110 px-4 sm:px-5 py-2 text-xs sm:text-sm font-bold text-[var(--on-primary)] transition active:scale-95 shadow-md disabled:opacity-50 cursor-pointer"
+                      >
+                        {isOpening ? (
+                          <Icon name="sync" className="text-base animate-spin" />
+                        ) : (
+                          <Icon name="play_arrow" filled className="text-lg" />
+                        )}
+                        <span>Play All</span>
+                      </button>
+
+                      <button
+                        onClick={(e) => playGenre(selectedGenre, true, e)}
+                        disabled={isOpening || isQueueing}
+                        className="flex items-center gap-1.5 rounded-full border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-ink transition active:scale-95 disabled:opacity-50 cursor-pointer shadow-sm"
+                      >
+                        <Icon name="shuffle" className="text-base" />
+                        <span>Shuffle</span>
+                      </button>
+
+                      <button
+                        onClick={(e) => queueGenre(selectedGenre, true, e)}
+                        disabled={isOpening || isQueueing}
+                        title="Play genre next"
+                        className="flex items-center gap-1 rounded-full border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] px-3 py-2 text-xs sm:text-sm font-semibold text-ink transition active:scale-95 disabled:opacity-50 cursor-pointer shadow-sm"
+                      >
+                        <Icon name="playlist_play" className="text-lg" />
+                        <span className="hidden sm:inline">Play Next</span>
+                      </button>
+
+                      <button
+                        onClick={(e) => queueGenre(selectedGenre, false, e)}
+                        disabled={isOpening || isQueueing}
+                        title="Add all songs in genre to queue"
+                        className="flex items-center gap-1 rounded-full border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] px-3 py-2 text-xs sm:text-sm font-semibold text-ink transition active:scale-95 disabled:opacity-50 cursor-pointer shadow-sm"
+                      >
+                        <Icon name="playlist_add" className="text-lg" />
+                        <span className="hidden sm:inline">Queue</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setSelectedGenre(null)
+                          loadLocalLibrary(selectedArtist, null)
+                        }}
+                        title="Show all albums"
+                        className="flex items-center gap-1 rounded-full border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] px-3 py-2 text-xs sm:text-sm font-semibold text-ink-soft hover:text-ink transition active:scale-95 cursor-pointer shadow-sm ml-auto sm:ml-0"
+                      >
+                        <Icon name="close" className="text-base" />
+                        <span>All Albums</span>
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => {
-                      setSelectedGenre(null)
-                      loadLocalLibrary(selectedArtist, null)
-                    }}
-                    className="text-xs sm:text-sm font-semibold text-ink-soft hover:text-ink underline cursor-pointer"
-                  >
-                    Show all albums
-                  </button>
-                </div>
-              )}
+                )
+              })()}
 
               {/* Albums View */}
               {localTab === 'albums' && (
@@ -1616,7 +1861,20 @@ export default function YTMusicView({
                               {album.fileFormat && (
                                 <span className="font-semibold text-ink-soft/90 mr-1">{album.fileFormat} ·</span>
                               )}
-                              {album.artist} {album.year ? `· ${album.year}` : ''}
+                              <span
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setSelectedArtist(album.artist)
+                                  setSelectedGenre(null)
+                                  setLocalTab('albums')
+                                  loadLocalLibrary(album.artist, null)
+                                }}
+                                className="hover:underline hover:text-[var(--primary)] cursor-pointer"
+                                title={`Filter by ${album.artist}`}
+                              >
+                                {album.artist}
+                              </span>
+                              {album.year ? ` · ${album.year}` : ''}
                             </p>
                           </div>
                         </div>
@@ -1636,33 +1894,61 @@ export default function YTMusicView({
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                      {localArtists.map((artistItem) => (
-                        <div
-                          key={artistItem.artist}
-                          onClick={() => {
-                            setSelectedArtist(artistItem.artist)
-                            setSelectedGenre(null)
-                            setLocalTab('albums')
-                            loadLocalLibrary(artistItem.artist, null)
-                          }}
-                          className="flex items-center justify-between p-4 rounded-2xl glass-inset border border-[var(--outline-var)] hover:bg-[var(--sc-high)] transition cursor-pointer group"
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--sc-high)] border border-[var(--outline-var)] text-ink-soft group-hover:text-ink">
-                              <Icon name="person" className="text-xl" />
+                      {localArtists.map((artistItem) => {
+                        const isOpening = openingArtistOrGenre === artistItem.artist
+                        return (
+                          <div
+                            key={artistItem.artist}
+                            onClick={() => {
+                              setSelectedArtist(artistItem.artist)
+                              setSelectedGenre(null)
+                              setLocalTab('albums')
+                              loadLocalLibrary(artistItem.artist, null)
+                            }}
+                            className="flex items-center justify-between p-3.5 sm:p-4 rounded-2xl glass-inset border border-[var(--outline-var)] hover:bg-[var(--sc-high)] transition cursor-pointer group"
+                          >
+                            <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--sc-high)] border border-[var(--outline-var)] text-ink-soft group-hover:text-ink">
+                                <Icon name="person" className="text-xl" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-semibold text-ink text-sm sm:text-base truncate group-hover:underline">
+                                  {artistItem.artist}
+                                </p>
+                                <p className="text-xs text-ink-soft truncate">
+                                  {artistItem.albumCount} {artistItem.albumCount === 1 ? 'album' : 'albums'} · {artistItem.trackCount} tracks
+                                </p>
+                              </div>
                             </div>
-                            <div className="min-w-0">
-                              <p className="font-semibold text-ink text-sm sm:text-base truncate group-hover:underline">
-                                {artistItem.artist}
-                              </p>
-                              <p className="text-xs text-ink-soft">
-                                {artistItem.albumCount} {artistItem.albumCount === 1 ? 'album' : 'albums'} · {artistItem.trackCount} tracks
-                              </p>
+
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={(e) => playArtist(artistItem.artist, false, e)}
+                                disabled={isOpening}
+                                title={`Play all songs by ${artistItem.artist}`}
+                                className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--on-primary)] hover:brightness-110 active:scale-95 transition shadow-sm cursor-pointer disabled:opacity-50"
+                              >
+                                {isOpening ? (
+                                  <Icon name="sync" className="text-sm animate-spin" />
+                                ) : (
+                                  <Icon name="play_arrow" filled className="text-base" />
+                                )}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => playArtist(artistItem.artist, true, e)}
+                                disabled={isOpening}
+                                title={`Shuffle all songs by ${artistItem.artist}`}
+                                className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] text-ink active:scale-95 transition shadow-sm cursor-pointer disabled:opacity-50"
+                              >
+                                <Icon name="shuffle" className="text-sm" />
+                              </button>
+                              <Icon name="chevron_right" className="text-ink-soft group-hover:text-ink text-lg shrink-0 ml-0.5" />
                             </div>
                           </div>
-                          <Icon name="chevron_right" className="text-ink-soft group-hover:text-ink text-lg shrink-0" />
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   )}
                 </div>
@@ -1678,33 +1964,61 @@ export default function YTMusicView({
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                      {localGenres.map((genreItem) => (
-                        <div
-                          key={genreItem.genre}
-                          onClick={() => {
-                            setSelectedGenre(genreItem.genre)
-                            setSelectedArtist(null)
-                            setLocalTab('albums')
-                            loadLocalLibrary(null, genreItem.genre)
-                          }}
-                          className="flex items-center justify-between p-4 rounded-2xl glass-inset border border-[var(--outline-var)] hover:bg-[var(--sc-high)] transition cursor-pointer group"
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--sc-high)] border border-[var(--outline-var)] text-ink-soft group-hover:text-ink">
-                              <Icon name="style" className="text-xl" />
+                      {localGenres.map((genreItem) => {
+                        const isOpening = openingArtistOrGenre === genreItem.genre
+                        return (
+                          <div
+                            key={genreItem.genre}
+                            onClick={() => {
+                              setSelectedGenre(genreItem.genre)
+                              setSelectedArtist(null)
+                              setLocalTab('albums')
+                              loadLocalLibrary(null, genreItem.genre)
+                            }}
+                            className="flex items-center justify-between p-3.5 sm:p-4 rounded-2xl glass-inset border border-[var(--outline-var)] hover:bg-[var(--sc-high)] transition cursor-pointer group"
+                          >
+                            <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--sc-high)] border border-[var(--outline-var)] text-ink-soft group-hover:text-ink">
+                                <Icon name="style" className="text-xl" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-semibold text-ink text-sm sm:text-base truncate group-hover:underline">
+                                  {genreItem.genre}
+                                </p>
+                                <p className="text-xs text-ink-soft truncate">
+                                  {genreItem.albumCount} {genreItem.albumCount === 1 ? 'album' : 'albums'} · {genreItem.trackCount} tracks
+                                </p>
+                              </div>
                             </div>
-                            <div className="min-w-0">
-                              <p className="font-semibold text-ink text-sm sm:text-base truncate group-hover:underline">
-                                {genreItem.genre}
-                              </p>
-                              <p className="text-xs text-ink-soft">
-                                {genreItem.albumCount} {genreItem.albumCount === 1 ? 'album' : 'albums'} · {genreItem.trackCount} tracks
-                              </p>
+
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={(e) => playGenre(genreItem.genre, false, e)}
+                                disabled={isOpening}
+                                title={`Play all songs in ${genreItem.genre}`}
+                                className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--on-primary)] hover:brightness-110 active:scale-95 transition shadow-sm cursor-pointer disabled:opacity-50"
+                              >
+                                {isOpening ? (
+                                  <Icon name="sync" className="text-sm animate-spin" />
+                                ) : (
+                                  <Icon name="play_arrow" filled className="text-base" />
+                                )}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => playGenre(genreItem.genre, true, e)}
+                                disabled={isOpening}
+                                title={`Shuffle all songs in ${genreItem.genre}`}
+                                className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] text-ink active:scale-95 transition shadow-sm cursor-pointer disabled:opacity-50"
+                              >
+                                <Icon name="shuffle" className="text-sm" />
+                              </button>
+                              <Icon name="chevron_right" className="text-ink-soft group-hover:text-ink text-lg shrink-0 ml-0.5" />
                             </div>
                           </div>
-                          <Icon name="chevron_right" className="text-ink-soft group-hover:text-ink text-lg shrink-0" />
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   )}
                 </div>

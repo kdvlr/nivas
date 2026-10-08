@@ -760,6 +760,62 @@ class LocalMusicService:
             logger.error(f"Error fetching album tracks for {album_id}: {e}")
             return {}
 
+    def get_artist_tracks(self, artist: str) -> List[Dict[str, Any]]:
+        """Returns all tracks for a specific artist, ordered by album, disc, track number, title."""
+        tracks = []
+        if not artist:
+            return tracks
+        try:
+            with self._get_conn() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT * FROM tracks
+                    WHERE artist = ? COLLATE NOCASE OR album_artist = ? COLLATE NOCASE
+                    ORDER BY album COLLATE NOCASE ASC, disc_number ASC, track_number ASC, title COLLATE NOCASE ASC
+                """, (artist, artist))
+                rows = cursor.fetchall()
+                if not rows:
+                    pattern = f"%{artist}%"
+                    cursor.execute("""
+                        SELECT * FROM tracks
+                        WHERE artist LIKE ? OR album_artist LIKE ?
+                        ORDER BY album COLLATE NOCASE ASC, disc_number ASC, track_number ASC, title COLLATE NOCASE ASC
+                    """, (pattern, pattern))
+                    rows = cursor.fetchall()
+                for row in rows:
+                    tracks.append(self._format_track_dict(row))
+        except Exception as e:
+            logger.error(f"Error fetching tracks for artist {artist}: {e}")
+        return tracks
+
+    def get_genre_tracks(self, genre: str) -> List[Dict[str, Any]]:
+        """Returns all tracks for a specific genre, ordered by artist, album, disc, track number, title."""
+        tracks = []
+        if not genre:
+            return tracks
+        try:
+            with self._get_conn() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT * FROM tracks
+                    WHERE genre = ? COLLATE NOCASE
+                    ORDER BY artist COLLATE NOCASE ASC, album COLLATE NOCASE ASC, disc_number ASC, track_number ASC, title COLLATE NOCASE ASC
+                """, (genre,))
+                rows = cursor.fetchall()
+                if not rows:
+                    pattern = f"%{genre}%"
+                    cursor.execute("""
+                        SELECT * FROM tracks
+                        WHERE genre LIKE ?
+                        ORDER BY artist COLLATE NOCASE ASC, album COLLATE NOCASE ASC, disc_number ASC, track_number ASC, title COLLATE NOCASE ASC
+                    """, (pattern,))
+                    rows = cursor.fetchall()
+                for row in rows:
+                    tracks.append(self._format_track_dict(row))
+        except Exception as e:
+            logger.error(f"Error fetching tracks for genre {genre}: {e}")
+        return tracks
+
     def get_track(self, track_id: str) -> Optional[Dict[str, Any]]:
         """Retrieves a single track by its ID."""
         try:

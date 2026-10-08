@@ -167,11 +167,53 @@ def get_local_albums(artist: Optional[str] = None, genre: Optional[str] = None):
     return local_music_service.get_albums(artist=artist, genre=genre)
 
 @router.get("/local/tracks")
-def get_local_tracks(album_id: str = Query(...)):
-    data = local_music_service.get_album_tracks(album_id)
-    if not data:
-        raise HTTPException(status_code=404, detail="Album not found")
-    return data
+def get_local_tracks(
+    album_id: Optional[str] = Query(None),
+    artist: Optional[str] = Query(None),
+    genre: Optional[str] = Query(None),
+):
+    if album_id:
+        data = local_music_service.get_album_tracks(album_id)
+        if not data:
+            raise HTTPException(status_code=404, detail="Album not found")
+        return data
+    elif artist:
+        tracks = local_music_service.get_artist_tracks(artist)
+        return {
+            "artist": artist,
+            "tracks": tracks,
+            "trackCount": len(tracks),
+            "source": "local",
+        }
+    elif genre:
+        tracks = local_music_service.get_genre_tracks(genre)
+        return {
+            "genre": genre,
+            "tracks": tracks,
+            "trackCount": len(tracks),
+            "source": "local",
+        }
+    raise HTTPException(status_code=400, detail="Must provide album_id, artist, or genre")
+
+@router.get("/local/artist/tracks")
+def get_local_artist_tracks(artist: str = Query(...)):
+    tracks = local_music_service.get_artist_tracks(artist)
+    return {
+        "artist": artist,
+        "tracks": tracks,
+        "trackCount": len(tracks),
+        "source": "local",
+    }
+
+@router.get("/local/genre/tracks")
+def get_local_genre_tracks(genre: str = Query(...)):
+    tracks = local_music_service.get_genre_tracks(genre)
+    return {
+        "genre": genre,
+        "tracks": tracks,
+        "trackCount": len(tracks),
+        "source": "local",
+    }
 
 @router.get("/local/artwork/{album_id}")
 def get_local_artwork(album_id: str):
