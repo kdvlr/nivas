@@ -399,7 +399,7 @@ export function startFxCanvas(
   let flock: Flock | null = null
   let nextFlock = performance.now() + rand(15_000, 60_000)
   let batSwarm: BatSwarm | null = null
-  let nextBatSwarm = performance.now() + rand(25_000, 55_000)
+  let nextBatSwarm = performance.now() + rand(90_000, 180_000)
   let witch: Witch | null = null
   let nextWitch = performance.now() + rand(20_000, 50_000)
   let santa: Santa | null = null
@@ -1630,7 +1630,7 @@ export function startFxCanvas(
         const gone = batSwarm.dir === 1 ? batSwarm.x - 750 > w : batSwarm.x + 750 < 0
         if (gone) {
           batSwarm = null
-          nextBatSwarm = t + rand(65_000, 130_000) // Spaced out: every 1 to 2.2 minutes
+          nextBatSwarm = t + rand(180_000, 300_000) // Spaced out: every 3 to 5 minutes
         } else {
           for (const b of batSwarm.bats) {
             // Compute erratic swooping and deep vertical diving
