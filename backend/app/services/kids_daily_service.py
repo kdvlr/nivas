@@ -11,7 +11,16 @@ from ..config import get_settings
 
 logger = logging.getLogger(__name__)
 
-DOMAINS = ("science", "engineering", "math", "geography", "inventions", "language", "art_music", "global_cultures", "practical_skills", "computing", "media_literacy")
+DOMAINS = (
+    "history_civilizations",
+    "science_nature",
+    "everyday_curiosities",
+    "pop_culture_entertainment",
+    "inventions_engineering",
+    "art_music_literature",
+    "global_cultures_geography",
+    "language_storytelling",
+)
 
 
 def _tokens(value: str) -> set[str]:
@@ -190,31 +199,31 @@ FALLBACK_CATALOG: List[Dict[str, Any]] = [
     # Day 3
     {
         "word_of_the_day": {
-            "word": "Resilient",
-            "pronunciation": "reh-ZIL-yunt",
+            "word": "Whimsical",
+            "pronunciation": "WIM-zih-kul",
             "part_of_speech": "adjective",
-            "definition": "Able to bounce back, recover quickly, and stay strong after difficulties.",
-            "example": "Even when the Lego tower fell over, Liam was resilient and built an even taller castle."
+            "definition": "Playfully quaint, fanciful, or full of fun imagination.",
+            "example": "The whimsical cartoon had bouncing teacups and dancing broomsticks."
         },
         "fun_fact": {
-            "fact": "A cloud might look as light as cotton candy, but an average cumulus cloud weighs about 1.1 million pounds—as much as 100 elephants!",
-            "category": "Earth & Weather",
-            "emoji": "☁️",
-            "did_you_know": "Clouds float because the tiny water droplets are spread out across a massive volume of warm rising air."
+            "fact": "Sound artists called Foley artists tap metal guy-wires on radio towers with a wrench to make laser blaster sounds in movies!",
+            "category": "Movie Magic",
+            "emoji": "🎬",
+            "did_you_know": "They also use cornstarch in leather pouches to create footsteps crunching in fresh snow."
         },
         "stem_5yo": {
-            "topic": "Plant Biology",
-            "question": "How do plants drink water if they don't have a mouth?",
-            "hint": "Look down at the soil under the stem!",
-            "answer": "Plants drink water using their roots like tiny straws hidden underground in the soil.",
-            "parent_explanation": "Roots absorb moisture and minerals from dirt and carry them up the stem through microscopic plant vessels called xylem."
+            "topic": "Everyday Wonders",
+            "question": "Why does popcorn go POP when you heat it in a pot or microwave?",
+            "hint": "Each kernel has a tiny drop of water trapped inside!",
+            "answer": "Water trapped inside turns to hot steam and builds pressure until the hard hull bursts into fluffy white popcorn!",
+            "parent_explanation": "Popcorn kernels have hard hulls containing water and starch. Steam pressure builds to ~135 psi until it bursts and gelatinizes."
         },
         "stem_9yo": {
-            "topic": "Computer Science & Logic",
-            "question": "How can a computer store whole pictures and videos using only 1s and 0s (binary code)?",
-            "hint": "Think about breaking an image down into millions of tiny colored dots.",
-            "answer": "Images are divided into millions of tiny pixels, and each pixel's color values are stored as patterns of electrical 1s and 0s (bits).",
-            "parent_explanation": "Every pixel has red, green, and blue color levels (0-255). Computers store these numbers as binary electric switches (on/off)."
+            "topic": "Animation & Film",
+            "question": "How do animators make cartoon characters look like they are smoothly running across a movie screen?",
+            "hint": "They display a sequence of slightly different drawings very quickly.",
+            "answer": "They show 24 slightly different drawings every second. Our brains blend these discrete images into fluid continuous motion.",
+            "parent_explanation": "This relies on persistence of vision and the phi phenomenon: the human visual cortex bridges rapid sequential frames into motion."
         }
     },
     # Day 4
@@ -250,31 +259,31 @@ FALLBACK_CATALOG: List[Dict[str, Any]] = [
     # Day 5
     {
         "word_of_the_day": {
-            "word": "Navigational",
-            "pronunciation": "nav-ih-GAY-shuh-nul",
+            "word": "Ingenious",
+            "pronunciation": "in-JEEN-yus",
             "part_of_speech": "adjective",
-            "definition": "Having to do with steering, directing a course, or finding your way.",
-            "example": "Migrating sea turtles use natural navigational senses to return to the beach where they hatched."
+            "definition": "Clever, original, and brilliantly inventive at solving problems.",
+            "example": "Maya had an ingenious idea to turn an old cardboard box into a solar oven."
         },
         "fun_fact": {
-            "fact": "A blue whale's heart is as big as a small car, and its heartbeat can be heard over 2 miles away underwater!",
-            "category": "Ocean Giants",
-            "emoji": "🐋",
-            "did_you_know": "A blue whale can weigh up to 300,000 pounds, making it the largest animal to ever live on Earth."
+            "fact": "The popsicle was invented by an 11-year-old kid in 1905 who accidentally left soda with a stirring stick outside on a freezing night!",
+            "category": "Accidental Inventions",
+            "emoji": "🍧",
+            "did_you_know": "Frank Epperson originally called it the 'Epsicle', but his kids convinced him to call it a Pop's-sicle!"
         },
         "stem_5yo": {
-            "topic": "Ocean Science",
-            "question": "Why does the ocean taste salty when rainwater tastes fresh?",
-            "hint": "Rain washes over rocks and rivers on its way to the ocean!",
-            "answer": "Rivers carry tiny amounts of dissolved minerals and salts from rocks into the sea over millions of years.",
-            "parent_explanation": "When ocean water evaporates into clouds, salt stays behind in the ocean, slowly making the sea salty over geological time."
+            "topic": "Everyday Objects",
+            "question": "Why do pencils have soft pink erasers, and how do they rub away pencil marks?",
+            "hint": "The rubber is stickier than paper and picks up graphite dust!",
+            "answer": "The rubber eraser is stickier than the paper, so it grabs the loose pencil graphite particles off the page as you rub.",
+            "parent_explanation": "Pencils write by leaving layers of graphite on paper fibers. Rubber erasers create friction that lifts graphite and rolls away in crumbs."
         },
         "stem_9yo": {
-            "topic": "Marine Biology & Light",
-            "question": "How do deep-sea creatures like anglerfish produce glowing light in total darkness without electricity?",
-            "hint": "They use a chemical reaction inside their bodies called bioluminescence.",
-            "answer": "They produce light through a chemical reaction between a molecule called luciferin and an enzyme called luciferase (or symbiotic glowing bacteria).",
-            "parent_explanation": "Bioluminescence is cold light with nearly 100% energy efficiency. Creatures use it to attract prey, find mates, or startle predators."
+            "topic": "Invention History",
+            "question": "How did an engineer taking a walk with his dog in the woods lead to the invention of Velcro fasteners on sneakers?",
+            "hint": "He noticed tiny burrs sticking stubbornly to his socks and his dog's fur.",
+            "answer": "George de Mestral saw under a microscope that cocklebur seeds have hundreds of tiny hooks that grab fabric loops, inspiring hook-and-loop Velcro.",
+            "parent_explanation": "This is a classic example of biomimicry. Nature's hook-and-loop seed dispersal mechanism inspired synthetic nylon fastening tape."
         }
     },
     # Day 6
@@ -310,31 +319,31 @@ FALLBACK_CATALOG: List[Dict[str, Any]] = [
     # Day 7
     {
         "word_of_the_day": {
-            "word": "Microscopic",
-            "pronunciation": "my-kruh-SKOP-ik",
+            "word": "Epic",
+            "pronunciation": "EP-ik",
             "part_of_speech": "adjective",
-            "definition": "So tiny that it can only be seen clearly with the help of a powerful microscope.",
-            "example": "A single drop of pond water contains a whole world of microscopic swimming creatures."
+            "definition": "Grand, heroic, or impressively magnificent in scale.",
+            "example": "The video game hero went on an epic quest across floating islands to find the golden star."
         },
         "fun_fact": {
-            "fact": "No two people on Earth have the exact same fingerprints—not even identical twins!",
-            "category": "Human Biology",
-            "emoji": "🔍",
-            "did_you_know": "Fingerprint ridges also help our fingers grip objects and improve our sense of touch texture."
+            "fact": "Pac-Man creator Toru Iwatani got the idea for the iconic round yellow character after ordering a whole pizza and taking out a single slice!",
+            "category": "Video Game Lore",
+            "emoji": "🕹️",
+            "did_you_know": "Pac-Man was designed to appeal to everyone by focusing on eating colorful fruit rather than spaceship shooting."
         },
         "stem_5yo": {
-            "topic": "Human Body",
-            "question": "Why do our eyes blink automatically throughout the day?",
-            "hint": "Think about what happens to a dry sponge or windshield wipers on a car!",
-            "answer": "Blinking sweeps moisture and tears across your eyes to keep them clean, wet, and clear of dust.",
-            "parent_explanation": "Eyelids act like gentle windshield wipers, spreading a thin tear film that delivers oxygen and washes away tiny particles."
+            "topic": "Toys & Building",
+            "question": "Why do LEGO bricks snap together and hold tight without any glue?",
+            "hint": "The round studs on top fit snugly inside the tubes underneath!",
+            "answer": "Round studs on top squeeze tightly into tubes underneath, holding with friction until you pull them apart!",
+            "parent_explanation": "LEGO bricks use 'clutch power'. High-precision manufacturing creates an interference fit with micro-flexibility in ABS plastic."
         },
         "stem_9yo": {
-            "topic": "Neuroscience & Senses",
-            "question": "How does your brain understand what your eyes are seeing in less than a tenth of a second?",
-            "hint": "Photoreceptor cells turn photons of light into electrical signals sent along a nerve cable.",
-            "answer": "Retina cells (rods and cones) convert light photons into electrical nerve impulses that travel along the optic nerve to the brain's visual cortex.",
-            "parent_explanation": "The brain's occipital lobe decodes shape, color, motion, and depth from electrical firing patterns in milliseconds."
+            "topic": "Computer Graphics",
+            "question": "Why did early video games like Super Mario look like they were made of square blocks (pixels)?",
+            "hint": "Early game console chips had tiny memory and could only draw small grids of colored squares.",
+            "answer": "Early game consoles had limited memory that could only store 8-bit color grids, so artists designed characters using small palettes of pixel squares.",
+            "parent_explanation": "The NES GPU could only display 64 colors and 64 sprites. Artists used clever pixel art silhouettes to convey personality in just 16x16 squares."
         }
     },
     # Day 8
@@ -400,31 +409,31 @@ FALLBACK_CATALOG: List[Dict[str, Any]] = [
     # Day 10
     {
         "word_of_the_day": {
-            "word": "Interstellar",
-            "pronunciation": "in-ter-STEL-er",
-            "part_of_speech": "adjective",
-            "definition": "Occurring, located, or traveling between the stars.",
-            "example": "The Voyager 1 space probe has traveled so far that it entered interstellar space."
+            "word": "Artifact",
+            "pronunciation": "AR-tih-fakt",
+            "part_of_speech": "noun",
+            "definition": "An object made or shaped by humans long ago, often of historical interest.",
+            "example": "Archaeologists discovered an ancient bronze artifact buried in the courtyard."
         },
         "fun_fact": {
-            "fact": "Saturn's spectacular rings are not solid—they are made of billions of chunks of ice and rock ranging from tiny dust grains to house-sized boulders!",
-            "category": "Space Exploration",
-            "emoji": "🪐",
-            "did_you_know": "Although the rings are up to 175,000 miles wide, they are remarkably thin—only about 30 feet thick in most places."
+            "fact": "Ancient Egyptian kids played with board games, spinning tops, and wooden toys with moving jaws over 3,000 years ago!",
+            "category": "Ancient Civilizations",
+            "emoji": "🏺",
+            "did_you_know": "One of the most popular ancient games was Senet, where players rolled carved sticks to race pieces across a 30-square grid."
         },
         "stem_5yo": {
-            "topic": "Astronomy & Gravity",
-            "question": "Why does Mars look reddish-orange in the night sky?",
-            "hint": "Think about what happens to iron metal when it gets left out in the rain!",
-            "answer": "Mars is covered in iron-rich dust that rusted over billions of years, giving the whole planet a rusty red coat.",
-            "parent_explanation": "The Martian soil contains iron oxide (rust). Windstorms blow the red dust into the atmosphere, making the sky and surface glow red."
+            "topic": "Ancient Wonders",
+            "question": "Why did ancient Egyptians build the Great Pyramids out of giant stone blocks?",
+            "hint": "They wanted them to stand strong and last forever for their pharaohs!",
+            "answer": "They built them with heavy limestone blocks so the royal monuments would stand tall against wind and desert sands forever.",
+            "parent_explanation": "The Great Pyramid of Giza was built from over 2 million limestone blocks and stood as the tallest human-made structure for 3,800 years."
         },
         "stem_9yo": {
-            "topic": "Physics & Orbital Mechanics",
-            "question": "Why do astronauts float inside the International Space Station if Earth's gravity is still 90% as strong up there?",
-            "hint": "The space station and astronauts are both falling toward Earth at the exact same forward orbital speed.",
-            "answer": "They are in perpetual free fall! The station is falling toward Earth while moving sideways at 17,500 mph, curving around the planet endlessly.",
-            "parent_explanation": "Weightlessness in orbit is microgravity caused by free fall. The ground curves away at the same rate the spacecraft falls."
+            "topic": "Ancient Engineering",
+            "question": "How did ancient Roman aqueducts carry fresh mountain water for dozens of miles into cities without water pumps?",
+            "hint": "They used a very slight, constant downward slope powered purely by gravity.",
+            "answer": "Roman engineers built aqueducts with a precise, gentle downhill slope, letting gravity pull water smoothly across arched bridges into city fountains.",
+            "parent_explanation": "Engineers used chorobates levels to maintain slopes as gentle as 1 foot drop per 1,000 feet length, delivering millions of gallons of water daily."
         }
     },
     # Day 11
@@ -610,31 +619,31 @@ FALLBACK_CATALOG: List[Dict[str, Any]] = [
     # Day 17
     {
         "word_of_the_day": {
-            "word": "Biodiversity",
-            "pronunciation": "by-oh-dih-VER-sih-tee",
-            "part_of_speech": "noun",
-            "definition": "The amazing variety of different plants, animals, and living things in an ecosystem.",
-            "example": "Tropical rainforests have more biodiversity than almost any other place on Earth."
+            "word": "Courageous",
+            "pronunciation": "kuh-RAY-jus",
+            "part_of_speech": "adjective",
+            "definition": "Brave and determined when facing difficulty or challenges.",
+            "example": "The courageous explorer climbed into the dark cavern to map the hidden underground lake."
         },
         "fun_fact": {
-            "fact": "More than half of all the world's plant and animal species live in tropical rainforests, even though rainforests cover only 6% of Earth's land!",
-            "category": "Ecology",
-            "emoji": "🌴",
-            "did_you_know": "A single rainforest tree can be home to over 1,000 different species of insects."
+            "fact": "Medieval castle spiral staircases were built winding clockwise going up, so defending knights could freely swing their swords with their right hands!",
+            "category": "Medieval History",
+            "emoji": "🏰",
+            "did_you_know": "Attackers coming up the stairs had their sword arms cramped against the central stone pillar, giving defenders a big advantage."
         },
         "stem_5yo": {
-            "topic": "Life Cycles",
-            "question": "How does a swimming tadpole transform into a hopping green frog?",
-            "hint": "It undergoes a magical transformation called metamorphosis!",
-            "answer": "Inside the pond, the tadpole grows back legs, front legs, absorbs its tail, and develops lungs to breathe air on land.",
-            "parent_explanation": "This biological transformation is called metamorphosis, regulated by thyroid hormones that remodel gills, digestive system, and limbs."
+            "topic": "Castles & History",
+            "question": "Why did castles have deep water moats all the way around their stone walls?",
+            "hint": "It stopped attackers from digging tunnels under the walls or walking up with ladders!",
+            "answer": "Moats kept castles safe by stopping attackers from digging tunnels under walls or wheeling up battering rams.",
+            "parent_explanation": "Moats prevented undermining (mining under walls to collapse them) and forced attackers to cross exposed water under defensive towers."
         },
         "stem_9yo": {
-            "topic": "Ecosystems & Energy Flow",
-            "question": "Why are apex predators like wolves, lions, and sharks so essential for healthy plant and tree growth in an ecosystem?",
-            "hint": "Think about what happens to herbivores (like deer) when there are no predators around.",
-            "answer": "Predators keep herbivore populations balanced, preventing overgrazing of riverbanks and forests in a ripple effect called a trophic cascade.",
-            "parent_explanation": "In Yellowstone, reintroducing wolves controlled elk, allowing willows and aspens to regrow, which restored songbirds, beavers, and stabilized rivers."
+            "topic": "Medieval Engineering",
+            "question": "How did a medieval trebuchet catapult fling giant 200-pound stones across hundreds of yards without gunpowder?",
+            "hint": "It used a heavy falling counterweight on the short end of a long lever arm.",
+            "answer": "A massive counterweight on the short arm fell rapidly, swinging the much longer arm through an arc to release the stone at high velocity.",
+            "parent_explanation": "Trebuchets trade heavy force over a short distance for high speed over a long distance, transferring potential energy into kinetic energy."
         }
     },
     # Day 18
@@ -700,31 +709,31 @@ FALLBACK_CATALOG: List[Dict[str, Any]] = [
     # Day 20
     {
         "word_of_the_day": {
-            "word": "Glacial",
-            "pronunciation": "GLAY-shul",
-            "part_of_speech": "adjective",
-            "definition": "Extremely cold like ice, or moving very slowly like a giant frozen glacier.",
-            "example": "The turquoise alpine lake was filled with pure water melted from a glacial mountain peak."
+            "word": "Serendipity",
+            "pronunciation": "sair-un-DIP-ih-tee",
+            "part_of_speech": "noun",
+            "definition": "Finding delightful, unexpected good luck or discoveries by happy chance.",
+            "example": "Finding a shiny lucky coin inside the pocket of an old jacket was pure serendipity."
         },
         "fun_fact": {
-            "fact": "Glaciers store about 69% of the entire world's fresh water in the form of ancient compacted ice!",
-            "category": "Polar Science",
-            "emoji": "🏔️",
-            "did_you_know": "Glaciers are not frozen solid; their immense weight causes them to slowly creep and flow down mountains like frozen rivers."
+            "fact": "Play-Doh was originally invented in the 1930s as wallpaper cleaner before a nursery school teacher realized kids loved shaping it into art!",
+            "category": "Toy Inventions",
+            "emoji": "🎨",
+            "did_you_know": "Over 3 billion cans of Play-Doh have been squished since it was introduced to classrooms in 1956."
         },
         "stem_5yo": {
-            "topic": "Polar Animals",
-            "question": "Why don't emperor penguins freeze while standing on Antarctica's ice in minus 40-degree winds?",
-            "hint": "They have special waterproof feathers, blubber, and huddle together in giant groups!",
-            "answer": "They have thick blubber fat, dense waterproof feathers, and take turns standing in the warm middle of giant penguin huddles.",
-            "parent_explanation": "Penguins share body warmth through communal huddling, constantly rotating so outside penguins can move inside to warm up."
+            "topic": "Everyday Mysteries",
+            "question": "Why do we yawn, and why does seeing someone else yawn make you want to yawn too?",
+            "hint": "Yawns bring in a big cool breath of air to wake up your brain!",
+            "answer": "Yawning takes in a big gulp of air to help cool your brain and keep you alert, and our brains mimic others to show empathy!",
+            "parent_explanation": "Yawning ventilates the lungs and increases blood flow to cool the brain. Contagious yawning is linked to mirror neurons and social empathy."
         },
         "stem_9yo": {
-            "topic": "Space Weather & Magnetism",
-            "question": "What causes the dancing green and purple lights of the Aurora Borealis (Northern Lights) near polar regions?",
-            "hint": "Charged particles from solar flares collide with gas atoms in Earth's upper atmosphere.",
-            "answer": "Solar wind electrons and protons funnel along Earth's magnetic field lines and excite oxygen and nitrogen atoms in the thermosphere.",
-            "parent_explanation": "When excited atmospheric gas atoms drop back to ground energy states, they emit photons (green/red from oxygen, blue/purple from nitrogen)."
+            "topic": "Everyday Science",
+            "question": "Why does hot water freeze faster than cold water under certain freezer conditions (the Mpemba effect)?",
+            "hint": "Evaporation and rapid convection currents help heat escape faster from hot water.",
+            "answer": "Hot water evaporates faster (reducing total mass) and develops stronger convection currents, allowing heat to escape rapidly in the freezer.",
+            "parent_explanation": "Named after Tanzanian student Erasto Mpemba, this phenomenon involves rapid evaporation and temperature gradients accelerating heat loss."
         }
     },
     # Day 21
@@ -790,31 +799,31 @@ FALLBACK_CATALOG: List[Dict[str, Any]] = [
     # Day 23
     {
         "word_of_the_day": {
-            "word": "Durable",
-            "pronunciation": "DUR-uh-bul",
+            "word": "Monumental",
+            "pronunciation": "mon-yuh-MEN-tul",
             "part_of_speech": "adjective",
-            "definition": "Able to withstand wear, pressure, and damage for a very long time.",
-            "example": "Astronaut spacesuits are made of durable multi-layer fabrics that stop micrometeoroids."
+            "definition": "Great in importance, size, or historical significance.",
+            "example": "The invention of the printing press was a monumental moment that helped people everywhere learn to read."
         },
         "fun_fact": {
-            "fact": "Diamonds are the hardest natural substance found on Earth—the only thing that can scratch a diamond is another diamond!",
-            "category": "Earth Minerals",
-            "emoji": "💎",
-            "did_you_know": "Both soft pencil graphite and ultra-hard diamonds are made of pure carbon atoms; only their crystal arrangements differ."
+            "fact": "Before the printing press was invented, every single book had to be written by hand, which could take a scribe a whole year for one book!",
+            "category": "History of Books",
+            "emoji": "📚",
+            "did_you_know": "Johannes Gutenberg's movable metal type in the 1440s allowed hundreds of book pages to be printed in a single afternoon."
         },
         "stem_5yo": {
-            "topic": "Materials Science",
-            "question": "Why does a rubber bouncy ball bounce high when you drop it, while a ball of playdough just thuds flat?",
-            "hint": "Rubber is elastic and springs right back to its round shape instantly!",
-            "answer": "Rubber is elastic! When it hits the floor, it squishes momentarily and then snaps back, pushing off the ground.",
-            "parent_explanation": "Elastic materials store impact energy as potential energy and quickly convert it back into kinetic upward bounce energy."
+            "topic": "Everyday Inventions",
+            "question": "Why are school buses painted bright yellowish-orange instead of red or blue?",
+            "hint": "Our eyes notice this color faster than almost any other in our side vision!",
+            "answer": "Human eyes spot that special yellow color in their peripheral vision faster than any other color, keeping kids safe in traffic!",
+            "parent_explanation": "Formulated in 1939 as 'National School Bus Glossy Yellow', this hue stimulates both red and green photoreceptors, making it instantly noticeable."
         },
         "stem_9yo": {
-            "topic": "Molecular Chemistry & Allotropes",
-            "question": "Why is diamond transparent and ultra-hard, while pencil lead (graphite) is black and slippery, if both are 100% pure carbon?",
-            "hint": "Diamond has a 3D tetrahedral lattice, while graphite has loosely bonded 2D hexagonal sheets.",
-            "answer": "Diamond atoms form rigid 3D tetrahedral covalent bonds (sp³), whereas graphite forms 2D sheets (sp²) with weak Van der Waals forces that slide easily.",
-            "parent_explanation": "Allotropes show how atomic geometry dictates material properties. Rigid 3D networks resist deformation, while weak interlayer bonds allow graphite to slide onto paper."
+            "topic": "Optics & Vision",
+            "question": "Why can you see your reflection clearly in a smooth mirror, but not in a sheet of white paper even though paper reflects light?",
+            "hint": "Smooth surfaces bounce light rays in parallel, while rough surfaces scatter them in all directions.",
+            "answer": "A mirror creates specular reflection (parallel rays bounce in unison), while rough paper fibers create diffuse reflection (rays scatter in all directions).",
+            "parent_explanation": "Specular reflection preserves wavefront angles so an image forms. Diffuse scattering scrambles angle information into uniform white glare."
         }
     },
     # Day 24
@@ -910,31 +919,31 @@ FALLBACK_CATALOG: List[Dict[str, Any]] = [
     # Day 27
     {
         "word_of_the_day": {
-            "word": "Autonomous",
-            "pronunciation": "aw-TAHN-uh-mus",
+            "word": "Enchanting",
+            "pronunciation": "en-CHANT-ing",
             "part_of_speech": "adjective",
-            "definition": "Able to act, navigate, and make decisions independently without human control.",
-            "example": "The Mars Perseverance rover uses autonomous navigation to drive around rocks on the red planet."
+            "definition": "Delightfully charming, captivating, or full of magical wonder.",
+            "example": "The animated movie had an enchanting story about friendly woodland animals."
         },
         "fun_fact": {
-            "fact": "The Mars rover Curiosity has a built-in rock-zapping laser named ChemCam that vaporizes rocks from 20 feet away to analyze their minerals!",
-            "category": "Robotics & AI",
-            "emoji": "🤖",
-            "did_you_know": "Radio signals from Mars take between 5 and 20 minutes to reach Earth, which is why Mars rovers must drive autonomously."
+            "fact": "Walt Disney animators brought real deer into the studio so artists could study their gentle movements and draw Bambi realistically!",
+            "category": "Animation Lore",
+            "emoji": "🦌",
+            "did_you_know": "Mickey Mouse was originally named 'Mortimer' until Walt's wife Lillian suggested that 'Mickey' sounded much friendlier and cuter."
         },
         "stem_5yo": {
-            "topic": "Robots & Computers",
-            "question": "How does a robot vacuum know when it reaches a wall or staircase without eyes?",
-            "hint": "It has invisible infrared beams and bumper sensors!",
-            "answer": "It uses infrared light sensors and bumper switches to bounce light off obstacles and feel edges before turning around.",
-            "parent_explanation": "Sensors send signals to the robot's microchip, which follows pre-programmed rules (e.g. 'if edge detected, stop and reverse')."
+            "topic": "Everyday Curiosities",
+            "question": "Why do shoelaces suddenly untie themselves when you are running, even when you tied a double knot?",
+            "hint": "Your foot hitting the ground and swinging forward creates a double force on the knot!",
+            "answer": "Stamping your foot loosens the knot, and your swinging leg whips the loose ends back and forth until the knot slips open!",
+            "parent_explanation": "Foot impacts create forces up to 7G that loosen the central knot, while swinging legs whip free lace ends until they slip."
         },
         "stem_9yo": {
-            "topic": "Sensors & Inertial Navigation",
-            "question": "How does a drone or smartphone know its exact tilt angle and orientation in 3D space without using a camera?",
-            "hint": "Microscopic vibrating tuning forks inside a silicon MEMS gyroscope detect rotational acceleration.",
-            "answer": "MEMS (Micro-Electro-Mechanical Systems) gyroscopes and accelerometers measure Coriolis force and gravitational acceleration on microscopic silicon vibrating arms.",
-            "parent_explanation": "Tilting the device causes microscopic silicon masses to deflect, changing electrical capacitance between sensor plates to calculate pitch, roll, and yaw."
+            "topic": "Movie Technology",
+            "question": "How does a movie green screen let filmmakers place actors on alien planets or floating in outer space?",
+            "hint": "A computer replaces a specific pure green color hue with a different video background.",
+            "answer": "Through chroma key compositing: software isolates the pure green background and makes it transparent, layering the actor over new footage.",
+            "parent_explanation": "Green is chosen because human skin tones contain virtually no green pigment, and digital camera sensors have twice as many green photosites."
         }
     },
     # Day 28
@@ -1059,83 +1068,94 @@ FALLBACK_CATALOG: List[Dict[str, Any]] = [
     },
 ]
 
-KIDS_CATEGORIES = [
-    "Astrophysics, Nebulae & Black Holes",
-    "Deep Ocean Trenches & Abyssal Creatures",
-    "Volcanoes, Magma Chambers & Geysers",
-    "Aerodynamics, Supersonic Flight & Gliders",
-    "Botany, Photosynthesis & Carnivorous Plants",
-    "Crystallography, Gems & Mineral Formations",
-    "Entomology, Insect Superpowers & Metamorphosis",
-    "Paleontology, Dinosaurs & Fossilized Footprints",
-    "Acoustics, Sound Waves, Echoes & Sonar",
-    "Animal Biomimicry & Nature's Inventions",
-    "Extreme Weather, Tornadoes, Hurricanes & Lightning",
-    "Microbiology, Extremophiles & Bacteria",
+HISTORY_CATEGORIES = [
+    "Ancient Egypt, Pyramids & Hieroglyphics",
+    "Medieval Castles, Knights & Siege Engines",
+    "The Silk Road, Camels & Ancient Trade",
+    "Ancient Rome, Aqueducts & The Colosseum",
+    "Samurai, Ninjas & Feudal Japanese History",
+    "Ancient Greece, The First Olympics & Myths",
+    "Archaeology, King Tut & Lost Cities",
+    "The Renaissance, Leonardo da Vinci & Inventions",
+    "Age of Exploration, Caravels & Mapmaking",
+    "Viking Longships, Navigation & Runes",
+    "Ancient Chinese Inventions, Paper & Fireworks",
+    "Maya & Inca Empires, Step Pyramids & Roads",
+    "Pioneers, Steam Trains & The Transcontinental Rail",
+    "The First Flights, Wright Brothers & Early Airplanes",
+    "Tall Ships, Lighthouses & Maritime Sea Lore",
+    "Ancient Wonders, Hanging Gardens & Colossus",
+    "Colonial Era, Town Criers & Printing Presses",
+    "Ancient Games, Senet, Mancala & Early Board Games",
     "Architecture, Suspension Bridges & Arches",
-    "Optics, Prisms, Lasers & Wave-Particle Duality",
-    "Glaciology, Icebergs & Ice Ages",
-    "Neurobiology, The Brain & Animal Senses",
-    "Rocketry, Orbital Mechanics & Mars Rovers",
-    "Bioluminescence & Glow-in-the-Dark Sea Life",
-    "Plate Tectonics, Earthquakes & Continental Drift",
-    "Ancient Civilizations & Engineering Marvels",
-    "Cryogenics, Liquid Nitrogen & Absolute Zero",
-    "Fluid Dynamics, Vortices & Ocean Currents",
-    "Quantum Oddities, Atoms & Subatomic Particles",
-    "Renewable Energy, Solar Cells & Wind Turbines",
-    "Arachnology, Spider Silk & Web Architecture",
-    "Marine Mammals, Whale Songs & Echolocation",
-    "Desert Ecology, Cacti & Camouflage Adaptations",
-    "Caves, Stalactites & Subterranean Rivers",
-    "Magnetism, Electromagnets & Earth's Magnetic Field",
-    "Mycology, Mushrooms & Forest Mycelium Networks",
-    "Planetary Moons, Rings & Asteroid Belts",
-    "Bird Migration, Navigation & Magnetic Senses",
-    "Robotics, Artificial Intelligence & Sensors",
-    "Rainforest Canopies & Symbiotic Biodiversity",
-    "The Solar Wind, Auroras & Northern Lights",
-    "Coral Reefs, Polyps & Atoll Formations",
-    "Kinetic Energy, Momentum & Rollercoasters",
-    "Amber Preservation & Prehistoric Insects",
-    "Atmospheric Layers, Stratosphere & Exosphere",
-    "Deep Sea Hydrothermal Vents & Chemosynthesis",
-    "Geothermal Energy, Hot Springs & Fumaroles",
-    "Bioluminescent Fungi & Glowing Forests",
-    "Materials Science, Graphene & Aerogels",
-    "Tides, Moon Gravity & Coastal Estuaries",
-    "Pollination, Honeybee Dances & Nectar Chemistry",
-    "Meteorites, Impact Craters & Comets",
-    "Biomechanics, Cheetah Speed & Muscle Levers",
-    "Bridges, Cantilevers & Structural Trusses",
-    "Hydraulics, Water Pressure & Submarines",
-    "Thermohaline Circulation & Gulf Stream",
-    "Seed Dispersal, Helicopter Samaras & Burrs",
-    "Optical Illusions, Mirages & Rainbow Physics",
-    "Radio Astronomy, Pulsars & Space Signals",
-    "Electric Animals, Torpedo Rays & Electric Eels",
-    "Ant Colonies, Superorganisms & Pheromone Trails",
-    "Superconductors & Magnetic Levitation Trains",
-    "Atmospheric Pressure, Barometers & Flight Lift",
-    "Dendrochronology, Tree Rings & Forest History",
-    "Venom, Toxins & Biochemical Defenses",
-    "Geodes, Agates & Underground Crystals",
-    "Seafloor Spreading, Mid-Atlantic Ridge & Trenches",
-    "Gravity Slingshots, Voyager Missions & Probes",
-    "Ecosystem Trophic Cascades & Apex Predators",
-    "Friction, Hovercrafts & Air Bearings",
-    "Plant Communication, Chemical Signals & Roots",
-    "Chromatography, Color Chemistry & Pigments",
-    "Bioluminescent Waves, Dinoflagellates & Red Tides",
-    "Solar Eclipses, Umbra, Penumbra & Coronas",
-    "Hibernation, Torpor & Freeze-Tolerant Frogs",
-    "Hovering Birds, Hummingbird Wings & Aerodynamics",
-    "Geological Time Scales, Strata & Sedimentary Layers",
-    "Thermodynamics, Heat Conduction & Insulation",
-    "Subsurface Oceans, Europa & Enceladus",
-    "Static Electricity, Van de Graaff & Lightning Rods",
-    "Cephalopod Camouflage, Chromatophores & Octopuses",
 ]
+
+EVERYDAY_CATEGORIES = [
+    "Kitchen Chemistry, How Popcorn Pops & Yeast",
+    "Accidental Inventions, Popsicles, Post-its & Velcro",
+    "Everyday Mysteries, Why We Yawn, Dream & Hiccup",
+    "Invention of Writing, Pencils, Erasers & Crayons",
+    "How Cities Work, Traffic Lights, Bridges & Subways",
+    "Home Wonders, How Refrigerators & Microwaves Work",
+    "History of Money, Ancient Coins & Piggy Banks",
+    "Bicycles, Skateboards & How Balance Works",
+    "Ice Cream, Chocolate & Sweet Confectionery History",
+    "The Science of Sleep, Dreams & Biological Clocks",
+    "Clothing Inventions, Zippers, Buttons & Fabrics",
+    "Shoe Inventions, Sneakers & Why Shoelaces Untie",
+    "Libraries, Paper Scrolls & Gutenberg's Printing Press",
+    "How Clocks, Sundials & Pendulums Keep Time",
+    "Breakfast Science, How Bread Toasts & Syrup Flows",
+    "Mirrors, Reflection & How Glass Is Made",
+    "Why Soap Cleans, Bubbles & Surface Tension",
+    "Plumbing, Water Towers & How Faucets Work",
+]
+
+POP_CULTURE_CATEGORIES = [
+    "Animation History, Disney, Pixar & Hand-Drawn Cartoons",
+    "Video Game History, 8-Bit Pixels, Arcades & Nintendo",
+    "Movie Magic, Foley Sound Effects & Behind-the-Scenes",
+    "Toy Inventions, LEGO Bricks, Slinkies & Play-Doh",
+    "Comic Strips, Superhero Origins & Graphic Art",
+    "Theme Parks, Roller Coaster Physics & Dark Rides",
+    "Puppetry, Jim Henson, The Muppets & Marionettes",
+    "Musical Instruments, How Pianos & Guitars Make Sound",
+    "Magic Tricks, Optical Illusions & Sleight of Hand",
+    "Children's Books, Classic Fairy Tales & Illustrators",
+    "Stop-Motion Animation, Claymation & Armatures",
+    "Board Game Inventions, Monopoly, Scrabble & Chess",
+    "Origins of Cartoons, Flipbooks & Zoetropes",
+    "Circus Arts, Trapeze, Juggling & Center Ring Lore",
+    "Orchestra Families, Violins, Trumpets & Percussion",
+]
+
+SCIENCE_NATURE_CATEGORIES = [
+    "Astrophysics, Nebulae, Stars & Astronomy",
+    "Deep Ocean Trenches, Abyssal Fish & Glowing Squids",
+    "Volcanoes, Magma Chambers & Geysers",
+    "Dinosaurs, Fossils & Prehistoric Earth",
+    "Animal Biomimicry & Nature's Inventions",
+    "Extreme Weather, Tornadoes, Rainbows & Lightning",
+    "Rainforest Wildlife, Sloths & Tree-Canopy Secrets",
+    "Insect Superpowers, Ant Colonies & Bee Dances",
+    "Robotics, Mars Rovers & Space Probes",
+    "Bioluminescence & Glow-in-the-Dark Sea Life",
+    "Desert Survival, Cacti & Camouflage Adaptations",
+    "Whale Songs, Marine Mammals & Echolocation",
+    "Caves, Stalactites & Underground Rivers",
+    "Earth's Magnetic Field, Auroras & Northern Lights",
+    "Coral Reefs, Sea Turtles & Ocean Ecosystems",
+    "Flight Physics, Bird Wings & Aerodynamics",
+    "Plant Superpowers, Carnivorous Plants & Seeds",
+    "The Solar System, Mars Exploration & Saturn's Rings",
+]
+
+KIDS_CATEGORIES = (
+    HISTORY_CATEGORIES
+    + EVERYDAY_CATEGORIES
+    + POP_CULTURE_CATEGORIES
+    + SCIENCE_NATURE_CATEGORIES
+)
 
 class KidsDailyService:
     def __init__(self):
@@ -1405,14 +1425,19 @@ class KidsDailyService:
         recent_cats = history["recent_categories"]
         recent_stem_topics = history["recent_stem_topics"]
 
-        # Prioritize categories that have not been used recently
-        fresh_categories = [
-            c for c in KIDS_CATEGORIES
-            if not any(rc in c.lower() or c.lower().startswith(rc) for rc in recent_cats)
+        # Ensure balanced variety across all 4 pillars: History, Everyday Curiosities, Pop Culture, and Science/Nature
+        def _pick_fresh(pool: List[str]) -> str:
+            fresh = [c for c in pool if not any(rc in c.lower() or c.lower().startswith(rc) for rc in recent_cats)]
+            return random.choice(fresh if fresh else pool)
+
+        pillar_cats = [
+            _pick_fresh(HISTORY_CATEGORIES),
+            _pick_fresh(EVERYDAY_CATEGORIES),
+            _pick_fresh(POP_CULTURE_CATEGORIES),
+            _pick_fresh(SCIENCE_NATURE_CATEGORIES),
         ]
-        if len(fresh_categories) < 4:
-            fresh_categories = KIDS_CATEGORIES.copy()
-        sample_cats = random.sample(fresh_categories, 4)
+        random.shuffle(pillar_cats)
+        sample_cats = pillar_cats
         nonce = uuid.uuid4().hex[:8]
 
         forbidden_words_display = ", ".join(forbidden_word_list[-40:]) if forbidden_word_list else "None yet"
@@ -1424,19 +1449,21 @@ class KidsDailyService:
             f"The following words and topics have ALREADY been featured recently and are STRICTLY FORBIDDEN:\n"
             f"- FORBIDDEN RECENT WORDS: {forbidden_words_display}\n"
             f"- FORBIDDEN RECENT TOPICS: {forbidden_topics_display}\n"
-            f"DO NOT use any of the above forbidden words or any common variations/synonyms. You MUST select an entirely fresh, exciting vocabulary word and distinct STEM concepts.\n\n"
+            f"DO NOT use any of the above forbidden words or any common variations/synonyms. You MUST select an entirely fresh, exciting vocabulary word and distinct engaging concepts.\n\n"
             f"Category inspiration themes for today:\n"
             f"- Word of the Day focus: {sample_cats[0]}\n"
             f"- Fun Fact focus: {sample_cats[1]}\n"
-            f"- 5-Year-Old STEM challenge: {sample_cats[2]}\n"
-            f"- 9-Year-Old STEM challenge: {sample_cats[3]}\n\n"
+            f"- 5-Year-Old challenge: {sample_cats[2]}\n"
+            f"- 9-Year-Old challenge: {sample_cats[3]}\n\n"
             "Requirements:\n"
-            "1. word_of_the_day: A rich, fascinating vocabulary word related to science, exploration, nature, physics, or discovery. Include phonetic pronunciation, part of speech, kid-friendly definition, and an engaging example sentence. Pick a unique and uncommon word (do NOT default to 'Curious', 'Resilient', 'Bioluminescent', 'Barycenter', 'Keystone', or 'Resonance').\n"
-            "2. fun_fact: An astonishing, true fact from science, animals, space, oceans, or planet Earth. Include a fitting emoji, specific category, and a short 1-sentence 'did_you_know' extension.\n"
-            "3. stem_5yo: A curious, playful STEM question/riddle for a 5-year-old (kindergarten level) about physical observations in daily life. Include a helpful hint, a simple clear answer, and an engaging 'parent_explanation' for parents to discuss.\n"
-            "4. stem_9yo: A thought-provoking STEM challenge for a 9-year-old (4th grade level) involving real physics, astronomy, engineering, chemistry, biology, or computing. Include a hint, a clear factual answer, and a deep conceptual 'parent_explanation'.\n\n"
+            "1. word_of_the_day: A wonderful, expressive, kid-friendly vocabulary word. It must NOT be dry technical scientific jargon (never use words like 'Periapsis', 'Barycenter', or 'Chemosynthesis'). "
+            "Draw widely from literature, storytelling, history, character virtues, everyday curiosities, arts, and exploration (e.g. 'Courageous', 'Whimsical', 'Artifact', 'Serendipity', 'Ingenious', 'Monumental', 'Ponder', 'Enchanting', 'Pioneer', 'Conundrum', 'Vibrant', 'Tenacious', 'Marvel', 'Jovial', 'Audacious', 'Effervescent', 'Splendid', 'Epic', 'Labyrinth', 'Chronicle'). "
+            "Include phonetic pronunciation, part of speech, a clear kid-friendly definition (under 140 characters), and an engaging kid-friendly example sentence (under 140 characters) featuring relatable daily scenarios, historical moments, storytelling, or fun references.\n"
+            "2. fun_fact: An astonishing, kid-friendly true fact. Ensure variety by drawing from history & ancient civilizations, pop culture & entertainment (animation, video games, toys, movies, music), everyday occurrences & household wonders (why popcorn pops, how popsicles were invented, sneakers, food origins), alongside nature and animal wonders! Include a fitting emoji, specific category (under 32 characters), and a short 1-sentence 'did_you_know' extension (under 180 characters).\n"
+            "3. stem_5yo: A curious, playful question or riddle for a 5-year-old (kindergarten level) about physical observations in daily life, nature, history, or toys (e.g. how wheels roll, why toast crunches, how cartoon flipbooks work, why ducks float, how magnets stick). Include a helpful hint, a simple clear answer, and an engaging 'parent_explanation' for parents to discuss.\n"
+            "4. stem_9yo: A thought-provoking challenge for a 9-year-old (4th grade level) involving real science, historical engineering (pyramids, castles, aqueducts), everyday mechanics (rollercoasters, animation frames, microwave ovens, bicycles), or nature. Include a hint, a clear factual answer, and a deep conceptual 'parent_explanation'.\n\n"
             "Wall-display length limits (characters, including spaces): word 24, pronunciation 32, part of speech 16, definition 140, example 140; fun fact 180, category 32, did-you-know 180; each topic 40, question 160, hint 140, answer 200, and parent explanation 220. Write complete concise sentences within every limit—never use ellipses or incomplete phrases.\n\n"
-            "CRITICAL: All 4 sections (Word, Fun Fact, 5yo STEM, 9yo STEM) MUST be completely fresh, unique, varied, and specific to the designated themes."
+            "CRITICAL: All 4 sections (Word, Fun Fact, 5yo Challenge, 9yo Challenge) MUST be completely fresh, unique, varied, kid-friendly, and specific to the designated themes."
         )
 
         candidate_models = [model_name, "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-flash-latest"]
