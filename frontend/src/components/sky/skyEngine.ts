@@ -250,6 +250,30 @@ interface Flock {
   birds: { dx: number; dy: number; flapOffset: number }[]
 }
 
+interface SwarmBat {
+  dx: number
+  dy: number
+  scale: number
+  isAlpha: boolean
+  speedMult: number
+  flapRate: number
+  flapOffset: number
+  swoopPeriod: number
+  swoopDepth: number
+  swoopPhase: number
+  dartPeriod: number
+  dartAmp: number
+  dartPhase: number
+}
+
+interface BatSwarm {
+  x: number
+  y: number
+  speed: number
+  dir: 1 | -1
+  bats: SwarmBat[]
+}
+
 interface WitchSparkle {
   x: number
   y: number
@@ -366,6 +390,8 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
   let sizeKey = ''
   let flock: Flock | null = null
   let nextFlock = performance.now() + rand(15_000, 60_000)
+  let batSwarm: BatSwarm | null = null
+  let nextBatSwarm = performance.now() + rand(2_500, 6_000)
   let witch: Witch | null = null
   let nextWitch = performance.now() + rand(20_000, 50_000)
   let santa: Santa | null = null
@@ -400,6 +426,11 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     nextFlock = 0
   }
   window.addEventListener('trigger-geese', handleTriggerGeese)
+
+  const handleTriggerBats = () => {
+    nextBatSwarm = 0
+  }
+  window.addEventListener('trigger-bats', handleTriggerBats)
 
   const seed = (w: number, h: number, density: number) => {
     drops = Array.from({ length: Math.round(130 * density) }, () => ({
@@ -491,47 +522,225 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     ctx.stroke()
   }
 
+  const createBatSwarm = (w: number, h: number): BatSwarm => {
+    const dir: 1 | -1 = Math.random() < 0.5 ? 1 : -1
+    const count = 30 + Math.floor(Math.random() * 12) // 30 - 41 bats in a massive colony!
+    const bats: SwarmBat[] = []
+
+    for (let i = 0; i < count; i++) {
+      const isAlpha = i < 3 // 3 prominent scary foreground bats
+      const isDistant = i > 22 // background silhouettes for depth
+
+      const scale = isAlpha
+        ? rand(1.85, 2.35)
+        : isDistant
+        ? rand(0.7, 1.05)
+        : rand(1.2, 1.65)
+
+      // Wide, organic cloud distribution across the swarm
+      const dx = (Math.random() - 0.5) * 540 - i * 10 * dir
+      const dy = (Math.random() - 0.5) * 180
+
+      const speedMult = rand(0.85, 1.35)
+      const flapRate = rand(0.022, 0.032) // Rapid flutter (22-32 rad/ms)
+      const flapOffset = Math.random() * Math.PI * 2
+
+      // Deep acrobatic swoops & plunges
+      const swoopPeriod = rand(1100, 2400)
+      const swoopDepth = rand(40, isAlpha ? 115 : 75)
+      const swoopPhase = Math.random() * Math.PI * 2
+
+      // Erratic hunting twitches
+      const dartPeriod = rand(320, 700)
+      const dartAmp = rand(12, 30)
+      const dartPhase = Math.random() * Math.PI * 2
+
+      bats.push({
+        dx,
+        dy,
+        scale,
+        isAlpha,
+        speedMult,
+        flapRate,
+        flapOffset,
+        swoopPeriod,
+        swoopDepth,
+        swoopPhase,
+        dartPeriod,
+        dartAmp,
+        dartPhase,
+      })
+    }
+
+    // Sort by scale ascending so larger foreground bats render on top
+    bats.sort((a, b) => a.scale - b.scale)
+
+    return {
+      x: dir === 1 ? -320 : w + 320,
+      y: h * rand(0.12, 0.36),
+      speed: rand(145, 195),
+      dir,
+      bats,
+    }
+  }
+
   const drawBat = (
     x: number,
     y: number,
     flap: number,
     scale: number,
-    color: string,
-    dir: 1 | -1
+    dir: 1 | -1,
+    pitch: number = 0,
+    isAlpha: boolean = false,
+    skyPhase: string = 'night'
   ) => {
     ctx.save()
     ctx.translate(x, y)
     ctx.scale(dir * scale, scale)
+    ctx.rotate(pitch)
 
-    const s = Math.sin(flap)
-    const wingLift = s * 7
+    const s = Math.sin(flap) // -1: upstroke, +1: downstroke
 
-    ctx.fillStyle = color
+    // Colors adapted for contrast across sky phases
+    const isBrightSky = skyPhase === 'day' || skyPhase === 'dawn'
+    const bodyColor = isBrightSky ? '#15121e' : '#0b0911'
+    const wingMembrane = isBrightSky ? '#1e1a2b' : '#14111d'
+    const boneColor = isBrightSky ? '#3d3452' : '#342c48'
+    const earInner = isBrightSky ? '#2d253d' : '#262035'
+
+    // 1. LEFT & RIGHT WINGS: Scalloped leathery membrane, carpal thumb spurs, and finger bones
+    for (const side of [-1, 1]) {
+      ctx.save()
+      ctx.beginPath()
+      ctx.moveTo(side * 2.5, -3)
+
+      const wristX = side * 13
+      const wristY = -6 - s * 9
+      const thumbX = side * 14.5
+      const thumbY = -11 - s * 9.5
+
+      const tipX = side * 27
+      const tipY = -1 - s * 16
+      const d4X = side * 21
+      const d4Y = 7 - s * 10
+      const d5X = side * 13.5
+      const d5Y = 10 - s * 6
+      const hipX = side * 2.5
+      const hipY = 5
+
+      // Leading edge
+      ctx.quadraticCurveTo(side * 7, -5 - s * 5, wristX, wristY)
+      ctx.lineTo(thumbX, thumbY)
+      ctx.lineTo(wristX + side * 0.5, wristY - 1)
+      ctx.quadraticCurveTo(side * 19, -4 - s * 13, tipX, tipY)
+
+      // Scalloped trailing edge between finger struts
+      ctx.quadraticCurveTo(side * 23, 0 - s * 13, d4X, d4Y)
+      ctx.quadraticCurveTo(side * 16.5, 6 - s * 8, d5X, d5Y)
+      ctx.quadraticCurveTo(side * 8, 8 - s * 3.5, hipX, hipY)
+
+      ctx.closePath()
+      ctx.fillStyle = wingMembrane
+      ctx.fill()
+
+      // Finger bone struts
+      ctx.strokeStyle = boneColor
+      ctx.lineWidth = 0.8
+      ctx.beginPath()
+      ctx.moveTo(side * 2.5, -3)
+      ctx.lineTo(wristX, wristY)
+      ctx.moveTo(wristX, wristY)
+      ctx.quadraticCurveTo(side * 20, -3 - s * 12, tipX, tipY)
+      ctx.moveTo(wristX, wristY)
+      ctx.quadraticCurveTo(side * 17, 1 - s * 9, d4X, d4Y)
+      ctx.moveTo(wristX, wristY)
+      ctx.quadraticCurveTo(side * 13, 3 - s * 7, d5X, d5Y)
+      ctx.stroke()
+
+      ctx.restore()
+    }
+
+    // 2. BODY & TAIL MEMBRANE
+    ctx.fillStyle = bodyColor
     ctx.beginPath()
+    ctx.ellipse(0, 1, 3.8, 6.5, 0, 0, Math.PI * 2)
+    ctx.fill()
 
-    // Head and ears
-    ctx.moveTo(0, -3)
-    ctx.lineTo(-2, -6)
-    ctx.lineTo(-1, -3)
-    ctx.lineTo(1, -3)
-    ctx.lineTo(2, -6)
-    ctx.lineTo(0, -3)
-
-    // Left wing
-    ctx.lineTo(-3, -1)
-    ctx.quadraticCurveTo(-8, -4 - wingLift * 0.7, -15, -2 - wingLift)
-    ctx.quadraticCurveTo(-11, 3 - wingLift * 0.4, -8, 2 - wingLift * 0.3)
-    ctx.quadraticCurveTo(-5, 4 - wingLift * 0.1, -2, 3)
-
-    // Body bottom
-    ctx.lineTo(0, 5)
-
-    // Right wing
-    ctx.lineTo(2, 3)
-    ctx.quadraticCurveTo(5, 4 - wingLift * 0.1, 8, 2 - wingLift * 0.3)
-    ctx.quadraticCurveTo(11, 3 - wingLift * 0.4, 15, -2 - wingLift)
-    ctx.quadraticCurveTo(8, -4 - wingLift * 0.7, 3, -1)
+    // Uropatagium (tail membrane)
+    ctx.beginPath()
+    ctx.moveTo(-2.8, 4)
+    ctx.lineTo(2.8, 4)
+    ctx.lineTo(0, 11)
     ctx.closePath()
+    ctx.fillStyle = bodyColor
+    ctx.fill()
+
+    // Clawed rear feet
+    ctx.fillStyle = boneColor
+    ctx.fillRect(-3.2, 7.5, 1.2, 2.5)
+    ctx.fillRect(2.0, 7.5, 1.2, 2.5)
+
+    // 3. HEAD & POINTED DEMONIC EARS
+    ctx.fillStyle = bodyColor
+    ctx.beginPath()
+    ctx.arc(0, -6.5, 4.2, 0, Math.PI * 2)
+    ctx.moveTo(-1.2, -8.5)
+    ctx.lineTo(-4.8, -16)
+    ctx.lineTo(-4.0, -6.5)
+    ctx.moveTo(1.2, -8.5)
+    ctx.lineTo(4.8, -16)
+    ctx.lineTo(4.0, -6.5)
+    ctx.fill()
+
+    // Inner ear depth
+    ctx.fillStyle = earInner
+    ctx.beginPath()
+    ctx.moveTo(-1.8, -8.5)
+    ctx.lineTo(-4.2, -14.5)
+    ctx.lineTo(-3.4, -7.5)
+    ctx.moveTo(1.8, -8.5)
+    ctx.lineTo(4.2, -14.5)
+    ctx.lineTo(3.4, -7.5)
+    ctx.fill()
+
+    // 4. MOUTH & SHARP WHITE FANGS
+    ctx.fillStyle = '#050308'
+    ctx.beginPath()
+    ctx.ellipse(0, -4.2, 2.2, 1.0, 0, 0, Math.PI)
+    ctx.fill()
+
+    ctx.fillStyle = '#ffffff'
+    // Left fang
+    ctx.beginPath()
+    ctx.moveTo(-1.6, -4.6)
+    ctx.lineTo(-0.8, -4.6)
+    ctx.lineTo(-1.2, -2.4)
+    ctx.closePath()
+    ctx.fill()
+    // Right fang
+    ctx.beginPath()
+    ctx.moveTo(0.8, -4.6)
+    ctx.lineTo(1.6, -4.6)
+    ctx.lineTo(1.2, -2.4)
+    ctx.closePath()
+    ctx.fill()
+
+    // 5. PIERCING GLOWING DEMONIC RED EYES
+    ctx.save()
+    ctx.shadowColor = '#ff1111'
+    ctx.shadowBlur = isAlpha ? 10 : 6
+    ctx.fillStyle = '#ff2222'
+    ctx.beginPath()
+    ctx.arc(-2.0, -7.0, isAlpha ? 1.5 : 1.2, 0, Math.PI * 2)
+    ctx.arc(2.0, -7.0, isAlpha ? 1.5 : 1.2, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.restore()
+
+    // Bright eye core
+    ctx.fillStyle = '#fff5f5'
+    ctx.beginPath()
+    ctx.arc(-2.0, -7.0, 0.45, 0, Math.PI * 2)
+    ctx.arc(2.0, -7.0, 0.45, 0, Math.PI * 2)
     ctx.fill()
 
     ctx.restore()
@@ -1316,7 +1525,8 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     const wantsLeaves = november && calm
     const wantsLanterns = diwali && (phase === 'night' || phase === 'dusk') && calm
     const wantsDiwaliFireworks = diwali && calm
-    const creaturesPossible = calm && (october || daylight || november)
+    const batsPossible = october && calm
+    const creaturesPossible = calm && (daylight || november)
     const witchPossible = october && calm
     const santaPossible = christmasDay && calm
 
@@ -1326,11 +1536,13 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
       wantsLeaves ||
       wantsLanterns ||
       wantsDiwaliFireworks ||
+      batSwarm !== null ||
       flock !== null ||
       witch !== null ||
       santa !== null ||
       christmasDay ||
       newYearSeason ||
+      (batsPossible && t > nextBatSwarm) ||
       (creaturesPossible && t > nextFlock) ||
       (witchPossible && t > nextWitch) ||
       (santaPossible && t > nextSanta)
@@ -1358,7 +1570,44 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
       seed(w, h, densityFor(state))
     }
 
-    // Birds (daylight), Bats (October), or Canada Geese in V-formation (November)
+    // 1. October Bat Swarms (spooky, erratic, high-density colony with leathery scalloped wings & glowing red eyes)
+    if (batsPossible) {
+      if (!batSwarm && t > nextBatSwarm) {
+        batSwarm = createBatSwarm(w, h)
+      }
+      if (batSwarm) {
+        batSwarm.x += batSwarm.dir * batSwarm.speed * dt
+        const gone = batSwarm.dir === 1 ? batSwarm.x - 750 > w : batSwarm.x + 750 < 0
+        if (gone) {
+          batSwarm = null
+          nextBatSwarm = t + rand(14_000, 26_000) // Frequently recurring swarms in October!
+        } else {
+          for (const b of batSwarm.bats) {
+            // Compute erratic swooping and deep vertical diving
+            const swoop = Math.sin((t / b.swoopPeriod) * Math.PI * 2 + b.swoopPhase)
+            const dartX = Math.sin((t / b.dartPeriod) * Math.PI * 2 + b.dartPhase) * b.dartAmp
+            const dartY = Math.cos((t / (b.dartPeriod * 1.3)) * Math.PI * 2 + b.dartPhase) * (b.dartAmp * 0.4)
+
+            const bx = batSwarm.x + (b.dx + dartX) * batSwarm.dir
+            const by = batSwarm.y + b.dy + swoop * b.swoopDepth + dartY
+
+            // Dynamic pitch / banking along vertical dive velocity!
+            // When swooping down, bat pitches down; when climbing out, bat banks upward
+            const swoopVelY = Math.cos((t / b.swoopPeriod) * Math.PI * 2 + b.swoopPhase) * b.swoopDepth
+            const pitch = Math.max(-0.55, Math.min(0.55, (swoopVelY / 65) * 0.45))
+
+            // Frantic, jittery flap flutter
+            const flap = t * b.flapRate + b.flapOffset
+
+            drawBat(bx, by, flap, b.scale, batSwarm.dir, pitch, b.isAlpha, phase)
+          }
+        }
+      }
+    } else {
+      batSwarm = null
+    }
+
+    // 2. Birds (daylight) or Canada Geese in V-formation (November)
     if (creaturesPossible) {
       if (!flock && t > nextFlock) {
         const dir: 1 | -1 = Math.random() < 0.5 ? 1 : -1
@@ -1367,7 +1616,7 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
         flock = {
           x: dir === 1 ? -160 : w + 160,
           y: november ? h * rand(0.04, 0.14) : h * rand(0.08, 0.32),
-          speed: october ? rand(105, 150) : november ? rand(90, 125) : rand(90, 130),
+          speed: november ? rand(90, 125) : rand(90, 130),
           dir,
           scale,
           birds: november
@@ -1381,7 +1630,7 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
                   flapOffset: row * 0.42, // Graceful aerodynamic wave
                 }
               })
-            : Array.from({ length: 4 + Math.floor(Math.random() * (october ? 6 : 4)) }, (_, i) => ({
+            : Array.from({ length: 4 + Math.floor(Math.random() * 4) }, (_, i) => ({
                 dx: -i * rand(24, 38),
                 dy: (i % 2 === 0 ? 1 : -1) * i * rand(6, 14),
                 flapOffset: rand(0, Math.PI * 2),
@@ -1397,18 +1646,16 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
         } else {
           const color =
             phase === 'night'
-              ? (october ? 'rgba(20,16,30,0.92)' : november ? '#1e293b' : 'rgba(30,45,60,0.8)')
+              ? (november ? '#1e293b' : 'rgba(30,45,60,0.8)')
               : phase === 'dusk'
-              ? (october ? 'rgba(35,20,45,0.88)' : november ? '#334155' : 'rgba(30,45,60,0.8)')
+              ? (november ? '#334155' : 'rgba(30,45,60,0.8)')
               : phase === 'dawn'
-              ? (october ? 'rgba(45,30,55,0.85)' : november ? '#334155' : 'rgba(50,40,60,0.75)')
-              : (october ? 'rgba(30,30,40,0.85)' : november ? '#1e293b' : 'rgba(30,45,60,0.8)')
+              ? (november ? '#334155' : 'rgba(50,40,60,0.75)')
+              : (november ? '#1e293b' : 'rgba(30,45,60,0.8)')
           for (const b of flock.birds) {
             const bx = flock.x + b.dx * flock.dir
-            const by = flock.y + b.dy + Math.sin(t / (october ? 450 : 800) + b.flapOffset) * (october ? 6 : 4)
-            if (october) {
-              drawBat(bx, by, t / 45 + b.flapOffset, flock.scale, color, flock.dir)
-            } else if (november) {
+            const by = flock.y + b.dy + Math.sin(t / 800 + b.flapOffset) * 4
+            if (november) {
               drawGoose(bx, by, t / 195 + b.flapOffset, flock.scale, color, flock.dir)
             } else {
               drawBird(bx, by, t / 90 + b.flapOffset, flock.scale, color)
@@ -1906,5 +2153,6 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     cancelAnimationFrame(raf)
     window.removeEventListener('resize', resize)
     window.removeEventListener('trigger-geese', handleTriggerGeese)
+    window.removeEventListener('trigger-bats', handleTriggerBats)
   }
 }

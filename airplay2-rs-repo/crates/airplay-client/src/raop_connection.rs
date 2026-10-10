@@ -562,6 +562,13 @@ impl RaopConnection {
         self.volume
     }
 
+    /// Check whether the audio streamer has completed decoding and transmitting all audio frames.
+    pub fn is_streamer_stopped(&self) -> bool {
+        self.streamer
+            .as_ref()
+            .map_or(false, |s| s.state() == airplay_audio::StreamerState::Stopped)
+    }
+
     /// Send feedback/keepalive.
     pub async fn send_feedback(&mut self) -> Result<()> {
         // RAOP uses SET_PARAMETER or GET_PARAMETER as keepalive

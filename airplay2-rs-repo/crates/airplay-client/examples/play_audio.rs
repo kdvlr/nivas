@@ -1064,9 +1064,20 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
 
-            if current_duration_secs > 0.0 && absolute_pos >= current_duration_secs - 0.5 {
+            if conns[0].is_streamer_stopped() {
+                let drain_ms = (render_delay_ms as u64).max(2000) + 600;
+                tracing::info!("Streamer reached EOF. Waiting {}ms for speaker render buffer to drain...", drain_ms);
+                tokio::time::sleep(Duration::from_millis(drain_ms)).await;
                 println!("\nReached end of audio, stopping...");
                 break;
+            }
+
+            if current_duration_secs > 0.0 {
+                let safety_margin = (render_delay_ms as f64 / 1000.0).max(2.0) + 3.0;
+                if absolute_pos >= current_duration_secs + safety_margin {
+                    println!("\nReached end of audio (watchdog), stopping...");
+                    break;
+                }
             }
         }
 
@@ -1152,9 +1163,20 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
 
-            if duration_secs > 0.0 && absolute_pos >= duration_secs - 0.5 {
+            if conn.is_streamer_stopped() {
+                let drain_ms = (render_delay_ms as u64).max(2000) + 600;
+                tracing::info!("Streamer reached EOF. Waiting {}ms for speaker render buffer to drain...", drain_ms);
+                tokio::time::sleep(Duration::from_millis(drain_ms)).await;
                 println!("\nReached end of audio, stopping...");
                 break;
+            }
+
+            if duration_secs > 0.0 {
+                let safety_margin = (render_delay_ms as f64 / 1000.0).max(2.0) + 3.0;
+                if absolute_pos >= duration_secs + safety_margin {
+                    println!("\nReached end of audio (watchdog), stopping...");
+                    break;
+                }
             }
         }
 

@@ -1997,6 +1997,13 @@ impl Connection {
         self.streamer.as_ref().map_or(0, |s| s.underruns())
     }
 
+    /// Check whether the audio streamer has completed decoding and transmitting all audio frames.
+    pub fn is_streamer_stopped(&self) -> bool {
+        self.streamer
+            .as_ref()
+            .map_or(false, |s| s.state() == airplay_audio::StreamerState::Stopped)
+    }
+
     /// Set render delay in milliseconds.
     ///
     /// Sets the RTP distance between the outgoing packet head and the sample

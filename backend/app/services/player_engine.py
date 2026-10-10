@@ -1431,7 +1431,9 @@ class PlayerEngine:
                         logger.info("Received AirPlay remote event: Prev")
                         if self._event_loop and self._event_loop.is_running():
                             asyncio.run_coroutine_threadsafe(self.prev_track(), self._event_loop)
-                    elif "Reached end of audio" in line_clean or "Decoder EOF and buffer empty" in line_clean:
+                    elif "Decoder EOF and buffer empty" in line_clean:
+                        logger.info("AirPlay stream decoder reached EOF; waiting for speaker render buffer to drain")
+                    elif "Reached end of audio" in line_clean:
                         if generation_id is not None and generation_id != self._play_generation_id:
                             logger.info(
                                 "Ignoring EOF from stale stream generation %s (current is %s)",
