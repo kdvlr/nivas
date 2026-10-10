@@ -291,6 +291,7 @@ interface Witch {
   dir: 1 | -1
   scale: number
   sparkles: WitchSparkle[]
+  isBehind: boolean
 }
 
 interface Santa {
@@ -399,7 +400,7 @@ export function startFxCanvas(
   let flock: Flock | null = null
   let nextFlock = performance.now() + rand(15_000, 60_000)
   let batSwarm: BatSwarm | null = null
-  let nextBatSwarm = performance.now() + rand(90_000, 180_000)
+  let nextBatSwarm = performance.now() + rand(45_000, 90_000)
   let witch: Witch | null = null
   let nextWitch = performance.now() + rand(20_000, 50_000)
   let santa: Santa | null = null
@@ -521,17 +522,24 @@ export function startFxCanvas(
     }))
   }
 
-  const drawBird = (x: number, y: number, flap: number, scale: number, color: string) => {
+  const drawBird = (
+    targetCtx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    flap: number,
+    scale: number,
+    color: string
+  ) => {
     const w = 13 * scale
     const lift = Math.sin(flap) * 5 * scale
-    ctx.strokeStyle = color
-    ctx.lineWidth = 1.9 * scale
-    ctx.lineCap = 'round'
-    ctx.beginPath()
-    ctx.moveTo(x - w, y - lift)
-    ctx.quadraticCurveTo(x - w * 0.45, y + 3 * scale, x, y)
-    ctx.quadraticCurveTo(x + w * 0.45, y + 3 * scale, x + w, y - lift)
-    ctx.stroke()
+    targetCtx.strokeStyle = color
+    targetCtx.lineWidth = 1.9 * scale
+    targetCtx.lineCap = 'round'
+    targetCtx.beginPath()
+    targetCtx.moveTo(x - w, y - lift)
+    targetCtx.quadraticCurveTo(x - w * 0.45, y + 3 * scale, x, y)
+    targetCtx.quadraticCurveTo(x + w * 0.45, y + 3 * scale, x + w, y - lift)
+    targetCtx.stroke()
   }
 
   const createBatSwarm = (w: number, h: number): BatSwarm => {
@@ -1122,6 +1130,7 @@ export function startFxCanvas(
   }
 
   const drawWitch = (
+    targetCtx: CanvasRenderingContext2D,
     x: number,
     y: number,
     scale: number,
@@ -1129,216 +1138,216 @@ export function startFxCanvas(
     dir: 1 | -1,
     t: number
   ) => {
-    ctx.save()
-    ctx.translate(x, y)
-    ctx.scale(dir * scale, scale)
+    targetCtx.save()
+    targetCtx.translate(x, y)
+    targetCtx.scale(dir * scale, scale)
 
     const outlineColor = 'rgba(156, 163, 175, 0.95)' // Clean crisp neutral gray (#9ca3af)
 
     // 1. Broomstick
-    ctx.strokeStyle = '#5c3a21'
-    ctx.lineWidth = 2.4
-    ctx.lineCap = 'round'
-    ctx.beginPath()
-    ctx.moveTo(-32, 6)
-    ctx.lineTo(30, -5)
-    ctx.stroke()
+    targetCtx.strokeStyle = '#5c3a21'
+    targetCtx.lineWidth = 2.4
+    targetCtx.lineCap = 'round'
+    targetCtx.beginPath()
+    targetCtx.moveTo(-32, 6)
+    targetCtx.lineTo(30, -5)
+    targetCtx.stroke()
 
     // Broomstick thin gray outline highlight
-    ctx.strokeStyle = outlineColor
-    ctx.lineWidth = 0.6
-    ctx.beginPath()
-    ctx.moveTo(-32, 4.8)
-    ctx.lineTo(30, -6.2)
-    ctx.stroke()
+    targetCtx.strokeStyle = outlineColor
+    targetCtx.lineWidth = 0.6
+    targetCtx.beginPath()
+    targetCtx.moveTo(-32, 4.8)
+    targetCtx.lineTo(30, -6.2)
+    targetCtx.stroke()
 
     // 2. Straw bristles at rear of broom
-    ctx.fillStyle = '#b45309'
-    ctx.beginPath()
-    ctx.moveTo(-28, 5)
-    ctx.lineTo(-46, -3)
-    ctx.lineTo(-50, 6)
-    ctx.lineTo(-45, 14)
-    ctx.lineTo(-29, 8)
-    ctx.closePath()
-    ctx.fill()
-    ctx.strokeStyle = outlineColor
-    ctx.lineWidth = 0.7
-    ctx.stroke()
+    targetCtx.fillStyle = '#b45309'
+    targetCtx.beginPath()
+    targetCtx.moveTo(-28, 5)
+    targetCtx.lineTo(-46, -3)
+    targetCtx.lineTo(-50, 6)
+    targetCtx.lineTo(-45, 14)
+    targetCtx.lineTo(-29, 8)
+    targetCtx.closePath()
+    targetCtx.fill()
+    targetCtx.strokeStyle = outlineColor
+    targetCtx.lineWidth = 0.7
+    targetCtx.stroke()
 
     // Straw twigs detail strokes
-    ctx.strokeStyle = '#78350f'
-    ctx.lineWidth = 1.2
-    ctx.beginPath()
-    ctx.moveTo(-28, 6)
-    ctx.lineTo(-52, 2)
-    ctx.moveTo(-28, 6.5)
-    ctx.lineTo(-48, 10)
-    ctx.stroke()
+    targetCtx.strokeStyle = '#78350f'
+    targetCtx.lineWidth = 1.2
+    targetCtx.beginPath()
+    targetCtx.moveTo(-28, 6)
+    targetCtx.lineTo(-52, 2)
+    targetCtx.moveTo(-28, 6.5)
+    targetCtx.lineTo(-48, 10)
+    targetCtx.stroke()
 
     // Twine band binding the broom bristles
-    ctx.strokeStyle = '#d97706'
-    ctx.lineWidth = 2
-    ctx.beginPath()
-    ctx.moveTo(-30, 4)
-    ctx.lineTo(-29, 8)
-    ctx.stroke()
+    targetCtx.strokeStyle = '#d97706'
+    targetCtx.lineWidth = 2
+    targetCtx.beginPath()
+    targetCtx.moveTo(-30, 4)
+    targetCtx.lineTo(-29, 8)
+    targetCtx.stroke()
 
     // 3. Witch silhouette (body, dress, cape, hat)
-    ctx.fillStyle = color
+    targetCtx.fillStyle = color
 
     // Billowing cloak behind her
     const capeWave = Math.sin(t / 140) * 3
-    ctx.beginPath()
-    ctx.moveTo(3, -15)
-    ctx.quadraticCurveTo(-10, -10, -22 + capeWave, -2)
-    ctx.quadraticCurveTo(-15, 6, -2, 5)
-    ctx.lineTo(3, -15)
-    ctx.closePath()
-    ctx.fill()
-    ctx.strokeStyle = outlineColor
-    ctx.lineWidth = 0.7
-    ctx.stroke()
+    targetCtx.beginPath()
+    targetCtx.moveTo(3, -15)
+    targetCtx.quadraticCurveTo(-10, -10, -22 + capeWave, -2)
+    targetCtx.quadraticCurveTo(-15, 6, -2, 5)
+    targetCtx.lineTo(3, -15)
+    targetCtx.closePath()
+    targetCtx.fill()
+    targetCtx.strokeStyle = outlineColor
+    targetCtx.lineWidth = 0.7
+    targetCtx.stroke()
 
     // Torso & sitting legs
-    ctx.beginPath()
-    ctx.moveTo(-2, 4)
-    ctx.lineTo(4, -15)
-    ctx.lineTo(8, -13)
-    ctx.lineTo(12, 2)
-    ctx.lineTo(17, 3)
-    ctx.lineTo(14, 5)
-    ctx.lineTo(5, 5)
-    ctx.lineTo(-2, 4)
-    ctx.closePath()
-    ctx.fill()
-    ctx.strokeStyle = outlineColor
-    ctx.lineWidth = 0.7
-    ctx.stroke()
+    targetCtx.beginPath()
+    targetCtx.moveTo(-2, 4)
+    targetCtx.lineTo(4, -15)
+    targetCtx.lineTo(8, -13)
+    targetCtx.lineTo(12, 2)
+    targetCtx.lineTo(17, 3)
+    targetCtx.lineTo(14, 5)
+    targetCtx.lineTo(5, 5)
+    targetCtx.lineTo(-2, 4)
+    targetCtx.closePath()
+    targetCtx.fill()
+    targetCtx.strokeStyle = outlineColor
+    targetCtx.lineWidth = 0.7
+    targetCtx.stroke()
 
     // Arm reaching forward holding broomstick (outline undercoat + dark fill)
-    ctx.strokeStyle = outlineColor
-    ctx.lineWidth = 3.2
-    ctx.lineCap = 'round'
-    ctx.beginPath()
-    ctx.moveTo(4, -13)
-    ctx.lineTo(9, -7)
-    ctx.lineTo(15, -2)
-    ctx.stroke()
+    targetCtx.strokeStyle = outlineColor
+    targetCtx.lineWidth = 3.2
+    targetCtx.lineCap = 'round'
+    targetCtx.beginPath()
+    targetCtx.moveTo(4, -13)
+    targetCtx.lineTo(9, -7)
+    targetCtx.lineTo(15, -2)
+    targetCtx.stroke()
 
-    ctx.strokeStyle = color
-    ctx.lineWidth = 2.0
-    ctx.beginPath()
-    ctx.moveTo(4, -13)
-    ctx.lineTo(9, -7)
-    ctx.lineTo(15, -2)
-    ctx.stroke()
+    targetCtx.strokeStyle = color
+    targetCtx.lineWidth = 2.0
+    targetCtx.beginPath()
+    targetCtx.moveTo(4, -13)
+    targetCtx.lineTo(9, -7)
+    targetCtx.lineTo(15, -2)
+    targetCtx.stroke()
 
     // Head and profile (hooked nose & chin)
-    ctx.beginPath()
-    ctx.arc(8, -19, 4.5, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.strokeStyle = outlineColor
-    ctx.lineWidth = 0.7
-    ctx.stroke()
+    targetCtx.beginPath()
+    targetCtx.arc(8, -19, 4.5, 0, Math.PI * 2)
+    targetCtx.fill()
+    targetCtx.strokeStyle = outlineColor
+    targetCtx.lineWidth = 0.7
+    targetCtx.stroke()
 
     // Pointed nose & chin profile
-    ctx.beginPath()
-    ctx.moveTo(11, -21)
-    ctx.lineTo(15, -19)
-    ctx.lineTo(11, -17)
-    ctx.lineTo(14, -15)
-    ctx.lineTo(9, -15)
-    ctx.closePath()
-    ctx.fill()
-    ctx.strokeStyle = outlineColor
-    ctx.lineWidth = 0.7
-    ctx.stroke()
+    targetCtx.beginPath()
+    targetCtx.moveTo(11, -21)
+    targetCtx.lineTo(15, -19)
+    targetCtx.lineTo(11, -17)
+    targetCtx.lineTo(14, -15)
+    targetCtx.lineTo(9, -15)
+    targetCtx.closePath()
+    targetCtx.fill()
+    targetCtx.strokeStyle = outlineColor
+    targetCtx.lineWidth = 0.7
+    targetCtx.stroke()
 
     // 4. Iconic Witch Hat
-    ctx.save()
-    ctx.translate(8, -22)
-    ctx.rotate(-0.2)
+    targetCtx.save()
+    targetCtx.translate(8, -22)
+    targetCtx.rotate(-0.2)
 
     // Wide Brim
-    ctx.fillStyle = color
-    ctx.beginPath()
-    ctx.ellipse(0, 0, 11, 2.5, 0, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.strokeStyle = outlineColor
-    ctx.lineWidth = 0.7
-    ctx.stroke()
+    targetCtx.fillStyle = color
+    targetCtx.beginPath()
+    targetCtx.ellipse(0, 0, 11, 2.5, 0, 0, Math.PI * 2)
+    targetCtx.fill()
+    targetCtx.strokeStyle = outlineColor
+    targetCtx.lineWidth = 0.7
+    targetCtx.stroke()
 
     // Hat Band (orange ribbon)
-    ctx.fillStyle = '#ea580c'
-    ctx.fillRect(-5, -3, 10, 2)
+    targetCtx.fillStyle = '#ea580c'
+    targetCtx.fillRect(-5, -3, 10, 2)
 
     // Cone of hat bending backward
-    ctx.fillStyle = color
-    ctx.beginPath()
-    ctx.moveTo(-5, -2)
-    ctx.lineTo(5, -2)
-    ctx.quadraticCurveTo(3, -12, -2, -18)
-    ctx.lineTo(-6, -17)
-    ctx.quadraticCurveTo(-1, -10, -5, -2)
-    ctx.closePath()
-    ctx.fill()
-    ctx.strokeStyle = outlineColor
-    ctx.lineWidth = 0.7
-    ctx.stroke()
+    targetCtx.fillStyle = color
+    targetCtx.beginPath()
+    targetCtx.moveTo(-5, -2)
+    targetCtx.lineTo(5, -2)
+    targetCtx.quadraticCurveTo(3, -12, -2, -18)
+    targetCtx.lineTo(-6, -17)
+    targetCtx.quadraticCurveTo(-1, -10, -5, -2)
+    targetCtx.closePath()
+    targetCtx.fill()
+    targetCtx.strokeStyle = outlineColor
+    targetCtx.lineWidth = 0.7
+    targetCtx.stroke()
 
-    ctx.restore()
+    targetCtx.restore()
 
     // 5. Tiny black cat riding behind her on the broom
-    ctx.fillStyle = color
-    ctx.beginPath()
-    ctx.ellipse(-14, 2, 3.5, 2.5, -0.2, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.strokeStyle = outlineColor
-    ctx.lineWidth = 0.6
-    ctx.stroke()
+    targetCtx.fillStyle = color
+    targetCtx.beginPath()
+    targetCtx.ellipse(-14, 2, 3.5, 2.5, -0.2, 0, Math.PI * 2)
+    targetCtx.fill()
+    targetCtx.strokeStyle = outlineColor
+    targetCtx.lineWidth = 0.6
+    targetCtx.stroke()
 
-    ctx.beginPath()
-    ctx.arc(-11, -1, 2.2, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.strokeStyle = outlineColor
-    ctx.lineWidth = 0.6
-    ctx.stroke()
+    targetCtx.beginPath()
+    targetCtx.arc(-11, -1, 2.2, 0, Math.PI * 2)
+    targetCtx.fill()
+    targetCtx.strokeStyle = outlineColor
+    targetCtx.lineWidth = 0.6
+    targetCtx.stroke()
 
-    ctx.beginPath()
-    ctx.moveTo(-12, -2)
-    ctx.lineTo(-12.5, -4.5)
-    ctx.lineTo(-10.5, -3)
-    ctx.moveTo(-10.5, -3)
-    ctx.lineTo(-9.5, -4.5)
-    ctx.lineTo(-9, -2)
-    ctx.fill()
-    ctx.strokeStyle = outlineColor
-    ctx.lineWidth = 0.6
-    ctx.stroke()
+    targetCtx.beginPath()
+    targetCtx.moveTo(-12, -2)
+    targetCtx.lineTo(-12.5, -4.5)
+    targetCtx.lineTo(-10.5, -3)
+    targetCtx.moveTo(-10.5, -3)
+    targetCtx.lineTo(-9.5, -4.5)
+    targetCtx.lineTo(-9, -2)
+    targetCtx.fill()
+    targetCtx.strokeStyle = outlineColor
+    targetCtx.lineWidth = 0.6
+    targetCtx.stroke()
 
-    ctx.strokeStyle = outlineColor
-    ctx.lineWidth = 2.0
-    ctx.beginPath()
-    ctx.moveTo(-17, 3)
-    ctx.quadraticCurveTo(-22, 1, -20, -3)
-    ctx.stroke()
+    targetCtx.strokeStyle = outlineColor
+    targetCtx.lineWidth = 2.0
+    targetCtx.beginPath()
+    targetCtx.moveTo(-17, 3)
+    targetCtx.quadraticCurveTo(-22, 1, -20, -3)
+    targetCtx.stroke()
 
-    ctx.strokeStyle = color
-    ctx.lineWidth = 1.2
-    ctx.beginPath()
-    ctx.moveTo(-17, 3)
-    ctx.quadraticCurveTo(-22, 1, -20, -3)
-    ctx.stroke()
+    targetCtx.strokeStyle = color
+    targetCtx.lineWidth = 1.2
+    targetCtx.beginPath()
+    targetCtx.moveTo(-17, 3)
+    targetCtx.quadraticCurveTo(-22, 1, -20, -3)
+    targetCtx.stroke()
 
     // Tiny glowing cat eyes
-    ctx.fillStyle = '#a3e635'
-    ctx.beginPath()
-    ctx.arc(-10.2, -1.2, 0.45, 0, Math.PI * 2)
-    ctx.arc(-11.5, -1.2, 0.45, 0, Math.PI * 2)
-    ctx.fill()
+    targetCtx.fillStyle = '#a3e635'
+    targetCtx.beginPath()
+    targetCtx.arc(-10.2, -1.2, 0.45, 0, Math.PI * 2)
+    targetCtx.arc(-11.5, -1.2, 0.45, 0, Math.PI * 2)
+    targetCtx.fill()
 
-    ctx.restore()
+    targetCtx.restore()
   }
 
   const drawSanta = (
@@ -1630,7 +1639,7 @@ export function startFxCanvas(
         const gone = batSwarm.dir === 1 ? batSwarm.x - 750 > w : batSwarm.x + 750 < 0
         if (gone) {
           batSwarm = null
-          nextBatSwarm = t + rand(180_000, 300_000) // Spaced out: every 3 to 5 minutes
+          nextBatSwarm = t + rand(150_000, 210_000) // Spaced out: around 3 minutes
         } else {
           for (const b of batSwarm.bats) {
             // Compute erratic swooping and deep vertical diving
@@ -1711,7 +1720,9 @@ export function startFxCanvas(
             if (november) {
               drawGoose(bx, by, t / 195 + b.flapOffset, flock.scale, color, flock.dir)
             } else {
-              drawBird(bx, by, t / 90 + b.flapOffset, flock.scale, color)
+              const targetCtx = bgCtx ?? ctx
+              if (bgCtx) bgHadDraw = true
+              drawBird(targetCtx, bx, by, t / 90 + b.flapOffset, flock.scale, color)
             }
           }
         }
@@ -1726,6 +1737,7 @@ export function startFxCanvas(
         const dir: 1 | -1 = Math.random() < 0.5 ? 1 : -1
         const scale = rand(1.9, 2.3) // 2 sizes bigger (was 0.85-1.25)
         const baseY = h * rand(0.08, 0.28)
+        const isBehind = Math.random() < 0.5 && !!bgCtx
         witch = {
           x: dir === 1 ? -240 : w + 240,
           y: baseY,
@@ -1734,6 +1746,7 @@ export function startFxCanvas(
           dir,
           scale,
           sparkles: [],
+          isBehind,
         }
       }
       if (witch) {
@@ -1765,12 +1778,15 @@ export function startFxCanvas(
           witch = null
           nextWitch = t + rand(80_000, 180_000)
         } else {
+          const targetCtx = (witch.isBehind && bgCtx) ? bgCtx : ctx
+          if (witch.isBehind && bgCtx) bgHadDraw = true
+
           // Draw sparkles
           for (const sp of witch.sparkles) {
-            ctx.fillStyle = `rgba(253, 224, 71, ${sp.alpha})`
-            ctx.beginPath()
-            ctx.arc(sp.x, sp.y, sp.size, 0, Math.PI * 2)
-            ctx.fill()
+            targetCtx.fillStyle = `rgba(253, 224, 71, ${sp.alpha})`
+            targetCtx.beginPath()
+            targetCtx.arc(sp.x, sp.y, sp.size, 0, Math.PI * 2)
+            targetCtx.fill()
           }
 
           const witchColor =
@@ -1781,7 +1797,7 @@ export function startFxCanvas(
               : phase === 'dawn'
               ? 'rgba(38, 22, 48, 0.9)'
               : 'rgba(32, 28, 38, 0.88)'
-          drawWitch(witch.x, witch.y, witch.scale, witchColor, witch.dir, t)
+          drawWitch(targetCtx, witch.x, witch.y, witch.scale, witchColor, witch.dir, t)
         }
       }
     } else {
