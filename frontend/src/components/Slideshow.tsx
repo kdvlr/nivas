@@ -3793,6 +3793,7 @@ export default function Slideshow({
   const rootRef = useRef<HTMLDivElement>(null)
   const playerRef = useRef<HTMLVideoElement>(null)
   const starRef = useRef<HTMLCanvasElement>(null)
+  const bgFxRef = useRef<HTMLCanvasElement>(null)
   const fxRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -3840,7 +3841,7 @@ export default function Slideshow({
   // only mounted above the lowest tier — the engines must follow their refs.
   useEffect(() => {
     const stopStars = starRef.current ? startStarCanvas(starRef.current, () => stateRef.current) : undefined
-    const stopFx = fxRef.current ? startFxCanvas(fxRef.current, () => stateRef.current) : undefined
+    const stopFx = fxRef.current ? startFxCanvas(fxRef.current, () => stateRef.current, bgFxRef.current) : undefined
     return () => {
       stopStars?.()
       stopFx?.()
@@ -4125,6 +4126,9 @@ export default function Slideshow({
 
       {/* String lights along the top sky background (behind photos & decorations, Dec 1-25) */}
       {isChristmasSeason(seasonalDate) && <StringLights />}
+
+      {/* Background delights & distant bats (flying behind photos) */}
+      <canvas ref={bgFxRef} className="absolute inset-0 w-full h-full pointer-events-none" />
 
       {/* Photos. Plain sync presence: every layer here is already absolutely
           positioned, so popLayout's layout projection was measuring for

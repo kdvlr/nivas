@@ -255,6 +255,8 @@ interface SwarmBat {
   dy: number
   scale: number
   isAlpha: boolean
+  isDistant: boolean
+  isBehind: boolean
   speedMult: number
   flapRate: number
   flapOffset: number
@@ -372,9 +374,15 @@ interface FireworksFlash {
   alpha: number
 }
 
-export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): () => void {
+export function startFxCanvas(
+  canvas: HTMLCanvasElement,
+  get: () => SkyState,
+  bgCanvas?: HTMLCanvasElement | null
+): () => void {
   const ctx = canvas.getContext('2d')
   if (!ctx) return () => {}
+  const bgCtx = bgCanvas?.getContext('2d') ?? null
+  let bgHadDraw = false
 
   const fireflyGlow = makeGlowSprite(220, 255, 150)
 
@@ -391,7 +399,7 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
   let flock: Flock | null = null
   let nextFlock = performance.now() + rand(15_000, 60_000)
   let batSwarm: BatSwarm | null = null
-  let nextBatSwarm = performance.now() + rand(2_500, 6_000)
+  let nextBatSwarm = performance.now() + rand(25_000, 55_000)
   let witch: Witch | null = null
   let nextWitch = performance.now() + rand(20_000, 50_000)
   let santa: Santa | null = null
@@ -416,6 +424,10 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     if (canvas.width !== pw || canvas.height !== ph) {
       canvas.width = pw
       canvas.height = ph
+    }
+    if (bgCanvas && (bgCanvas.width !== pw || bgCanvas.height !== ph)) {
+      bgCanvas.width = pw
+      bgCanvas.height = ph
     }
   }
 
@@ -524,22 +536,24 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
 
   const createBatSwarm = (w: number, h: number): BatSwarm => {
     const dir: 1 | -1 = Math.random() < 0.5 ? 1 : -1
-    const count = 30 + Math.floor(Math.random() * 12) // 30 - 41 bats in a massive colony!
+    const count = 18 + Math.floor(Math.random() * 5) // 18 - 22 bats: ideal colony size
     const bats: SwarmBat[] = []
 
     for (let i = 0; i < count; i++) {
-      const isAlpha = i < 3 // 3 prominent scary foreground bats
-      const isDistant = i > 22 // background silhouettes for depth
+      const isAlpha = i < 2 // 2 prominent scary foreground alpha bats with glowing eyes & fangs
+      const isDistant = !isAlpha && i >= 10 // ~8-10 background silhouette bats
+      // Assign layering: distant bats go behind the photos!
+      const isBehind = isDistant && !!bgCtx
 
       const scale = isAlpha
         ? rand(1.85, 2.35)
         : isDistant
-        ? rand(0.7, 1.05)
-        : rand(1.2, 1.65)
+        ? rand(0.7, 1.1)
+        : rand(1.25, 1.65)
 
       // Wide, organic cloud distribution across the swarm
-      const dx = (Math.random() - 0.5) * 540 - i * 10 * dir
-      const dy = (Math.random() - 0.5) * 180
+      const dx = (Math.random() - 0.5) * 500 - i * 14 * dir
+      const dy = (Math.random() - 0.5) * 190
 
       const speedMult = rand(0.85, 1.35)
       const flapRate = rand(0.022, 0.032) // Rapid flutter (22-32 rad/ms)
@@ -547,12 +561,12 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
 
       // Deep acrobatic swoops & plunges
       const swoopPeriod = rand(1100, 2400)
-      const swoopDepth = rand(40, isAlpha ? 115 : 75)
+      const swoopDepth = rand(35, isAlpha ? 110 : 70)
       const swoopPhase = Math.random() * Math.PI * 2
 
       // Erratic hunting twitches
       const dartPeriod = rand(320, 700)
-      const dartAmp = rand(12, 30)
+      const dartAmp = rand(10, 26)
       const dartPhase = Math.random() * Math.PI * 2
 
       bats.push({
@@ -560,6 +574,8 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
         dy,
         scale,
         isAlpha,
+        isDistant,
+        isBehind,
         speedMult,
         flapRate,
         flapOffset,
@@ -572,12 +588,15 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
       })
     }
 
-    // Sort by scale ascending so larger foreground bats render on top
-    bats.sort((a, b) => a.scale - b.scale)
+    // Sort: background bats first, then foreground bats by scale ascending
+    bats.sort((a, b) => {
+      if (a.isBehind !== b.isBehind) return a.isBehind ? -1 : 1
+      return a.scale - b.scale
+    })
 
     return {
-      x: dir === 1 ? -320 : w + 320,
-      y: h * rand(0.12, 0.36),
+      x: dir === 1 ? -350 : w + 350,
+      y: h * rand(0.12, 0.38),
       speed: rand(145, 195),
       dir,
       bats,
@@ -585,6 +604,7 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
   }
 
   const drawBat = (
+    targetCtx: CanvasRenderingContext2D,
     x: number,
     y: number,
     flap: number,
@@ -592,12 +612,13 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
     dir: 1 | -1,
     pitch: number = 0,
     isAlpha: boolean = false,
+    isDistant: boolean = false,
     skyPhase: string = 'night'
   ) => {
-    ctx.save()
-    ctx.translate(x, y)
-    ctx.scale(dir * scale, scale)
-    ctx.rotate(pitch)
+    targetCtx.save()
+    targetCtx.translate(x, y)
+    targetCtx.scale(dir * scale, scale)
+    targetCtx.rotate(pitch)
 
     const s = Math.sin(flap) // -1: upstroke, +1: downstroke
 
@@ -610,9 +631,9 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
 
     // 1. LEFT & RIGHT WINGS: Scalloped leathery membrane, carpal thumb spurs, and finger bones
     for (const side of [-1, 1]) {
-      ctx.save()
-      ctx.beginPath()
-      ctx.moveTo(side * 2.5, -3)
+      targetCtx.save()
+      targetCtx.beginPath()
+      targetCtx.moveTo(side * 2.5, -3)
 
       const wristX = side * 13
       const wristY = -6 - s * 9
@@ -629,121 +650,136 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
       const hipY = 5
 
       // Leading edge
-      ctx.quadraticCurveTo(side * 7, -5 - s * 5, wristX, wristY)
-      ctx.lineTo(thumbX, thumbY)
-      ctx.lineTo(wristX + side * 0.5, wristY - 1)
-      ctx.quadraticCurveTo(side * 19, -4 - s * 13, tipX, tipY)
+      targetCtx.quadraticCurveTo(side * 7, -5 - s * 5, wristX, wristY)
+      targetCtx.lineTo(thumbX, thumbY)
+      targetCtx.lineTo(wristX + side * 0.5, wristY - 1)
+      targetCtx.quadraticCurveTo(side * 19, -4 - s * 13, tipX, tipY)
 
       // Scalloped trailing edge between finger struts
-      ctx.quadraticCurveTo(side * 23, 0 - s * 13, d4X, d4Y)
-      ctx.quadraticCurveTo(side * 16.5, 6 - s * 8, d5X, d5Y)
-      ctx.quadraticCurveTo(side * 8, 8 - s * 3.5, hipX, hipY)
+      targetCtx.quadraticCurveTo(side * 23, 0 - s * 13, d4X, d4Y)
+      targetCtx.quadraticCurveTo(side * 16.5, 6 - s * 8, d5X, d5Y)
+      targetCtx.quadraticCurveTo(side * 8, 8 - s * 3.5, hipX, hipY)
 
-      ctx.closePath()
-      ctx.fillStyle = wingMembrane
-      ctx.fill()
+      targetCtx.closePath()
+      targetCtx.fillStyle = wingMembrane
+      targetCtx.fill()
 
-      // Finger bone struts
-      ctx.strokeStyle = boneColor
-      ctx.lineWidth = 0.8
-      ctx.beginPath()
-      ctx.moveTo(side * 2.5, -3)
-      ctx.lineTo(wristX, wristY)
-      ctx.moveTo(wristX, wristY)
-      ctx.quadraticCurveTo(side * 20, -3 - s * 12, tipX, tipY)
-      ctx.moveTo(wristX, wristY)
-      ctx.quadraticCurveTo(side * 17, 1 - s * 9, d4X, d4Y)
-      ctx.moveTo(wristX, wristY)
-      ctx.quadraticCurveTo(side * 13, 3 - s * 7, d5X, d5Y)
-      ctx.stroke()
+      // Finger bone struts (skip on distant background silhouettes for tablet efficiency)
+      if (!isDistant) {
+        targetCtx.strokeStyle = boneColor
+        targetCtx.lineWidth = 0.8
+        targetCtx.beginPath()
+        targetCtx.moveTo(side * 2.5, -3)
+        targetCtx.lineTo(wristX, wristY)
+        targetCtx.moveTo(wristX, wristY)
+        targetCtx.quadraticCurveTo(side * 20, -3 - s * 12, tipX, tipY)
+        targetCtx.moveTo(wristX, wristY)
+        targetCtx.quadraticCurveTo(side * 17, 1 - s * 9, d4X, d4Y)
+        targetCtx.moveTo(wristX, wristY)
+        targetCtx.quadraticCurveTo(side * 13, 3 - s * 7, d5X, d5Y)
+        targetCtx.stroke()
+      }
 
-      ctx.restore()
+      targetCtx.restore()
     }
 
     // 2. BODY & TAIL MEMBRANE
-    ctx.fillStyle = bodyColor
-    ctx.beginPath()
-    ctx.ellipse(0, 1, 3.8, 6.5, 0, 0, Math.PI * 2)
-    ctx.fill()
+    targetCtx.fillStyle = bodyColor
+    targetCtx.beginPath()
+    targetCtx.ellipse(0, 1, 3.8, 6.5, 0, 0, Math.PI * 2)
+    targetCtx.fill()
 
     // Uropatagium (tail membrane)
-    ctx.beginPath()
-    ctx.moveTo(-2.8, 4)
-    ctx.lineTo(2.8, 4)
-    ctx.lineTo(0, 11)
-    ctx.closePath()
-    ctx.fillStyle = bodyColor
-    ctx.fill()
+    targetCtx.beginPath()
+    targetCtx.moveTo(-2.8, 4)
+    targetCtx.lineTo(2.8, 4)
+    targetCtx.lineTo(0, 11)
+    targetCtx.closePath()
+    targetCtx.fillStyle = bodyColor
+    targetCtx.fill()
 
-    // Clawed rear feet
-    ctx.fillStyle = boneColor
-    ctx.fillRect(-3.2, 7.5, 1.2, 2.5)
-    ctx.fillRect(2.0, 7.5, 1.2, 2.5)
+    if (!isDistant) {
+      // Clawed rear feet
+      targetCtx.fillStyle = boneColor
+      targetCtx.fillRect(-3.2, 7.5, 1.2, 2.5)
+      targetCtx.fillRect(2.0, 7.5, 1.2, 2.5)
+    }
 
     // 3. HEAD & POINTED DEMONIC EARS
-    ctx.fillStyle = bodyColor
-    ctx.beginPath()
-    ctx.arc(0, -6.5, 4.2, 0, Math.PI * 2)
-    ctx.moveTo(-1.2, -8.5)
-    ctx.lineTo(-4.8, -16)
-    ctx.lineTo(-4.0, -6.5)
-    ctx.moveTo(1.2, -8.5)
-    ctx.lineTo(4.8, -16)
-    ctx.lineTo(4.0, -6.5)
-    ctx.fill()
+    targetCtx.fillStyle = bodyColor
+    targetCtx.beginPath()
+    targetCtx.arc(0, -6.5, 4.2, 0, Math.PI * 2)
+    targetCtx.moveTo(-1.2, -8.5)
+    targetCtx.lineTo(-4.8, -16)
+    targetCtx.lineTo(-4.0, -6.5)
+    targetCtx.moveTo(1.2, -8.5)
+    targetCtx.lineTo(4.8, -16)
+    targetCtx.lineTo(4.0, -6.5)
+    targetCtx.fill()
 
-    // Inner ear depth
-    ctx.fillStyle = earInner
-    ctx.beginPath()
-    ctx.moveTo(-1.8, -8.5)
-    ctx.lineTo(-4.2, -14.5)
-    ctx.lineTo(-3.4, -7.5)
-    ctx.moveTo(1.8, -8.5)
-    ctx.lineTo(4.2, -14.5)
-    ctx.lineTo(3.4, -7.5)
-    ctx.fill()
+    if (!isDistant) {
+      // Inner ear depth
+      targetCtx.fillStyle = earInner
+      targetCtx.beginPath()
+      targetCtx.moveTo(-1.8, -8.5)
+      targetCtx.lineTo(-4.2, -14.5)
+      targetCtx.lineTo(-3.4, -7.5)
+      targetCtx.moveTo(1.8, -8.5)
+      targetCtx.lineTo(4.2, -14.5)
+      targetCtx.lineTo(3.4, -7.5)
+      targetCtx.fill()
 
-    // 4. MOUTH & SHARP WHITE FANGS
-    ctx.fillStyle = '#050308'
-    ctx.beginPath()
-    ctx.ellipse(0, -4.2, 2.2, 1.0, 0, 0, Math.PI)
-    ctx.fill()
+      // 4. MOUTH & SHARP WHITE FANGS
+      targetCtx.fillStyle = '#050308'
+      targetCtx.beginPath()
+      targetCtx.ellipse(0, -4.2, 2.2, 1.0, 0, 0, Math.PI)
+      targetCtx.fill()
 
-    ctx.fillStyle = '#ffffff'
-    // Left fang
-    ctx.beginPath()
-    ctx.moveTo(-1.6, -4.6)
-    ctx.lineTo(-0.8, -4.6)
-    ctx.lineTo(-1.2, -2.4)
-    ctx.closePath()
-    ctx.fill()
-    // Right fang
-    ctx.beginPath()
-    ctx.moveTo(0.8, -4.6)
-    ctx.lineTo(1.6, -4.6)
-    ctx.lineTo(1.2, -2.4)
-    ctx.closePath()
-    ctx.fill()
+      targetCtx.fillStyle = '#ffffff'
+      targetCtx.beginPath()
+      targetCtx.moveTo(-1.6, -4.6)
+      targetCtx.lineTo(-0.8, -4.6)
+      targetCtx.lineTo(-1.2, -2.4)
+      targetCtx.closePath()
+      targetCtx.fill()
 
-    // 5. PIERCING GLOWING DEMONIC RED EYES
-    ctx.save()
-    ctx.shadowColor = '#ff1111'
-    ctx.shadowBlur = isAlpha ? 10 : 6
-    ctx.fillStyle = '#ff2222'
-    ctx.beginPath()
-    ctx.arc(-2.0, -7.0, isAlpha ? 1.5 : 1.2, 0, Math.PI * 2)
-    ctx.arc(2.0, -7.0, isAlpha ? 1.5 : 1.2, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.restore()
+      targetCtx.beginPath()
+      targetCtx.moveTo(0.8, -4.6)
+      targetCtx.lineTo(1.6, -4.6)
+      targetCtx.lineTo(1.2, -2.4)
+      targetCtx.closePath()
+      targetCtx.fill()
+    }
 
-    // Bright eye core
-    ctx.fillStyle = '#fff5f5'
-    ctx.beginPath()
-    ctx.arc(-2.0, -7.0, 0.45, 0, Math.PI * 2)
-    ctx.arc(2.0, -7.0, 0.45, 0, Math.PI * 2)
-    ctx.fill()
+    // 5. DEMONIC RED EYES
+    if (isAlpha) {
+      // Full demonic glow for alpha leaders
+      targetCtx.save()
+      targetCtx.shadowColor = '#ff1111'
+      targetCtx.shadowBlur = 10
+      targetCtx.fillStyle = '#ff2222'
+      targetCtx.beginPath()
+      targetCtx.arc(-2.0, -7.0, 1.5, 0, Math.PI * 2)
+      targetCtx.arc(2.0, -7.0, 1.5, 0, Math.PI * 2)
+      targetCtx.fill()
+      targetCtx.restore()
 
-    ctx.restore()
+      // Bright eye core
+      targetCtx.fillStyle = '#fff5f5'
+      targetCtx.beginPath()
+      targetCtx.arc(-2.0, -7.0, 0.45, 0, Math.PI * 2)
+      targetCtx.arc(2.0, -7.0, 0.45, 0, Math.PI * 2)
+      targetCtx.fill()
+    } else if (!isDistant) {
+      // Crisp red eye dots without expensive shadowBlur for midground bats (tablet friendly)
+      targetCtx.fillStyle = '#ff2222'
+      targetCtx.beginPath()
+      targetCtx.arc(-2.0, -7.0, 1.2, 0, Math.PI * 2)
+      targetCtx.arc(2.0, -7.0, 1.2, 0, Math.PI * 2)
+      targetCtx.fill()
+    }
+
+    targetCtx.restore()
   }
 
   const drawGoose = (
@@ -1552,17 +1588,31 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
         ctx.clearRect(0, 0, w, h)
         canvas.style.visibility = 'hidden'
+        if (bgCtx && bgCanvas) {
+          bgCtx.setTransform(dpr, 0, 0, dpr, 0, 0)
+          bgCtx.clearRect(0, 0, w, h)
+          bgCanvas.style.visibility = 'hidden'
+        }
         blanked = true
       }
       return
     }
     if (blanked) {
       canvas.style.visibility = ''
+      if (bgCanvas) bgCanvas.style.visibility = ''
       blanked = false
     }
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.clearRect(0, 0, w, h)
+
+    if (bgCtx) {
+      bgCtx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      if (bgHadDraw) {
+        bgCtx.clearRect(0, 0, w, h)
+        bgHadDraw = false
+      }
+    }
 
     const key = `${w}x${h}x${state.quality ?? 'high'}`
     if (key !== sizeKey) {
@@ -1580,7 +1630,7 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
         const gone = batSwarm.dir === 1 ? batSwarm.x - 750 > w : batSwarm.x + 750 < 0
         if (gone) {
           batSwarm = null
-          nextBatSwarm = t + rand(14_000, 26_000) // Frequently recurring swarms in October!
+          nextBatSwarm = t + rand(65_000, 130_000) // Spaced out: every 1 to 2.2 minutes
         } else {
           for (const b of batSwarm.bats) {
             // Compute erratic swooping and deep vertical diving
@@ -1599,7 +1649,10 @@ export function startFxCanvas(canvas: HTMLCanvasElement, get: () => SkyState): (
             // Frantic, jittery flap flutter
             const flap = t * b.flapRate + b.flapOffset
 
-            drawBat(bx, by, flap, b.scale, batSwarm.dir, pitch, b.isAlpha, phase)
+            const targetCtx = (b.isBehind && bgCtx) ? bgCtx : ctx
+            if (b.isBehind && bgCtx) bgHadDraw = true
+
+            drawBat(targetCtx, bx, by, flap, b.scale, batSwarm.dir, pitch, b.isAlpha, b.isDistant, phase)
           }
         }
       }
