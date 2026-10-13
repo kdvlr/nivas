@@ -18,6 +18,7 @@ const rand = (a: number, b: number) => a + Math.random() * (b - a)
 import {
   getSeasonalDate,
   isOctober,
+  isSwaraBirthday,
   isNovember,
   isDiwaliSeason,
   isDecember,
@@ -1136,7 +1137,8 @@ export function startFxCanvas(
     scale: number,
     color: string,
     dir: 1 | -1,
-    t: number
+    t: number,
+    isBirthday = false
   ) => {
     targetCtx.save()
     targetCtx.translate(x, y)
@@ -1347,6 +1349,82 @@ export function startFxCanvas(
     targetCtx.arc(-11.5, -1.2, 0.45, 0, Math.PI * 2)
     targetCtx.fill()
 
+    // 6. Swara's Birthday Celebration: Trailing Birthday Banner & Floating Balloons behind the broom!
+    if (isBirthday) {
+      // Cord connecting broom bristles to banner
+      targetCtx.strokeStyle = 'rgba(255, 255, 255, 0.7)'
+      targetCtx.lineWidth = 0.9
+      targetCtx.beginPath()
+      targetCtx.moveTo(-46, 3)
+      targetCtx.lineTo(-65, 3)
+      targetCtx.moveTo(-46, 9)
+      targetCtx.lineTo(-65, 9)
+      targetCtx.stroke()
+
+      // Trailing Streamer Banner
+      const bannerW = 145
+      const bannerH = 17
+      const bannerX = -65 - bannerW
+      const bannerY = -2
+      const wave = Math.sin(t / 180) * 2.2
+
+      targetCtx.save()
+      targetCtx.translate(0, wave)
+
+      // Banner background ribbon (festive magenta gradient with golden borders)
+      targetCtx.fillStyle = '#ec4899'
+      targetCtx.beginPath()
+      targetCtx.moveTo(bannerX + bannerW, bannerY)
+      targetCtx.lineTo(bannerX + 10, bannerY)
+      targetCtx.lineTo(bannerX, bannerY + bannerH / 2) // Swallowtail notch
+      targetCtx.lineTo(bannerX + 10, bannerY + bannerH)
+      targetCtx.lineTo(bannerX + bannerW, bannerY + bannerH)
+      targetCtx.closePath()
+      targetCtx.fill()
+
+      // Golden border trim
+      targetCtx.strokeStyle = '#facc15'
+      targetCtx.lineWidth = 1.0
+      targetCtx.stroke()
+
+      // Banner text
+      targetCtx.fillStyle = '#ffffff'
+      targetCtx.font = "bold 9px system-ui, -apple-system, sans-serif"
+      targetCtx.textAlign = 'center'
+      targetCtx.textBaseline = 'middle'
+      targetCtx.fillText('★ HAPPY BIRTHDAY SWARA! 🎂 ★', bannerX + bannerW / 2 + 5, bannerY + bannerH / 2)
+
+      targetCtx.restore()
+
+      // Mini helium balloons tied to broom
+      const drawMiniBalloon = (bx: number, by: number, bColor: string, shineColor: string) => {
+        targetCtx.strokeStyle = 'rgba(255, 255, 255, 0.65)'
+        targetCtx.lineWidth = 0.7
+        targetCtx.beginPath()
+        targetCtx.moveTo(-30, 4)
+        targetCtx.quadraticCurveTo(-26, (by + 4) / 2, bx, by + 10)
+        targetCtx.stroke()
+
+        targetCtx.fillStyle = bColor
+        targetCtx.beginPath()
+        targetCtx.ellipse(bx, by, 6, 8, 0, 0, Math.PI * 2)
+        targetCtx.fill()
+
+        targetCtx.fillStyle = shineColor
+        targetCtx.beginPath()
+        targetCtx.ellipse(bx - 2, by - 2.5, 1.8, 3.5, -0.3, 0, Math.PI * 2)
+        targetCtx.fill()
+      }
+
+      const bob1 = Math.sin(t / 220) * 3
+      const bob2 = Math.sin(t / 260 + 1) * 3
+      const bob3 = Math.sin(t / 200 + 2) * 3
+
+      drawMiniBalloon(-32, -28 + bob1, '#f43f5e', '#fecdd3') // Pink
+      drawMiniBalloon(-20, -38 + bob2, '#38bdf8', '#e0f2fe') // Cyan
+      drawMiniBalloon(-10, -30 + bob3, '#facc15', '#fef9c3') // Gold
+    }
+
     targetCtx.restore()
   }
 
@@ -1555,6 +1633,7 @@ export function startFxCanvas(
     const calm = kind === 'clear' || kind === 'cloudy'
 
     const seasonalDate = getSeasonalDate()
+    const swaraBirthday = isSwaraBirthday(seasonalDate)
     const october = isOctober(seasonalDate)
     const november = isNovember(seasonalDate)
     const diwali = isDiwaliSeason(seasonalDate)
@@ -1570,6 +1649,7 @@ export function startFxCanvas(
     const wantsLeaves = november && calm
     const wantsLanterns = diwali && (phase === 'night' || phase === 'dusk') && calm
     const wantsDiwaliFireworks = diwali && calm
+    const wantsSwaraFireworks = swaraBirthday && (phase === 'dusk' || phase === 'night') && calm
     const batsPossible = october && calm
     const creaturesPossible = calm && (daylight || november)
     const witchPossible = october && calm
@@ -1581,6 +1661,7 @@ export function startFxCanvas(
       wantsLeaves ||
       wantsLanterns ||
       wantsDiwaliFireworks ||
+      wantsSwaraFireworks ||
       batSwarm !== null ||
       flock !== null ||
       witch !== null ||
@@ -1738,8 +1819,9 @@ export function startFxCanvas(
         const scale = rand(1.9, 2.3) // 2 sizes bigger (was 0.85-1.25)
         const baseY = h * rand(0.08, 0.28)
         const isBehind = Math.random() < 0.5 && !!bgCtx
+        const witchMargin = swaraBirthday ? 520 : 240
         witch = {
-          x: dir === 1 ? -240 : w + 240,
+          x: dir === 1 ? -witchMargin : w + witchMargin,
           y: baseY,
           baseY,
           speed: rand(105, 145),
@@ -1773,7 +1855,8 @@ export function startFxCanvas(
           }
         }
 
-        const gone = witch.dir === 1 ? witch.x - 260 > w : witch.x + 260 < 0
+        const exitMargin = swaraBirthday ? 540 : 260
+        const gone = witch.dir === 1 ? witch.x - exitMargin > w : witch.x + exitMargin < 0
         if (gone) {
           witch = null
           nextWitch = t + rand(80_000, 180_000)
@@ -1797,7 +1880,7 @@ export function startFxCanvas(
               : phase === 'dawn'
               ? 'rgba(38, 22, 48, 0.9)'
               : 'rgba(32, 28, 38, 0.88)'
-          drawWitch(targetCtx, witch.x, witch.y, witch.scale, witchColor, witch.dir, t)
+          drawWitch(targetCtx, witch.x, witch.y, witch.scale, witchColor, witch.dir, t, swaraBirthday)
         }
       }
     } else {
@@ -1919,12 +2002,23 @@ export function startFxCanvas(
       }
     }
 
-    // Festive Fireworks: New Year's Season & Diwali Nights (Pataka & Rockets)!
-    const wantsFireworks = newYearSeason || wantsDiwaliFireworks
+    // Festive Fireworks: New Year's Season, Diwali Nights & Swara's Birthday Dusk/Night!
+    const wantsFireworks = newYearSeason || wantsDiwaliFireworks || wantsSwaraFireworks
     if (wantsFireworks) {
       if (t > nextRocket) {
-        nextRocket = t + rand(diwali ? 450 : 650, diwali ? 1200 : 1500)
-        const fireworkColors = diwali
+        nextRocket = t + rand(wantsSwaraFireworks ? 500 : (diwali ? 450 : 650), wantsSwaraFireworks ? 1300 : (diwali ? 1200 : 1500))
+        const fireworkColors = wantsSwaraFireworks
+          ? [
+              '#ec4899', // Hot Pink
+              '#f472b6', // Pastel Rose
+              '#a855f7', // Electric Violet
+              '#c084fc', // Lilac
+              '#38bdf8', // Neon Sky Blue
+              '#facc15', // Sparkling Gold
+              '#34d399', // Mint / Emerald
+              '#ffffff', // Diamond Star Sparkler
+            ]
+          : diwali
           ? [
               '#facc15', // Sparkling Diwali Gold (Zari)
               '#ef4444', // Festive Crimson (Gulal)
@@ -1948,14 +2042,14 @@ export function startFxCanvas(
           let rx: number
           let tilt = 0
           const isBottle = diwali && Math.random() < 0.85
-          if (diwali) {
+          if (diwali || wantsSwaraFireworks) {
             // Strictly constrain to side columns so central photo frame is never obstructed
             const side = Math.random() < 0.5 ? 'left' : 'right'
             if (side === 'left') {
-              rx = w * rand(0.03, 0.14)
+              rx = w * rand(0.03, 0.16)
               tilt = rand(0.02, 0.06)
             } else {
-              rx = w * rand(0.86, 0.97)
+              rx = w * rand(0.84, 0.97)
               tilt = rand(-0.06, -0.02)
             }
           } else {

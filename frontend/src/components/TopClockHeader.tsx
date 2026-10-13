@@ -2,6 +2,7 @@ import React from 'react'
 import Icon from './Icon'
 import { useTimer } from '../context/TimerContext'
 import { formatTimerDisplay } from '../lib/timer'
+import { isSwaraBirthday } from './sky/queryParam'
 
 interface TopClockHeaderProps {
   now: Date
@@ -103,6 +104,14 @@ export default function TopClockHeader({ now, config, className = '' }: TopClock
           )}
         </span>
       </div>
+
+      {isSwaraBirthday(now) && (
+        <div className="mt-1 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-pink-500/20 via-purple-500/20 to-amber-500/20 text-pink-600 dark:text-pink-300 border border-pink-400/40 text-[10px] sm:text-xs font-bold shadow-sm tracking-wide animate-pulse">
+          <span>🎂</span>
+          <span>Happy Birthday Swara!</span>
+          <span>👑</span>
+        </div>
+      )}
     </div>
   )
 }

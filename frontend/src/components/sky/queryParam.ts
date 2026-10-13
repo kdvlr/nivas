@@ -31,6 +31,9 @@ export function getSeasonalDate(now: Date = new Date()): Date {
   const override = getHolidayOverride()
   if (override) {
     const o = override.toLowerCase()
+    if (o === 'swara' || o === 'birthday' || o === 'bday' || o === 'swarabday' || o === 'oct31' || o === 'halloweenbday') {
+      return new Date(2026, 9, 31)
+    }
     if (o === 'october' || o === 'oct' || o === 'halloween' || o === 'spooky' || o === 'skeleton') {
       return new Date(2026, 9, 15)
     }
@@ -54,6 +57,13 @@ export function getSeasonalDate(now: Date = new Date()): Date {
     }
   }
   return now
+}
+
+export function isSwaraBirthday(d?: Date): boolean {
+  const date = d ?? getSeasonalDate()
+  const override = getHolidayOverride()?.toLowerCase()
+  if (override === 'swara' || override === 'birthday' || override === 'bday' || override === 'swarabday' || override === 'oct31' || override === 'halloweenbday') return true
+  return date.getMonth() === 9 && date.getDate() === 31
 }
 
 export function isOctober(d?: Date): boolean {

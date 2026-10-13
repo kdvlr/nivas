@@ -29,6 +29,7 @@ export type CelebrationName =
   | 'donut-crusher'
   | 'firefighter-rescue'
   | 'ninja-chop'
+  | 'birthday-cake'
 
 export interface Celebration {
   name: CelebrationName
@@ -1542,4 +1543,260 @@ export const CELEBRATIONS: Celebration[] = [
     praise: ['Warp speed ahead!', 'Light-speed legend!', 'To infinity… and DONE!'],
     run: hyperspaceRun,
   },
+  {
+    name: 'birthday-cake',
+    emoji: '🎂',
+    label: 'Birthday Cake Spectacular',
+    backdrop: '#fdf2f8',
+    durationMs: 7500,
+    hideHtmlPraise: true,
+    praise: ['Happy Birthday Swara! 🎂✨', 'Make a Wish, Swara! 🕯️💫', 'Sweetest Chore Champ! 👑'],
+    run: birthdayCakeRun,
+  },
 ]
+
+function birthdayCakeRun(canvas: HTMLCanvasElement): () => void {
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return () => {}
+
+  const W = canvas.width
+  const H = canvas.height
+
+  let running = true
+  let rafId = 0
+  let startTime = 0
+
+  interface Particle {
+    x: number
+    y: number
+    vx: number
+    vy: number
+    size: number
+    color: string
+    rot: number
+    vRot: number
+    shape: 'rect' | 'circle' | 'star'
+  }
+
+  const confetti: Particle[] = []
+  const colors = ['#ec4899', '#f472b6', '#a855f7', '#c084fc', '#38bdf8', '#facc15', '#34d399', '#ffffff']
+
+  for (let i = 0; i < 140; i++) {
+    confetti.push({
+      x: Math.random() * W,
+      y: Math.random() * -H,
+      vx: (Math.random() - 0.5) * 80,
+      vy: 120 + Math.random() * 180,
+      size: 5 + Math.random() * 8,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      rot: Math.random() * Math.PI * 2,
+      vRot: (Math.random() - 0.5) * 4,
+      shape: Math.random() < 0.2 ? 'star' : Math.random() < 0.5 ? 'circle' : 'rect',
+    })
+  }
+
+  const loop = (ts: number) => {
+    if (!running) return
+    if (!startTime) startTime = ts
+    const t = (ts - startTime) / 1000
+
+    ctx.clearRect(0, 0, W, H)
+
+    // Radial warm pink spotlight
+    const grad = ctx.createRadialGradient(W / 2, H / 2, 50, W / 2, H / 2, Math.max(W, H) / 1.5)
+    grad.addColorStop(0, 'rgba(253, 242, 248, 0.96)')
+    grad.addColorStop(1, 'rgba(250, 232, 255, 0.98)')
+    ctx.fillStyle = grad
+    ctx.fillRect(0, 0, W, H)
+
+    // Animated Cake Rising
+    const cakeProgress = Math.min(1, t / 0.8)
+    const cakeOvershoot = cakeProgress === 1 ? 1 : Math.sin((cakeProgress * Math.PI) / 2) * 1.05
+    const cakeCenterY = H * 0.58 + (1 - cakeOvershoot) * 200
+
+    ctx.save()
+    ctx.translate(W / 2, cakeCenterY)
+
+    // Plate / Pedestal
+    ctx.fillStyle = '#e2e8f0'
+    ctx.beginPath()
+    ctx.ellipse(0, 95, 170, 28, 0, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.fillStyle = '#ffffff'
+    ctx.beginPath()
+    ctx.ellipse(0, 92, 160, 24, 0, 0, Math.PI * 2)
+    ctx.fill()
+
+    // --- TIER 1 (Bottom Tier - Pastel Strawberry) ---
+    ctx.fillStyle = '#f472b6'
+    ctx.beginPath()
+    ctx.roundRect(-140, 0, 280, 90, 14)
+    ctx.fill()
+    // Frosting Cream Top of Tier 1
+    ctx.fillStyle = '#fffbeb'
+    ctx.beginPath()
+    ctx.ellipse(0, 0, 140, 22, 0, 0, Math.PI * 2)
+    ctx.fill()
+    // Drips along bottom tier rim
+    for (let i = -130; i <= 130; i += 26) {
+      ctx.beginPath()
+      ctx.arc(i, 8, 12, 0, Math.PI)
+      ctx.fill()
+    }
+
+    // --- TIER 2 (Middle Tier - Lavender Cream) ---
+    ctx.fillStyle = '#c084fc'
+    ctx.beginPath()
+    ctx.roundRect(-100, -75, 200, 75, 12)
+    ctx.fill()
+    // Frosting Cream Top of Tier 2
+    ctx.fillStyle = '#fffbeb'
+    ctx.beginPath()
+    ctx.ellipse(0, -75, 100, 18, 0, 0, Math.PI * 2)
+    ctx.fill()
+    // Drips along middle tier rim
+    for (let i = -90; i <= 90; i += 22) {
+      ctx.beginPath()
+      ctx.arc(i, -67, 10, 0, Math.PI)
+      ctx.fill()
+    }
+
+    // --- TIER 3 (Top Tier - Mint Pastel) ---
+    ctx.fillStyle = '#6ee7b7'
+    ctx.beginPath()
+    ctx.roundRect(-65, -140, 130, 65, 10)
+    ctx.fill()
+    // Frosting Cream Top of Tier 3
+    ctx.fillStyle = '#fffbeb'
+    ctx.beginPath()
+    ctx.ellipse(0, -140, 65, 14, 0, 0, Math.PI * 2)
+    ctx.fill()
+    // Drips along top tier rim
+    for (let i = -55; i <= 55; i += 18) {
+      ctx.beginPath()
+      ctx.arc(i, -133, 8, 0, Math.PI)
+      ctx.fill()
+    }
+
+    // --- 5 BIRTHDAY CANDLES ON TOP ---
+    const candleXs = [-40, -20, 0, 20, 40]
+    const candleColors = ['#f43f5e', '#38bdf8', '#facc15', '#a855f7', '#ec4899']
+
+    for (let c = 0; c < 5; c++) {
+      const cx = candleXs[c]
+      const cCol = candleColors[c]
+
+      // Candle Stick
+      ctx.fillStyle = cCol
+      ctx.fillRect(cx - 3, -172, 6, 32)
+
+      // Stripes
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(cx - 3, -164, 6, 4)
+      ctx.fillRect(cx - 3, -152, 6, 4)
+
+      // Wick
+      ctx.strokeStyle = '#451a03'
+      ctx.lineWidth = 1.2
+      ctx.beginPath()
+      ctx.moveTo(cx, -172)
+      ctx.lineTo(cx, -176)
+      ctx.stroke()
+
+      // Flickering Flame Glow
+      const flicker = Math.sin(t * 16 + c * 2) * 1.5
+      ctx.fillStyle = 'rgba(250, 204, 21, 0.4)'
+      ctx.beginPath()
+      ctx.arc(cx, -182 + flicker, 10, 0, Math.PI * 2)
+      ctx.fill()
+
+      // Flame Tear
+      ctx.fillStyle = '#f59e0b'
+      ctx.beginPath()
+      ctx.moveTo(cx, -190 + flicker)
+      ctx.quadraticCurveTo(cx + 4, -182 + flicker, cx, -178 + flicker)
+      ctx.quadraticCurveTo(cx - 4, -182 + flicker, cx, -190 + flicker)
+      ctx.fill()
+
+      ctx.fillStyle = '#ffffff'
+      ctx.beginPath()
+      ctx.arc(cx, -181 + flicker, 2, 0, Math.PI * 2)
+      ctx.fill()
+    }
+
+    ctx.restore()
+
+    // --- FESTIVE BANNER OVERHEAD ---
+    const bannerPop = Math.min(1, Math.max(0, (t - 0.4) / 0.5))
+    if (bannerPop > 0) {
+      ctx.save()
+      ctx.translate(W / 2, H * 0.16)
+      ctx.scale(bannerPop, bannerPop)
+
+      // Banner background
+      ctx.fillStyle = '#ec4899'
+      ctx.beginPath()
+      ctx.roundRect(-240, -28, 480, 56, 28)
+      ctx.fill()
+      ctx.strokeStyle = '#facc15'
+      ctx.lineWidth = 3
+      ctx.stroke()
+
+      // Banner Text
+      ctx.fillStyle = '#ffffff'
+      ctx.font = 'bold 26px system-ui, -apple-system, sans-serif'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText('🎂 HAPPY BIRTHDAY SWARA! 👑', 0, 2)
+      ctx.restore()
+    }
+
+    // --- FALLING CONFETTI RAIN ---
+    for (const p of confetti) {
+      p.y += p.vy * 0.016
+      p.x += p.vx * 0.016 + Math.sin(t * 3 + p.y * 0.01) * 1.5
+      p.rot += p.vRot * 0.016
+
+      if (p.y > H + 20) {
+        p.y = -20
+        p.x = Math.random() * W
+      }
+
+      ctx.save()
+      ctx.translate(p.x, p.y)
+      ctx.rotate(p.rot)
+      ctx.fillStyle = p.color
+
+      if (p.shape === 'circle') {
+        ctx.beginPath()
+        ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2)
+        ctx.fill()
+      } else if (p.shape === 'star') {
+        ctx.beginPath()
+        for (let s = 0; s < 5; s++) {
+          const a = (s * Math.PI * 2) / 5 - Math.PI / 2
+          const ra = a + Math.PI / 5
+          const r1 = p.size * 0.8
+          const r2 = p.size * 0.35
+          if (s === 0) ctx.moveTo(Math.cos(a) * r1, Math.sin(a) * r1)
+          else ctx.lineTo(Math.cos(a) * r1, Math.sin(a) * r1)
+          ctx.lineTo(Math.cos(ra) * r2, Math.sin(ra) * r2)
+        }
+        ctx.closePath()
+        ctx.fill()
+      } else {
+        ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2)
+      }
+      ctx.restore()
+    }
+
+    rafId = requestAnimationFrame(loop)
+  }
+
+  rafId = requestAnimationFrame(loop)
+
+  return () => {
+    running = false
+    cancelAnimationFrame(rafId)
+  }
+}

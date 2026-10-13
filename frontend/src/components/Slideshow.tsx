@@ -10,6 +10,7 @@ import {
   getSeasonalDate,
   getHolidayOverride,
   isOctober,
+  isSwaraBirthday,
   isNovember,
   isDiwaliSeason,
   isThanksgivingWeek,
@@ -208,7 +209,7 @@ function Pumpkin({ seed = 0 }: { seed?: number }) {
   )
 }
 
-function JackOLantern({ seed = 0 }: { seed?: number }) {
+function JackOLantern({ seed = 0, hasBirthdayCandle = false }: { seed?: number; hasBirthdayCandle?: boolean }) {
   const gradId = useId()
   return (
     <svg
@@ -228,11 +229,33 @@ function JackOLantern({ seed = 0 }: { seed?: number }) {
         </radialGradient>
       </defs>
 
-      {/* Soft warm aura glow behind lantern (clean SVG vector, zero blur filter overhead) */}
+      {/* Soft warm aura glow behind lantern */}
       <circle cx="48" cy="62" r="42" fill="rgba(251, 146, 60, 0.22)" />
 
-      {/* Stem */}
-      <path d="M48 30 C46 17 53 10 59 8 C57 8 51 13 48 20 C46 24 45 30 45 30 Z" fill="#1e3a1f" />
+      {/* Stem or Festive Birthday Candle */}
+      {hasBirthdayCandle ? (
+        <g>
+          {/* Candle stick */}
+          <rect x="45.5" y="10" width="5" height="22" rx="1.5" fill="#f43f5e" />
+          {/* Diagonal stripes on candle */}
+          <path d="M 45.5 14 L 50.5 12" stroke="#fef08a" strokeWidth="1.6" />
+          <path d="M 45.5 20 L 50.5 18" stroke="#fef08a" strokeWidth="1.6" />
+          <path d="M 45.5 26 L 50.5 24" stroke="#fef08a" strokeWidth="1.6" />
+          {/* Wick */}
+          <line x1="48" y1="10" x2="48" y2="6" stroke="#451a03" strokeWidth="1.2" strokeLinecap="round" />
+          {/* Candle Flame Glow */}
+          <circle cx="48" cy="2" r="7" fill="rgba(250, 204, 21, 0.35)" />
+          {/* Flame Tear */}
+          <path d="M 48 -3 C 51 1, 51 5, 48 6 C 45 5, 45 1, 48 -3 Z" fill="#facc15" />
+          <path d="M 48 0 C 49.5 2, 49.5 4, 48 5 C 46.5 4, 46.5 2, 48 0 Z" fill="#ffffff" />
+          {/* Sparkle stars */}
+          <circle cx="42" cy="-1" r="0.8" fill="#fde047" opacity="0.85" />
+          <circle cx="54" cy="1" r="0.8" fill="#fde047" opacity="0.85" />
+        </g>
+      ) : (
+        /* Stem */
+        <path d="M48 30 C46 17 53 10 59 8 C57 8 51 13 48 20 C46 24 45 30 45 30 Z" fill="#1e3a1f" />
+      )}
 
       {/* Darker Night Pumpkin Lobes */}
       <ellipse cx="27" cy="59" rx="16" ry="24" fill="#9a3412" />
@@ -270,6 +293,226 @@ function JackOLantern({ seed = 0 }: { seed?: number }) {
       <ellipse cx="48" cy="89" rx="4" ry="2.5" fill="#7c2d12" />
       <path d="M48 89 C44 107 52 126 48 153" stroke="rgba(255,255,255,0.72)" strokeWidth="1.6" fill="none" />
     </svg>
+  )
+}
+
+function BirthdayOwlTopper({ seed = 0, isNightOrDusk = false }: { seed?: number; isNightOrDusk?: boolean }) {
+  const goggleColors = [
+    { frame: '#ec4899', lens: 'rgba(244, 114, 182, 0.45)', star: '#fdf2f8' },
+    { frame: '#06b6d4', lens: 'rgba(56, 189, 248, 0.45)', star: '#e0f2fe' },
+    { frame: '#a855f7', lens: 'rgba(192, 132, 252, 0.45)', star: '#f3e8ff' },
+    { frame: '#f59e0b', lens: 'rgba(251, 191, 36, 0.45)', star: '#fef3c7' },
+  ]
+  const g = goggleColors[Math.abs(seed) % goggleColors.length]
+  const hatColor = ['#ec4899', '#8b5cf6', '#06b6d4', '#f59e0b'][Math.abs(seed) % 4]
+
+  return (
+    <svg
+      width="114"
+      height="181"
+      viewBox="0 0 96 155"
+      className="pointer-events-none filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)]"
+      style={{ willChange: 'transform' }}
+      aria-hidden="true"
+    >
+      {/* Warm gentle aura behind owl in night/dusk */}
+      {isNightOrDusk && <circle cx="48" cy="64" r="38" fill="rgba(244, 114, 182, 0.16)" />}
+
+      {/* Mini festive party hat between ear tufts */}
+      <g transform="translate(0, 0)">
+        <circle cx="48" cy="8" r="3.2" fill="#facc15" stroke="#eab308" strokeWidth="0.6" />
+        <path d="M 40 28 L 48 9 L 56 28 Z" fill={hatColor} />
+        <path d="M 42 22 L 48 9 L 50 16 Z" fill="#facc15" />
+        <path d="M 45 28 L 48 9 L 47 21 Z" fill="#38bdf8" />
+        <ellipse cx="48" cy="28" rx="8.5" ry="2" fill="#fef08a" />
+      </g>
+
+      {/* Feathered Ear Tufts */}
+      <path d="M 28 38 L 18 20 L 36 30 Z" fill="#78350f" stroke="#451a03" strokeWidth="1" />
+      <path d="M 68 38 L 78 20 L 60 30 Z" fill="#78350f" stroke="#451a03" strokeWidth="1" />
+      <path d="M 28 36 L 22 24 L 34 32 Z" fill="#92400e" />
+      <path d="M 68 36 L 74 24 L 62 32 Z" fill="#92400e" />
+
+      {/* Main Body Plumage */}
+      <ellipse cx="48" cy="62" rx="27" ry="32" fill="#78350f" stroke="#451a03" strokeWidth="1.2" />
+      <path d="M 23 48 C 17 56, 17 76, 26 88 C 22 80, 22 60, 26 50 Z" fill="#451a03" />
+      <path d="M 73 48 C 79 56, 79 76, 70 88 C 74 80, 74 60, 70 50 Z" fill="#451a03" />
+
+      {/* Creamy Feather Breast */}
+      <ellipse cx="48" cy="68" rx="18" ry="23" fill="#fef3c7" />
+      <path d="M 41 58 Q 44 61 47 58 M 49 58 Q 52 61 55 58" stroke="#d97706" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+      <path d="M 37 66 Q 41 70 45 66 M 47 66 Q 51 70 55 66 M 57 66 Q 60 70 63 66" stroke="#d97706" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+      <path d="M 40 75 Q 44 79 48 75 M 50 75 Q 54 79 58 75" stroke="#d97706" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+      <path d="M 44 83 Q 48 86 52 83" stroke="#d97706" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+
+      {/* Facial Discs */}
+      <circle cx="37" cy="46" r="13" fill="#fffbeb" stroke="#fde68a" strokeWidth="1" />
+      <circle cx="59" cy="46" r="13" fill="#fffbeb" stroke="#fde68a" strokeWidth="1" />
+
+      {/* Eyes */}
+      <circle cx="37" cy="46" r="7.5" fill="#f59e0b" />
+      <circle cx="59" cy="46" r="7.5" fill="#f59e0b" />
+      <circle cx="37" cy="46" r="4.5" fill="#0f172a" />
+      <circle cx="59" cy="46" r="4.5" fill="#0f172a" />
+      <circle cx="35" cy="44" r="1.5" fill="#ffffff" />
+      <circle cx="57" cy="44" r="1.5" fill="#ffffff" />
+      <circle cx="39" cy="48" r="0.8" fill="#ffffff" />
+      <circle cx="61" cy="48" r="0.8" fill="#ffffff" />
+
+      {/* Owl Beak */}
+      <polygon points="48,48 44,56 52,56" fill="#f59e0b" stroke="#b45309" strokeWidth="0.8" />
+
+      {/* --- FUNKY HAPPY BIRTHDAY GOGGLES --- */}
+      <g>
+        <path d="M 44 44 Q 48 41 52 44" stroke={g.frame} strokeWidth="3" fill="none" strokeLinecap="round" />
+        <path d="M 44 44 Q 48 41 52 44" stroke="#ffffff" strokeWidth="1" fill="none" strokeLinecap="round" opacity="0.6" />
+
+        {/* Star Novelty Goggles */}
+        <polygon
+          points="37,34 39,41 46,41 40,46 43,53 37,49 31,53 34,46 28,41 35,41"
+          fill={g.lens}
+          stroke={g.frame}
+          strokeWidth="2.4"
+          strokeLinejoin="round"
+        />
+        <polygon
+          points="59,34 61,41 68,41 62,46 65,53 59,49 53,53 56,46 50,41 57,41"
+          fill={g.lens}
+          stroke={g.frame}
+          strokeWidth="2.4"
+          strokeLinejoin="round"
+        />
+
+        <path d="M 28 42 L 20 41" stroke={g.frame} strokeWidth="2.2" strokeLinecap="round" />
+        <path d="M 68 42 L 76 41" stroke={g.frame} strokeWidth="2.2" strokeLinecap="round" />
+
+        <circle cx="34" cy="38" r="1.2" fill={g.star} />
+        <circle cx="56" cy="38" r="1.2" fill={g.star} />
+      </g>
+
+      {/* Talons gripping photo edge */}
+      <g fill="#f59e0b" stroke="#b45309" strokeWidth="0.8">
+        <ellipse cx="38" cy="94" rx="2.5" ry="4" />
+        <ellipse cx="42" cy="94" rx="2.5" ry="4" />
+        <ellipse cx="46" cy="94" rx="2.5" ry="4" />
+        <ellipse cx="50" cy="94" rx="2.5" ry="4" />
+        <ellipse cx="54" cy="94" rx="2.5" ry="4" />
+        <ellipse cx="58" cy="94" rx="2.5" ry="4" />
+      </g>
+
+      {/* Decorative Birthday Bow & Twin Ribbon Tails */}
+      <g transform="translate(48, 97)">
+        <circle cx="0" cy="0" r="3.2" fill="#ec4899" stroke="#db2777" strokeWidth="0.8" />
+        <path d="M 0 0 C -8 -6, -12 -1, 0 0 Z" fill="#f472b6" stroke="#db2777" strokeWidth="0.8" />
+        <path d="M 0 0 C 8 -6, 12 -1, 0 0 Z" fill="#f472b6" stroke="#db2777" strokeWidth="0.8" />
+        <path d="M -2 2 C -8 18, -4 34, -2 55" stroke="#ec4899" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+        <path d="M 2 2 C 8 18, 4 34, 2 55" stroke="#f472b6" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+      </g>
+    </svg>
+  )
+}
+
+function BirthdayBow({ seed = 0 }: { seed?: number }) {
+  const BOW_COLORS = [
+    { main: '#ec4899', light: '#f472b6', dark: '#db2777' }, // Pink
+    { main: '#f59e0b', light: '#fbbf24', dark: '#d97706' }, // Gold
+    { main: '#a855f7', light: '#c084fc', dark: '#9333ea' }, // Violet
+    { main: '#06b6d4', light: '#38bdf8', dark: '#0891b2' }, // Cyan
+  ]
+  const c = BOW_COLORS[Math.abs(seed) % BOW_COLORS.length]
+
+  return (
+    <svg
+      width="44"
+      height="44"
+      viewBox="0 0 44 44"
+      className="pointer-events-none filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.25)]"
+      aria-hidden="true"
+    >
+      <path d="M 22 22 Q 14 30 10 40 L 16 38 L 22 24 Z" fill={c.dark} />
+      <path d="M 22 22 Q 30 30 34 40 L 28 38 L 22 24 Z" fill={c.main} />
+
+      <path
+        d="M 22 22 C 12 12, 4 14, 4 22 C 4 28, 14 26, 22 22 Z"
+        fill={c.light}
+        stroke={c.dark}
+        strokeWidth="0.8"
+      />
+      <path d="M 18 20 C 12 18, 8 20, 8 22" stroke={c.dark} strokeWidth="0.8" fill="none" />
+
+      <path
+        d="M 22 22 C 32 12, 40 14, 40 22 C 40 28, 30 26, 22 22 Z"
+        fill={c.main}
+        stroke={c.dark}
+        strokeWidth="0.8"
+      />
+      <path d="M 26 20 C 32 18, 36 20, 36 22" stroke={c.dark} strokeWidth="0.8" fill="none" />
+
+      <circle cx="22" cy="22" r="4.2" fill={c.dark} />
+      <circle cx="21" cy="21" r="3.2" fill={c.light} />
+      <circle cx="20.5" cy="20.5" r="1.2" fill="#ffffff" opacity="0.8" />
+    </svg>
+  )
+}
+
+function FloatingBirthdayBalloons() {
+  const balloons = useMemo(() => [
+    { left: '8%', delay: '0s', dur: '16s', scale: 0.95, color: '#ec4899', shine: '#fbcfe8' },
+    { left: '22%', delay: '5s', dur: '19s', scale: 1.1, color: '#38bdf8', shine: '#bae6fd' },
+    { left: '76%', delay: '2s', dur: '17s', scale: 1.0, color: '#facc15', shine: '#fef9c3' },
+    { left: '88%', delay: '8s', dur: '18s', scale: 0.9, color: '#a855f7', shine: '#f3e8ff' },
+  ], [])
+
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden z-10 select-none">
+      {balloons.map((b, i) => (
+        <div
+          key={i}
+          className="absolute -bottom-40"
+          style={{
+            left: b.left,
+            animation: `floatUpBalloon ${b.dur} linear infinite`,
+            animationDelay: b.delay,
+            transform: `scale(${b.scale})`,
+          }}
+        >
+          <svg width="70" height="180" viewBox="0 0 70 180" className="filter drop-shadow-[0_6px_12px_rgba(0,0,0,0.2)]">
+            <path
+              d="M 35 10 C 14 10, 4 30, 4 52 C 4 76, 26 95, 33 100 L 32 105 L 38 105 L 37 100 C 44 95, 66 76, 66 52 C 66 30, 56 10, 35 10 Z"
+              fill={b.color}
+            />
+            <ellipse cx="24" cy="38" rx="8" ry="16" fill={b.shine} opacity="0.45" transform="rotate(-25 24 38)" />
+            <circle cx="20" cy="24" r="3" fill="#ffffff" opacity="0.75" />
+            <polygon points="32,104 38,104 35,108" fill={b.color} />
+            <path
+              d="M 35 108 Q 30 120 40 135 T 32 155 T 42 175"
+              stroke="rgba(255,255,255,0.7)"
+              strokeWidth="1.4"
+              fill="none"
+              strokeLinecap="round"
+            />
+          </svg>
+        </div>
+      ))}
+      <style>{`
+        @keyframes floatUpBalloon {
+          0% {
+            transform: translateY(0) rotate(0deg);
+            opacity: 0;
+          }
+          5% {
+            opacity: 0.95;
+          }
+          90% {
+            opacity: 0.95;
+          }
+          100% {
+            transform: translateY(-130vh) rotate(8deg);
+            opacity: 0;
+          }
+        }
+      `}</style>
+    </div>
   )
 }
 
@@ -2840,9 +3083,11 @@ function SpookyGraveyard() {
 function DancingSkeletonFigure({
   phase,
   flip = false,
+  isBirthday = false,
 }: {
   phase: 'entering' | 'dancing' | 'startled' | 'running'
   flip?: boolean
+  isBirthday?: boolean
 }) {
   const bodyStyle = useMemo<React.CSSProperties>(() => {
     switch (phase) {
@@ -3166,13 +3411,28 @@ function DancingSkeletonFigure({
             </g>
           )}
 
-          {/* Dapper Top Hat */}
-          <g transform="translate(0, 0)">
-            <ellipse cx="48" cy="12" rx="15" ry="3.5" fill="#09090b" />
-            <path d="M 38 12 L 40 -2 L 56 -2 L 58 12 Z" fill="#18181b" stroke="#09090b" strokeWidth="1" />
-            <ellipse cx="48" cy="-2" rx="8" ry="2.2" fill="#27272a" />
-            <path d="M 38.5 10 L 39 5 L 57 5 L 57.5 10 Z" fill="#f97316" />
-          </g>
+          {/* Hat: Festive Birthday Cone Party Hat vs Dapper Top Hat */}
+          {isBirthday ? (
+            <g transform="translate(0, 0)">
+              {/* Fluffy Pom-pom on tip */}
+              <circle cx="48" cy="-14" r="3.5" fill="#facc15" stroke="#eab308" strokeWidth="0.8" />
+              {/* Cone Hat */}
+              <path d="M 37 12 L 48 -13 L 59 12 Z" fill="#ec4899" stroke="#db2777" strokeWidth="1" />
+              {/* Festive colorful stripes */}
+              <path d="M 40 5 L 48 -13 L 51 -6 Z" fill="#38bdf8" />
+              <path d="M 43 12 L 48 -13 L 47 4 Z" fill="#facc15" />
+              <path d="M 52 12 L 48 -13 L 56 6 Z" fill="#a855f7" />
+              {/* Hat brim ruffle trim */}
+              <ellipse cx="48" cy="12" rx="12" ry="2.5" fill="#fef08a" />
+            </g>
+          ) : (
+            <g transform="translate(0, 0)">
+              <ellipse cx="48" cy="12" rx="15" ry="3.5" fill="#09090b" />
+              <path d="M 38 12 L 40 -2 L 56 -2 L 58 12 Z" fill="#18181b" stroke="#09090b" strokeWidth="1" />
+              <ellipse cx="48" cy="-2" rx="8" ry="2.2" fill="#27272a" />
+              <path d="M 38.5 10 L 39 5 L 57 5 L 57.5 10 Z" fill="#f97316" />
+            </g>
+          )}
 
           {/* Cranium */}
           <ellipse cx="48" cy="24" rx="13" ry="14" fill="#f8fafc" stroke="#09090b" strokeWidth="1.4" />
@@ -3207,6 +3467,23 @@ function DancingSkeletonFigure({
           <line x1="49.5" y1="33" x2="49.5" y2="37" stroke="#09090b" strokeWidth="0.8" />
           <line x1="52" y1="33" x2="52" y2="37" stroke="#09090b" strokeWidth="0.8" />
 
+          {/* Party Blower in mouth */}
+          {isBirthday && (
+            <g transform="translate(48, 36)">
+              <rect x="-2" y="0" width="4" height="3" fill="#ef4444" rx="0.5" />
+              <path d="M 0 2 Q 10 -2 22 1 Q 30 3 36 -1" stroke="#38bdf8" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+              <circle cx="36" cy="-1" r="2.2" fill="#facc15" />
+              {phase === 'dancing' && (
+                <g opacity="0.9">
+                  <circle cx="41" cy="-4" r="1.2" fill="#ec4899" />
+                  <circle cx="43" cy="2" r="1" fill="#facc15" />
+                  <circle cx="46" cy="-2" r="1.3" fill="#38bdf8" />
+                  <circle cx="44" cy="-6" r="0.9" fill="#a855f7" />
+                </g>
+              )}
+            </g>
+          )}
+
           {/* Lower Jaw (drops in startled phase) */}
           <g style={phase === 'startled' ? { animation: 'skelJawDrop 0.25s ease-out forwards' } : undefined}>
             <path d="M 42 38 C 42 43, 54 43, 54 38 Z" fill="#f8fafc" stroke="#09090b" strokeWidth="1" />
@@ -3217,7 +3494,7 @@ function DancingSkeletonFigure({
   )
 }
 
-function DancingSkeleton() {
+function DancingSkeleton({ seasonalDate }: { seasonalDate?: Date }) {
   const [active, setActive] = useState(false)
   const [direction, setDirection] = useState<1 | -1>(1)
   const [phase, setPhase] = useState<'entering' | 'dancing' | 'startled' | 'running'>('entering')
@@ -3293,7 +3570,7 @@ function DancingSkeleton() {
       className="fixed bottom-2 pointer-events-none z-30 select-none"
       style={{ willChange: 'transform', transform: 'translateZ(0)' }}
     >
-      <DancingSkeletonFigure phase={phase} flip={direction === -1} />
+      <DancingSkeletonFigure phase={phase} flip={direction === -1} isBirthday={isSwaraBirthday(seasonalDate)} />
     </motion.div>
   )
 }
@@ -3603,6 +3880,16 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
           <SittingElf seed={seedOffset} flip={elfFlip} />
         </div>
       )}
+      {isSwaraBirthday(seasonalNow) && (
+        <>
+          <div className="absolute -top-3.5 -left-3.5 pointer-events-none z-20 select-none">
+            <BirthdayBow seed={seedOffset} />
+          </div>
+          <div className="absolute -top-3.5 -right-3.5 pointer-events-none z-20 select-none">
+            <BirthdayBow seed={seedOffset + 1} />
+          </div>
+        </>
+      )}
       {media}
       {caption}
     </div>
@@ -3612,7 +3899,19 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
   let topElement: React.ReactNode = null
 
   if (isOctober(seasonalNow)) {
-    if (phase === 'dusk' || phase === 'night') {
+    if (isSwaraBirthday(seasonalNow)) {
+      const isNight = phase === 'dusk' || phase === 'night'
+      const showOwl = Math.abs(seedOffset) % 2 === 0
+      topElement = (
+        <div className="absolute bottom-[calc(100%-12px)] pointer-events-none select-none z-10">
+          {showOwl ? (
+            <BirthdayOwlTopper seed={seedOffset} isNightOrDusk={isNight} />
+          ) : (
+            <JackOLantern seed={seedOffset} hasBirthdayCandle={true} />
+          )}
+        </div>
+      )
+    } else if (phase === 'dusk' || phase === 'night') {
       topElement = (
         <div className="absolute bottom-[calc(100%-12px)] pointer-events-none select-none z-10">
           <JackOLantern seed={seedOffset} />
@@ -4176,7 +4475,10 @@ export default function Slideshow({
       )}
 
       {/* October Spooky Delight: Dancing and running away skeleton */}
-      {isOctober(seasonalDate) && <DancingSkeleton />}
+      {isOctober(seasonalDate) && <DancingSkeleton seasonalDate={seasonalDate} />}
+
+      {/* Swara's Birthday Delights (Oct 31): Floating Birthday Balloons */}
+      {isSwaraBirthday(seasonalDate) && <FloatingBirthdayBalloons />}
 
       {/* Holiday Delights (Running Elf across bottom bezel, Dec 1-24) */}
       {isElfSeason(seasonalDate) && !isNewYearSeason(seasonalDate) && <RunningElf />}
