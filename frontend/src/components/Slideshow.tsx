@@ -296,7 +296,13 @@ function JackOLantern({ seed = 0, hasBirthdayCandle = false }: { seed?: number; 
   )
 }
 
-function BirthdayOwlTopper({ seed = 0, isNightOrDusk = false }: { seed?: number; isNightOrDusk?: boolean }) {
+function SittingOwl({
+  seed = 0,
+  flip = false,
+}: {
+  seed?: number
+  flip?: boolean
+}) {
   const goggleColors = [
     { frame: '#ec4899', lens: 'rgba(244, 114, 182, 0.45)', star: '#fdf2f8' },
     { frame: '#06b6d4', lens: 'rgba(56, 189, 248, 0.45)', star: '#e0f2fe' },
@@ -308,105 +314,135 @@ function BirthdayOwlTopper({ seed = 0, isNightOrDusk = false }: { seed?: number;
 
   return (
     <svg
-      width="114"
-      height="181"
-      viewBox="0 0 96 155"
-      className="pointer-events-none filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.3)]"
-      style={{ willChange: 'transform' }}
+      width="78"
+      height="86"
+      viewBox="0 0 78 86"
+      className="pointer-events-none select-none filter drop-shadow-[0_4px_12px_rgba(0,0,0,0.35)]"
+      style={{ transform: flip ? 'scaleX(-1)' : undefined }}
       aria-hidden="true"
     >
-      {/* Warm gentle aura behind owl in night/dusk */}
-      {isNightOrDusk && <circle cx="48" cy="64" r="38" fill="rgba(244, 114, 182, 0.16)" />}
+      <style>{`
+        @keyframes owlHeadTilt {
+          0%, 65%, 100% { transform: rotate(0deg); }
+          72% { transform: rotate(-7deg); }
+          80% { transform: rotate(-7deg); }
+          88% { transform: rotate(6deg); }
+          94% { transform: rotate(0deg); }
+        }
+        @keyframes owlWingWiggle {
+          0%, 80%, 100% { transform: rotate(0deg); }
+          85% { transform: rotate(-8deg); }
+          90% { transform: rotate(5deg); }
+          95% { transform: rotate(-4deg); }
+        }
+        @keyframes owlPomBounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-2px); }
+        }
+      `}</style>
 
-      {/* Mini festive party hat between ear tufts */}
-      <g transform="translate(0, 0)">
-        <circle cx="48" cy="8" r="3.2" fill="#facc15" stroke="#eab308" strokeWidth="0.6" />
-        <path d="M 40 28 L 48 9 L 56 28 Z" fill={hatColor} />
-        <path d="M 42 22 L 48 9 L 50 16 Z" fill="#facc15" />
-        <path d="M 45 28 L 48 9 L 47 21 Z" fill="#38bdf8" />
-        <ellipse cx="48" cy="28" rx="8.5" ry="2" fill="#fef08a" />
+      {/* Tail feathers peeking down behind photo card top border (y=50 is photo card top edge) */}
+      <path d="M 34 48 L 39 58 L 44 48 Z" fill="#451a03" />
+
+      {/* Plump Owl Body resting on photo card top edge */}
+      <ellipse cx="39" cy="40" rx="20" ry="14" fill="#78350f" stroke="#451a03" strokeWidth="1.2" />
+
+      {/* Soft creamy breast feathers with delicate chevron texture */}
+      <ellipse cx="39" cy="42" rx="14" ry="10" fill="#fef3c7" />
+      <path d="M 33 38 Q 36 41 39 38 M 39 38 Q 42 41 45 38" stroke="#d97706" strokeWidth="1" fill="none" strokeLinecap="round" />
+      <path d="M 31 43 Q 35 46 39 43 M 39 43 Q 43 46 47 43" stroke="#d97706" strokeWidth="1" fill="none" strokeLinecap="round" />
+      <path d="M 35 47 Q 39 50 43 47" stroke="#d97706" strokeWidth="1" fill="none" strokeLinecap="round" />
+
+      {/* Folded wings on each side (with wing flutter animation) */}
+      <g style={{ transformOrigin: '21px 34px', animation: 'owlWingWiggle 5s ease-in-out infinite' }}>
+        <path d="M 21 32 C 16 38, 17 48, 24 50 C 21 44, 21 38, 22 32 Z" fill="#451a03" stroke="#291002" strokeWidth="0.8" />
       </g>
+      <path d="M 57 32 C 62 38, 61 48, 54 50 C 57 44, 57 38, 56 32 Z" fill="#451a03" stroke="#291002" strokeWidth="0.8" />
 
-      {/* Feathered Ear Tufts */}
-      <path d="M 28 38 L 18 20 L 36 30 Z" fill="#78350f" stroke="#451a03" strokeWidth="1" />
-      <path d="M 68 38 L 78 20 L 60 30 Z" fill="#78350f" stroke="#451a03" strokeWidth="1" />
-      <path d="M 28 36 L 22 24 L 34 32 Z" fill="#92400e" />
-      <path d="M 68 36 L 74 24 L 62 32 Z" fill="#92400e" />
-
-      {/* Main Body Plumage */}
-      <ellipse cx="48" cy="62" rx="27" ry="32" fill="#78350f" stroke="#451a03" strokeWidth="1.2" />
-      <path d="M 23 48 C 17 56, 17 76, 26 88 C 22 80, 22 60, 26 50 Z" fill="#451a03" />
-      <path d="M 73 48 C 79 56, 79 76, 70 88 C 74 80, 74 60, 70 50 Z" fill="#451a03" />
-
-      {/* Creamy Feather Breast */}
-      <ellipse cx="48" cy="68" rx="18" ry="23" fill="#fef3c7" />
-      <path d="M 41 58 Q 44 61 47 58 M 49 58 Q 52 61 55 58" stroke="#d97706" strokeWidth="1.2" fill="none" strokeLinecap="round" />
-      <path d="M 37 66 Q 41 70 45 66 M 47 66 Q 51 70 55 66 M 57 66 Q 60 70 63 66" stroke="#d97706" strokeWidth="1.2" fill="none" strokeLinecap="round" />
-      <path d="M 40 75 Q 44 79 48 75 M 50 75 Q 54 79 58 75" stroke="#d97706" strokeWidth="1.2" fill="none" strokeLinecap="round" />
-      <path d="M 44 83 Q 48 86 52 83" stroke="#d97706" strokeWidth="1.2" fill="none" strokeLinecap="round" />
-
-      {/* Facial Discs */}
-      <circle cx="37" cy="46" r="13" fill="#fffbeb" stroke="#fde68a" strokeWidth="1" />
-      <circle cx="59" cy="46" r="13" fill="#fffbeb" stroke="#fde68a" strokeWidth="1" />
-
-      {/* Eyes */}
-      <circle cx="37" cy="46" r="7.5" fill="#f59e0b" />
-      <circle cx="59" cy="46" r="7.5" fill="#f59e0b" />
-      <circle cx="37" cy="46" r="4.5" fill="#0f172a" />
-      <circle cx="59" cy="46" r="4.5" fill="#0f172a" />
-      <circle cx="35" cy="44" r="1.5" fill="#ffffff" />
-      <circle cx="57" cy="44" r="1.5" fill="#ffffff" />
-      <circle cx="39" cy="48" r="0.8" fill="#ffffff" />
-      <circle cx="61" cy="48" r="0.8" fill="#ffffff" />
-
-      {/* Owl Beak */}
-      <polygon points="48,48 44,56 52,56" fill="#f59e0b" stroke="#b45309" strokeWidth="0.8" />
-
-      {/* --- FUNKY HAPPY BIRTHDAY GOGGLES --- */}
-      <g>
-        <path d="M 44 44 Q 48 41 52 44" stroke={g.frame} strokeWidth="3" fill="none" strokeLinecap="round" />
-        <path d="M 44 44 Q 48 41 52 44" stroke="#ffffff" strokeWidth="1" fill="none" strokeLinecap="round" opacity="0.6" />
-
-        {/* Star Novelty Goggles */}
-        <polygon
-          points="37,34 39,41 46,41 40,46 43,53 37,49 31,53 34,46 28,41 35,41"
-          fill={g.lens}
-          stroke={g.frame}
-          strokeWidth="2.4"
-          strokeLinejoin="round"
-        />
-        <polygon
-          points="59,34 61,41 68,41 62,46 65,53 59,49 53,53 56,46 50,41 57,41"
-          fill={g.lens}
-          stroke={g.frame}
-          strokeWidth="2.4"
-          strokeLinejoin="round"
-        />
-
-        <path d="M 28 42 L 20 41" stroke={g.frame} strokeWidth="2.2" strokeLinecap="round" />
-        <path d="M 68 42 L 76 41" stroke={g.frame} strokeWidth="2.2" strokeLinecap="round" />
-
-        <circle cx="34" cy="38" r="1.2" fill={g.star} />
-        <circle cx="56" cy="38" r="1.2" fill={g.star} />
-      </g>
-
-      {/* Talons gripping photo edge */}
+      {/* Talons gripping tightly over the photo card top edge (y=50) */}
       <g fill="#f59e0b" stroke="#b45309" strokeWidth="0.8">
-        <ellipse cx="38" cy="94" rx="2.5" ry="4" />
-        <ellipse cx="42" cy="94" rx="2.5" ry="4" />
-        <ellipse cx="46" cy="94" rx="2.5" ry="4" />
-        <ellipse cx="50" cy="94" rx="2.5" ry="4" />
-        <ellipse cx="54" cy="94" rx="2.5" ry="4" />
-        <ellipse cx="58" cy="94" rx="2.5" ry="4" />
+        {/* Left foot claws wrapping over the white frame rim */}
+        <ellipse cx="27" cy="53" rx="2.2" ry="3.8" transform="rotate(-6 27 53)" />
+        <ellipse cx="31" cy="54" rx="2.2" ry="4.2" />
+        <ellipse cx="35" cy="53" rx="2.2" ry="3.8" transform="rotate(6 35 53)" />
+
+        {/* Right foot claws wrapping over the white frame rim */}
+        <ellipse cx="43" cy="53" rx="2.2" ry="3.8" transform="rotate(-6 43 53)" />
+        <ellipse cx="47" cy="54" rx="2.2" ry="4.2" />
+        <ellipse cx="51" cy="53" rx="2.2" ry="3.8" transform="rotate(6 51 53)" />
       </g>
 
-      {/* Decorative Birthday Bow & Twin Ribbon Tails */}
-      <g transform="translate(48, 97)">
-        <circle cx="0" cy="0" r="3.2" fill="#ec4899" stroke="#db2777" strokeWidth="0.8" />
-        <path d="M 0 0 C -8 -6, -12 -1, 0 0 Z" fill="#f472b6" stroke="#db2777" strokeWidth="0.8" />
-        <path d="M 0 0 C 8 -6, 12 -1, 0 0 Z" fill="#f472b6" stroke="#db2777" strokeWidth="0.8" />
-        <path d="M -2 2 C -8 18, -4 34, -2 55" stroke="#ec4899" strokeWidth="2.2" fill="none" strokeLinecap="round" />
-        <path d="M 2 2 C 8 18, 4 34, 2 55" stroke="#f472b6" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+      {/* Curious owl head with lifelike head-tilt animation */}
+      <g style={{ transformOrigin: '39px 28px', animation: 'owlHeadTilt 5.4s ease-in-out infinite' }}>
+        {/* Feathered ear tufts */}
+        <path d="M 25 24 L 17 11 L 30 18 Z" fill="#78350f" stroke="#451a03" strokeWidth="1" />
+        <path d="M 25 22 L 20 14 L 28 19 Z" fill="#92400e" />
+        <path d="M 53 24 L 61 11 L 48 18 Z" fill="#78350f" stroke="#451a03" strokeWidth="1" />
+        <path d="M 53 22 L 58 14 L 50 19 Z" fill="#92400e" />
+
+        {/* Head plumage */}
+        <ellipse cx="39" cy="27" rx="17" ry="13" fill="#78350f" stroke="#451a03" strokeWidth="1.2" />
+
+        {/* Creamy facial discs */}
+        <circle cx="32" cy="27" r="9" fill="#fffbeb" stroke="#fde68a" strokeWidth="0.8" />
+        <circle cx="46" cy="27" r="9" fill="#fffbeb" stroke="#fde68a" strokeWidth="0.8" />
+
+        {/* Eyes & Catchlights */}
+        <circle cx="32" cy="27" r="5.5" fill="#f59e0b" />
+        <circle cx="46" cy="27" r="5.5" fill="#f59e0b" />
+        <circle cx="32" cy="27" r="3.4" fill="#0f172a" />
+        <circle cx="46" cy="27" r="3.4" fill="#0f172a" />
+        <circle cx="30.5" cy="25.5" r="1.2" fill="#ffffff" />
+        <circle cx="44.5" cy="25.5" r="1.2" fill="#ffffff" />
+        <circle cx="33.5" cy="28.5" r="0.6" fill="#ffffff" />
+        <circle cx="47.5" cy="28.5" r="0.6" fill="#ffffff" />
+
+        {/* Owl Beak */}
+        <polygon points="39,28 36,34 42,34" fill="#f59e0b" stroke="#b45309" strokeWidth="0.6" />
+
+        {/* Striped Party Cone Hat */}
+        <g>
+          <path d="M 33 17 L 39 3 L 45 17 Z" fill={hatColor} />
+          <path d="M 34 13 L 39 3 L 40 8 Z" fill="#facc15" />
+          <path d="M 37 17 L 39 3 L 38 12 Z" fill="#38bdf8" />
+          <ellipse cx="39" cy="17" rx="6.5" ry="1.6" fill="#fef08a" />
+          {/* Bouncy gold pom-pom */}
+          <g style={{ transformOrigin: '39px 3px', animation: 'owlPomBounce 2s ease-in-out infinite' }}>
+            <circle cx="39" cy="3" r="2.8" fill="#facc15" stroke="#eab308" strokeWidth="0.6" />
+          </g>
+        </g>
+
+        {/* Funky Happy Birthday Star Novelty Goggles */}
+        <g>
+          {/* Frame bridge */}
+          <path d="M 37 26 Q 39 23 41 26" stroke={g.frame} strokeWidth="2.2" fill="none" strokeLinecap="round" />
+          <path d="M 37 26 Q 39 23 41 26" stroke="#ffffff" strokeWidth="0.8" fill="none" strokeLinecap="round" opacity="0.6" />
+
+          {/* Left Star Lens */}
+          <polygon
+            points="32,19 33.8,23.5 38.5,23.5 34.6,26.5 36.2,31 32,28.2 27.8,31 29.4,26.5 25.5,23.5 30.2,23.5"
+            fill={g.lens}
+            stroke={g.frame}
+            strokeWidth="1.8"
+            strokeLinejoin="round"
+          />
+          {/* Right Star Lens */}
+          <polygon
+            points="46,19 47.8,23.5 52.5,23.5 48.6,26.5 50.2,31 46,28.2 41.8,31 43.4,26.5 39.5,23.5 44.2,23.5"
+            fill={g.lens}
+            stroke={g.frame}
+            strokeWidth="1.8"
+            strokeLinejoin="round"
+          />
+
+          {/* Temple arms */}
+          <path d="M 25.5 24 L 20 23" stroke={g.frame} strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M 52.5 24 L 58 23" stroke={g.frame} strokeWidth="1.8" strokeLinecap="round" />
+
+          {/* Star sparkles */}
+          <circle cx="30" cy="22" r="0.9" fill={g.star} />
+          <circle cx="44" cy="22" r="0.9" fill={g.star} />
+        </g>
       </g>
     </svg>
   )
@@ -463,6 +499,12 @@ function FloatingBirthdayBalloons() {
     { left: '88%', delay: '8s', dur: '18s', scale: 0.9, color: '#a855f7', shine: '#f3e8ff' },
   ], [])
 
+  const bows = useMemo(() => [
+    { left: '16%', delay: '3s', dur: '21s', scale: 0.9, seed: 0 },
+    { left: '82%', delay: '7s', dur: '23s', scale: 0.95, seed: 1 },
+    { left: '48%', delay: '12s', dur: '25s', scale: 0.85, seed: 2 },
+  ], [])
+
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden z-10 select-none">
       {balloons.map((b, i) => (
@@ -492,6 +534,20 @@ function FloatingBirthdayBalloons() {
               strokeLinecap="round"
             />
           </svg>
+        </div>
+      ))}
+      {bows.map((b, i) => (
+        <div
+          key={`bow-${i}`}
+          className="absolute -bottom-24"
+          style={{
+            left: b.left,
+            animation: `floatUpBalloon ${b.dur} linear infinite`,
+            animationDelay: b.delay,
+            transform: `scale(${b.scale})`,
+          }}
+        >
+          <BirthdayBow seed={b.seed} />
         </div>
       ))}
       <style>{`
@@ -3852,9 +3908,13 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
 
   const seasonalNow = seasonalDate ?? getSeasonalDate()
   const hasSittingElf = isElfSeason(seasonalNow) && !isNewYearSeason(seasonalNow)
+  const hasSittingOwl = isSwaraBirthday(seasonalNow)
   const seedOffset = seed + pairIdx * 3 + index
   const elfPosition = pair ? (pairIdx === 0 ? 'left' : 'right') : 'right'
   const elfFlip = pair ? pairIdx === 0 : false
+
+  const owlPosition = pair ? (pairIdx === 0 ? 'left' : 'right') : 'right'
+  const owlFlip = pair ? pairIdx === 0 : false
 
   const card = (
     <div
@@ -3880,15 +3940,19 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
           <SittingElf seed={seedOffset} flip={elfFlip} />
         </div>
       )}
+      {hasSittingOwl && (
+        <div
+          className={`absolute -top-[50px] ${owlPosition === 'left' ? 'left-8' : 'right-8'} pointer-events-none z-20 select-none`}
+        >
+          <SittingOwl seed={seedOffset} flip={owlFlip} />
+        </div>
+      )}
       {isSwaraBirthday(seasonalNow) && (
-        <>
-          <div className="absolute -top-3.5 -left-3.5 pointer-events-none z-20 select-none">
-            <BirthdayBow seed={seedOffset} />
-          </div>
-          <div className="absolute -top-3.5 -right-3.5 pointer-events-none z-20 select-none">
-            <BirthdayBow seed={seedOffset + 1} />
-          </div>
-        </>
+        <div
+          className={`absolute -top-3.5 ${owlPosition === 'left' ? '-right-3.5' : '-left-3.5'} pointer-events-none z-20 select-none`}
+        >
+          <BirthdayBow seed={seedOffset} />
+        </div>
       )}
       {media}
       {caption}
@@ -3899,22 +3963,10 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
   let topElement: React.ReactNode = null
 
   if (isOctober(seasonalNow)) {
-    if (isSwaraBirthday(seasonalNow)) {
-      const isNight = phase === 'dusk' || phase === 'night'
-      const showOwl = Math.abs(seedOffset) % 2 === 0
+    if (phase === 'dusk' || phase === 'night') {
       topElement = (
         <div className="absolute bottom-[calc(100%-12px)] pointer-events-none select-none z-10">
-          {showOwl ? (
-            <BirthdayOwlTopper seed={seedOffset} isNightOrDusk={isNight} />
-          ) : (
-            <JackOLantern seed={seedOffset} hasBirthdayCandle={true} />
-          )}
-        </div>
-      )
-    } else if (phase === 'dusk' || phase === 'night') {
-      topElement = (
-        <div className="absolute bottom-[calc(100%-12px)] pointer-events-none select-none z-10">
-          <JackOLantern seed={seedOffset} />
+          <JackOLantern seed={seedOffset} hasBirthdayCandle={isSwaraBirthday(seasonalNow)} />
         </div>
       )
     } else {
