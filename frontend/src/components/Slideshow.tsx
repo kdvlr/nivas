@@ -3669,18 +3669,18 @@ function DancingSkeletonFigure({
   )
 }
 
-const SKELETON_CONFETTI_PARTICLES = Array.from({ length: 48 }, (_, i) => {
-  const angleDeg = -80 + (i / 47) * 160 + (((i * 17) % 15) - 7)
+const SKELETON_CONFETTI_PARTICLES = Array.from({ length: 60 }, (_, i) => {
+  const angleDeg = -85 + (i / 59) * 170 + (((i * 17) % 15) - 7)
   const angleRad = (angleDeg * Math.PI) / 180
-  const speed = 95 + ((i * 23) % 95)
+  const speed = 110 + ((i * 23) % 110)
   const dx1 = Math.round(Math.sin(angleRad) * speed)
-  const dy1 = Math.round(-Math.cos(angleRad) * speed * 1.3)
-  const dx2 = Math.round(dx1 * 1.35 + ((i % 2 === 0 ? 1 : -1) * 35))
-  const dy2 = Math.round(dy1 + 195 + ((i * 13) % 65))
+  const dy1 = Math.round(-Math.cos(angleRad) * speed * 1.35)
+  const dx2 = Math.round(dx1 * 1.4 + (i % 2 === 0 ? 1 : -1) * 45)
+  const dy2 = Math.round(dy1 + 240 + ((i * 13) % 80))
   const rot1 = (i * 45) % 360
-  const rot2 = rot1 + (i % 2 === 0 ? 1 : -1) * (360 + ((i * 30) % 360))
-  const delay = ((i % 8) * 0.03).toFixed(2)
-  const duration = (2.2 + (i % 5) * 0.15).toFixed(2)
+  const rot2 = rot1 + (i % 2 === 0 ? 1 : -1) * (480 + ((i * 30) % 360))
+  const delay = ((i % 10) * 0.025).toFixed(2)
+  const duration = (2.4 + (i % 6) * 0.15).toFixed(2)
   const colors = [
     '#ec4899', // pink
     '#facc15', // gold
@@ -3689,95 +3689,67 @@ const SKELETON_CONFETTI_PARTICLES = Array.from({ length: 48 }, (_, i) => {
     '#10b981', // emerald
     '#f97316', // orange
     '#f43f5e', // rose
-    '#fef08a', // light yellow shimmer
+    '#fef08a', // light yellow
+    '#e0e7ff', // shimmer white
   ]
   const color = colors[i % colors.length]
   const shape = i % 4
-  const size = 5 + (i % 5)
+  const size = 6 + (i % 6)
   return { id: i, dx1, dy1, dx2, dy2, rot1, rot2, delay, duration, color, shape, size }
 })
 
 function SkeletonConfettiBurst({ x }: { x: number }) {
   return (
     <div
-      className="fixed pointer-events-none z-30 select-none overflow-visible"
+      className="fixed pointer-events-none z-30 select-none"
       style={{
         left: `${x}px`,
         bottom: '120px',
+        width: 0,
+        height: 0,
       }}
       aria-hidden="true"
     >
       <style>{`
         @keyframes skelConfettiFly {
           0% {
-            transform: translate(0, 0) scale(0) rotate(0deg);
+            transform: translate3d(0, 0, 0) scale(0) rotate(0deg);
             opacity: 0;
           }
           15% {
-            transform: translate(var(--dx1), var(--dy1)) scale(1.15) rotate(var(--rot1));
+            transform: translate3d(var(--dx1), var(--dy1), 0) scale(1.25) rotate(var(--rot1));
             opacity: 1;
           }
-          70% {
-            opacity: 0.95;
+          75% {
+            opacity: 1;
           }
           100% {
-            transform: translate(var(--dx2), var(--dy2)) scale(0.8) rotate(var(--rot2));
+            transform: translate3d(var(--dx2), var(--dy2), 0) scale(0.7) rotate(var(--rot2));
             opacity: 0;
           }
         }
       `}</style>
-      <svg
-        width="1"
-        height="1"
-        className="overflow-visible"
-        style={{ overflow: 'visible' }}
-      >
-        {SKELETON_CONFETTI_PARTICLES.map((p) => (
-          <g
-            key={p.id}
-            style={{
-              animation: `skelConfettiFly ${p.duration}s cubic-bezier(0.22, 1, 0.36, 1) forwards`,
-              animationDelay: `${p.delay}s`,
-              ['--dx1' as string]: `${p.dx1}px`,
-              ['--dy1' as string]: `${p.dy1}px`,
-              ['--dx2' as string]: `${p.dx2}px`,
-              ['--dy2' as string]: `${p.dy2}px`,
-              ['--rot1' as string]: `${p.rot1}deg`,
-              ['--rot2' as string]: `${p.rot2}deg`,
-            }}
-          >
-            {p.shape === 0 && (
-              <rect
-                x={-p.size * 0.8}
-                y={-p.size * 0.4}
-                width={p.size * 1.6}
-                height={p.size * 0.8}
-                rx="1"
-                fill={p.color}
-              />
-            )}
-            {p.shape === 1 && (
-              <polygon
-                points={`0,${-p.size} ${p.size * 0.3},${-p.size * 0.3} ${p.size},0 ${p.size * 0.3},${p.size * 0.3} 0,${p.size} ${-p.size * 0.3},${p.size * 0.3} ${-p.size},0 ${-p.size * 0.3},${-p.size * 0.3}`}
-                fill={p.color}
-              />
-            )}
-            {p.shape === 2 && (
-              <circle cx="0" cy="0" r={p.size * 0.55} fill={p.color} />
-            )}
-            {p.shape === 3 && (
-              <rect
-                x={-p.size * 1.1}
-                y={-p.size * 0.25}
-                width={p.size * 2.2}
-                height={p.size * 0.5}
-                rx="1"
-                fill={p.color}
-              />
-            )}
-          </g>
-        ))}
-      </svg>
+      {SKELETON_CONFETTI_PARTICLES.map((p) => (
+        <div
+          key={p.id}
+          className="absolute"
+          style={{
+            width: `${p.size * (p.shape === 3 ? 2.6 : p.shape === 0 ? 1.6 : 1)}px`,
+            height: `${p.size * (p.shape === 3 ? 0.5 : p.shape === 0 ? 0.8 : 1)}px`,
+            borderRadius: p.shape === 2 ? '50%' : p.shape === 1 ? '1px' : '2px',
+            backgroundColor: p.color,
+            boxShadow: `0 0 6px ${p.color}aa`,
+            animation: `skelConfettiFly ${p.duration}s cubic-bezier(0.22, 1, 0.36, 1) forwards`,
+            animationDelay: `${p.delay}s`,
+            ['--dx1' as string]: `${p.dx1}px`,
+            ['--dy1' as string]: `${p.dy1}px`,
+            ['--dx2' as string]: `${p.dx2}px`,
+            ['--dy2' as string]: `${p.dy2}px`,
+            ['--rot1' as string]: `${p.rot1}deg`,
+            ['--rot2' as string]: `${p.rot2}deg`,
+          }}
+        />
+      ))}
     </div>
   )
 }
