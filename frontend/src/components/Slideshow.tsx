@@ -296,198 +296,6 @@ function JackOLantern({ seed = 0, hasBirthdayCandle = false }: { seed?: number; 
   )
 }
 
-function SittingOwl({
-  seed = 0,
-}: {
-  seed?: number
-}) {
-  const hatColors = ['#ec4899', '#8b5cf6', '#06b6d4', '#f59e0b']
-  const hatColor = hatColors[Math.abs(seed) % hatColors.length]
-
-  return (
-    <svg
-      width="118"
-      height="146"
-      viewBox="0 -18 118 160"
-      className="pointer-events-none select-none filter drop-shadow-[0_4px_16px_rgba(0,0,0,0.45)]"
-      style={{ overflow: 'visible' }}
-      aria-hidden="true"
-    >
-      <style>{`
-        @keyframes owlHeadTilt {
-          0%, 65%, 100% { transform: rotate(0deg); }
-          72% { transform: rotate(-7deg); }
-          80% { transform: rotate(-7deg); }
-          88% { transform: rotate(6deg); }
-          94% { transform: rotate(0deg); }
-        }
-        @keyframes owlWingWiggle {
-          0%, 80%, 100% { transform: rotate(0deg); }
-          85% { transform: rotate(-6deg); }
-          90% { transform: rotate(4deg); }
-          95% { transform: rotate(-3deg); }
-        }
-        @keyframes owlPomBounce {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-2.5px); }
-        }
-      `}</style>
-
-      {/* Layered Gothic Tail Feathers peeking down behind photo frame (y=90 is frame edge) */}
-      <path d="M 52 86 L 59 100 L 66 86 Z" fill="#09090b" />
-      <path d="M 47 85 L 53 96 L 58 85 Z" fill="#18181b" />
-      <path d="M 60 85 L 65 96 L 71 85 Z" fill="#18181b" />
-
-      {/* Plump Rounded Body - Deep Halloween Obsidian & Charcoal */}
-      <ellipse cx="59" cy="72" rx="30" ry="21" fill="#18181b" stroke="#09090b" strokeWidth="1.6" />
-
-      {/* Folded Wings with dark slate layered covert and primary flight feathers */}
-      <g style={{ transformOrigin: '33px 62px', animation: 'owlWingWiggle 5.2s ease-in-out infinite' }}>
-        <path d="M 33 56 C 22 66, 24 82, 38 88 C 32 80, 31 68, 35 58 Z" fill="#27272a" stroke="#09090b" strokeWidth="1.3" />
-        <path d="M 31 66 Q 34 76 37 84" stroke="#52525b" strokeWidth="1.2" fill="none" />
-        <path d="M 28 72 Q 32 79 35 84" stroke="#71717a" strokeWidth="0.8" fill="none" opacity="0.7" />
-      </g>
-      <g>
-        <path d="M 85 56 C 96 66, 94 82, 80 88 C 86 80, 87 68, 83 58 Z" fill="#27272a" stroke="#09090b" strokeWidth="1.3" />
-        <path d="M 87 66 Q 84 76 81 84" stroke="#52525b" strokeWidth="1.2" fill="none" />
-        <path d="M 90 72 Q 86 79 83 84" stroke="#71717a" strokeWidth="0.8" fill="none" opacity="0.7" />
-      </g>
-
-      {/* Ghostly Moonlight Silver Breast Bib */}
-      <ellipse cx="59" cy="74" rx="20" ry="16" fill="#e4e4e7" stroke="#d4d4d8" strokeWidth="0.8" />
-
-      {/* Gothic Charcoal Chevron Feather Barring on Chest */}
-      <path d="M 49 66 Q 54 70 59 66 M 59 66 Q 64 70 69 66" stroke="#27272a" strokeWidth="1.6" fill="none" strokeLinecap="round" />
-      <path d="M 45 72 Q 52 77 59 72 M 59 72 Q 66 77 73 72" stroke="#27272a" strokeWidth="1.6" fill="none" strokeLinecap="round" />
-      <path d="M 48 78 Q 54 83 59 78 M 59 78 Q 64 83 70 78" stroke="#27272a" strokeWidth="1.6" fill="none" strokeLinecap="round" />
-      <path d="M 53 84 Q 59 88 65 84" stroke="#27272a" strokeWidth="1.6" fill="none" strokeLinecap="round" />
-
-      {/* Pale Bone-White / Slate Raptor Talons gripping firmly over the photo card rim (y=90) */}
-      <g>
-        {/* Left Foot Claws */}
-        <g>
-          <path d="M 36 86 Q 34 93 35 98 Q 36 99 38 98 Q 39 93 38 86 Z" fill="#d4d4d8" stroke="#52525b" strokeWidth="1" />
-          <path d="M 41 86 Q 41 94 42 100 Q 43 101 45 100 Q 45 94 44 86 Z" fill="#d4d4d8" stroke="#52525b" strokeWidth="1" />
-          <path d="M 47 86 Q 48 93 49 98 Q 51 99 51 97 Q 50 93 49 86 Z" fill="#d4d4d8" stroke="#52525b" strokeWidth="1" />
-          {/* Curved black claw tips gripping front mat */}
-          <path d="M 35 98 Q 35 103 33 104" stroke="#09090b" strokeWidth="2" strokeLinecap="round" fill="none" />
-          <path d="M 42 100 Q 42 105 40 106" stroke="#09090b" strokeWidth="2" strokeLinecap="round" fill="none" />
-          <path d="M 49 98 Q 50 103 48 104" stroke="#09090b" strokeWidth="2" strokeLinecap="round" fill="none" />
-        </g>
-
-        {/* Right Foot Claws */}
-        <g>
-          <path d="M 69 86 Q 68 93 69 98 Q 70 99 72 97 Q 73 93 71 86 Z" fill="#d4d4d8" stroke="#52525b" strokeWidth="1" />
-          <path d="M 74 86 Q 74 94 75 100 Q 76 101 78 100 Q 78 94 77 86 Z" fill="#d4d4d8" stroke="#52525b" strokeWidth="1" />
-          <path d="M 80 86 Q 81 93 82 98 Q 83 99 85 98 Q 85 93 83 86 Z" fill="#d4d4d8" stroke="#52525b" strokeWidth="1" />
-          {/* Curved black claw tips */}
-          <path d="M 69 98 Q 69 103 67 104" stroke="#09090b" strokeWidth="2" strokeLinecap="round" fill="none" />
-          <path d="M 75 100 Q 75 105 73 106" stroke="#09090b" strokeWidth="2" strokeLinecap="round" fill="none" />
-          <path d="M 82 98 Q 83 103 81 104" stroke="#09090b" strokeWidth="2" strokeLinecap="round" fill="none" />
-        </g>
-      </g>
-
-      {/* Owl Head & Expressive Facial Features with Curious Cocking Head Motion */}
-      <g style={{ transformOrigin: '59px 48px', animation: 'owlHeadTilt 5.4s ease-in-out infinite' }}>
-        {/* Dramatic Spooky Ear Tufts (Great Horned Owl horns) */}
-        <g>
-          <path d="M 41 38 L 18 16 L 27 32 L 16 26 L 32 36 L 24 34 L 46 34 Z" fill="#18181b" stroke="#09090b" strokeWidth="1.2" />
-          <path d="M 37 36 L 24 20 L 30 32 Z" fill="#3f3f46" />
-          <path d="M 77 38 L 100 16 L 91 32 L 102 26 L 86 36 L 94 34 L 72 34 Z" fill="#18181b" stroke="#09090b" strokeWidth="1.2" />
-          <path d="M 81 36 L 94 20 L 88 32 Z" fill="#3f3f46" />
-        </g>
-
-        {/* Head Plumage Dome (Deep Obsidian Charcoal) */}
-        <ellipse cx="59" cy="48" rx="27" ry="21" fill="#18181b" stroke="#09090b" strokeWidth="1.5" />
-
-        {/* Haunting Moonlight White Facial Discs */}
-        <g>
-          <circle cx="47" cy="48" r="14" fill="#f4f4f5" stroke="#3f3f46" strokeWidth="1.4" />
-          <circle cx="71" cy="48" r="14" fill="#f4f4f5" stroke="#3f3f46" strokeWidth="1.4" />
-          <circle cx="47" cy="48" r="11" fill="#ffffff" />
-          <circle cx="71" cy="48" r="11" fill="#ffffff" />
-        </g>
-
-        {/* Piercing Glowing Halloween Jack-o'-Lantern Eyes */}
-        <g>
-          {/* Left Eye */}
-          <circle cx="47" cy="48" r="7.5" fill="#f97316" stroke="#c2410c" strokeWidth="0.8" />
-          <circle cx="47" cy="48" r="6.2" fill="#facc15" />
-          <circle cx="47" cy="48" r="4.2" fill="#09090b" />
-          <circle cx="45" cy="45.5" r="1.5" fill="#ffffff" />
-          <circle cx="48.5" cy="49.5" r="0.7" fill="#ffffff" />
-
-          {/* Right Eye */}
-          <circle cx="71" cy="48" r="7.5" fill="#f97316" stroke="#c2410c" strokeWidth="0.8" />
-          <circle cx="71" cy="48" r="6.2" fill="#facc15" />
-          <circle cx="71" cy="48" r="4.2" fill="#09090b" />
-          <circle cx="69" cy="45.5" r="1.5" fill="#ffffff" />
-          <circle cx="72.5" cy="49.5" r="0.7" fill="#ffffff" />
-        </g>
-
-        {/* Hooked Raptor Beak (Obsidian) */}
-        <path d="M 57 46 Q 59 44 61 46 L 61 55 Q 59 62 57 55 Z" fill="#27272a" stroke="#09090b" strokeWidth="1" />
-        <path d="M 57.5 54 Q 59 61 60.5 54" fill="#09090b" />
-
-        {/* --- PROMINENT FESTIVE BIRTHDAY PARTY CONE HAT (Rises high above head & glasses!) --- */}
-        <g>
-          {/* Cone Hat */}
-          <path d="M 48 28 L 59 -8 L 70 28 Z" fill={hatColor} stroke="#db2777" strokeWidth="1.2" />
-          {/* Vibrant Party Stripes */}
-          <path d="M 50 18 L 59 -8 L 61 4 Z" fill="#facc15" />
-          <path d="M 54 28 L 59 -8 L 57 10 Z" fill="#38bdf8" />
-          <path d="M 64 28 L 59 -8 L 68 12 Z" fill="#a855f7" />
-          {/* Gold ruffled trim at base */}
-          <ellipse cx="59" cy="28" rx="11" ry="2.5" fill="#fef08a" stroke="#facc15" strokeWidth="0.6" />
-          {/* Large Bouncy Golden Pom-pom */}
-          <g style={{ transformOrigin: '59px -8px', animation: 'owlPomBounce 2s ease-in-out infinite' }}>
-            <circle cx="59" cy="-8" r="4.6" fill="#facc15" stroke="#ca8a04" strokeWidth="0.8" />
-          </g>
-        </g>
-
-        {/* --- NOVELTY HBD PARTY GLASSES --- */}
-        <g>
-          {/* Left Round Sunglass Frame & Tinted Lens */}
-          <circle cx="47" cy="48" r="10.5" fill="rgba(236, 72, 153, 0.35)" stroke="#ec4899" strokeWidth="2.4" />
-          {/* Sparkle star on left lens */}
-          <polygon points="43,45 44,46.5 45.5,46.5 44.2,47.5 44.8,49 43,48 41.2,49 41.8,47.5 40.5,46.5 42,46.5" fill="#ffffff" opacity="0.85" />
-
-          {/* Right Round Sunglass Frame & Tinted Lens */}
-          <circle cx="71" cy="48" r="10.5" fill="rgba(6, 182, 212, 0.35)" stroke="#06b6d4" strokeWidth="2.4" />
-          {/* Sparkle star on right lens */}
-          <polygon points="67,45 68,46.5 69.5,46.5 68.2,47.5 68.8,49 67,48 65.2,49 65.8,47.5 64.5,46.5 66,46.5" fill="#ffffff" opacity="0.85" />
-
-          {/* Novelty Bridge connecting lenses */}
-          <path d="M 56 46 Q 59 43 62 46" stroke="#facc15" strokeWidth="3" fill="none" strokeLinecap="round" />
-
-          {/* Temple arms wrapping towards sides */}
-          <path d="M 37 46 L 26 44" stroke="#ec4899" strokeWidth="2.4" strokeLinecap="round" />
-          <path d="M 81 46 L 92 44" stroke="#06b6d4" strokeWidth="2.4" strokeLinecap="round" />
-
-          {/* --- BOLD 3D "H B D" LETTERS ON THE BROW OF THE GLASSES --- */}
-          <g
-            fontFamily="'Impact', 'Arial Black', -apple-system, sans-serif"
-            fontWeight="900"
-            fontSize="13.5"
-            textAnchor="middle"
-            dominantBaseline="central"
-          >
-            {/* Dark outline for maximum crisp contrast */}
-            <text x="47" y="34" fill="#09090b" stroke="#09090b" strokeWidth="3.4" strokeLinejoin="round">H</text>
-            <text x="59" y="31" fill="#09090b" stroke="#09090b" strokeWidth="3.4" strokeLinejoin="round">B</text>
-            <text x="71" y="34" fill="#09090b" stroke="#09090b" strokeWidth="3.4" strokeLinejoin="round">D</text>
-
-            {/* Vibrant Festive Letter Faces */}
-            <text x="47" y="34" fill="#ec4899" stroke="#ffffff" strokeWidth="0.8">H</text>
-            <text x="59" y="31" fill="#facc15" stroke="#ffffff" strokeWidth="0.8">B</text>
-            <text x="71" y="34" fill="#38bdf8" stroke="#ffffff" strokeWidth="0.8">D</text>
-          </g>
-        </g>
-      </g>
-    </svg>
-  )
-}
-
 function BirthdayBow({ seed = 0 }: { seed?: number }) {
   const BOW_COLORS = [
     { main: '#ec4899', light: '#f472b6', dark: '#db2777' }, // Pink
@@ -4136,12 +3944,10 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
 
   const seasonalNow = seasonalDate ?? getSeasonalDate()
   const hasSittingElf = isElfSeason(seasonalNow) && !isNewYearSeason(seasonalNow)
-  const hasSittingOwl = isSwaraBirthday(seasonalNow)
   const seedOffset = seed + pairIdx * 3 + index
   const elfPosition = pair ? (pairIdx === 0 ? 'left' : 'right') : 'right'
   const elfFlip = pair ? pairIdx === 0 : false
-
-  const owlPosition = pair ? (pairIdx === 0 ? 'left' : 'right') : 'right'
+  const bowPosition = pair ? (pairIdx === 0 ? 'right' : 'left') : 'right'
 
   const card = (
     <div
@@ -4167,16 +3973,9 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
           <SittingElf seed={seedOffset} flip={elfFlip} />
         </div>
       )}
-      {hasSittingOwl && (
-        <div
-          className={`absolute -top-[88px] ${owlPosition === 'left' ? 'left-6' : 'right-6'} pointer-events-none z-20 select-none`}
-        >
-          <SittingOwl seed={seedOffset} />
-        </div>
-      )}
       {isSwaraBirthday(seasonalNow) && (
         <div
-          className={`absolute -top-3.5 ${owlPosition === 'left' ? '-right-3.5' : '-left-3.5'} pointer-events-none z-20 select-none`}
+          className={`absolute -top-3.5 ${bowPosition === 'left' ? '-left-3.5' : '-right-3.5'} pointer-events-none z-20 select-none`}
         >
           <BirthdayBow seed={seedOffset} />
         </div>
