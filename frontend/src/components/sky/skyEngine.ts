@@ -1388,11 +1388,19 @@ export function startFxCanvas(
       targetCtx.stroke()
 
       // Banner text
+      targetCtx.save()
+      const textCenterX = bannerX + bannerW / 2 + 5
+      const textCenterY = bannerY + bannerH / 2
+      targetCtx.translate(textCenterX, textCenterY)
+      if (dir === -1) {
+        targetCtx.scale(-1, 1) // Invert negative scale so text is always read normally left-to-right!
+      }
       targetCtx.fillStyle = '#ffffff'
       targetCtx.font = "bold 9px system-ui, -apple-system, sans-serif"
       targetCtx.textAlign = 'center'
       targetCtx.textBaseline = 'middle'
-      targetCtx.fillText('★ HAPPY BIRTHDAY SWARA! 🎂 ★', bannerX + bannerW / 2 + 5, bannerY + bannerH / 2)
+      targetCtx.fillText('★ HAPPY BIRTHDAY SWARA! 🎂 ★', 0, 0)
+      targetCtx.restore()
 
       targetCtx.restore()
 

@@ -298,27 +298,18 @@ function JackOLantern({ seed = 0, hasBirthdayCandle = false }: { seed?: number; 
 
 function SittingOwl({
   seed = 0,
-  flip = false,
 }: {
   seed?: number
-  flip?: boolean
 }) {
-  const goggleColors = [
-    { frame: '#ec4899', lens: 'rgba(244, 114, 182, 0.45)', star: '#fdf2f8' },
-    { frame: '#06b6d4', lens: 'rgba(56, 189, 248, 0.45)', star: '#e0f2fe' },
-    { frame: '#a855f7', lens: 'rgba(192, 132, 252, 0.45)', star: '#f3e8ff' },
-    { frame: '#f59e0b', lens: 'rgba(251, 191, 36, 0.45)', star: '#fef3c7' },
-  ]
-  const g = goggleColors[Math.abs(seed) % goggleColors.length]
-  const hatColor = ['#ec4899', '#8b5cf6', '#06b6d4', '#f59e0b'][Math.abs(seed) % 4]
+  const hatColors = ['#ec4899', '#8b5cf6', '#06b6d4', '#f59e0b']
+  const hatColor = hatColors[Math.abs(seed) % hatColors.length]
 
   return (
     <svg
-      width="78"
-      height="86"
-      viewBox="0 0 78 86"
-      className="pointer-events-none select-none filter drop-shadow-[0_4px_12px_rgba(0,0,0,0.35)]"
-      style={{ transform: flip ? 'scaleX(-1)' : undefined }}
+      width="118"
+      height="132"
+      viewBox="0 0 118 132"
+      className="pointer-events-none select-none filter drop-shadow-[0_4px_14px_rgba(0,0,0,0.38)]"
       aria-hidden="true"
     >
       <style>{`
@@ -331,9 +322,9 @@ function SittingOwl({
         }
         @keyframes owlWingWiggle {
           0%, 80%, 100% { transform: rotate(0deg); }
-          85% { transform: rotate(-8deg); }
-          90% { transform: rotate(5deg); }
-          95% { transform: rotate(-4deg); }
+          85% { transform: rotate(-6deg); }
+          90% { transform: rotate(4deg); }
+          95% { transform: rotate(-3deg); }
         }
         @keyframes owlPomBounce {
           0%, 100% { transform: translateY(0); }
@@ -341,107 +332,150 @@ function SittingOwl({
         }
       `}</style>
 
-      {/* Tail feathers peeking down behind photo card top border (y=50 is photo card top edge) */}
-      <path d="M 34 48 L 39 58 L 44 48 Z" fill="#451a03" />
+      {/* Layered Tail Feathers peeking down behind photo frame (y=80 is frame edge) */}
+      <path d="M 52 76 L 59 88 L 66 76 Z" fill="#451a03" />
+      <path d="M 47 75 L 53 85 L 58 75 Z" fill="#291002" />
+      <path d="M 60 75 L 65 85 L 71 75 Z" fill="#291002" />
 
-      {/* Plump Owl Body resting on photo card top edge */}
-      <ellipse cx="39" cy="40" rx="20" ry="14" fill="#78350f" stroke="#451a03" strokeWidth="1.2" />
+      {/* Plump Rounded Body resting securely on frame top rim */}
+      <ellipse cx="59" cy="62" rx="30" ry="20" fill="#78350f" stroke="#451a03" strokeWidth="1.6" />
 
-      {/* Soft creamy breast feathers with delicate chevron texture */}
-      <ellipse cx="39" cy="42" rx="14" ry="10" fill="#fef3c7" />
-      <path d="M 33 38 Q 36 41 39 38 M 39 38 Q 42 41 45 38" stroke="#d97706" strokeWidth="1" fill="none" strokeLinecap="round" />
-      <path d="M 31 43 Q 35 46 39 43 M 39 43 Q 43 46 47 43" stroke="#d97706" strokeWidth="1" fill="none" strokeLinecap="round" />
-      <path d="M 35 47 Q 39 50 43 47" stroke="#d97706" strokeWidth="1" fill="none" strokeLinecap="round" />
-
-      {/* Folded wings on each side (with wing flutter animation) */}
-      <g style={{ transformOrigin: '21px 34px', animation: 'owlWingWiggle 5s ease-in-out infinite' }}>
-        <path d="M 21 32 C 16 38, 17 48, 24 50 C 21 44, 21 38, 22 32 Z" fill="#451a03" stroke="#291002" strokeWidth="0.8" />
+      {/* Folded Wings with mottled scapular and flight feather textures */}
+      <g style={{ transformOrigin: '33px 52px', animation: 'owlWingWiggle 5.2s ease-in-out infinite' }}>
+        <path d="M 33 46 C 23 56, 25 72, 38 78 C 32 70, 31 58, 35 48 Z" fill="#582405" stroke="#2e1202" strokeWidth="1.2" />
+        <path d="M 31 56 Q 34 66 37 74" stroke="#78350f" strokeWidth="1.2" fill="none" />
       </g>
-      <path d="M 57 32 C 62 38, 61 48, 54 50 C 57 44, 57 38, 56 32 Z" fill="#451a03" stroke="#291002" strokeWidth="0.8" />
-
-      {/* Talons gripping tightly over the photo card top edge (y=50) */}
-      <g fill="#f59e0b" stroke="#b45309" strokeWidth="0.8">
-        {/* Left foot claws wrapping over the white frame rim */}
-        <ellipse cx="27" cy="53" rx="2.2" ry="3.8" transform="rotate(-6 27 53)" />
-        <ellipse cx="31" cy="54" rx="2.2" ry="4.2" />
-        <ellipse cx="35" cy="53" rx="2.2" ry="3.8" transform="rotate(6 35 53)" />
-
-        {/* Right foot claws wrapping over the white frame rim */}
-        <ellipse cx="43" cy="53" rx="2.2" ry="3.8" transform="rotate(-6 43 53)" />
-        <ellipse cx="47" cy="54" rx="2.2" ry="4.2" />
-        <ellipse cx="51" cy="53" rx="2.2" ry="3.8" transform="rotate(6 51 53)" />
+      <g>
+        <path d="M 85 46 C 95 56, 93 72, 80 78 C 86 70, 87 58, 83 48 Z" fill="#582405" stroke="#2e1202" strokeWidth="1.2" />
+        <path d="M 87 56 Q 84 66 81 74" stroke="#78350f" strokeWidth="1.2" fill="none" />
       </g>
 
-      {/* Curious owl head with lifelike head-tilt animation */}
-      <g style={{ transformOrigin: '39px 28px', animation: 'owlHeadTilt 5.4s ease-in-out infinite' }}>
-        {/* Feathered ear tufts */}
-        <path d="M 25 24 L 17 11 L 30 18 Z" fill="#78350f" stroke="#451a03" strokeWidth="1" />
-        <path d="M 25 22 L 20 14 L 28 19 Z" fill="#92400e" />
-        <path d="M 53 24 L 61 11 L 48 18 Z" fill="#78350f" stroke="#451a03" strokeWidth="1" />
-        <path d="M 53 22 L 58 14 L 50 19 Z" fill="#92400e" />
+      {/* Soft Downy Cream Breast Bib */}
+      <ellipse cx="59" cy="64" rx="20" ry="15" fill="#fef3c7" stroke="#fde68a" strokeWidth="0.8" />
 
-        {/* Head plumage */}
-        <ellipse cx="39" cy="27" rx="17" ry="13" fill="#78350f" stroke="#451a03" strokeWidth="1.2" />
+      {/* Chevron Feather Barring on Chest (distinctive owl markings) */}
+      <path d="M 49 56 Q 54 60 59 56 M 59 56 Q 64 60 69 56" stroke="#b45309" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+      <path d="M 45 62 Q 52 67 59 62 M 59 62 Q 66 67 73 62" stroke="#b45309" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+      <path d="M 48 68 Q 54 73 59 68 M 59 68 Q 64 73 70 68" stroke="#b45309" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+      <path d="M 53 74 Q 59 78 65 74" stroke="#b45309" strokeWidth="1.5" fill="none" strokeLinecap="round" />
 
-        {/* Creamy facial discs */}
-        <circle cx="32" cy="27" r="9" fill="#fffbeb" stroke="#fde68a" strokeWidth="0.8" />
-        <circle cx="46" cy="27" r="9" fill="#fffbeb" stroke="#fde68a" strokeWidth="0.8" />
-
-        {/* Eyes & Catchlights */}
-        <circle cx="32" cy="27" r="5.5" fill="#f59e0b" />
-        <circle cx="46" cy="27" r="5.5" fill="#f59e0b" />
-        <circle cx="32" cy="27" r="3.4" fill="#0f172a" />
-        <circle cx="46" cy="27" r="3.4" fill="#0f172a" />
-        <circle cx="30.5" cy="25.5" r="1.2" fill="#ffffff" />
-        <circle cx="44.5" cy="25.5" r="1.2" fill="#ffffff" />
-        <circle cx="33.5" cy="28.5" r="0.6" fill="#ffffff" />
-        <circle cx="47.5" cy="28.5" r="0.6" fill="#ffffff" />
-
-        {/* Owl Beak */}
-        <polygon points="39,28 36,34 42,34" fill="#f59e0b" stroke="#b45309" strokeWidth="0.6" />
-
-        {/* Striped Party Cone Hat */}
+      {/* Powerful Curved Raptor Talons gripping firmly over the photo card rim (y=80) */}
+      <g>
+        {/* Left Foot Claws */}
         <g>
-          <path d="M 33 17 L 39 3 L 45 17 Z" fill={hatColor} />
-          <path d="M 34 13 L 39 3 L 40 8 Z" fill="#facc15" />
-          <path d="M 37 17 L 39 3 L 38 12 Z" fill="#38bdf8" />
-          <ellipse cx="39" cy="17" rx="6.5" ry="1.6" fill="#fef08a" />
-          {/* Bouncy gold pom-pom */}
-          <g style={{ transformOrigin: '39px 3px', animation: 'owlPomBounce 2s ease-in-out infinite' }}>
-            <circle cx="39" cy="3" r="2.8" fill="#facc15" stroke="#eab308" strokeWidth="0.6" />
+          <path d="M 36 76 Q 34 83 35 88 Q 36 89 38 88 Q 39 83 38 76 Z" fill="#f59e0b" stroke="#92400e" strokeWidth="1" />
+          <path d="M 41 76 Q 41 84 42 90 Q 43 91 45 90 Q 45 84 44 76 Z" fill="#f59e0b" stroke="#92400e" strokeWidth="1" />
+          <path d="M 47 76 Q 48 83 49 88 Q 51 89 51 87 Q 50 83 49 76 Z" fill="#f59e0b" stroke="#92400e" strokeWidth="1" />
+          {/* Curved black claw tips gripping the front mat */}
+          <path d="M 35 88 Q 35 93 33 94" stroke="#291002" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+          <path d="M 42 90 Q 42 95 40 96" stroke="#291002" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+          <path d="M 49 88 Q 50 93 48 94" stroke="#291002" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+        </g>
+
+        {/* Right Foot Claws */}
+        <g>
+          <path d="M 69 76 Q 68 83 69 88 Q 70 89 72 87 Q 73 83 71 76 Z" fill="#f59e0b" stroke="#92400e" strokeWidth="1" />
+          <path d="M 74 76 Q 74 84 75 90 Q 76 91 78 90 Q 78 84 77 76 Z" fill="#f59e0b" stroke="#92400e" strokeWidth="1" />
+          <path d="M 80 76 Q 81 83 82 88 Q 83 89 85 88 Q 85 83 83 76 Z" fill="#f59e0b" stroke="#92400e" strokeWidth="1" />
+          {/* Curved black claw tips */}
+          <path d="M 69 88 Q 69 93 67 94" stroke="#291002" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+          <path d="M 75 90 Q 75 95 73 96" stroke="#291002" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+          <path d="M 82 88 Q 83 93 81 94" stroke="#291002" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+        </g>
+      </g>
+
+      {/* Owl Head & Expressive Facial Features with Curious Cocking Head Motion */}
+      <g style={{ transformOrigin: '59px 38px', animation: 'owlHeadTilt 5.4s ease-in-out infinite' }}>
+        {/* Majestic Great Horned Owl Ear Tufts */}
+        <g>
+          <path d="M 41 28 L 22 8 L 30 22 L 20 18 L 34 26 L 26 24 L 46 24 Z" fill="#582405" stroke="#291002" strokeWidth="1.2" />
+          <path d="M 38 26 L 26 12 L 32 22 Z" fill="#92400e" />
+          <path d="M 77 28 L 96 8 L 88 22 L 98 18 L 84 26 L 92 24 L 72 24 Z" fill="#582405" stroke="#291002" strokeWidth="1.2" />
+          <path d="M 80 26 L 92 12 L 86 22 Z" fill="#92400e" />
+        </g>
+
+        {/* Head Plumage Dome */}
+        <ellipse cx="59" cy="38" rx="27" ry="21" fill="#78350f" stroke="#451a03" strokeWidth="1.5" />
+
+        {/* The Iconic Heart / Double Facial Discs */}
+        <g>
+          <circle cx="47" cy="38" r="14" fill="#fef3c7" stroke="#d97706" strokeWidth="1.2" />
+          <circle cx="71" cy="38" r="14" fill="#fef3c7" stroke="#d97706" strokeWidth="1.2" />
+          <circle cx="47" cy="38" r="11" fill="#fffbeb" />
+          <circle cx="71" cy="38" r="11" fill="#fffbeb" />
+        </g>
+
+        {/* Big Wise Round Raptor Eyes */}
+        <g>
+          {/* Left Eye */}
+          <circle cx="47" cy="38" r="7.5" fill="#f59e0b" stroke="#b45309" strokeWidth="0.8" />
+          <circle cx="47" cy="38" r="6.2" fill="#fbbf24" />
+          <circle cx="47" cy="38" r="4.2" fill="#09090b" />
+          <circle cx="45" cy="35.5" r="1.5" fill="#ffffff" />
+          <circle cx="48.5" cy="39.5" r="0.7" fill="#ffffff" />
+
+          {/* Right Eye */}
+          <circle cx="71" cy="38" r="7.5" fill="#f59e0b" stroke="#b45309" strokeWidth="0.8" />
+          <circle cx="71" cy="38" r="6.2" fill="#fbbf24" />
+          <circle cx="71" cy="38" r="4.2" fill="#09090b" />
+          <circle cx="69" cy="35.5" r="1.5" fill="#ffffff" />
+          <circle cx="72.5" cy="39.5" r="0.7" fill="#ffffff" />
+        </g>
+
+        {/* Hooked Raptor Beak */}
+        <path d="M 57 36 Q 59 34 61 36 L 61 45 Q 59 52 57 45 Z" fill="#f59e0b" stroke="#78350f" strokeWidth="0.9" />
+        <path d="M 57.5 44 Q 59 51 60.5 44" fill="#92400e" />
+
+        {/* Striped Birthday Party Cone Hat between tufts */}
+        <g>
+          <path d="M 50 20 L 59 2 L 68 20 Z" fill={hatColor} stroke="#db2777" strokeWidth="1" />
+          <path d="M 52 14 L 59 2 L 61 8 Z" fill="#facc15" />
+          <path d="M 55 20 L 59 2 L 57 12 Z" fill="#38bdf8" />
+          <path d="M 62 20 L 59 2 L 66 12 Z" fill="#a855f7" />
+          <ellipse cx="59" cy="20" rx="9.5" ry="2.2" fill="#fef08a" />
+          {/* Bouncy Golden Pom-pom */}
+          <g style={{ transformOrigin: '59px 2px', animation: 'owlPomBounce 2s ease-in-out infinite' }}>
+            <circle cx="59" cy="2" r="3.4" fill="#facc15" stroke="#ca8a04" strokeWidth="0.8" />
           </g>
         </g>
 
-        {/* Funky Happy Birthday Star Novelty Goggles */}
+        {/* --- NOVELTY HBD PARTY GLASSES --- */}
         <g>
-          {/* Frame bridge */}
-          <path d="M 37 26 Q 39 23 41 26" stroke={g.frame} strokeWidth="2.2" fill="none" strokeLinecap="round" />
-          <path d="M 37 26 Q 39 23 41 26" stroke="#ffffff" strokeWidth="0.8" fill="none" strokeLinecap="round" opacity="0.6" />
+          {/* Left Round Sunglass Frame & Tinted Lens */}
+          <circle cx="47" cy="38" r="10.5" fill="rgba(236, 72, 153, 0.42)" stroke="#ec4899" strokeWidth="2.4" />
+          {/* Sparkle star on left lens */}
+          <polygon points="43,35 44,36.5 45.5,36.5 44.2,37.5 44.8,39 43,38 41.2,39 41.8,37.5 40.5,36.5 42,36.5" fill="#ffffff" opacity="0.85" />
 
-          {/* Left Star Lens */}
-          <polygon
-            points="32,19 33.8,23.5 38.5,23.5 34.6,26.5 36.2,31 32,28.2 27.8,31 29.4,26.5 25.5,23.5 30.2,23.5"
-            fill={g.lens}
-            stroke={g.frame}
-            strokeWidth="1.8"
-            strokeLinejoin="round"
-          />
-          {/* Right Star Lens */}
-          <polygon
-            points="46,19 47.8,23.5 52.5,23.5 48.6,26.5 50.2,31 46,28.2 41.8,31 43.4,26.5 39.5,23.5 44.2,23.5"
-            fill={g.lens}
-            stroke={g.frame}
-            strokeWidth="1.8"
-            strokeLinejoin="round"
-          />
+          {/* Right Round Sunglass Frame & Tinted Lens */}
+          <circle cx="71" cy="38" r="10.5" fill="rgba(6, 182, 212, 0.42)" stroke="#06b6d4" strokeWidth="2.4" />
+          {/* Sparkle star on right lens */}
+          <polygon points="67,35 68,36.5 69.5,36.5 68.2,37.5 68.8,39 67,38 65.2,39 65.8,37.5 64.5,36.5 66,36.5" fill="#ffffff" opacity="0.85" />
 
-          {/* Temple arms */}
-          <path d="M 25.5 24 L 20 23" stroke={g.frame} strokeWidth="1.8" strokeLinecap="round" />
-          <path d="M 52.5 24 L 58 23" stroke={g.frame} strokeWidth="1.8" strokeLinecap="round" />
+          {/* Novelty Bridge connecting lenses */}
+          <path d="M 56 36 Q 59 33 62 36" stroke="#facc15" strokeWidth="3" fill="none" strokeLinecap="round" />
 
-          {/* Star sparkles */}
-          <circle cx="30" cy="22" r="0.9" fill={g.star} />
-          <circle cx="44" cy="22" r="0.9" fill={g.star} />
+          {/* Temple arms wrapping towards sides */}
+          <path d="M 37 36 L 27 34" stroke="#ec4899" strokeWidth="2.4" strokeLinecap="round" />
+          <path d="M 81 36 L 91 34" stroke="#06b6d4" strokeWidth="2.4" strokeLinecap="round" />
+
+          {/* --- BOLD 3D "H B D" LETTERS ON THE BROW OF THE GLASSES --- */}
+          <g
+            fontFamily="'Impact', 'Arial Black', -apple-system, sans-serif"
+            fontWeight="900"
+            fontSize="13"
+            textAnchor="middle"
+            dominantBaseline="central"
+          >
+            {/* Dark outline for maximum crisp contrast */}
+            <text x="47" y="24" fill="#09090b" stroke="#09090b" strokeWidth="3.2" strokeLinejoin="round">H</text>
+            <text x="59" y="21" fill="#09090b" stroke="#09090b" strokeWidth="3.2" strokeLinejoin="round">B</text>
+            <text x="71" y="24" fill="#09090b" stroke="#09090b" strokeWidth="3.2" strokeLinejoin="round">D</text>
+
+            {/* Vibrant Festive Letter Faces */}
+            <text x="47" y="24" fill="#ec4899" stroke="#ffffff" strokeWidth="0.8">H</text>
+            <text x="59" y="21" fill="#facc15" stroke="#ffffff" strokeWidth="0.8">B</text>
+            <text x="71" y="24" fill="#38bdf8" stroke="#ffffff" strokeWidth="0.8">D</text>
+          </g>
         </g>
       </g>
     </svg>
@@ -3247,10 +3281,10 @@ function DancingSkeletonFigure({
 
   return (
     <svg
-      width={84}
-      height={114}
-      viewBox="0 0 96 130"
-      className="pointer-events-none select-none"
+      width={90}
+      height={144}
+      viewBox="0 -32 96 162"
+      className="pointer-events-none select-none overflow-visible"
       style={{
         transform: flip ? 'scaleX(-1)' : undefined,
         transformOrigin: '48px 65px',
@@ -3623,7 +3657,7 @@ function DancingSkeleton({ seasonalDate }: { seasonalDate?: Date }) {
         ease: ['easeOut', 'linear', 'linear', 'easeIn'],
       }}
       onAnimationComplete={handleAnimationComplete}
-      className="fixed bottom-2 pointer-events-none z-30 select-none"
+      className="fixed bottom-2 pointer-events-none z-30 select-none overflow-visible"
       style={{ willChange: 'transform', transform: 'translateZ(0)' }}
     >
       <DancingSkeletonFigure phase={phase} flip={direction === -1} isBirthday={isSwaraBirthday(seasonalDate)} />
@@ -3914,7 +3948,6 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
   const elfFlip = pair ? pairIdx === 0 : false
 
   const owlPosition = pair ? (pairIdx === 0 ? 'left' : 'right') : 'right'
-  const owlFlip = pair ? pairIdx === 0 : false
 
   const card = (
     <div
@@ -3942,9 +3975,9 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
       )}
       {hasSittingOwl && (
         <div
-          className={`absolute -top-[50px] ${owlPosition === 'left' ? 'left-8' : 'right-8'} pointer-events-none z-20 select-none`}
+          className={`absolute -top-[78px] ${owlPosition === 'left' ? 'left-6' : 'right-6'} pointer-events-none z-20 select-none`}
         >
-          <SittingOwl seed={seedOffset} flip={owlFlip} />
+          <SittingOwl seed={seedOffset} />
         </div>
       )}
       {isSwaraBirthday(seasonalNow) && (
