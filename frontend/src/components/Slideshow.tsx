@@ -3578,8 +3578,8 @@ function DancingSkeletonFigure({
 
         {/* Skull Group */}
         <g style={skullStyle}>
-          {/* Startled '!' Comic Badge */}
-          {phase === 'startled' && (
+          {/* Startled '!' Comic Badge (only on normal Halloween, replaced by celebratory confetti on birthday) */}
+          {phase === 'startled' && !isBirthday && (
             <g style={{ animation: 'skelStartlePop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards', transformOrigin: '66px -2px' }}>
               <circle cx="66" cy="-2" r="9" fill="#ef4444" stroke="#ffffff" strokeWidth="1.5" />
               <text x="66" y="2" textAnchor="middle" fill="#ffffff" fontSize="12" fontWeight="900" fontFamily="sans-serif">!</text>
@@ -3669,12 +3669,126 @@ function DancingSkeletonFigure({
   )
 }
 
+const SKELETON_CONFETTI_PARTICLES = Array.from({ length: 48 }, (_, i) => {
+  const angleDeg = -80 + (i / 47) * 160 + (((i * 17) % 15) - 7)
+  const angleRad = (angleDeg * Math.PI) / 180
+  const speed = 95 + ((i * 23) % 95)
+  const dx1 = Math.round(Math.sin(angleRad) * speed)
+  const dy1 = Math.round(-Math.cos(angleRad) * speed * 1.3)
+  const dx2 = Math.round(dx1 * 1.35 + ((i % 2 === 0 ? 1 : -1) * 35))
+  const dy2 = Math.round(dy1 + 195 + ((i * 13) % 65))
+  const rot1 = (i * 45) % 360
+  const rot2 = rot1 + (i % 2 === 0 ? 1 : -1) * (360 + ((i * 30) % 360))
+  const delay = ((i % 8) * 0.03).toFixed(2)
+  const duration = (2.2 + (i % 5) * 0.15).toFixed(2)
+  const colors = [
+    '#ec4899', // pink
+    '#facc15', // gold
+    '#38bdf8', // sky blue
+    '#a855f7', // purple
+    '#10b981', // emerald
+    '#f97316', // orange
+    '#f43f5e', // rose
+    '#fef08a', // light yellow shimmer
+  ]
+  const color = colors[i % colors.length]
+  const shape = i % 4
+  const size = 5 + (i % 5)
+  return { id: i, dx1, dy1, dx2, dy2, rot1, rot2, delay, duration, color, shape, size }
+})
+
+function SkeletonConfettiBurst({ x }: { x: number }) {
+  return (
+    <div
+      className="fixed pointer-events-none z-30 select-none overflow-visible"
+      style={{
+        left: `${x}px`,
+        bottom: '120px',
+      }}
+      aria-hidden="true"
+    >
+      <style>{`
+        @keyframes skelConfettiFly {
+          0% {
+            transform: translate(0, 0) scale(0) rotate(0deg);
+            opacity: 0;
+          }
+          15% {
+            transform: translate(var(--dx1), var(--dy1)) scale(1.15) rotate(var(--rot1));
+            opacity: 1;
+          }
+          70% {
+            opacity: 0.95;
+          }
+          100% {
+            transform: translate(var(--dx2), var(--dy2)) scale(0.8) rotate(var(--rot2));
+            opacity: 0;
+          }
+        }
+      `}</style>
+      <svg
+        width="1"
+        height="1"
+        className="overflow-visible"
+        style={{ overflow: 'visible' }}
+      >
+        {SKELETON_CONFETTI_PARTICLES.map((p) => (
+          <g
+            key={p.id}
+            style={{
+              animation: `skelConfettiFly ${p.duration}s cubic-bezier(0.22, 1, 0.36, 1) forwards`,
+              animationDelay: `${p.delay}s`,
+              ['--dx1' as string]: `${p.dx1}px`,
+              ['--dy1' as string]: `${p.dy1}px`,
+              ['--dx2' as string]: `${p.dx2}px`,
+              ['--dy2' as string]: `${p.dy2}px`,
+              ['--rot1' as string]: `${p.rot1}deg`,
+              ['--rot2' as string]: `${p.rot2}deg`,
+            }}
+          >
+            {p.shape === 0 && (
+              <rect
+                x={-p.size * 0.8}
+                y={-p.size * 0.4}
+                width={p.size * 1.6}
+                height={p.size * 0.8}
+                rx="1"
+                fill={p.color}
+              />
+            )}
+            {p.shape === 1 && (
+              <polygon
+                points={`0,${-p.size} ${p.size * 0.3},${-p.size * 0.3} ${p.size},0 ${p.size * 0.3},${p.size * 0.3} 0,${p.size} ${-p.size * 0.3},${p.size * 0.3} ${-p.size},0 ${-p.size * 0.3},${-p.size * 0.3}`}
+                fill={p.color}
+              />
+            )}
+            {p.shape === 2 && (
+              <circle cx="0" cy="0" r={p.size * 0.55} fill={p.color} />
+            )}
+            {p.shape === 3 && (
+              <rect
+                x={-p.size * 1.1}
+                y={-p.size * 0.25}
+                width={p.size * 2.2}
+                height={p.size * 0.5}
+                rx="1"
+                fill={p.color}
+              />
+            )}
+          </g>
+        ))}
+      </svg>
+    </div>
+  )
+}
+
 function DancingSkeleton({ seasonalDate }: { seasonalDate?: Date }) {
   const [active, setActive] = useState(false)
   const [runId, setRunId] = useState(0)
   const [direction, setDirection] = useState<1 | -1>(1)
   const [phase, setPhase] = useState<'entering' | 'dancing' | 'startled' | 'running'>('entering')
   const [coords, setCoords] = useState<{ startX: number; danceX: number; exitX: number } | null>(null)
+  const [showConfetti, setShowConfetti] = useState(false)
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
 
   const clearAllTimers = () => {
@@ -3682,8 +3796,11 @@ function DancingSkeleton({ seasonalDate }: { seasonalDate?: Date }) {
     timersRef.current = []
   }
 
+  const isBday = isSwaraBirthday(seasonalDate)
+
   const trigger = (e?: Event) => {
     clearAllTimers()
+    setShowConfetti(false)
     const custom = e as CustomEvent<{ freeze?: boolean }> | undefined
     const isFreeze = Boolean(custom?.detail?.freeze)
     const w = typeof window !== 'undefined' ? window.innerWidth : 1920
@@ -3707,6 +3824,9 @@ function DancingSkeleton({ seasonalDate }: { seasonalDate?: Date }) {
     timersRef.current.push(
       setTimeout(() => {
         setPhase('startled')
+        if (isBday) {
+          setShowConfetti(true)
+        }
       }, 5400)
     )
     timersRef.current.push(
@@ -3732,6 +3852,7 @@ function DancingSkeleton({ seasonalDate }: { seasonalDate?: Date }) {
       return
     }
     setActive(false)
+    setShowConfetti(false)
     clearAllTimers()
     const nextTimer = setTimeout(trigger, 25_000 + Math.random() * 30_000)
     timersRef.current.push(nextTimer)
@@ -3740,23 +3861,26 @@ function DancingSkeleton({ seasonalDate }: { seasonalDate?: Date }) {
   if (!active || !coords) return null
 
   return (
-    <motion.div
-      key={runId}
-      initial={{ x: coords.startX }}
-      animate={{
-        x: [coords.startX, coords.danceX, coords.danceX, coords.danceX, coords.exitX],
-      }}
-      transition={{
-        duration: 8.0,
-        times: [0, 0.30, 0.675, 0.75, 1],
-        ease: ['easeOut', 'linear', 'linear', 'easeIn'],
-      }}
-      onAnimationComplete={handleAnimationComplete}
-      className="fixed bottom-3 pointer-events-none z-30 select-none overflow-visible"
-      style={{ willChange: 'transform', transform: 'translateZ(0)' }}
-    >
-      <DancingSkeletonFigure phase={phase} flip={direction === -1} isBirthday={isSwaraBirthday(seasonalDate)} />
-    </motion.div>
+    <>
+      <motion.div
+        key={runId}
+        initial={{ x: coords.startX }}
+        animate={{
+          x: [coords.startX, coords.danceX, coords.danceX, coords.danceX, coords.exitX],
+        }}
+        transition={{
+          duration: 8.0,
+          times: [0, 0.30, 0.675, 0.75, 1],
+          ease: ['easeOut', 'linear', 'linear', 'easeIn'],
+        }}
+        onAnimationComplete={handleAnimationComplete}
+        className="fixed bottom-3 pointer-events-none z-30 select-none overflow-visible"
+        style={{ willChange: 'transform', transform: 'translateZ(0)' }}
+      >
+        <DancingSkeletonFigure phase={phase} flip={direction === -1} isBirthday={isBday} />
+      </motion.div>
+      {showConfetti && <SkeletonConfettiBurst x={coords.danceX + 48} />}
+    </>
   )
 }
 
