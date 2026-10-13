@@ -3631,6 +3631,7 @@ function DancingSkeletonFigure({
 
 function DancingSkeleton({ seasonalDate }: { seasonalDate?: Date }) {
   const [active, setActive] = useState(false)
+  const [runId, setRunId] = useState(0)
   const [direction, setDirection] = useState<1 | -1>(1)
   const [phase, setPhase] = useState<'entering' | 'dancing' | 'startled' | 'running'>('entering')
   const [coords, setCoords] = useState<{ startX: number; danceX: number; exitX: number } | null>(null)
@@ -3651,6 +3652,7 @@ function DancingSkeleton({ seasonalDate }: { seasonalDate?: Date }) {
     const exitX = dir === 1 ? w + 130 : -130
     setCoords({ startX, danceX, exitX })
     setPhase('entering')
+    setRunId((r) => r + 1)
     setActive(true)
 
     timersRef.current.push(
@@ -3692,6 +3694,7 @@ function DancingSkeleton({ seasonalDate }: { seasonalDate?: Date }) {
 
   return (
     <motion.div
+      key={runId}
       initial={{ x: coords.startX }}
       animate={{
         x: [coords.startX, coords.danceX, coords.danceX, coords.danceX, coords.exitX],
@@ -3702,7 +3705,7 @@ function DancingSkeleton({ seasonalDate }: { seasonalDate?: Date }) {
         ease: ['easeOut', 'linear', 'linear', 'easeIn'],
       }}
       onAnimationComplete={handleAnimationComplete}
-      className="fixed bottom-2 pointer-events-none z-30 select-none overflow-visible"
+      className="fixed bottom-3 pointer-events-none z-30 select-none overflow-visible"
       style={{ willChange: 'transform', transform: 'translateZ(0)' }}
     >
       <DancingSkeletonFigure phase={phase} flip={direction === -1} isBirthday={isSwaraBirthday(seasonalDate)} />
