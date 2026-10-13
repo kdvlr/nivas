@@ -58,32 +58,33 @@
 
         /* Embed iframe mode for celebration overlay */
         body.embed {
-            margin: 0;
-            padding: 0;
-            min-height: 0;
-            background: #0f172a;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 100vw;
-            height: 100vh;
+            padding: 0 !important;
+            margin: 0 !important;
+            background: #0f172a !important;
+            overflow: hidden !important;
+            min-height: 100vh !important;
+            height: 100vh !important;
+            width: 100vw !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
         }
-        body.embed .w-full.max-w-4xl {
-            max-width: 100vw;
-            width: 100vw;
-            height: 100vh;
-            gap: 0;
-            padding: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        body.embed > div > div:first-child,
-        body.embed > div > div:last-child,
-        body.embed #timeDisplay,
-        body.embed .absolute.bottom-3\\.5 {
+        body.embed #towerHeader,
+        body.embed #towerControls,
+        body.embed #timerBadge,
+        body.embed #timeDisplay {
             display: none !important;
+        }
+        body.embed > div.w-full {
+            max-width: 100vw !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            max-height: 100vh !important;
+            gap: 0 !important;
+            padding: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
         }
         body.embed .svg-stage {
             width: 100vw !important;
@@ -106,7 +107,7 @@
     <div class="w-full max-w-4xl flex flex-col gap-4">
         
         <!-- Top Header -->
-        <div class="flex flex-wrap items-center justify-between gap-3 bg-white/85 backdrop-blur-md border border-slate-200/90 px-5 py-3.5 rounded-2xl shadow-sm">
+        <div id="towerHeader" class="flex flex-wrap items-center justify-between gap-3 bg-white/85 backdrop-blur-md border border-slate-200/90 px-5 py-3.5 rounded-2xl shadow-sm">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-xl bg-sky-100 border border-sky-200 flex items-center justify-center text-sky-600">
                     <i class="ph-fill ph-buildings text-2xl"></i>
@@ -567,14 +568,14 @@
             </svg>
 
             <!-- Floating Timer Badge inside Stage -->
-            <div class="absolute bottom-3.5 right-4 bg-white/85 backdrop-blur-md border border-slate-200 px-3 py-1 rounded-full text-xs font-mono text-slate-600 flex items-center gap-1.5 pointer-events-none shadow-sm">
+            <div id="timerBadge" class="absolute bottom-3.5 right-4 bg-white/85 backdrop-blur-md border border-slate-200 px-3 py-1 rounded-full text-xs font-mono text-slate-600 flex items-center gap-1.5 pointer-events-none shadow-sm">
                 <i class="ph-fill ph-timer text-sky-500"></i>
                 <span id="timeDisplay">0.0s / 7.5s</span>
             </div>
         </div>
 
         <!-- Interactive Lottie-Style Player Controls -->
-        <div class="bg-white/85 backdrop-blur-md border border-slate-200/90 px-5 py-4 rounded-2xl flex flex-col sm:flex-row items-center gap-4 shadow-sm">
+        <div id="towerControls" class="bg-white/85 backdrop-blur-md border border-slate-200/90 px-5 py-4 rounded-2xl flex flex-col sm:flex-row items-center gap-4 shadow-sm">
             <div class="flex items-center gap-2">
                 <button id="playPauseBtn" class="w-11 h-11 rounded-xl bg-sky-500 hover:bg-sky-600 text-white flex items-center justify-center font-bold shadow-md shadow-sky-300/50 transition active:scale-95" title="Play / Pause">
                     <i id="playPauseIcon" class="ph-fill ph-pause text-xl"></i>
@@ -604,6 +605,11 @@
     </div>
 
     <script>
+        const urlParams = new URLSearchParams(location.search);
+        if (urlParams.has("embed")) {
+            document.body.classList.add("embed");
+        }
+
         // ============================================================================
         // 1. SYNTHESIZED SOUND ENGINE (Tone.js - Zero external audio files required)
         // ============================================================================
@@ -1147,6 +1153,13 @@
         // ============================================================================
         buildChoreAnimationTimeline();
 
+        const seekParam = urlParams.get("seek");
+        if (seekParam !== null) {
+            masterTL.pause();
+            masterTL.seek(parseFloat(seekParam));
+        }
+
+
         const playPauseBtn = document.getElementById('playPauseBtn');
         const replayBtn = document.getElementById('replayBtn');
         const speedBtn = document.getElementById('speedBtn');
@@ -1219,12 +1232,7 @@
             }
         });
 
-        // Embed & Audio Initialization
-        const urlParams = new URLSearchParams(location.search);
-        if (urlParams.has("embed")) {
-            document.body.classList.add("embed");
-        }
-
+        // Audio Initialization
         try {
             if (urlParams.get("sound") === "1" || localStorage.getItem("nivas_celebration_sound") === "true") {
                 initAudio().then(() => {
