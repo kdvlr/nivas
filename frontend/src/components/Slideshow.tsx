@@ -3454,11 +3454,6 @@ function DancingSkeletonFigure({
           0% { transform: rotate(30deg); }
           100% { transform: rotate(130deg); }
         }
-        @keyframes skelStartlePop {
-          0% { opacity: 0; transform: scale(0.2) translateY(10px); }
-          60% { opacity: 1; transform: scale(1.3) translateY(-4px); }
-          100% { opacity: 1; transform: scale(1) translateY(0); }
-        }
 
         @keyframes skelRunSprint {
           0%, 100% { transform: translateY(0) rotate(22deg); }
@@ -3578,14 +3573,6 @@ function DancingSkeletonFigure({
 
         {/* Skull Group */}
         <g style={skullStyle}>
-          {/* Startled '!' Comic Badge (only on normal Halloween, replaced by celebratory confetti on birthday) */}
-          {phase === 'startled' && !isBirthday && (
-            <g style={{ animation: 'skelStartlePop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards', transformOrigin: '66px -2px' }}>
-              <circle cx="66" cy="-2" r="9" fill="#ef4444" stroke="#ffffff" strokeWidth="1.5" />
-              <text x="66" y="2" textAnchor="middle" fill="#ffffff" fontSize="12" fontWeight="900" fontFamily="sans-serif">!</text>
-            </g>
-          )}
-
           {/* Hat: Festive Birthday Cone Party Hat vs Dapper Top Hat */}
           {isBirthday ? (
             <g transform="translate(0, 0)">
