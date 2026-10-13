@@ -3182,7 +3182,7 @@ function SpookyGraveyard({ isBirthday = false }: { isBirthday?: boolean }) {
           </g>
         </g>
 
-        {/* --- Eerie Floating Will-o'-the-Wisp Ghost (x = 610, y = 80) --- */}
+        {/* --- Eerie Floating Will-o'-the-Wisp Ghost (x = 610, y = 80) with Cute Bow --- */}
         <g transform="translate(610, 80)">
           <g style={{ animation: 'ghostWisp 6.5s ease-in-out infinite' }}>
             <path
@@ -3193,8 +3193,39 @@ function SpookyGraveyard({ isBirthday = false }: { isBirthday?: boolean }) {
               d="M -8 16 C -8 4, -8 -8, 0 -8 C 8 -8, 8 4, 8 16 C 5 13, 2 15, 0 12 C -2 15, -5 13, -8 16 Z"
               fill="rgba(165, 243, 252, 0.65)"
             />
+            {/* Cute Rosy Cheek Blush */}
+            <ellipse cx="-4.5" cy="2" rx="1.6" ry="1" fill="#f472b6" opacity="0.55" />
+            <ellipse cx="4.5" cy="2" rx="1.6" ry="1" fill="#f472b6" opacity="0.55" />
+            {/* Expressive Eyes */}
             <circle cx="-2.5" cy="-1" r="1.1" fill="#083344" />
             <circle cx="2.5" cy="-1" r="1.1" fill="#083344" />
+            <circle cx="-2.8" cy="-1.4" r="0.4" fill="#ffffff" />
+            <circle cx="2.2" cy="-1.4" r="0.4" fill="#ffffff" />
+            {/* Cute Ribbon Bow perched on ghost's head */}
+            <g transform="translate(4.5, -7.5) rotate(18)">
+              {/* Ribbon Tails */}
+              <path d="M -0.5 0.5 Q -3 3.5 -4 6 L -2.5 5.5 L 0 1 Z" fill="#be185d" />
+              <path d="M 0.5 0.5 Q 3 3.5 4.5 6 L 3 5.5 L 0 1 Z" fill="#db2777" />
+              {/* Left Bow Loop */}
+              <path
+                d="M 0 0 C -4 -4, -6.5 -2, -6.5 0 C -6.5 2, -4 4, 0 0 Z"
+                fill="#f472b6"
+                stroke="#db2777"
+                strokeWidth="0.6"
+              />
+              <path d="M -1 -0.5 C -3 -1.5, -4.5 -0.5, -4.5 0" stroke="#db2777" strokeWidth="0.5" fill="none" />
+              {/* Right Bow Loop */}
+              <path
+                d="M 0 0 C 4 -4, 6.5 -2, 6.5 0 C 6.5 2, 4 4, 0 0 Z"
+                fill="#ec4899"
+                stroke="#db2777"
+                strokeWidth="0.6"
+              />
+              <path d="M 1 -0.5 C 3 -1.5, 4.5 -0.5, 4.5 0" stroke="#db2777" strokeWidth="0.5" fill="none" />
+              {/* Center Knot */}
+              <ellipse cx="0" cy="0" rx="1.6" ry="1.4" fill="#fbcfe8" stroke="#be185d" strokeWidth="0.6" />
+              <circle cx="-0.4" cy="-0.4" r="0.5" fill="#ffffff" opacity="0.9" />
+            </g>
           </g>
         </g>
 
