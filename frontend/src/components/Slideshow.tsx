@@ -3182,7 +3182,7 @@ function SpookyGraveyard({ isBirthday = false }: { isBirthday?: boolean }) {
           </g>
         </g>
 
-        {/* --- Eerie Floating Will-o'-the-Wisp Ghost (x = 610, y = 70) with Cute Bow --- */}
+        {/* --- Eerie Floating Will-o'-the-Wisp Ghost (x = 610, y = 70) --- */}
         <g transform="translate(610, 70) scale(1.6)">
           <g style={{ animation: 'ghostWisp 6.5s ease-in-out infinite' }}>
             {/* Soft Cyan Outer Glow */}
@@ -3195,41 +3195,46 @@ function SpookyGraveyard({ isBirthday = false }: { isBirthday?: boolean }) {
               d="M -9 16 C -9 3, -9 -9, 0 -9 C 9 -9, 9 3, 9 16 C 6 13, 2 15, 0 12 C -2 15, -6 13, -9 16 Z"
               fill="rgba(207, 250, 254, 0.88)"
             />
-            {/* Cute Rosy Cheek Blush */}
-            <ellipse cx="-4.8" cy="2.2" rx="1.8" ry="1.1" fill="#f472b6" opacity="0.65" />
-            <ellipse cx="4.8" cy="2.2" rx="1.8" ry="1.1" fill="#f472b6" opacity="0.65" />
             {/* Expressive Eyes */}
             <ellipse cx="-2.6" cy="-1.2" rx="1.1" ry="1.4" fill="#083344" />
             <ellipse cx="2.6" cy="-1.2" rx="1.1" ry="1.4" fill="#083344" />
-            <circle cx="-3" cy="-1.8" r="0.45" fill="#ffffff" />
-            <circle cx="2.2" cy="-1.8" r="0.45" fill="#ffffff" />
-            {/* Sweet Happy Smile */}
-            <path d="M -1.8 1.8 Q 0 3.6 1.8 1.8" stroke="#083344" strokeWidth="0.6" strokeLinecap="round" fill="none" />
-            {/* Cute Ribbon Bow perched on ghost's head */}
-            <g transform="translate(5.5, -8.5) rotate(18)">
-              {/* Ribbon Tails */}
-              <path d="M -0.5 0.5 Q -3 4 -4.5 7 L -2.8 6.2 L 0 1 Z" fill="#be185d" />
-              <path d="M 0.5 0.5 Q 3 4 5 7 L 3.2 6.2 L 0 1 Z" fill="#db2777" />
-              {/* Left Bow Loop */}
-              <path
-                d="M 0 0 C -4.5 -4.5, -7.5 -2.5, -7.5 0 C -7.5 2.5, -4.5 4.5, 0 0 Z"
-                fill="#f472b6"
-                stroke="#db2777"
-                strokeWidth="0.7"
-              />
-              <path d="M -1.2 -0.6 C -3.5 -1.8, -5.2 -0.6, -5.2 0" stroke="#db2777" strokeWidth="0.5" fill="none" />
-              {/* Right Bow Loop */}
-              <path
-                d="M 0 0 C 4.5 -4.5, 7.5 -2.5, 7.5 0 C 7.5 2.5, 4.5 4.5, 0 0 Z"
-                fill="#ec4899"
-                stroke="#db2777"
-                strokeWidth="0.7"
-              />
-              <path d="M 1.2 -0.6 C 3.5 -1.8, 5.2 -0.6, 5.2 0" stroke="#db2777" strokeWidth="0.5" fill="none" />
-              {/* Center Knot */}
-              <ellipse cx="0" cy="0" rx="1.8" ry="1.5" fill="#fbcfe8" stroke="#be185d" strokeWidth="0.7" />
-              <circle cx="-0.5" cy="-0.5" r="0.6" fill="#ffffff" opacity="0.95" />
-            </g>
+            {isBirthday ? (
+              <>
+                {/* Twinkling Eye Sparkles on Birthday */}
+                <circle cx="-3" cy="-1.8" r="0.45" fill="#ffffff" />
+                <circle cx="2.2" cy="-1.8" r="0.45" fill="#ffffff" />
+                {/* Cute Rosy Cheek Blush (Oct 31 Birthday only) */}
+                <ellipse cx="-4.8" cy="2.2" rx="1.8" ry="1.1" fill="#f472b6" opacity="0.65" />
+                <ellipse cx="4.8" cy="2.2" rx="1.8" ry="1.1" fill="#f472b6" opacity="0.65" />
+                {/* Sweet Happy Smile (Oct 31 Birthday only) */}
+                <path d="M -1.8 1.8 Q 0 3.6 1.8 1.8" stroke="#083344" strokeWidth="0.6" strokeLinecap="round" fill="none" />
+                {/* Cute Ribbon Bow perched on ghost's head (Oct 31 Birthday only) */}
+                <g transform="translate(5.5, -8.5) rotate(18)">
+                  {/* Ribbon Tails */}
+                  <path d="M -0.5 0.5 Q -3 4 -4.5 7 L -2.8 6.2 L 0 1 Z" fill="#be185d" />
+                  <path d="M 0.5 0.5 Q 3 4 5 7 L 3.2 6.2 L 0 1 Z" fill="#db2777" />
+                  {/* Left Bow Loop */}
+                  <path
+                    d="M 0 0 C -4.5 -4.5, -7.5 -2.5, -7.5 0 C -7.5 2.5, -4.5 4.5, 0 0 Z"
+                    fill="#f472b6"
+                    stroke="#db2777"
+                    strokeWidth="0.7"
+                  />
+                  <path d="M -1.2 -0.6 C -3.5 -1.8, -5.2 -0.6, -5.2 0" stroke="#db2777" strokeWidth="0.5" fill="none" />
+                  {/* Right Bow Loop */}
+                  <path
+                    d="M 0 0 C 4.5 -4.5, 7.5 -2.5, 7.5 0 C 7.5 2.5, 4.5 4.5, 0 0 Z"
+                    fill="#ec4899"
+                    stroke="#db2777"
+                    strokeWidth="0.7"
+                  />
+                  <path d="M 1.2 -0.6 C 3.5 -1.8, 5.2 -0.6, 5.2 0" stroke="#db2777" strokeWidth="0.5" fill="none" />
+                  {/* Center Knot */}
+                  <ellipse cx="0" cy="0" rx="1.8" ry="1.5" fill="#fbcfe8" stroke="#be185d" strokeWidth="0.7" />
+                  <circle cx="-0.5" cy="-0.5" r="0.6" fill="#ffffff" opacity="0.95" />
+                </g>
+              </>
+            ) : null}
           </g>
         </g>
 
