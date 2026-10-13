@@ -3669,33 +3669,36 @@ function DancingSkeletonFigure({
   )
 }
 
-const SKELETON_CONFETTI_PARTICLES = Array.from({ length: 60 }, (_, i) => {
-  const angleDeg = -85 + (i / 59) * 170 + (((i * 17) % 15) - 7)
+const SKELETON_CONFETTI_PARTICLES = Array.from({ length: 64 }, (_, i) => {
+  const fanFraction = (i / 63) * 2 - 1 // -1.0 to +1.0
+  const angleDeg = fanFraction * 68 + (((i * 13) % 15) - 7)
   const angleRad = (angleDeg * Math.PI) / 180
-  const speed = 110 + ((i * 23) % 110)
-  const dx1 = Math.round(Math.sin(angleRad) * speed)
-  const dy1 = Math.round(-Math.cos(angleRad) * speed * 1.35)
-  const dx2 = Math.round(dx1 * 1.4 + (i % 2 === 0 ? 1 : -1) * 45)
-  const dy2 = Math.round(dy1 + 240 + ((i * 13) % 80))
-  const rot1 = (i * 45) % 360
-  const rot2 = rot1 + (i % 2 === 0 ? 1 : -1) * (480 + ((i * 30) % 360))
-  const delay = ((i % 10) * 0.025).toFixed(2)
-  const duration = (2.4 + (i % 6) * 0.15).toFixed(2)
+  const speed = 190 + ((i * 31) % 150)
+  const dxApex = Math.round(Math.sin(angleRad) * speed * 0.95)
+  const dyApex = Math.round(-Math.cos(angleRad) * speed * 1.35 - 35) // Launch high up into view
+  const dxMid = Math.round(dxApex * 1.15 + (i % 2 === 0 ? 1 : -1) * 28)
+  const dyMid = Math.round(dyApex * 0.72) // Slow float at apex
+  const dxEnd = Math.round(dxMid * 1.25 + (i % 2 === 0 ? 1 : -1) * 45)
+  const dyEnd = Math.round(dyMid + 160 + ((i * 19) % 70)) // Drifts down towards ground level
+  const rotApex = (i * 45) % 360
+  const rotEnd = rotApex + (i % 2 === 0 ? 1 : -1) * (540 + ((i * 30) % 360))
+  const delay = ((i % 12) * 0.02).toFixed(2)
+  const duration = (2.8 + (i % 7) * 0.16).toFixed(2)
   const colors = [
-    '#ec4899', // pink
-    '#facc15', // gold
-    '#38bdf8', // sky blue
+    '#ec4899', // bright pink
+    '#facc15', // gold shimmer
     '#a855f7', // purple
-    '#10b981', // emerald
-    '#f97316', // orange
+    '#38bdf8', // sky cyan
+    '#34d399', // emerald
+    '#fb923c', // orange
     '#f43f5e', // rose
-    '#fef08a', // light yellow
-    '#e0e7ff', // shimmer white
+    '#fef08a', // light yellow sparkle
+    '#ffffff', // diamond white
   ]
   const color = colors[i % colors.length]
   const shape = i % 4
-  const size = 6 + (i % 6)
-  return { id: i, dx1, dy1, dx2, dy2, rot1, rot2, delay, duration, color, shape, size }
+  const size = 7 + (i % 6)
+  return { id: i, dxApex, dyApex, dxMid, dyMid, dxEnd, dyEnd, rotApex, rotEnd, delay, duration, color, shape, size }
 })
 
 function SkeletonConfettiBurst({ x }: { x: number }) {
@@ -3704,7 +3707,7 @@ function SkeletonConfettiBurst({ x }: { x: number }) {
       className="fixed pointer-events-none z-30 select-none"
       style={{
         left: `${x}px`,
-        bottom: '120px',
+        bottom: '180px',
         width: 0,
         height: 0,
       }}
@@ -3717,14 +3720,18 @@ function SkeletonConfettiBurst({ x }: { x: number }) {
             opacity: 0;
           }
           15% {
-            transform: translate3d(var(--dx1), var(--dy1), 0) scale(1.25) rotate(var(--rot1));
+            transform: translate3d(var(--dxApex), var(--dyApex), 0) scale(1.3) rotate(var(--rotApex));
             opacity: 1;
           }
-          75% {
+          50% {
+            transform: translate3d(var(--dxMid), var(--dyMid), 0) scale(1.08) rotate(calc(var(--rotApex) * 1.5));
             opacity: 1;
+          }
+          80% {
+            opacity: 0.92;
           }
           100% {
-            transform: translate3d(var(--dx2), var(--dy2), 0) scale(0.7) rotate(var(--rot2));
+            transform: translate3d(var(--dxEnd), var(--dyEnd), 0) scale(0.65) rotate(var(--rotEnd));
             opacity: 0;
           }
         }
@@ -3738,15 +3745,17 @@ function SkeletonConfettiBurst({ x }: { x: number }) {
             height: `${p.size * (p.shape === 3 ? 0.5 : p.shape === 0 ? 0.8 : 1)}px`,
             borderRadius: p.shape === 2 ? '50%' : p.shape === 1 ? '1px' : '2px',
             backgroundColor: p.color,
-            boxShadow: `0 0 6px ${p.color}aa`,
+            boxShadow: `0 0 7px ${p.color}dd`,
             animation: `skelConfettiFly ${p.duration}s cubic-bezier(0.22, 1, 0.36, 1) forwards`,
             animationDelay: `${p.delay}s`,
-            ['--dx1' as string]: `${p.dx1}px`,
-            ['--dy1' as string]: `${p.dy1}px`,
-            ['--dx2' as string]: `${p.dx2}px`,
-            ['--dy2' as string]: `${p.dy2}px`,
-            ['--rot1' as string]: `${p.rot1}deg`,
-            ['--rot2' as string]: `${p.rot2}deg`,
+            ['--dxApex' as string]: `${p.dxApex}px`,
+            ['--dyApex' as string]: `${p.dyApex}px`,
+            ['--dxMid' as string]: `${p.dxMid}px`,
+            ['--dyMid' as string]: `${p.dyMid}px`,
+            ['--dxEnd' as string]: `${p.dxEnd}px`,
+            ['--dyEnd' as string]: `${p.dyEnd}px`,
+            ['--rotApex' as string]: `${p.rotApex}deg`,
+            ['--rotEnd' as string]: `${p.rotEnd}deg`,
           }}
         />
       ))}
@@ -3829,33 +3838,35 @@ function DancingSkeleton({ seasonalDate }: { seasonalDate?: Date }) {
     }
     setActive(false)
     clearAllTimers()
-    const clearConfettiTimer = setTimeout(() => setShowConfetti(false), 2400)
+    const clearConfettiTimer = setTimeout(() => setShowConfetti(false), 2600)
     timersRef.current.push(clearConfettiTimer)
     const nextTimer = setTimeout(trigger, 25_000 + Math.random() * 30_000)
     timersRef.current.push(nextTimer)
   }
 
-  if (!active || !coords) return null
+  if ((!active && !showConfetti) || !coords) return null
 
   return (
     <>
-      <motion.div
-        key={runId}
-        initial={{ x: coords.startX }}
-        animate={{
-          x: [coords.startX, coords.danceX, coords.danceX, coords.danceX, coords.exitX],
-        }}
-        transition={{
-          duration: 8.0,
-          times: [0, 0.30, 0.675, 0.75, 1],
-          ease: ['easeOut', 'linear', 'linear', 'easeIn'],
-        }}
-        onAnimationComplete={handleAnimationComplete}
-        className="fixed bottom-3 pointer-events-none z-30 select-none overflow-visible"
-        style={{ willChange: 'transform', transform: 'translateZ(0)' }}
-      >
-        <DancingSkeletonFigure phase={phase} flip={direction === -1} isBirthday={isBday} />
-      </motion.div>
+      {active && (
+        <motion.div
+          key={runId}
+          initial={{ x: coords.startX }}
+          animate={{
+            x: [coords.startX, coords.danceX, coords.danceX, coords.danceX, coords.exitX],
+          }}
+          transition={{
+            duration: 8.0,
+            times: [0, 0.30, 0.675, 0.75, 1],
+            ease: ['easeOut', 'linear', 'linear', 'easeIn'],
+          }}
+          onAnimationComplete={handleAnimationComplete}
+          className="fixed bottom-3 pointer-events-none z-30 select-none overflow-visible"
+          style={{ willChange: 'transform', transform: 'translateZ(0)' }}
+        >
+          <DancingSkeletonFigure phase={phase} flip={direction === -1} isBirthday={isBday} />
+        </motion.div>
+      )}
       {showConfetti && <SkeletonConfettiBurst x={coords.danceX + 48} />}
     </>
   )
