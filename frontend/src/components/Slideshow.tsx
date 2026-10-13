@@ -3452,7 +3452,7 @@ function DancingSkeletonFigure({
         }
         @keyframes skelStartleArmR {
           0% { transform: rotate(30deg); }
-          100% { transform: rotate(-130deg); }
+          100% { transform: rotate(130deg); }
         }
         @keyframes skelStartlePop {
           0% { opacity: 0; transform: scale(0.2) translateY(10px); }
@@ -3801,16 +3801,20 @@ function DancingSkeleton({ seasonalDate }: { seasonalDate?: Date }) {
   const trigger = (e?: Event) => {
     clearAllTimers()
     setShowConfetti(false)
-    const custom = e as CustomEvent<{ freeze?: boolean }> | undefined
+    const custom = e as CustomEvent<{ freeze?: boolean; phase?: 'entering' | 'dancing' | 'startled' | 'running'; x?: number }> | undefined
     const isFreeze = Boolean(custom?.detail?.freeze)
+    const targetPhase = isFreeze ? (custom?.detail?.phase || 'dancing') : 'entering'
     const w = typeof window !== 'undefined' ? window.innerWidth : 1920
     const dir: 1 | -1 = Math.random() < 0.5 ? 1 : -1
     setDirection(dir)
-    const danceX = dir === 1 ? Math.round(w * 0.26) : Math.round(w * 0.52)
+    const danceX = custom?.detail?.x ?? (dir === 1 ? Math.round(w * 0.26) : Math.round(w * 0.52))
     const startX = isFreeze ? danceX : (dir === 1 ? -110 : w + 110)
     const exitX = isFreeze ? danceX : (dir === 1 ? w + 130 : -130)
     setCoords({ startX, danceX, exitX })
-    setPhase(isFreeze ? 'dancing' : 'entering')
+    setPhase(targetPhase)
+    if (isFreeze && targetPhase === 'startled' && isBday) {
+      setShowConfetti(true)
+    }
     setRunId((r) => r + 1)
     setActive(true)
 
@@ -3832,7 +3836,7 @@ function DancingSkeleton({ seasonalDate }: { seasonalDate?: Date }) {
     timersRef.current.push(
       setTimeout(() => {
         setPhase('running')
-      }, 6000)
+      }, 6200)
     )
   }
 
@@ -3852,8 +3856,9 @@ function DancingSkeleton({ seasonalDate }: { seasonalDate?: Date }) {
       return
     }
     setActive(false)
-    setShowConfetti(false)
     clearAllTimers()
+    const clearConfettiTimer = setTimeout(() => setShowConfetti(false), 2400)
+    timersRef.current.push(clearConfettiTimer)
     const nextTimer = setTimeout(trigger, 25_000 + Math.random() * 30_000)
     timersRef.current.push(nextTimer)
   }
