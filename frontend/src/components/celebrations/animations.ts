@@ -29,6 +29,7 @@ export type CelebrationName =
   | 'donut-crusher'
   | 'firefighter-rescue'
   | 'ninja-chop'
+  | 'chore-tower'
   | 'birthday-cake'
 
 export interface Celebration {
@@ -1442,6 +1443,16 @@ export const CELEBRATIONS: Celebration[] = [
     hideHtmlPraise: true,
     praise: ['Hi-yah! Chores complete!'],
     iframeSrc: '/celebrations/ninja_chore_chop.html?embed=1',
+  },
+  {
+    name: 'chore-tower',
+    emoji: '🏗️',
+    label: 'Chore Tower',
+    backdrop: '#0f172a',
+    durationMs: 7800,
+    hideHtmlPraise: true,
+    praise: ['Chores stacked high!', 'Mission constructed!'],
+    iframeSrc: '/celebrations/chore_tower.html?embed=1',
   },
   {
     name: 'confetti',
