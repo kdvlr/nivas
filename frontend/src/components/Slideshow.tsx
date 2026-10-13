@@ -3642,18 +3642,22 @@ function DancingSkeleton({ seasonalDate }: { seasonalDate?: Date }) {
     timersRef.current = []
   }
 
-  const trigger = () => {
+  const trigger = (e?: Event) => {
     clearAllTimers()
+    const custom = e as CustomEvent<{ freeze?: boolean }> | undefined
+    const isFreeze = Boolean(custom?.detail?.freeze)
     const w = typeof window !== 'undefined' ? window.innerWidth : 1920
     const dir: 1 | -1 = Math.random() < 0.5 ? 1 : -1
     setDirection(dir)
-    const startX = dir === 1 ? -110 : w + 110
     const danceX = dir === 1 ? Math.round(w * 0.26) : Math.round(w * 0.52)
-    const exitX = dir === 1 ? w + 130 : -130
+    const startX = isFreeze ? danceX : (dir === 1 ? -110 : w + 110)
+    const exitX = isFreeze ? danceX : (dir === 1 ? w + 130 : -130)
     setCoords({ startX, danceX, exitX })
-    setPhase('entering')
+    setPhase(isFreeze ? 'dancing' : 'entering')
     setRunId((r) => r + 1)
     setActive(true)
+
+    if (isFreeze) return
 
     timersRef.current.push(
       setTimeout(() => {
@@ -3684,6 +3688,9 @@ function DancingSkeleton({ seasonalDate }: { seasonalDate?: Date }) {
   }, [])
 
   const handleAnimationComplete = () => {
+    if (coords && coords.startX === coords.exitX) {
+      return
+    }
     setActive(false)
     clearAllTimers()
     const nextTimer = setTimeout(trigger, 25_000 + Math.random() * 30_000)
