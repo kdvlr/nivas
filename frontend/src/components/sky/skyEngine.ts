@@ -2135,8 +2135,8 @@ export function startFxCanvas(
     const creaturesPossible = calm && (daylight || november)
     const witchPossible = october && calm
     const santaPossible = christmasDay && calm
-    const wantsCandy = daylight && (october || swaraBirthday) && calm
-    const batCakePossible = daylight && (october || swaraBirthday) && calm
+    const wantsCandy = daylight && (swaraBirthday || getQueryParam('candy') === '1') && calm
+    const batCakePossible = daylight && (swaraBirthday || Boolean(getQueryParam('batcake'))) && calm
 
     const active =
       wantsWeather ||

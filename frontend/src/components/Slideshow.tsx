@@ -5146,9 +5146,9 @@ export default function Slideshow({
         <AutumnHarvestHorizon seasonalDate={seasonalDate} phase={phase} />
       )}
 
-      {/* October daytime seasonal delights: party bunting & sunglasses-wearing acrobatic spiders */}
-      {isOctober(seasonalDate) && (phase === 'day' || phase === 'dawn') && (
-        <DaytimePartyBuntingAndSpiders isBirthday={isSwaraBirthday(seasonalDate)} />
+      {/* Swara's Birthday daytime delights: party streamers & sunglasses-wearing acrobatic spiders */}
+      {isSwaraBirthday(seasonalDate) && (phase === 'day' || phase === 'dawn') && (
+        <DaytimePartyBuntingAndSpiders isBirthday={true} />
       )}
 
       {/* October dusk/night spooky delights: webs & spiders dangling in FRONT of photos */}
