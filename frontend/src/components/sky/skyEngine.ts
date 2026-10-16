@@ -16,6 +16,7 @@ export interface SkyState {
 
 const rand = (a: number, b: number) => a + Math.random() * (b - a)
 import {
+  getQueryParam,
   getSeasonalDate,
   isOctober,
   isSwaraBirthday,
@@ -1266,37 +1267,100 @@ export function startFxCanvas(
     targetCtx.lineWidth = 0.7
     targetCtx.stroke()
 
-    // 4. Iconic Witch Hat
+    // 4. Hat: Festive Birthday Party Cone Hat vs Iconic Witch Hat
     targetCtx.save()
     targetCtx.translate(8, -22)
-    targetCtx.rotate(-0.2)
 
-    // Wide Brim
-    targetCtx.fillStyle = color
-    targetCtx.beginPath()
-    targetCtx.ellipse(0, 0, 11, 2.5, 0, 0, Math.PI * 2)
-    targetCtx.fill()
-    targetCtx.strokeStyle = outlineColor
-    targetCtx.lineWidth = 0.7
-    targetCtx.stroke()
+    if (isBirthday) {
+      targetCtx.rotate(-0.15) // Tilted back slightly with the broom wind
 
-    // Hat Band (orange ribbon)
-    targetCtx.fillStyle = '#ea580c'
-    targetCtx.fillRect(-5, -3, 10, 2)
+      // Main party cone hat body - bright festive pink
+      targetCtx.beginPath()
+      targetCtx.moveTo(-6.5, 0)
+      targetCtx.lineTo(0, -22)
+      targetCtx.lineTo(6.5, 0)
+      targetCtx.closePath()
+      targetCtx.fillStyle = '#ec4899'
+      targetCtx.fill()
+      targetCtx.strokeStyle = 'rgba(255, 255, 255, 0.95)'
+      targetCtx.lineWidth = 0.8
+      targetCtx.stroke()
 
-    // Cone of hat bending backward
-    targetCtx.fillStyle = color
-    targetCtx.beginPath()
-    targetCtx.moveTo(-5, -2)
-    targetCtx.lineTo(5, -2)
-    targetCtx.quadraticCurveTo(3, -12, -2, -18)
-    targetCtx.lineTo(-6, -17)
-    targetCtx.quadraticCurveTo(-1, -10, -5, -2)
-    targetCtx.closePath()
-    targetCtx.fill()
-    targetCtx.strokeStyle = outlineColor
-    targetCtx.lineWidth = 0.7
-    targetCtx.stroke()
+      // Vibrant diagonal festive stripes across party hat cone
+      // Stripe 1: Sky Blue
+      targetCtx.beginPath()
+      targetCtx.moveTo(-4.8, -6)
+      targetCtx.lineTo(0, -22)
+      targetCtx.lineTo(1.8, -14)
+      targetCtx.closePath()
+      targetCtx.fillStyle = '#38bdf8'
+      targetCtx.fill()
+
+      // Stripe 2: Golden Yellow
+      targetCtx.beginPath()
+      targetCtx.moveTo(-2.5, 0)
+      targetCtx.lineTo(0, -22)
+      targetCtx.lineTo(0, -9)
+      targetCtx.closePath()
+      targetCtx.fillStyle = '#facc15'
+      targetCtx.fill()
+
+      // Stripe 3: Royal Purple
+      targetCtx.beginPath()
+      targetCtx.moveTo(2.5, 0)
+      targetCtx.lineTo(0, -22)
+      targetCtx.lineTo(4.8, -7)
+      targetCtx.closePath()
+      targetCtx.fillStyle = '#a855f7'
+      targetCtx.fill()
+
+      // Festive yellow ruffled trim at base
+      targetCtx.fillStyle = '#fef08a'
+      targetCtx.beginPath()
+      targetCtx.ellipse(0, 0, 7.5, 2.2, 0, 0, Math.PI * 2)
+      targetCtx.fill()
+      targetCtx.strokeStyle = '#facc15'
+      targetCtx.lineWidth = 0.6
+      targetCtx.stroke()
+
+      // Fluffy golden pom-pom on the tip of the party cone
+      targetCtx.fillStyle = '#facc15'
+      targetCtx.beginPath()
+      targetCtx.arc(0, -22, 2.8, 0, Math.PI * 2)
+      targetCtx.fill()
+      targetCtx.strokeStyle = '#ffffff'
+      targetCtx.lineWidth = 0.6
+      targetCtx.stroke()
+    } else {
+      targetCtx.rotate(-0.2)
+
+      // Wide Brim
+      targetCtx.fillStyle = color
+      targetCtx.beginPath()
+      targetCtx.ellipse(0, 0, 11, 2.5, 0, 0, Math.PI * 2)
+      targetCtx.fill()
+      targetCtx.strokeStyle = outlineColor
+      targetCtx.lineWidth = 0.7
+      targetCtx.stroke()
+
+      // Hat Band (orange ribbon)
+      targetCtx.fillStyle = '#ea580c'
+      targetCtx.fillRect(-5, -3, 10, 2)
+
+      // Cone of hat bending backward
+      targetCtx.fillStyle = color
+      targetCtx.beginPath()
+      targetCtx.moveTo(-5, -2)
+      targetCtx.lineTo(5, -2)
+      targetCtx.quadraticCurveTo(3, -12, -2, -18)
+      targetCtx.lineTo(-6, -17)
+      targetCtx.quadraticCurveTo(-1, -10, -5, -2)
+      targetCtx.closePath()
+      targetCtx.fill()
+      targetCtx.strokeStyle = outlineColor
+      targetCtx.lineWidth = 0.7
+      targetCtx.stroke()
+    }
 
     targetCtx.restore()
 
@@ -1348,6 +1412,59 @@ export function startFxCanvas(
     targetCtx.arc(-10.2, -1.2, 0.45, 0, Math.PI * 2)
     targetCtx.arc(-11.5, -1.2, 0.45, 0, Math.PI * 2)
     targetCtx.fill()
+
+    // Cat Birthday Party Hat (tiny party cone on kitten's head between ears)
+    if (isBirthday) {
+      targetCtx.save()
+      targetCtx.translate(-11, -3.2)
+      targetCtx.rotate(-0.15) // tilted slightly back in the wind
+
+      // Mini Party Cone: height 7.5, base width 3.6
+      targetCtx.beginPath()
+      targetCtx.moveTo(-1.8, 0)
+      targetCtx.lineTo(0, -7.5)
+      targetCtx.lineTo(1.8, 0)
+      targetCtx.closePath()
+      targetCtx.fillStyle = '#8b5cf6' // vibrant royal purple
+      targetCtx.fill()
+      targetCtx.strokeStyle = 'rgba(255, 255, 255, 0.95)'
+      targetCtx.lineWidth = 0.4
+      targetCtx.stroke()
+
+      // Cute stripes on mini cone
+      targetCtx.beginPath()
+      targetCtx.moveTo(-1.2, -2)
+      targetCtx.lineTo(0, -7.5)
+      targetCtx.lineTo(0.5, -4.8)
+      targetCtx.closePath()
+      targetCtx.fillStyle = '#facc15' // yellow stripe
+      targetCtx.fill()
+
+      targetCtx.beginPath()
+      targetCtx.moveTo(0.6, 0)
+      targetCtx.lineTo(0, -7.5)
+      targetCtx.lineTo(1.4, -2.5)
+      targetCtx.closePath()
+      targetCtx.fillStyle = '#38bdf8' // blue stripe
+      targetCtx.fill()
+
+      // Mini ruffled trim at base
+      targetCtx.fillStyle = '#fef08a'
+      targetCtx.beginPath()
+      targetCtx.ellipse(0, 0, 2.0, 0.7, 0, 0, Math.PI * 2)
+      targetCtx.fill()
+
+      // Tiny pom-pom on top
+      targetCtx.fillStyle = '#facc15'
+      targetCtx.beginPath()
+      targetCtx.arc(0, -7.5, 1.1, 0, Math.PI * 2)
+      targetCtx.fill()
+      targetCtx.strokeStyle = '#ffffff'
+      targetCtx.lineWidth = 0.3
+      targetCtx.stroke()
+
+      targetCtx.restore()
+    }
 
     // 6. Swara's Birthday Celebration: Trailing Birthday Banner & Floating Balloons behind the broom!
     if (isBirthday) {
@@ -1822,7 +1939,7 @@ export function startFxCanvas(
 
     // Witch: occasional October flight across the sky on a broomstick.
     if (witchPossible) {
-      if (!witch && t > nextWitch) {
+      if (!witch && (t > nextWitch || getQueryParam('witch') === '1')) {
         const dir: 1 | -1 = Math.random() < 0.5 ? 1 : -1
         const scale = rand(1.9, 2.3) // 2 sizes bigger (was 0.85-1.25)
         const baseY = h * rand(0.08, 0.28)
@@ -1867,7 +1984,7 @@ export function startFxCanvas(
         const gone = witch.dir === 1 ? witch.x - exitMargin > w : witch.x + exitMargin < 0
         if (gone) {
           witch = null
-          nextWitch = t + rand(80_000, 180_000)
+          nextWitch = getQueryParam('witch') === '1' ? t + 1000 : t + rand(80_000, 180_000)
         } else {
           const targetCtx = (witch.isBehind && bgCtx) ? bgCtx : ctx
           if (witch.isBehind && bgCtx) bgHadDraw = true

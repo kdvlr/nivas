@@ -2482,7 +2482,26 @@ function RunningElf() {
   )
 }
 
-function Spider({ scale = 1, hourglassColor = '#ef4444' }: { scale?: number; hourglassColor?: string }) {
+function Spider({
+  scale = 1,
+  hourglassColor = '#ef4444',
+  isBirthday = false,
+  variant = 0,
+}: {
+  scale?: number
+  hourglassColor?: string
+  isBirthday?: boolean
+  variant?: number
+}) {
+  // 4 festive color schemes and tilts for the spiders' party hats
+  const hatVariants = [
+    { primary: '#ec4899', s1: '#38bdf8', s2: '#facc15', s3: '#a855f7', rot: -16, tx: -1.5 },
+    { primary: '#8b5cf6', s1: '#facc15', s2: '#38bdf8', s3: '#ec4899', rot: 16, tx: 1.5 },
+    { primary: '#06b6d4', s1: '#ec4899', s2: '#facc15', s3: '#a855f7', rot: -14, tx: -1.5 },
+    { primary: '#f97316', s1: '#8b5cf6', s2: '#38bdf8', s3: '#facc15', rot: 18, tx: 1.5 },
+  ]
+  const hv = hatVariants[variant % hatVariants.length]
+
   return (
     <g transform={`scale(${scale})`}>
       {/* Subtle depth shadow behind spider body (zero blur filter cost) */}
@@ -2541,11 +2560,27 @@ function Spider({ scale = 1, hourglassColor = '#ef4444' }: { scale?: number; hou
         <circle cx="-3.2" cy="-0.8" r="0.7" fill="#fca5a5" />
         <circle cx="3.2" cy="-0.8" r="0.7" fill="#fca5a5" />
       </g>
+
+      {/* Festive Striped Party Cone Hat perched on spider's head for Swara's Birthday */}
+      {isBirthday && (
+        <g transform={`translate(${hv.tx}, -4) rotate(${hv.rot})`}>
+          {/* Party Cone Hat */}
+          <path d="M -3.8 0 L 0 -13 L 3.8 0 Z" fill={hv.primary} stroke="rgba(255, 255, 255, 0.95)" strokeWidth="0.6" />
+          {/* Festive Diagonal Stripes */}
+          <path d="M -2.6 -4 L 0 -13 L 1 -8 Z" fill={hv.s1} />
+          <path d="M -1.5 0 L 0 -13 L 0 -5 Z" fill={hv.s2} />
+          <path d="M 1.5 0 L 0 -13 L 2.8 -4 Z" fill={hv.s3} />
+          {/* Hat Base Ruffle Trim */}
+          <ellipse cx="0" cy="0" rx="4.0" ry="1.2" fill="#fef08a" stroke="#facc15" strokeWidth="0.5" />
+          {/* Fluffy Pom-pom on tip */}
+          <circle cx="0" cy="-13" r="1.8" fill="#facc15" stroke="#ffffff" strokeWidth="0.5" />
+        </g>
+      )}
     </g>
   )
 }
 
-function SpookyWebsAndSpiders() {
+function SpookyWebsAndSpiders({ isBirthday = false }: { isBirthday?: boolean }) {
   return (
     <div
       className="absolute top-0 left-0 right-0 h-[480px] pointer-events-none z-30 select-none overflow-hidden"
@@ -2635,7 +2670,7 @@ function SpookyWebsAndSpiders() {
           <g style={{ animation: 'spiderFloat1 8.5s ease-in-out infinite' }}>
             <line x1="0" y1="-500" x2="0" y2="0" stroke="rgba(241, 245, 249, 0.65)" strokeWidth="1.2" />
             <g style={{ transformOrigin: '0 0', animation: 'spiderSway1 3.2s ease-in-out infinite' }}>
-              <Spider scale={1.05} hourglassColor="#ef4444" />
+              <Spider scale={1.05} hourglassColor="#ef4444" isBirthday={isBirthday} variant={0} />
             </g>
           </g>
         </g>
@@ -2645,7 +2680,7 @@ function SpookyWebsAndSpiders() {
           <g style={{ animation: 'spiderFloat2 11s ease-in-out infinite', animationDelay: '1.8s' }}>
             <line x1="0" y1="-500" x2="0" y2="0" stroke="rgba(241, 245, 249, 0.65)" strokeWidth="1.2" />
             <g style={{ transformOrigin: '0 0', animation: 'spiderSway2 3.6s ease-in-out infinite' }}>
-              <Spider scale={1.25} hourglassColor="#f97316" />
+              <Spider scale={1.25} hourglassColor="#f97316" isBirthday={isBirthday} variant={1} />
             </g>
           </g>
         </g>
@@ -2655,7 +2690,7 @@ function SpookyWebsAndSpiders() {
           <g style={{ animation: 'spiderFloat3 9.8s ease-in-out infinite', animationDelay: '4.2s' }}>
             <line x1="0" y1="-500" x2="0" y2="0" stroke="rgba(241, 245, 249, 0.65)" strokeWidth="1.2" />
             <g style={{ transformOrigin: '0 0', animation: 'spiderSway1 2.9s ease-in-out infinite' }}>
-              <Spider scale={1.15} hourglassColor="#ef4444" />
+              <Spider scale={1.15} hourglassColor="#ef4444" isBirthday={isBirthday} variant={2} />
             </g>
           </g>
         </g>
@@ -2665,7 +2700,7 @@ function SpookyWebsAndSpiders() {
           <g style={{ animation: 'spiderFloat4 8.2s ease-in-out infinite', animationDelay: '0.8s' }}>
             <line x1="0" y1="-500" x2="0" y2="0" stroke="rgba(241, 245, 249, 0.65)" strokeWidth="1.2" />
             <g style={{ transformOrigin: '0 0', animation: 'spiderSway2 3.4s ease-in-out infinite' }}>
-              <Spider scale={1.0} hourglassColor="#eab308" />
+              <Spider scale={1.0} hourglassColor="#eab308" isBirthday={isBirthday} variant={3} />
             </g>
           </g>
         </g>
@@ -4549,7 +4584,7 @@ export default function Slideshow({
 
       {/* October dusk/night spooky delights: webs & spiders dangling in FRONT of photos */}
       {isOctober(seasonalDate) && (phase === 'dusk' || phase === 'night') && (
-        <SpookyWebsAndSpiders />
+        <SpookyWebsAndSpiders isBirthday={isSwaraBirthday(seasonalDate)} />
       )}
 
       {/* October Spooky Delight: Dancing and running away skeleton */}
