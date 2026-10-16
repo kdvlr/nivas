@@ -2320,9 +2320,21 @@ function RunningSquirrel() {
   useEffect(() => {
     const qp = getQueryParam('squirrel')
     if (qp) {
+      const normalized =
+        qp === 'bury'
+          ? 'burying'
+          : qp === 'dig'
+          ? 'digging'
+          : qp === 'run' || qp === 'flee'
+          ? 'fleeing'
+          : qp
       const validPhases: SquirrelPhase[] = ['entering', 'sniffing', 'digging', 'burying', 'alert', 'fleeing']
-      const freezePhase = validPhases.includes(qp as SquirrelPhase) ? (qp as SquirrelPhase) : 'digging'
-      trigger(new CustomEvent('trigger-squirrel', { detail: { freeze: true, phase: freezePhase } }))
+      const freezePhase = validPhases.includes(normalized as SquirrelPhase) ? (normalized as SquirrelPhase) : 'digging'
+      trigger(
+        new CustomEvent('trigger-squirrel', {
+          detail: { freeze: true, phase: freezePhase, x: 960, direction: 1 },
+        })
+      )
       return
     }
 
