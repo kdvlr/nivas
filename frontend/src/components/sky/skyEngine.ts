@@ -281,8 +281,15 @@ interface BatSwarm {
 interface WitchSparkle {
   x: number
   y: number
+  vx: number
+  vy: number
   alpha: number
   size: number
+  length: number
+  angle: number
+  rotSpeed: number
+  color: string
+  kind: 'sprinkle' | 'star' | 'dot'
 }
 
 interface Witch {
@@ -296,6 +303,13 @@ interface Witch {
   isBehind: boolean
 }
 
+interface SantaSparkle {
+  x: number
+  y: number
+  alpha: number
+  size: number
+}
+
 interface Santa {
   x: number
   y: number
@@ -303,7 +317,7 @@ interface Santa {
   speed: number
   dir: 1 | -1
   scale: number
-  sparkles: WitchSparkle[]
+  sparkles: SantaSparkle[]
 }
 
 interface FallingGift {
@@ -1267,100 +1281,37 @@ export function startFxCanvas(
     targetCtx.lineWidth = 0.7
     targetCtx.stroke()
 
-    // 4. Hat: Festive Birthday Party Cone Hat vs Iconic Witch Hat
+    // 4. Iconic Witch Hat
     targetCtx.save()
     targetCtx.translate(8, -22)
+    targetCtx.rotate(-0.2)
 
-    if (isBirthday) {
-      targetCtx.rotate(-0.15) // Tilted back slightly with the broom wind
+    // Wide Brim
+    targetCtx.fillStyle = color
+    targetCtx.beginPath()
+    targetCtx.ellipse(0, 0, 11, 2.5, 0, 0, Math.PI * 2)
+    targetCtx.fill()
+    targetCtx.strokeStyle = outlineColor
+    targetCtx.lineWidth = 0.7
+    targetCtx.stroke()
 
-      // Main party cone hat body - bright festive pink
-      targetCtx.beginPath()
-      targetCtx.moveTo(-6.5, 0)
-      targetCtx.lineTo(0, -22)
-      targetCtx.lineTo(6.5, 0)
-      targetCtx.closePath()
-      targetCtx.fillStyle = '#ec4899'
-      targetCtx.fill()
-      targetCtx.strokeStyle = 'rgba(255, 255, 255, 0.95)'
-      targetCtx.lineWidth = 0.8
-      targetCtx.stroke()
+    // Hat Band (orange ribbon)
+    targetCtx.fillStyle = '#ea580c'
+    targetCtx.fillRect(-5, -3, 10, 2)
 
-      // Vibrant diagonal festive stripes across party hat cone
-      // Stripe 1: Sky Blue
-      targetCtx.beginPath()
-      targetCtx.moveTo(-4.8, -6)
-      targetCtx.lineTo(0, -22)
-      targetCtx.lineTo(1.8, -14)
-      targetCtx.closePath()
-      targetCtx.fillStyle = '#38bdf8'
-      targetCtx.fill()
-
-      // Stripe 2: Golden Yellow
-      targetCtx.beginPath()
-      targetCtx.moveTo(-2.5, 0)
-      targetCtx.lineTo(0, -22)
-      targetCtx.lineTo(0, -9)
-      targetCtx.closePath()
-      targetCtx.fillStyle = '#facc15'
-      targetCtx.fill()
-
-      // Stripe 3: Royal Purple
-      targetCtx.beginPath()
-      targetCtx.moveTo(2.5, 0)
-      targetCtx.lineTo(0, -22)
-      targetCtx.lineTo(4.8, -7)
-      targetCtx.closePath()
-      targetCtx.fillStyle = '#a855f7'
-      targetCtx.fill()
-
-      // Festive yellow ruffled trim at base
-      targetCtx.fillStyle = '#fef08a'
-      targetCtx.beginPath()
-      targetCtx.ellipse(0, 0, 7.5, 2.2, 0, 0, Math.PI * 2)
-      targetCtx.fill()
-      targetCtx.strokeStyle = '#facc15'
-      targetCtx.lineWidth = 0.6
-      targetCtx.stroke()
-
-      // Fluffy golden pom-pom on the tip of the party cone
-      targetCtx.fillStyle = '#facc15'
-      targetCtx.beginPath()
-      targetCtx.arc(0, -22, 2.8, 0, Math.PI * 2)
-      targetCtx.fill()
-      targetCtx.strokeStyle = '#ffffff'
-      targetCtx.lineWidth = 0.6
-      targetCtx.stroke()
-    } else {
-      targetCtx.rotate(-0.2)
-
-      // Wide Brim
-      targetCtx.fillStyle = color
-      targetCtx.beginPath()
-      targetCtx.ellipse(0, 0, 11, 2.5, 0, 0, Math.PI * 2)
-      targetCtx.fill()
-      targetCtx.strokeStyle = outlineColor
-      targetCtx.lineWidth = 0.7
-      targetCtx.stroke()
-
-      // Hat Band (orange ribbon)
-      targetCtx.fillStyle = '#ea580c'
-      targetCtx.fillRect(-5, -3, 10, 2)
-
-      // Cone of hat bending backward
-      targetCtx.fillStyle = color
-      targetCtx.beginPath()
-      targetCtx.moveTo(-5, -2)
-      targetCtx.lineTo(5, -2)
-      targetCtx.quadraticCurveTo(3, -12, -2, -18)
-      targetCtx.lineTo(-6, -17)
-      targetCtx.quadraticCurveTo(-1, -10, -5, -2)
-      targetCtx.closePath()
-      targetCtx.fill()
-      targetCtx.strokeStyle = outlineColor
-      targetCtx.lineWidth = 0.7
-      targetCtx.stroke()
-    }
+    // Cone of hat bending backward
+    targetCtx.fillStyle = color
+    targetCtx.beginPath()
+    targetCtx.moveTo(-5, -2)
+    targetCtx.lineTo(5, -2)
+    targetCtx.quadraticCurveTo(3, -12, -2, -18)
+    targetCtx.lineTo(-6, -17)
+    targetCtx.quadraticCurveTo(-1, -10, -5, -2)
+    targetCtx.closePath()
+    targetCtx.fill()
+    targetCtx.strokeStyle = outlineColor
+    targetCtx.lineWidth = 0.7
+    targetCtx.stroke()
 
     targetCtx.restore()
 
@@ -1795,7 +1746,7 @@ export function startFxCanvas(
       newYearSeason ||
       (batsPossible && t > nextBatSwarm) ||
       (creaturesPossible && t > nextFlock) ||
-      (witchPossible && t > nextWitch) ||
+      (witchPossible && (t > nextWitch || getQueryParam('witch') === '1')) ||
       (santaPossible && t > nextSanta)
 
     if (!active) {
@@ -1943,7 +1894,7 @@ export function startFxCanvas(
         const dir: 1 | -1 = Math.random() < 0.5 ? 1 : -1
         const scale = rand(1.9, 2.3) // 2 sizes bigger (was 0.85-1.25)
         const baseY = h * rand(0.08, 0.28)
-        const isBehind = Math.random() < 0.5 && !!bgCtx
+        const isBehind = getQueryParam('witch') === '1' ? false : (Math.random() < 0.5 && !!bgCtx)
         const witchMargin = swaraBirthday ? 520 : 240
         witch = {
           x: dir === 1 ? -witchMargin : w + witchMargin,
@@ -1960,21 +1911,49 @@ export function startFxCanvas(
         witch.x += witch.dir * witch.speed * dt
         witch.y = witch.baseY + Math.sin(t / 550) * 10
 
-        // Trailing stardust sparkles behind broom
-        if (Math.random() < 0.35) {
-          witch.sparkles.push({
-            x: witch.x - witch.dir * 46 * witch.scale + rand(-4, 4),
-            y: witch.y + 4 * witch.scale + rand(-3, 3),
-            alpha: rand(0.65, 0.95),
-            size: rand(2.0, 3.8),
-          })
+        // Trailing colorful sprinkles & confetti behind broom
+        const sprinkleBurst = swaraBirthday ? 3 : 2
+        for (let s = 0; s < sprinkleBurst; s++) {
+          if (Math.random() < 0.85) {
+            const kinds: Array<'sprinkle' | 'star' | 'dot'> = ['sprinkle', 'sprinkle', 'star', 'dot']
+            const kind = kinds[Math.floor(Math.random() * kinds.length)]
+            const colors = [
+              '#f43f5e', // Hot pink / rose
+              '#ec4899', // Bright pink
+              '#a855f7', // Vivid purple
+              '#38bdf8', // Sky blue
+              '#06b6d4', // Vibrant cyan
+              '#facc15', // Bright yellow
+              '#fb923c', // Festive orange
+              '#4ade80', // Lime green
+              '#ffffff', // White sugar
+            ]
+            const color = colors[Math.floor(Math.random() * colors.length)]
+            const bristleOffsetX = -witch.dir * rand(38, 54) * witch.scale
+            const bristleOffsetY = rand(2, 9) * witch.scale
+            witch.sparkles.push({
+              x: witch.x + bristleOffsetX + rand(-3, 3),
+              y: witch.y + bristleOffsetY + rand(-3, 3),
+              vx: -witch.dir * rand(25, 65) + rand(-10, 10),
+              vy: rand(15, 45),
+              alpha: rand(0.85, 1.0),
+              size: kind === 'sprinkle' ? rand(2.2, 3.4) : kind === 'star' ? rand(3.5, 6.0) : rand(1.8, 3.0),
+              length: rand(6.5, 11.5),
+              angle: rand(0, Math.PI * 2),
+              rotSpeed: rand(-3.5, 3.5),
+              color,
+              kind,
+            })
+          }
         }
 
-        // Update sparkles
+        // Update sprinkles
         for (let i = witch.sparkles.length - 1; i >= 0; i--) {
           const sp = witch.sparkles[i]
-          sp.alpha -= dt * 1.3
-          sp.y += dt * 6
+          sp.x += sp.vx * dt
+          sp.y += sp.vy * dt
+          sp.angle += sp.rotSpeed * dt
+          sp.alpha -= dt * 0.75 // lasts ~1.3 seconds
           if (sp.alpha <= 0) {
             witch.sparkles.splice(i, 1)
           }
@@ -1989,12 +1968,39 @@ export function startFxCanvas(
           const targetCtx = (witch.isBehind && bgCtx) ? bgCtx : ctx
           if (witch.isBehind && bgCtx) bgHadDraw = true
 
-          // Draw sparkles
+          // Draw colorful sprinkles
           for (const sp of witch.sparkles) {
-            targetCtx.fillStyle = `rgba(253, 224, 71, ${sp.alpha})`
-            targetCtx.beginPath()
-            targetCtx.arc(sp.x, sp.y, sp.size, 0, Math.PI * 2)
-            targetCtx.fill()
+            targetCtx.save()
+            targetCtx.globalAlpha = Math.max(0, sp.alpha)
+            targetCtx.fillStyle = sp.color
+
+            if (sp.kind === 'sprinkle') {
+              targetCtx.translate(sp.x, sp.y)
+              targetCtx.rotate(sp.angle)
+              targetCtx.beginPath()
+              if (typeof targetCtx.roundRect === 'function') {
+                targetCtx.roundRect(-sp.length / 2, -sp.size / 2, sp.length, sp.size, sp.size / 2)
+              } else {
+                targetCtx.rect(-sp.length / 2, -sp.size / 2, sp.length, sp.size)
+              }
+              targetCtx.fill()
+            } else if (sp.kind === 'star') {
+              targetCtx.translate(sp.x, sp.y)
+              targetCtx.rotate(sp.angle)
+              targetCtx.beginPath()
+              const s = sp.size
+              targetCtx.moveTo(0, -s)
+              targetCtx.quadraticCurveTo(0, 0, s, 0)
+              targetCtx.quadraticCurveTo(0, 0, 0, s)
+              targetCtx.quadraticCurveTo(0, 0, -s, 0)
+              targetCtx.quadraticCurveTo(0, 0, 0, -s)
+              targetCtx.fill()
+            } else {
+              targetCtx.beginPath()
+              targetCtx.arc(sp.x, sp.y, sp.size, 0, Math.PI * 2)
+              targetCtx.fill()
+            }
+            targetCtx.restore()
           }
 
           const witchColor =
