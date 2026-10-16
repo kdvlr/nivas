@@ -2156,7 +2156,7 @@ export function startFxCanvas(
       (batsPossible && t > nextBatSwarm) ||
       (creaturesPossible && t > nextFlock) ||
       (witchPossible && (t > nextWitch || getQueryParam('witch') === '1')) ||
-      (batCakePossible && (t > nextBatCake || getQueryParam('batcake') === '1')) ||
+      (batCakePossible && (t > nextBatCake || Boolean(getQueryParam('batcake')))) ||
       (santaPossible && t > nextSanta)
 
     if (!active) {
@@ -2488,14 +2488,15 @@ export function startFxCanvas(
     // Bat Cake Air-Delivery Mission ("The Bat Drop"):
     // Two friendly bats carrying a 3-tier birthday cake across the daytime sky!
     if (batCakePossible) {
-      if (!batCake && (t > nextBatCake || getQueryParam('batcake') === '1')) {
-        const dir: 1 | -1 = Math.random() < 0.5 ? 1 : -1
-        const scale = rand(1.6, 2.0)
-        const baseY = h * rand(0.12, 0.28)
-        const isBehind = getQueryParam('batcake') === '1' ? false : (Math.random() < 0.35 && !!bgCtx)
+      if (!batCake && (t > nextBatCake || Boolean(getQueryParam('batcake')))) {
+        const isMid = getQueryParam('batcake') === 'mid'
+        const dir: 1 | -1 = isMid ? 1 : (Math.random() < 0.5 ? 1 : -1)
+        const scale = rand(1.7, 2.0)
+        const baseY = h * rand(0.14, 0.24)
+        const isBehind = Boolean(getQueryParam('batcake')) ? false : (Math.random() < 0.35 && !!bgCtx)
         const margin = 260
         batCake = {
-          x: dir === 1 ? -margin : w + margin,
+          x: isMid ? w * 0.44 : (dir === 1 ? -margin : w + margin),
           y: baseY,
           baseY,
           speed: rand(95, 130),
@@ -2541,7 +2542,7 @@ export function startFxCanvas(
         const gone = batCake.dir === 1 ? batCake.x - 300 > w : batCake.x + 300 < 0
         if (gone) {
           batCake = null
-          nextBatCake = getQueryParam('batcake') === '1' ? t + 1000 : (swaraBirthday ? t + rand(25_000, 45_000) : t + rand(35_000, 60_000))
+          nextBatCake = Boolean(getQueryParam('batcake')) ? t + 1000 : (swaraBirthday ? t + rand(25_000, 45_000) : t + rand(35_000, 60_000))
         } else {
           const targetCtx = (batCake.isBehind && bgCtx) ? bgCtx : ctx
           if (batCake.isBehind && bgCtx) bgHadDraw = true
