@@ -2890,6 +2890,9 @@ function SpookyWebsAndSpiders({ isBirthday = false }: { isBirthday?: boolean }) 
 
 function DaytimePumpkinPatch({ isBirthday = false }: { isBirthday?: boolean }) {
   const petals = [0, 26, 52, 78, 104, 130, 156, 182, 208, 234, 260, 286, 312, 338]
+  const isZombieMid =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search || (window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '')).get('zombie') === 'mid'
 
   return (
     <div
@@ -2924,6 +2927,46 @@ function DaytimePumpkinPatch({ isBirthday = false }: { isBirthday?: boolean }) {
             0%, 100% { transform: translateY(0) rotate(0deg); }
             50% { transform: translateY(-4px) rotate(2deg); }
           }
+          @keyframes zombieStroll {
+            0% { transform: translate3d(-70px, 84px, 0) scaleX(1); }
+            7% { transform: translate3d(280px, 68px, 0) scaleX(1); }
+            15% { transform: translate3d(600px, 80px, 0) scaleX(1); }
+            23% { transform: translate3d(920px, 88px, 0) scaleX(1); }
+            31% { transform: translate3d(1240px, 72px, 0) scaleX(1); }
+            39% { transform: translate3d(1560px, 62px, 0) scaleX(1); }
+            46% { transform: translate3d(1880px, 74px, 0) scaleX(1); }
+            48% { transform: translate3d(1990px, 78px, 0) scaleX(1); }
+            49% { transform: translate3d(1990px, 78px, 0) scaleX(-1); }
+            51% { transform: translate3d(1990px, 78px, 0) scaleX(-1); }
+            58% { transform: translate3d(1650px, 64px, 0) scaleX(-1); }
+            66% { transform: translate3d(1300px, 72px, 0) scaleX(-1); }
+            74% { transform: translate3d(950px, 86px, 0) scaleX(-1); }
+            82% { transform: translate3d(600px, 80px, 0) scaleX(-1); }
+            90% { transform: translate3d(260px, 68px, 0) scaleX(-1); }
+            97% { transform: translate3d(-70px, 84px, 0) scaleX(-1); }
+            99% { transform: translate3d(-70px, 84px, 0) scaleX(1); }
+            100% { transform: translate3d(-70px, 84px, 0) scaleX(1); }
+          }
+          @keyframes zombieLimpBob {
+            0%, 100% { transform: translateY(0) rotate(-2deg); }
+            50% { transform: translateY(-4px) rotate(3deg); }
+          }
+          @keyframes zombieHeadLoll {
+            0%, 100% { transform: rotate(-5deg); }
+            50% { transform: rotate(7deg); }
+          }
+          @keyframes zombieArmsBob {
+            0%, 100% { transform: rotate(-3deg); }
+            50% { transform: rotate(6deg); }
+          }
+          @keyframes zombieLegSwingL {
+            0%, 100% { transform: rotate(-18deg); }
+            50% { transform: rotate(18deg); }
+          }
+          @keyframes zombieLegSwingR {
+            0%, 100% { transform: rotate(18deg); }
+            50% { transform: rotate(-18deg); }
+          }
         `}</style>
 
         {/* --- Background Rolling Green Knolls --- */}
@@ -2932,6 +2975,92 @@ function DaytimePumpkinPatch({ isBirthday = false }: { isBirthday?: boolean }) {
           fill="#15803d"
           opacity="0.88"
         />
+
+        {/* --- Meadow Walking Zombie (Shuffling across background ridge behind foreground hill) --- */}
+        <g
+          style={{
+            willChange: 'transform',
+            animation: isZombieMid ? 'none' : 'zombieStroll 68s linear infinite',
+            transform: isZombieMid ? 'translate3d(680px, 80px, 0)' : undefined,
+          }}
+        >
+          <g transform="scale(0.85)">
+            {/* Zombie Limping Body */}
+            <g style={{ animation: 'zombieLimpBob 1.1s ease-in-out infinite', transformOrigin: '0 20px' }}>
+              {/* Shadow underneath */}
+              <ellipse cx="2" cy="40" rx="14" ry="4" fill="rgba(0, 0, 0, 0.28)" />
+
+              {/* Back Arm (Left Arm, reaching forward) */}
+              <g style={{ transformOrigin: '-2px 8px', animation: 'zombieArmsBob 1.4s ease-in-out infinite' }}>
+                <path d="M -4 6 L 6 5 L 5 11 L -5 10 Z" fill="#581c87" />
+                <path d="M 0 8 L 14 7 L 24 9" stroke="#4ade80" strokeWidth="3" strokeLinecap="round" fill="none" />
+                <path d="M 24 9 L 28 8 M 24 9 L 28 10 M 24 9 L 27 12" stroke="#4ade80" strokeWidth="1.2" strokeLinecap="round" />
+              </g>
+
+              {/* Left Leg (Back Leg) */}
+              <g style={{ transformOrigin: '-3px 22px', animation: 'zombieLegSwingL 1.1s ease-in-out infinite' }}>
+                <line x1="-3" y1="22" x2="-5" y2="34" stroke="#334155" strokeWidth="4.2" strokeLinecap="round" />
+                <path d="M -8 33 L -2 33 L -3 36 L -5 34 L -7 36 Z" fill="#334155" />
+                <line x1="-5" y1="34" x2="-6" y2="39" stroke="#4ade80" strokeWidth="2.4" strokeLinecap="round" />
+                <path d="M -9 39 L -2 39 C 0 39, 0 42, -4 42 L -9 42 Z" fill="#78350f" />
+              </g>
+
+              {/* Right Leg (Front Leg) */}
+              <g style={{ transformOrigin: '3px 22px', animation: 'zombieLegSwingR 1.1s ease-in-out infinite' }}>
+                <line x1="3" y1="22" x2="6" y2="34" stroke="#475569" strokeWidth="4.5" strokeLinecap="round" />
+                <circle cx="4.5" cy="28" r="1.5" fill="#4ade80" />
+                <path d="M 1 33 L 7 33 L 6 36 L 4 34 L 2 36 Z" fill="#475569" />
+                <line x1="6" y1="34" x2="7" y2="39" stroke="#4ade80" strokeWidth="2.4" strokeLinecap="round" />
+                <path d="M 2 39 L 9 39 C 11 39, 11 42, 7 42 L 2 42 Z" fill="#581c87" />
+              </g>
+
+              {/* Tattered Tunic / Shirt Body */}
+              <path
+                d="M -7 6 L 7 6 L 9 22 L 5 21 L 2 24 L -1 21 L -5 23 L -8 21 Z"
+                fill="#7c3aed"
+                stroke="#581c87"
+                strokeWidth="0.8"
+              />
+              <path d="M 0 11 L 3 14 L -1 16 Z" fill="#4c1d95" />
+              <line x1="0" y1="13" x2="2.5" y2="13" stroke="#f8fafc" strokeWidth="0.9" />
+
+              {/* Front Arm (Right Arm, reaching forward) */}
+              <g style={{ transformOrigin: '2px 8px', animation: 'zombieArmsBob 1.4s ease-in-out infinite', animationDelay: '0.15s' }}>
+                <path d="M 0 6 L 8 6 L 7 12 L -1 11 Z" fill="#6d28d9" />
+                <path d="M 4 9 L 18 8 L 27 10" stroke="#4ade80" strokeWidth="3.2" strokeLinecap="round" fill="none" />
+                <path d="M 27 10 L 31 9 M 27 10 L 31 11 M 27 10 L 30 13" stroke="#4ade80" strokeWidth="1.2" strokeLinecap="round" />
+              </g>
+
+              {/* Zombie Head (with head loll animation) */}
+              <g style={{ transformOrigin: '0 6px', animation: 'zombieHeadLoll 2.2s ease-in-out infinite' }}>
+                <rect x="-7.5" y="-9" width="15" height="15" rx="3.5" fill="#4ade80" stroke="#22c55e" strokeWidth="0.9" />
+                <path d="M -8.5 -8 C -7 -13, -3 -11, -1 -14 C 1 -11, 4 -14, 7.5 -9 L 8.5 -5 L -8.5 -5 Z" fill="#1e1b4b" />
+                <path d="M 0 -6 L 4 -4 M 1 -6.5 L 1 -4 M 3 -5.5 L 3 -3" stroke="#166534" strokeWidth="0.8" strokeLinecap="round" />
+
+                {/* Mismatched Goofy Zombie Eyes */}
+                <circle cx="-3" cy="-1.5" r="2.8" fill="#fef08a" stroke="#1e293b" strokeWidth="0.6" />
+                <circle cx="-2.5" cy="-1.5" r="1.1" fill="#0f172a" />
+                <circle cx="3.2" cy="-1.2" r="2.2" fill="#fef08a" stroke="#1e293b" strokeWidth="0.6" />
+                <circle cx="3.4" cy="-1.0" r="0.9" fill="#0f172a" />
+                <path d="M 1.2 -2.5 Q 3.2 -1.8 5.2 -2.5" stroke="#166534" strokeWidth="0.8" strokeLinecap="round" fill="none" />
+
+                {/* Crooked Open Mouth with Cute Single Tooth */}
+                <path d="M -3 3.5 Q 0 6.5 4 3.5 Z" fill="#0f172a" />
+                <rect x="-1" y="3.2" width="1.6" height="2" fill="#ffffff" rx="0.3" />
+
+                {/* Birthday Party Cone Hat (Swara's Birthday) */}
+                {isBirthday && (
+                  <g transform="translate(1, -9) rotate(14)">
+                    <path d="M -4.5 0 L 0 -14 L 4.5 0 Z" fill="#ec4899" stroke="#db2777" strokeWidth="0.6" />
+                    <path d="M -3 -4 L 0 -14 L 1 -9 Z" fill="#38bdf8" />
+                    <path d="M -1.5 0 L 0 -14 L 0 -6 Z" fill="#facc15" />
+                    <circle cx="0" cy="-14" r="1.8" fill="#facc15" />
+                  </g>
+                )}
+              </g>
+            </g>
+          </g>
+        </g>
 
         {/* --- Foreground Lush Grass Horizon --- */}
         <path
