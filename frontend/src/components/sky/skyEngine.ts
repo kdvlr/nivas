@@ -418,7 +418,7 @@ export function startFxCanvas(
   let batSwarm: BatSwarm | null = null
   let nextBatSwarm = performance.now() + rand(45_000, 90_000)
   let witch: Witch | null = null
-  let nextWitch = performance.now() + rand(20_000, 50_000)
+  let nextWitch = performance.now() + rand(8_000, 18_000)
   let santa: Santa | null = null
   let nextSanta = performance.now() + rand(15_000, 45_000)
   let nextRocket = performance.now() + 500
@@ -1963,7 +1963,7 @@ export function startFxCanvas(
         const gone = witch.dir === 1 ? witch.x - exitMargin > w : witch.x + exitMargin < 0
         if (gone) {
           witch = null
-          nextWitch = getQueryParam('witch') === '1' ? t + 1000 : t + rand(80_000, 180_000)
+          nextWitch = getQueryParam('witch') === '1' ? t + 1000 : (swaraBirthday ? t + rand(25_000, 45_000) : t + rand(35_000, 60_000))
         } else {
           const targetCtx = (witch.isBehind && bgCtx) ? bgCtx : ctx
           if (witch.isBehind && bgCtx) bgHadDraw = true
