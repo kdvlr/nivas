@@ -1921,29 +1921,117 @@ function AutumnHarvestHorizon({
   )
 }
 
-function Squirrel({ flip = false }: { flip?: boolean }) {
+type SquirrelPhase = 'entering' | 'sniffing' | 'digging' | 'burying' | 'alert' | 'fleeing'
+
+function SquirrelFigure({
+  phase = 'entering',
+  flip = false,
+}: {
+  phase?: SquirrelPhase
+  flip?: boolean
+}) {
+  const isAlert = phase === 'alert'
+  const isDigging = phase === 'digging'
+  const isBurying = phase === 'burying'
+  const isFleeing = phase === 'fleeing'
+  const isSniffing = phase === 'sniffing'
+
   return (
     <svg
-      width="72"
-      height="56"
-      viewBox="0 0 64 48"
+      width="76"
+      height="58"
+      viewBox="0 0 68 50"
       className="pointer-events-none select-none filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)]"
-      style={{ transform: flip ? 'scaleX(-1)' : undefined }}
+      style={{
+        transform: flip ? 'scaleX(-1)' : undefined,
+        transformOrigin: '34px 25px',
+      }}
       aria-hidden="true"
     >
       <style>{`
         @keyframes squirrelTailWiggle {
           0%, 100% { transform: rotate(0deg); }
-          50% { transform: rotate(8deg); }
+          50% { transform: rotate(9deg); }
+        }
+        @keyframes squirrelTailDig {
+          0%, 100% { transform: rotate(-8deg); }
+          50% { transform: rotate(12deg); }
+        }
+        @keyframes squirrelTailAlert {
+          0%, 100% { transform: rotate(2deg); }
+          25% { transform: rotate(16deg); }
+          50% { transform: rotate(4deg); }
+          75% { transform: rotate(18deg); }
+        }
+        @keyframes squirrelTailStream {
+          0%, 100% { transform: rotate(-22deg) scaleY(0.9); }
+          50% { transform: rotate(-17deg) scaleY(1.05); }
         }
         @keyframes squirrelChew {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-1.2px); }
         }
+        @keyframes squirrelSniff {
+          0%, 100% { transform: translateY(0) rotate(0deg); }
+          50% { transform: translateY(1.5px) rotate(4deg); }
+        }
+        @keyframes squirrelLookAround {
+          0%, 100% { transform: rotate(-6deg); }
+          30% { transform: rotate(-14deg); }
+          70% { transform: rotate(5deg); }
+        }
+        @keyframes squirrelDigPawL {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(-3px, 4px); }
+        }
+        @keyframes squirrelDigPawR {
+          0%, 100% { transform: translate(-3px, 4px); }
+          50% { transform: translate(0, 0); }
+        }
+        @keyframes squirrelPatPaw {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(3.5px); }
+        }
+        @keyframes squirrelSprintPawL {
+          0%, 100% { transform: translate(-2px, 1px) rotate(-15deg); }
+          50% { transform: translate(3px, -2px) rotate(15deg); }
+        }
+        @keyframes squirrelSprintPawR {
+          0%, 100% { transform: translate(3px, -2px) rotate(15deg); }
+          50% { transform: translate(-2px, 1px) rotate(-15deg); }
+        }
+        @keyframes squirrelDirtFly1 {
+          0% { transform: translate(46px, 42px) scale(0.6); opacity: 0; }
+          20% { opacity: 0.95; }
+          100% { transform: translate(22px, 32px) scale(1.1); opacity: 0; }
+        }
+        @keyframes squirrelDirtFly2 {
+          0% { transform: translate(48px, 43px) scale(0.5); opacity: 0; }
+          25% { opacity: 0.95; }
+          100% { transform: translate(14px, 35px) scale(0.85); opacity: 0; }
+        }
+        @keyframes squirrelDirtFly3 {
+          0% { transform: translate(44px, 41px) scale(0.7); opacity: 0; }
+          30% { opacity: 0.95; }
+          100% { transform: translate(26px, 28px) scale(1.2); opacity: 0; }
+        }
       `}</style>
 
       {/* Fluffy Bushy Tail arching over back */}
-      <g style={{ transformOrigin: '14px 34px', animation: 'squirrelTailWiggle 1.4s ease-in-out infinite' }}>
+      <g
+        style={{
+          transformOrigin: '14px 34px',
+          animation: isDigging
+            ? 'squirrelTailDig 0.22s ease-in-out infinite'
+            : isAlert
+            ? 'squirrelTailAlert 0.8s ease-in-out infinite'
+            : isFleeing
+            ? 'squirrelTailStream 0.16s ease-in-out infinite'
+            : isBurying
+            ? 'squirrelTailWiggle 0.7s ease-in-out infinite'
+            : 'squirrelTailWiggle 1.4s ease-in-out infinite',
+        }}
+      >
         <path
           d="M 14 34 
              C 6 36, 0 28, 2 18 
@@ -1959,82 +2047,379 @@ function Squirrel({ flip = false }: { flip?: boolean }) {
       </g>
 
       {/* Squirrel Body */}
-      <ellipse cx="28" cy="32" rx="14" ry="10" fill="#92400e" />
-      <ellipse cx="32" cy="34" rx="8" ry="6" fill="#fef3c7" opacity="0.85" />
+      <g
+        style={{
+          transformOrigin: '20px 38px',
+          transform: isDigging
+            ? 'rotate(14deg)'
+            : isBurying
+            ? 'rotate(10deg)'
+            : isAlert
+            ? 'rotate(-10deg)'
+            : isFleeing
+            ? 'rotate(10deg)'
+            : isSniffing
+            ? 'rotate(6deg)'
+            : 'rotate(0deg)',
+          transition: 'transform 0.25s ease-out',
+        }}
+      >
+        <ellipse cx="28" cy="32" rx="14" ry="10" fill="#92400e" />
+        <ellipse cx="32" cy="34" rx="8" ry="6" fill="#fef3c7" opacity="0.85" />
 
-      {/* Scampering back leg & paw */}
-      <ellipse cx="18" cy="36" rx="6" ry="5" fill="#78350f" />
-      <path d="M 14 39 L 10 42 L 15 42 Z" fill="#78350f" />
+        {/* Scampering back leg & paw */}
+        <ellipse cx="18" cy="36" rx="6" ry="5" fill="#78350f" />
+        <path d="M 14 39 L 10 42 L 15 42 Z" fill="#78350f" />
 
-      {/* Squirrel Head & Ears */}
-      <g style={{ animation: 'squirrelChew 0.8s ease-in-out infinite' }}>
-        <ellipse cx="44" cy="24" rx="8" ry="7" fill="#92400e" />
-        <circle cx="48" cy="27" r="4.2" fill="#b45309" />
-        <path d="M 40 18 C 38 12, 42 12, 44 18 Z" fill="#78350f" />
-        <path d="M 41 17 C 40 14, 42 14, 43 17 Z" fill="#fef3c7" />
-        <circle cx="45" cy="22" r="1.8" fill="#1c1917" />
-        <circle cx="44.5" cy="21.5" r="0.6" fill="#ffffff" />
-        <circle cx="51" cy="25" r="1.1" fill="#1c1917" />
-      </g>
+        {/* Squirrel Head & Ears */}
+        <g
+          style={{
+            transformOrigin: '44px 24px',
+            animation: isAlert
+              ? 'squirrelLookAround 1.2s ease-in-out infinite'
+              : isSniffing
+              ? 'squirrelSniff 0.28s ease-in-out infinite'
+              : isDigging || isBurying || isFleeing
+              ? undefined
+              : 'squirrelChew 0.8s ease-in-out infinite',
+            transform: isDigging
+              ? 'translate(1px, 3px) rotate(8deg)'
+              : isAlert
+              ? 'translate(-1px, -4px)'
+              : undefined,
+          }}
+        >
+          <ellipse cx="44" cy="24" rx="8" ry="7" fill="#92400e" />
+          <circle cx="48" cy="27" r="4.2" fill="#b45309" />
+          <path d="M 40 18 C 38 12, 42 12, 44 18 Z" fill="#78350f" />
+          <path d="M 41 17 C 40 14, 42 14, 43 17 Z" fill="#fef3c7" />
 
-      {/* Front Paws holding Acorn */}
-      <g>
-        <g transform="translate(48, 30)">
-          <ellipse cx="0" cy="2" rx="3.2" ry="4" fill="#78350f" />
-          <ellipse cx="0" cy="-1" rx="3.8" ry="2" fill="#451a03" />
+          {/* Eye */}
+          <circle cx="45" cy="22" r={isAlert ? '2.3' : '1.8'} fill="#1c1917" />
+          <circle cx={isAlert ? '44.3' : '44.5'} cy={isAlert ? '21.3' : '21.5'} r={isAlert ? '0.8' : '0.6'} fill="#ffffff" />
+          <circle cx="51" cy="25" r="1.1" fill="#1c1917" />
+
+          {/* Tiny whiskers */}
+          <line x1="49" y1="26" x2="55" y2="24" stroke="#fef3c7" strokeWidth="0.6" opacity="0.7" />
+          <line x1="49" y1="27" x2="55" y2="28" stroke="#fef3c7" strokeWidth="0.6" opacity="0.7" />
         </g>
-        <ellipse cx="45" cy="31" rx="3.5" ry="2.2" fill="#92400e" />
-        <ellipse cx="48" cy="34" rx="3.5" ry="2.2" fill="#92400e" />
+
+        {/* Front Paws & Acorn State */}
+        {/* Phase: ENTERING / SNIFFING (holding acorn) */}
+        {(phase === 'entering' || phase === 'sniffing') && (
+          <g>
+            <g transform="translate(48, 30)">
+              <ellipse cx="0" cy="2" rx="3.2" ry="4" fill="#78350f" />
+              <ellipse cx="0" cy="-1" rx="3.8" ry="2" fill="#451a03" />
+              <line x1="0" y1="-1" x2="0.6" y2="-3" stroke="#451a03" strokeWidth="0.8" />
+            </g>
+            <ellipse cx="45" cy="31" rx="3.5" ry="2.2" fill="#92400e" />
+            <ellipse cx="48" cy="34" rx="3.5" ry="2.2" fill="#92400e" />
+          </g>
+        )}
+
+        {/* Phase: DIGGING (paws scratching frantically, acorn on ground, dirt spraying) */}
+        {phase === 'digging' && (
+          <g>
+            {/* Acorn resting beside the dig spot */}
+            <g transform="translate(54, 38) rotate(-18)">
+              <ellipse cx="0" cy="1.5" rx="3.2" ry="3.8" fill="#78350f" />
+              <ellipse cx="0" cy="-1.5" rx="3.8" ry="1.8" fill="#451a03" />
+              <line x1="0" y1="-1.5" x2="0.5" y2="-3.2" stroke="#451a03" strokeWidth="0.8" />
+            </g>
+
+            {/* Alternating digging paws */}
+            <g style={{ transformOrigin: '44px 34px', animation: 'squirrelDigPawL 0.12s ease-in-out infinite' }}>
+              <ellipse cx="44" cy="38" rx="3.6" ry="2.4" fill="#92400e" />
+              <line x1="45" y1="39" x2="47" y2="41" stroke="#78350f" strokeWidth="1" strokeLinecap="round" />
+            </g>
+            <g style={{ transformOrigin: '48px 34px', animation: 'squirrelDigPawR 0.12s ease-in-out infinite' }}>
+              <ellipse cx="48" cy="38" rx="3.6" ry="2.4" fill="#92400e" />
+              <line x1="49" y1="39" x2="51" y2="41" stroke="#78350f" strokeWidth="1" strokeLinecap="round" />
+            </g>
+
+            {/* Flying dirt particles */}
+            <circle cx="0" cy="0" r="1.6" fill="#5c2c16" style={{ animation: 'squirrelDirtFly1 0.22s linear infinite' }} />
+            <circle cx="0" cy="0" r="1.3" fill="#78350f" style={{ animation: 'squirrelDirtFly2 0.22s linear infinite', animationDelay: '0.07s' }} />
+            <circle cx="0" cy="0" r="1.8" fill="#451a03" style={{ animation: 'squirrelDirtFly3 0.22s linear infinite', animationDelay: '0.14s' }} />
+            <circle cx="0" cy="0" r="1.1" fill="#92400e" style={{ animation: 'squirrelDirtFly1 0.22s linear infinite', animationDelay: '0.11s' }} />
+          </g>
+        )}
+
+        {/* Phase: BURYING (nut in ground, paws patting earth down) */}
+        {phase === 'burying' && (
+          <g>
+            {/* Acorn in ground */}
+            <g transform="translate(48, 40)">
+              <ellipse cx="0" cy="1" rx="3" ry="3" fill="#78350f" />
+              <ellipse cx="0" cy="-1.5" rx="3.5" ry="1.6" fill="#451a03" />
+            </g>
+
+            {/* Paws patting dirt down */}
+            <g style={{ transformOrigin: '46px 34px', animation: 'squirrelPatPaw 0.16s ease-in-out infinite' }}>
+              <ellipse cx="45" cy="37" rx="3.6" ry="2.2" fill="#92400e" />
+              <ellipse cx="49" cy="38" rx="3.6" ry="2.2" fill="#92400e" />
+            </g>
+          </g>
+        )}
+
+        {/* Phase: ALERT (empty paws held against chest) */}
+        {phase === 'alert' && (
+          <g>
+            <ellipse cx="38" cy="27" rx="3.4" ry="2.2" fill="#92400e" />
+            <ellipse cx="42" cy="28" rx="3.4" ry="2.2" fill="#92400e" />
+          </g>
+        )}
+
+        {/* Phase: FLEEING (paws pumping in fast sprint) */}
+        {phase === 'fleeing' && (
+          <g>
+            <g style={{ transformOrigin: '38px 30px', animation: 'squirrelSprintPawL 0.13s ease-in-out infinite' }}>
+              <ellipse cx="40" cy="34" rx="3.8" ry="2.2" fill="#92400e" />
+            </g>
+            <g style={{ transformOrigin: '44px 30px', animation: 'squirrelSprintPawR 0.13s ease-in-out infinite' }}>
+              <ellipse cx="48" cy="32" rx="3.8" ry="2.2" fill="#92400e" />
+            </g>
+          </g>
+        )}
+      </g>
+    </svg>
+  )
+}
+
+const Squirrel = SquirrelFigure
+
+function BuriedNutMound() {
+  return (
+    <svg
+      width="64"
+      height="26"
+      viewBox="0 0 64 26"
+      className="overflow-visible filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)]"
+    >
+      {/* Freshly dug dark earth mound */}
+      <ellipse cx="32" cy="20" rx="16" ry="5.5" fill="#381907" />
+      <ellipse cx="32" cy="18.5" rx="13" ry="4" fill="#5c2c16" />
+      <ellipse cx="30" cy="17" rx="9" ry="2.8" fill="#78350f" />
+
+      {/* Loose soil crumbs around base */}
+      <circle cx="14" cy="22" r="1.2" fill="#381907" />
+      <circle cx="18" cy="20.5" r="1.5" fill="#5c2c16" />
+      <circle cx="46" cy="20.5" r="1.6" fill="#5c2c16" />
+      <circle cx="50" cy="22" r="1.2" fill="#381907" />
+      <circle cx="24" cy="22.5" r="1" fill="#78350f" />
+      <circle cx="40" cy="22.5" r="1" fill="#78350f" />
+
+      {/* The Acorn cap peeking out and fallen autumn leaves */}
+      <g transform="translate(32, 16)">
+        {/* Top of buried acorn tucked into earth */}
+        <ellipse cx="0" cy="0" rx="3.6" ry="1.8" fill="#451a03" />
+        <line x1="0" y1="-0.5" x2="0.8" y2="-3" stroke="#78350f" strokeWidth="1" strokeLinecap="round" />
+        {/* Fallen autumn leaves resting beside the mound */}
+        <path d="M 4 0 C 8 -3, 11 1, 8 3 C 6 2, 5 1, 4 0 Z" fill="#ea580c" />
+        <path d="M -5 1 C -8 -1, -10 2, -8 4 C -6 3, -5 2, -5 1 Z" fill="#eab308" />
       </g>
     </svg>
   )
 }
 
 function RunningSquirrel() {
-  const [running, setRunning] = useState(false)
+  const [active, setActive] = useState(false)
+  const [runId, setRunId] = useState(0)
   const [direction, setDirection] = useState<1 | -1>(1)
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [phase, setPhase] = useState<SquirrelPhase>('entering')
+  const [coords, setCoords] = useState<{ startX: number; buryX: number; exitX: number } | null>(null)
+  const [showMound, setShowMound] = useState(false)
+  const [moundCoords, setMoundCoords] = useState<{ x: number } | null>(null)
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
+
+  const clearAllTimers = () => {
+    timersRef.current.forEach((t) => clearTimeout(t))
+    timersRef.current = []
+  }
+
+  const trigger = (e?: Event) => {
+    clearAllTimers()
+    setShowMound(false)
+    setMoundCoords(null)
+
+    const custom = e as CustomEvent<{
+      freeze?: boolean
+      phase?: SquirrelPhase
+      x?: number
+      direction?: 1 | -1
+    }> | undefined
+
+    const isFreeze = Boolean(custom?.detail?.freeze)
+    const targetPhase = isFreeze ? (custom?.detail?.phase || 'digging') : 'entering'
+    const w = typeof window !== 'undefined' ? window.innerWidth : 1920
+    const dir: 1 | -1 = custom?.detail?.direction ?? (Math.random() < 0.5 ? 1 : -1)
+    setDirection(dir)
+
+    const buryX = custom?.detail?.x ?? (dir === 1
+      ? Math.round(w * (0.34 + Math.random() * 0.14))
+      : Math.round(w * (0.52 + Math.random() * 0.14)))
+    const startX = isFreeze ? buryX : (dir === 1 ? -90 : w + 90)
+    const exitX = isFreeze ? buryX : (dir === 1 ? w + 110 : -110)
+
+    setCoords({ startX, buryX, exitX })
+    setPhase(targetPhase)
+    setActive(true)
+    setRunId((r) => r + 1)
+
+    const moundX = buryX + (dir === 1 ? 48 : 16)
+
+    if (isFreeze) {
+      if (targetPhase === 'burying' || targetPhase === 'alert' || targetPhase === 'fleeing') {
+        setMoundCoords({ x: moundX })
+        setShowMound(true)
+      }
+      return
+    }
+
+    // Phase schedule:
+    // 0.0s - 2.4s: entering (runs to buryX with nut in paws)
+    // 2.4s - 3.2s: sniffing (sniff sniff, finds spot)
+    // 3.2s - 5.0s: digging (paws dig rapidly, dirt sprays backwards)
+    // 5.0s - 6.5s: burying (nut placed in hole, mound appears, paws pat down earth)
+    // 6.5s - 7.6s: alert (sits up on hind legs, empty paws at chest, looks left & right)
+    // 7.6s - 9.4s: fleeing (sprints away fast with empty paws)
+    timersRef.current.push(
+      setTimeout(() => {
+        setPhase('sniffing')
+      }, 2400)
+    )
+
+    timersRef.current.push(
+      setTimeout(() => {
+        setPhase('digging')
+      }, 3200)
+    )
+
+    timersRef.current.push(
+      setTimeout(() => {
+        setPhase('burying')
+        setMoundCoords({ x: moundX })
+        setShowMound(true)
+      }, 5000)
+    )
+
+    timersRef.current.push(
+      setTimeout(() => {
+        setPhase('alert')
+      }, 6500)
+    )
+
+    timersRef.current.push(
+      setTimeout(() => {
+        setPhase('fleeing')
+      }, 7600)
+    )
+  }
 
   useEffect(() => {
-    const trigger = () => {
-      setDirection(Math.random() < 0.5 ? 1 : -1)
-      setRunning(true)
+    const qp = getQueryParam('squirrel')
+    if (qp) {
+      const validPhases: SquirrelPhase[] = ['entering', 'sniffing', 'digging', 'burying', 'alert', 'fleeing']
+      const freezePhase = validPhases.includes(qp as SquirrelPhase) ? (qp as SquirrelPhase) : 'digging'
+      trigger(new CustomEvent('trigger-squirrel', { detail: { freeze: true, phase: freezePhase } }))
+      return
     }
+
     window.addEventListener('trigger-squirrel', trigger)
-    timerRef.current = setTimeout(trigger, 8_000)
+    const initialTimer = setTimeout(trigger, 6_000)
+    timersRef.current.push(initialTimer)
 
     return () => {
       window.removeEventListener('trigger-squirrel', trigger)
-      if (timerRef.current) clearTimeout(timerRef.current)
+      clearAllTimers()
     }
   }, [])
 
   const handleAnimationComplete = () => {
-    setRunning(false)
-    if (timerRef.current) clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(() => {
-      setDirection(Math.random() < 0.5 ? 1 : -1)
-      setRunning(true)
-    }, 25_000 + Math.random() * 35_000)
+    if (coords && coords.startX === coords.exitX) {
+      return
+    }
+    setActive(false)
+    // Keep the freshly buried acorn mound on the ground for 7 seconds so it can be appreciated
+    timersRef.current.push(
+      setTimeout(() => {
+        setShowMound(false)
+      }, 7000)
+    )
+    // Schedule next run
+    timersRef.current.push(
+      setTimeout(trigger, 30_000 + Math.random() * 35_000)
+    )
   }
 
-  if (!running) return null
+  const bounceConfig = useMemo(() => {
+    switch (phase) {
+      case 'entering':
+        return { y: [0, -6, 0], duration: 0.22, repeat: Infinity }
+      case 'sniffing':
+        return { y: [0, -1.5, 0], duration: 0.35, repeat: Infinity }
+      case 'digging':
+        return { y: [0, -2.5, 0], duration: 0.12, repeat: Infinity }
+      case 'burying':
+        return { y: [0, -2, 0], duration: 0.16, repeat: Infinity }
+      case 'alert':
+        return { y: -4, duration: 0.2, repeat: 0 }
+      case 'fleeing':
+        return { y: [0, -9, 0], duration: 0.13, repeat: Infinity }
+      default:
+        return { y: 0, duration: 0.2, repeat: 0 }
+    }
+  }, [phase])
+
+  if ((!active && !showMound) || !coords) return null
 
   return (
-    <motion.div
-      initial={{ x: direction === 1 ? -80 : window.innerWidth + 80 }}
-      animate={{ x: direction === 1 ? window.innerWidth + 80 : -80 }}
-      transition={{ duration: 6.8, ease: 'linear' }}
-      onAnimationComplete={handleAnimationComplete}
-      className="fixed bottom-1 pointer-events-none z-30 select-none"
-    >
-      <motion.div
-        animate={{ y: [0, -6, 0] }}
-        transition={{ duration: 0.24, repeat: Infinity, ease: 'easeInOut' }}
-      >
-        <Squirrel flip={direction === -1} />
-      </motion.div>
-    </motion.div>
+    <>
+      {/* Persisting Buried Nut Mound on the Ground */}
+      <AnimatePresence>
+        {showMound && moundCoords && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.85, transition: { duration: 1.0 } }}
+            className="fixed bottom-0 pointer-events-none z-20 select-none"
+            style={{ left: moundCoords.x, transform: 'translateX(-50%)' }}
+          >
+            <BuriedNutMound />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Animated Squirrel Figure */}
+      {active && (
+        <motion.div
+          key={runId}
+          initial={{ x: coords.startX }}
+          animate={{
+            x: [coords.startX, coords.buryX, coords.buryX, coords.exitX],
+          }}
+          transition={{
+            duration: 9.4,
+            times: [0, 0.255, 0.808, 1],
+            ease: ['easeOut', 'linear', 'easeIn'],
+          }}
+          onAnimationComplete={handleAnimationComplete}
+          className="fixed bottom-1 pointer-events-none z-30 select-none"
+        >
+          <motion.div
+            animate={Array.isArray(bounceConfig.y) ? { y: bounceConfig.y } : { y: bounceConfig.y }}
+            transition={{
+              duration: bounceConfig.duration,
+              repeat: bounceConfig.repeat,
+              ease: 'easeInOut',
+            }}
+          >
+            <SquirrelFigure phase={phase} flip={direction === -1} />
+          </motion.div>
+        </motion.div>
+      )}
+    </>
   )
 }
 
@@ -5294,8 +5679,10 @@ export default function Slideshow({
       {/* Holiday Delights (Running Elf across bottom bezel, Dec 1-24) */}
       {isElfSeason(seasonalDate) && !isNewYearSeason(seasonalDate) && <RunningElf />}
 
-      {/* November Autumn Delights: Running Squirrel (when not Thanksgiving week) */}
-      {isNovember(seasonalDate) && !isThanksgivingWeek(seasonalDate) && <RunningSquirrel />}
+      {/* November Autumn Delights: Burying Nut Squirrel (when not Thanksgiving week, or with query override) */}
+      {((isNovember(seasonalDate) && !isThanksgivingWeek(seasonalDate)) || Boolean(getQueryParam('squirrel'))) && (
+        <RunningSquirrel />
+      )}
 
       {/* Thanksgiving Week: Strutting Cartoon Turkey */}
       {isThanksgivingWeek(seasonalDate) && <StruttingTurkey />}
