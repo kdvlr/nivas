@@ -2487,11 +2487,13 @@ function Spider({
   hourglassColor = '#ef4444',
   isBirthday = false,
   variant = 0,
+  withSunglasses = false,
 }: {
   scale?: number
   hourglassColor?: string
   isBirthday?: boolean
   variant?: number
+  withSunglasses?: boolean
 }) {
   // 4 festive color schemes and tilts for the spiders' party hats
   const hatVariants = [
@@ -2551,7 +2553,7 @@ function Spider({
       <path d="M -1.8 -5 L -1.5 -8 M 1.8 -5 L 1.5 -8" stroke="rgba(255, 255, 255, 0.85)" strokeWidth="2.2" strokeLinecap="round" />
       <path d="M -1.8 -5 L -1.5 -8 M 1.8 -5 L 1.5 -8" stroke="#3f3f46" strokeWidth="1.2" strokeLinecap="round" />
 
-      {/* Glowing beady eyes (layered vector glow, 0 blur filter overhead) */}
+      {/* Glowing beady eyes */}
       <g style={{ animation: 'spiderEyesPulse 2.5s ease-in-out infinite' }}>
         <circle cx="-1.8" cy="-2" r="2.0" fill="#ef4444" opacity="0.35" />
         <circle cx="1.8" cy="-2" r="2.0" fill="#ef4444" opacity="0.35" />
@@ -2560,6 +2562,15 @@ function Spider({
         <circle cx="-3.2" cy="-0.8" r="0.7" fill="#fca5a5" />
         <circle cx="3.2" cy="-0.8" r="0.7" fill="#fca5a5" />
       </g>
+
+      {/* Cool sunglasses for daytime party spiders */}
+      {withSunglasses && (
+        <g transform="translate(0, -2)">
+          <path d="M -3.8 -1.2 L 3.8 -1.2 L 3.2 1.2 L 0.8 1.2 L 0.2 -0.2 L -0.2 -0.2 L -0.8 1.2 L -3.2 1.2 Z" fill="#0f172a" />
+          <line x1="-2.8" y1="-0.6" x2="-1.4" y2="0.6" stroke="rgba(255, 255, 255, 0.75)" strokeWidth="0.5" />
+          <line x1="1.4" y1="-0.6" x2="2.8" y2="0.6" stroke="rgba(255, 255, 255, 0.75)" strokeWidth="0.5" />
+        </g>
+      )}
 
       {/* Festive Striped Party Cone Hat perched on spider's head for Swara's Birthday */}
       {isBirthday && (
@@ -2577,6 +2588,174 @@ function Spider({
         </g>
       )}
     </g>
+  )
+}
+
+function DaytimePartyBuntingAndSpiders({ isBirthday = false }: { isBirthday?: boolean }) {
+  // 5 catenary swags spanning across 1920px
+  const swags = [
+    { startX: 0, endX: 384, sagY: 36 },
+    { startX: 384, endX: 768, sagY: 42 },
+    { startX: 768, endX: 1152, sagY: 44 },
+    { startX: 1152, endX: 1536, sagY: 42 },
+    { startX: 1536, endX: 1920, sagY: 36 },
+  ]
+  const flagColors = ['#ec4899', '#38bdf8', '#facc15', '#a855f7', '#f97316', '#22c55e']
+
+  // Generate pennants along each swag
+  const pennants: { id: string; x: number; y: number; rot: number; color: string }[] = []
+  swags.forEach((s, sIdx) => {
+    const count = 10
+    for (let i = 0; i < count; i++) {
+      const u = (i + 0.5) / count
+      const x = s.startX + u * (s.endX - s.startX)
+      // Parabolic dip: at u=0.5, y = sagY
+      const y = 4 * s.sagY * u * (1 - u)
+      // Tangent angle in degrees
+      const slope = (4 * s.sagY * (1 - 2 * u)) / (s.endX - s.startX)
+      const rot = Math.atan(slope) * (180 / Math.PI)
+      const color = flagColors[(sIdx * count + i) % flagColors.length]
+      pennants.push({ id: `${sIdx}-${i}`, x, y, rot, color })
+    }
+  })
+
+  return (
+    <div
+      className="absolute top-0 left-0 right-0 h-64 pointer-events-none z-30 select-none overflow-hidden"
+      style={{ willChange: 'transform', transform: 'translateZ(0)' }}
+    >
+      <svg
+        viewBox="0 0 1920 256"
+        preserveAspectRatio="none"
+        className="w-full h-full"
+        aria-hidden="true"
+      >
+        <style>{`
+          @keyframes daySpiderFloat1 {
+            0%, 100% { transform: translate3d(0, 0, 0); }
+            50% { transform: translate3d(0, 36px, 0); }
+          }
+          @keyframes daySpiderFloat2 {
+            0%, 100% { transform: translate3d(0, 0, 0); }
+            50% { transform: translate3d(0, 52px, 0); }
+          }
+          @keyframes daySpiderFloat3 {
+            0%, 100% { transform: translate3d(0, 0, 0); }
+            50% { transform: translate3d(0, 42px, 0); }
+          }
+          @keyframes daySpiderFloat4 {
+            0%, 100% { transform: translate3d(0, 0, 0); }
+            50% { transform: translate3d(0, 34px, 0); }
+          }
+          @keyframes spiderSway1 {
+            0%, 100% { transform: rotate(-5deg); }
+            50% { transform: rotate(5deg); }
+          }
+          @keyframes spiderSway2 {
+            0%, 100% { transform: rotate(6deg); }
+            50% { transform: rotate(-5deg); }
+          }
+          @keyframes spiderEyesPulse {
+            0%, 100% { opacity: 0.95; }
+            50% { opacity: 0.45; }
+          }
+        `}</style>
+
+        {/* --- Draped Party Bunting Flags --- */}
+        <g>
+          {pennants.map((p) => (
+            <g key={p.id} transform={`translate(${p.x}, ${p.y}) rotate(${p.rot})`}>
+              {/* Triangular Pennant Flag */}
+              <polygon
+                points="-12,0 12,0 0,26"
+                fill={p.color}
+                stroke="rgba(255, 255, 255, 0.9)"
+                strokeWidth="1.2"
+                strokeLinejoin="round"
+              />
+              {/* Inner decorative highlight stripe */}
+              <polygon
+                points="-6,2 6,2 0,18"
+                fill="rgba(255, 255, 255, 0.28)"
+              />
+            </g>
+          ))}
+
+          {/* Draped Rope Cable spanning across swags */}
+          <path
+            d="M 0 0 Q 192 72, 384 0 M 384 0 Q 576 84, 768 0 M 768 0 Q 960 88, 1152 0 M 1152 0 Q 1344 84, 1536 0 M 1536 0 Q 1728 72, 1920 0"
+            stroke="rgba(255, 255, 255, 0.95)"
+            strokeWidth="2.2"
+            fill="none"
+          />
+          <path
+            d="M 0 0 Q 192 72, 384 0 M 384 0 Q 576 84, 768 0 M 768 0 Q 960 88, 1152 0 M 1152 0 Q 1344 84, 1536 0 M 1536 0 Q 1728 72, 1920 0"
+            stroke="#e2e8f0"
+            strokeWidth="1.2"
+            strokeDasharray="4,4"
+            fill="none"
+          />
+
+          {/* Rosette Bows at Swag Anchors */}
+          {[384, 768, 1152, 1536].map((rx) => (
+            <g key={rx} transform={`translate(${rx}, 0)`}>
+              <circle cx="0" cy="2" r="6" fill="#f43f5e" stroke="#fff" strokeWidth="1" />
+              <circle cx="0" cy="2" r="2.8" fill="#fef08a" />
+              <path d="M -3 4 L -7 16 L -2 14 L 0 6" fill="#f43f5e" />
+              <path d="M 3 4 L 7 16 L 2 14 L 0 6" fill="#f43f5e" />
+            </g>
+          ))}
+        </g>
+
+        {/* --- SPIDER 1 (Left near corner, x = 220) --- */}
+        <g transform="translate(220, 36)" style={{ willChange: 'transform' }}>
+          <g style={{ animation: 'daySpiderFloat1 7.2s ease-in-out infinite' }}>
+            <line x1="0" y1="0" x2="0" y2="75" stroke="rgba(255, 255, 255, 0.85)" strokeWidth="1.2" />
+            <g transform="translate(0, 75)">
+              <g style={{ transformOrigin: '0 0', animation: 'spiderSway1 3.2s ease-in-out infinite' }}>
+                <Spider scale={1.05} hourglassColor="#ec4899" isBirthday={isBirthday} variant={0} withSunglasses={true} />
+              </g>
+            </g>
+          </g>
+        </g>
+
+        {/* --- SPIDER 2 (Center-Left, x = 680) --- */}
+        <g transform="translate(680, 42)" style={{ willChange: 'transform' }}>
+          <g style={{ animation: 'daySpiderFloat2 9.5s ease-in-out infinite', animationDelay: '1.2s' }}>
+            <line x1="0" y1="0" x2="0" y2="100" stroke="rgba(255, 255, 255, 0.85)" strokeWidth="1.2" />
+            <g transform="translate(0, 100)">
+              <g style={{ transformOrigin: '0 0', animation: 'spiderSway2 3.6s ease-in-out infinite' }}>
+                <Spider scale={1.22} hourglassColor="#38bdf8" isBirthday={isBirthday} variant={1} withSunglasses={true} />
+              </g>
+            </g>
+          </g>
+        </g>
+
+        {/* --- SPIDER 3 (Center-Right, x = 1260) --- */}
+        <g transform="translate(1260, 42)" style={{ willChange: 'transform' }}>
+          <g style={{ animation: 'daySpiderFloat3 8.6s ease-in-out infinite', animationDelay: '3.0s' }}>
+            <line x1="0" y1="0" x2="0" y2="88" stroke="rgba(255, 255, 255, 0.85)" strokeWidth="1.2" />
+            <g transform="translate(0, 88)">
+              <g style={{ transformOrigin: '0 0', animation: 'spiderSway1 2.9s ease-in-out infinite' }}>
+                <Spider scale={1.15} hourglassColor="#facc15" isBirthday={isBirthday} variant={2} withSunglasses={true} />
+              </g>
+            </g>
+          </g>
+        </g>
+
+        {/* --- SPIDER 4 (Right near corner, x = 1710) --- */}
+        <g transform="translate(1710, 36)" style={{ willChange: 'transform' }}>
+          <g style={{ animation: 'daySpiderFloat4 7.8s ease-in-out infinite', animationDelay: '0.6s' }}>
+            <line x1="0" y1="0" x2="0" y2="80" stroke="rgba(255, 255, 255, 0.85)" strokeWidth="1.2" />
+            <g transform="translate(0, 80)">
+              <g style={{ transformOrigin: '0 0', animation: 'spiderSway2 3.4s ease-in-out infinite' }}>
+                <Spider scale={1.0} hourglassColor="#a855f7" isBirthday={isBirthday} variant={3} withSunglasses={true} />
+              </g>
+            </g>
+          </g>
+        </g>
+      </svg>
+    </div>
   )
 }
 
@@ -2704,6 +2883,386 @@ function SpookyWebsAndSpiders({ isBirthday = false }: { isBirthday?: boolean }) 
             </g>
           </g>
         </g>
+      </svg>
+    </div>
+  )
+}
+
+function DaytimePumpkinPatch({ isBirthday = false }: { isBirthday?: boolean }) {
+  const petals = [0, 26, 52, 78, 104, 130, 156, 182, 208, 234, 260, 286, 312, 338]
+
+  return (
+    <div
+      className="absolute bottom-0 left-0 right-0 h-44 pointer-events-none z-[25] select-none overflow-hidden"
+      style={{ willChange: 'transform', transform: 'translateZ(0)' }}
+    >
+      <svg
+        viewBox="0 0 1920 176"
+        preserveAspectRatio="none"
+        className="w-full h-full"
+        aria-hidden="true"
+      >
+        <style>{`
+          @keyframes sunflowerSwayLeft {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(-5.5deg); }
+          }
+          @keyframes sunflowerSwayRight {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(6.5deg); }
+          }
+          @keyframes daytimeSkeletonWave {
+            0%, 100% { transform: rotate(0deg); }
+            35% { transform: rotate(-24deg); }
+            65% { transform: rotate(18deg); }
+          }
+          @keyframes daytimeHeartBeat {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+          }
+          @keyframes balloonBob {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-4px) rotate(2deg); }
+          }
+        `}</style>
+
+        {/* --- Background Rolling Green Knolls --- */}
+        <path
+          d="M 0 176 L 0 118 Q 300 96, 600 112 Q 900 126, 1200 102 Q 1500 88, 1920 110 L 1920 176 Z"
+          fill="#15803d"
+          opacity="0.88"
+        />
+
+        {/* --- Foreground Lush Grass Horizon --- */}
+        <path
+          d="M 0 176 L 0 110 Q 240 92, 480 106 Q 720 118, 960 98 Q 1200 84, 1440 102 Q 1680 112, 1920 96 L 1920 176 Z"
+          fill="#166534"
+        />
+
+        {/* Grass Blade Tufts along Ridge */}
+        {[80, 260, 430, 680, 910, 1120, 1340, 1560, 1790].map((gx, gi) => (
+          <g key={gx} transform={`translate(${gx}, ${104 + (gi % 3) * 2})`} stroke="#22c55e" strokeWidth="2" strokeLinecap="round" fill="none">
+            <path d="M 0 0 L -4 -9" />
+            <path d="M 2 0 L 2 -12" />
+            <path d="M 4 0 L 8 -8" />
+          </g>
+        ))}
+
+        {/* --- Tall Nodding Sunflowers --- */}
+        {/* Sunflower 1 (Left, x = 110) */}
+        <g transform="translate(110, 85)">
+          <path d="M 0 55 Q -6 25 2 0" stroke="#15803d" strokeWidth="3.2" fill="none" strokeLinecap="round" />
+          <path d="M -3 34 C -16 32, -22 24, -12 26 C -4 28, -2 32, -3 34 Z" fill="#16a34a" />
+          <path d="M 1 24 C 14 22, 20 14, 10 16 C 3 18, 1 22, 1 24 Z" fill="#16a34a" />
+          <g style={{ transformOrigin: '2px 0px', animation: 'sunflowerSwayLeft 5.2s ease-in-out infinite' }}>
+            {petals.map((deg, i) => (
+              <ellipse key={deg} cx="2" cy="-14" rx="4" ry="9.5" fill={i % 2 === 0 ? '#facc15' : '#eab308'} stroke="#ca8a04" strokeWidth="0.5" transform={`rotate(${deg}, 2, 0)`} />
+            ))}
+            <circle cx="2" cy="0" r="10.5" fill="#78350f" />
+            <circle cx="2" cy="0" r="9.5" fill="#451a03" />
+            <circle cx="2" cy="0" r="8" stroke="#b45309" strokeWidth="1.8" strokeDasharray="2,2.5" fill="none" />
+          </g>
+        </g>
+
+        {/* Sunflower 2 (x = 360) */}
+        <g transform="translate(360, 88) scale(0.92)">
+          <path d="M 0 55 Q 6 25 -2 0" stroke="#15803d" strokeWidth="3.2" fill="none" strokeLinecap="round" />
+          <path d="M 3 34 C 16 32, 22 24, 12 26 C 4 28, 2 32, 3 34 Z" fill="#16a34a" />
+          <path d="M -1 24 C -14 22, -20 14, -10 16 C -3 18, -1 22, -1 24 Z" fill="#16a34a" />
+          <g style={{ transformOrigin: '-2px 0px', animation: 'sunflowerSwayRight 4.6s ease-in-out infinite' }}>
+            {petals.map((deg, i) => (
+              <ellipse key={deg} cx="-2" cy="-14" rx="4" ry="9.5" fill={i % 2 === 0 ? '#facc15' : '#eab308'} stroke="#ca8a04" strokeWidth="0.5" transform={`rotate(${deg}, -2, 0)`} />
+            ))}
+            <circle cx="-2" cy="0" r="10.5" fill="#78350f" />
+            <circle cx="-2" cy="0" r="9.5" fill="#451a03" />
+            <circle cx="-2" cy="0" r="8" stroke="#b45309" strokeWidth="1.8" strokeDasharray="2,2.5" fill="none" />
+          </g>
+        </g>
+
+        {/* Sunflower 3 (Center-Right, x = 1040) */}
+        <g transform="translate(1040, 82) scale(1.05)">
+          <path d="M 0 55 Q -5 26 2 0" stroke="#15803d" strokeWidth="3.2" fill="none" strokeLinecap="round" />
+          <path d="M -3 34 C -16 32, -22 24, -12 26 C -4 28, -2 32, -3 34 Z" fill="#16a34a" />
+          <path d="M 1 24 C 14 22, 20 14, 10 16 C 3 18, 1 22, 1 24 Z" fill="#16a34a" />
+          <g style={{ transformOrigin: '2px 0px', animation: 'sunflowerSwayLeft 5.6s ease-in-out infinite' }}>
+            {petals.map((deg, i) => (
+              <ellipse key={deg} cx="2" cy="-14" rx="4" ry="9.5" fill={i % 2 === 0 ? '#facc15' : '#eab308'} stroke="#ca8a04" strokeWidth="0.5" transform={`rotate(${deg}, 2, 0)`} />
+            ))}
+            <circle cx="2" cy="0" r="10.5" fill="#78350f" />
+            <circle cx="2" cy="0" r="9.5" fill="#451a03" />
+            <circle cx="2" cy="0" r="8" stroke="#b45309" strokeWidth="1.8" strokeDasharray="2,2.5" fill="none" />
+          </g>
+        </g>
+
+        {/* Sunflower 4 (x = 1600) */}
+        <g transform="translate(1600, 86) scale(0.95)">
+          <path d="M 0 55 Q 6 25 -2 0" stroke="#15803d" strokeWidth="3.2" fill="none" strokeLinecap="round" />
+          <path d="M 3 34 C 16 32, 22 24, 12 26 C 4 28, 2 32, 3 34 Z" fill="#16a34a" />
+          <path d="M -1 24 C -14 22, -20 14, -10 16 C -3 18, -1 22, -1 24 Z" fill="#16a34a" />
+          <g style={{ transformOrigin: '-2px 0px', animation: 'sunflowerSwayRight 4.9s ease-in-out infinite' }}>
+            {petals.map((deg, i) => (
+              <ellipse key={deg} cx="-2" cy="-14" rx="4" ry="9.5" fill={i % 2 === 0 ? '#facc15' : '#eab308'} stroke="#ca8a04" strokeWidth="0.5" transform={`rotate(${deg}, -2, 0)`} />
+            ))}
+            <circle cx="-2" cy="0" r="10.5" fill="#78350f" />
+            <circle cx="-2" cy="0" r="9.5" fill="#451a03" />
+            <circle cx="-2" cy="0" r="8" stroke="#b45309" strokeWidth="1.8" strokeDasharray="2,2.5" fill="none" />
+          </g>
+        </g>
+
+        {/* Sunflower 5 (Far Right, x = 1840) */}
+        <g transform="translate(1840, 84) scale(1.0)">
+          <path d="M 0 55 Q -6 25 2 0" stroke="#15803d" strokeWidth="3.2" fill="none" strokeLinecap="round" />
+          <path d="M -3 34 C -16 32, -22 24, -12 26 C -4 28, -2 32, -3 34 Z" fill="#16a34a" />
+          <path d="M 1 24 C 14 22, 20 14, 10 16 C 3 18, 1 22, 1 24 Z" fill="#16a34a" />
+          <g style={{ transformOrigin: '2px 0px', animation: 'sunflowerSwayLeft 5.0s ease-in-out infinite' }}>
+            {petals.map((deg, i) => (
+              <ellipse key={deg} cx="2" cy="-14" rx="4" ry="9.5" fill={i % 2 === 0 ? '#facc15' : '#eab308'} stroke="#ca8a04" strokeWidth="0.5" transform={`rotate(${deg}, 2, 0)`} />
+            ))}
+            <circle cx="2" cy="0" r="10.5" fill="#78350f" />
+            <circle cx="2" cy="0" r="9.5" fill="#451a03" />
+            <circle cx="2" cy="0" r="8" stroke="#b45309" strokeWidth="1.8" strokeDasharray="2,2.5" fill="none" />
+          </g>
+        </g>
+
+        {/* --- Pumpkins & Jack-o'-Lanterns in the Patch --- */}
+        {/* Pumpkin Duo (x = 210) */}
+        <g transform="translate(210, 134)">
+          <path d="M 0 -10 Q 2 -16 6 -18" stroke="#15803d" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+          <path d="M 0 -10 Q -6 -15 -4 -19 Q -2 -23 -7 -25" stroke="#16a34a" strokeWidth="1.3" strokeLinecap="round" fill="none" />
+          <ellipse cx="0" cy="0" rx="15" ry="11" fill="#ea580c" stroke="#c2410c" strokeWidth="0.9" />
+          <ellipse cx="-7" cy="0" rx="8" ry="10.5" fill="#ea580c" />
+          <ellipse cx="7" cy="0" rx="8" ry="10.5" fill="#ea580c" />
+          <ellipse cx="0" cy="-5" rx="8" ry="3" fill="#fb923c" opacity="0.6" />
+        </g>
+        <g transform="translate(232, 138) scale(0.72)">
+          <path d="M 0 -10 Q 2 -15 5 -17" stroke="#15803d" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+          <ellipse cx="0" cy="0" rx="14" ry="10" fill="#f97316" stroke="#c2410c" strokeWidth="0.9" />
+          <ellipse cx="-6" cy="0" rx="7.5" ry="9.5" fill="#f97316" />
+          <ellipse cx="6" cy="0" rx="7.5" ry="9.5" fill="#f97316" />
+        </g>
+
+        {/* Smiling Jack-o'-Lantern (x = 480) */}
+        <g transform="translate(480, 132)">
+          <path d="M 0 -11 Q 2 -18 6 -20" stroke="#15803d" strokeWidth="2.8" strokeLinecap="round" fill="none" />
+          <ellipse cx="0" cy="0" rx="16" ry="12" fill="#ea580c" stroke="#c2410c" strokeWidth="1" />
+          <ellipse cx="-8" cy="0" rx="9" ry="11.5" fill="#ea580c" />
+          <ellipse cx="8" cy="0" rx="9" ry="11.5" fill="#ea580c" />
+          {/* Happy carved face */}
+          <path d="M -7 -2 Q -4 -7 -1 -2" stroke="#431407" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+          <path d="M 1 -2 Q 4 -7 7 -2" stroke="#431407" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+          <path d="M -8 3 Q 0 11 8 3 Z" fill="#431407" />
+          <rect x="-3" y="3" width="2.5" height="2.5" fill="#ea580c" />
+          <rect x="1" y="3" width="2.5" height="2.5" fill="#ea580c" />
+        </g>
+
+        {/* --- SKELETON 1: Lounging Casually Against Giant Pumpkin (x = 830) --- */}
+        {/* Giant Pumpkin behind Skeleton */}
+        <g transform="translate(868, 126)">
+          <path d="M 0 -22 Q 4 -32 10 -36" stroke="#15803d" strokeWidth="4.2" strokeLinecap="round" fill="none" />
+          <path d="M 0 -22 Q -8 -30 -6 -38 Q -2 -42 -10 -46" stroke="#16a34a" strokeWidth="2.0" strokeLinecap="round" fill="none" />
+          <ellipse cx="0" cy="0" rx="30" ry="22" fill="#ea580c" stroke="#c2410c" strokeWidth="1.4" />
+          <ellipse cx="-15" cy="0" rx="17" ry="21" fill="#ea580c" />
+          <ellipse cx="15" cy="0" rx="17" ry="21" fill="#ea580c" />
+          <ellipse cx="-23" cy="1" rx="9" ry="18" fill="#c2410c" />
+          <ellipse cx="23" cy="1" rx="9" ry="18" fill="#c2410c" />
+          <ellipse cx="0" cy="-11" rx="16" ry="5" fill="#fb923c" opacity="0.6" />
+        </g>
+
+        {/* Lounging Skeleton */}
+        <g transform="translate(828, 108)">
+          {/* Leaning Spine & Ribs */}
+          <line x1="0" y1="4" x2="4" y2="24" stroke="#f8fafc" strokeWidth="3" strokeLinecap="round" />
+          <path d="M -7 8 Q 0 11 8 8" stroke="#f8fafc" strokeWidth="2" fill="none" strokeLinecap="round" />
+          <path d="M -8 13 Q 1 16 9 13" stroke="#f8fafc" strokeWidth="2" fill="none" strokeLinecap="round" />
+          <path d="M -7 18 Q 2 21 8 18" stroke="#f8fafc" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+
+          {/* Tiny Beating Heart */}
+          <g style={{ animation: 'daytimeHeartBeat 0.7s ease-in-out infinite', transformOrigin: '2px 11px' }}>
+            <path d="M 2 9 C 0 7, -2 8, -1 10 C 0 12, 2 14, 2 14 C 2 14, 4 12, 5 10 C 6 8, 4 7, 2 9 Z" fill="#ec4899" />
+          </g>
+
+          {/* Relaxed crossed legs */}
+          <line x1="4" y1="24" x2="24" y2="30" stroke="#f8fafc" strokeWidth="3" strokeLinecap="round" />
+          <path d="M 4 24 L 14 18 L 18 28" stroke="#f8fafc" strokeWidth="2.8" strokeLinecap="round" fill="none" />
+
+          {/* Right Arm draped casually onto the giant pumpkin */}
+          <path d="M 6 7 L 18 8 L 30 16" stroke="#f8fafc" strokeWidth="2.4" strokeLinecap="round" fill="none" />
+          {/* Left Arm resting on knee */}
+          <path d="M -6 7 L -14 13 L -8 22" stroke="#f8fafc" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+
+          {/* Skull with sunglasses and hat */}
+          <g transform="translate(-1, -7) rotate(6)">
+            <ellipse cx="0" cy="0" rx="8" ry="9" fill="#f8fafc" />
+            <rect x="-4.5" y="6" width="9" height="5" fill="#f8fafc" rx="1" />
+            {/* Teeth markings */}
+            <path d="M -3 8.5 L 3 8.5 M -2 7 L -2 10 M 0 7 L 0 10 M 2 7 L 2 10" stroke="#09090b" strokeWidth="0.8" />
+
+            {/* Cool Black Sunglasses with Specular Glare */}
+            <g transform="translate(0, 0)">
+              <path d="M -8 -2 L 8 -2 L 7 3 L 1 3 L 0 0 L -1 0 L -2 3 L -7 3 Z" fill="#0f172a" />
+              <line x1="-6" y1="-1" x2="-3.5" y2="1.5" stroke="#ffffff" strokeWidth="0.9" strokeLinecap="round" />
+              <line x1="3.5" y1="-1" x2="6" y2="1.5" stroke="#ffffff" strokeWidth="0.9" strokeLinecap="round" />
+            </g>
+
+            {/* Hat: Festive Birthday Cone Party Hat vs Jaunty Straw Sun Hat */}
+            {isBirthday ? (
+              <g transform="translate(0, -9) rotate(-8)">
+                <path d="M -6.5 0 L 0 -17 L 6.5 0 Z" fill="#ec4899" stroke="#db2777" strokeWidth="0.8" />
+                <path d="M -4.5 -5 L 0 -17 L 1.5 -10 Z" fill="#38bdf8" />
+                <path d="M -2.5 0 L 0 -17 L 0 -8 Z" fill="#facc15" />
+                <path d="M 2.5 0 L 0 -17 L 4.5 -7 Z" fill="#a855f7" />
+                <ellipse cx="0" cy="0" rx="7" ry="1.8" fill="#fef08a" stroke="#facc15" strokeWidth="0.5" />
+                <circle cx="0" cy="-17" r="2.5" fill="#facc15" stroke="#eab308" strokeWidth="0.6" />
+              </g>
+            ) : (
+              <g transform="translate(0, -8) rotate(-6)">
+                <ellipse cx="0" cy="0" rx="13" ry="3.2" fill="#fef08a" stroke="#eab308" strokeWidth="0.8" />
+                <path d="M -7 0 Q 0 -9 7 0 Z" fill="#fde047" stroke="#eab308" strokeWidth="0.8" />
+                <path d="M -7 0 Q 0 -1.5 7 0" stroke="#ea580c" strokeWidth="1.8" fill="none" />
+              </g>
+            )}
+          </g>
+        </g>
+
+        {/* Smiling Jack-o'-Lantern (x = 1180) */}
+        <g transform="translate(1180, 130)">
+          <path d="M 0 -11 Q 2 -18 6 -20" stroke="#15803d" strokeWidth="2.8" strokeLinecap="round" fill="none" />
+          <ellipse cx="0" cy="0" rx="16" ry="12" fill="#ea580c" stroke="#c2410c" strokeWidth="1" />
+          <ellipse cx="-8" cy="0" rx="9" ry="11.5" fill="#ea580c" />
+          <ellipse cx="8" cy="0" rx="9" ry="11.5" fill="#ea580c" />
+          {/* Happy carved face */}
+          <path d="M -7 -2 Q -4 -7 -1 -2" stroke="#431407" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+          <path d="M 1 -2 Q 4 -7 7 -2" stroke="#431407" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+          <path d="M -8 3 Q 0 11 8 3 Z" fill="#431407" />
+          <rect x="-3" y="3" width="2.5" height="2.5" fill="#ea580c" />
+          <rect x="1" y="3" width="2.5" height="2.5" fill="#ea580c" />
+        </g>
+
+        {/* --- SKELETON 2: Sitting Next to Pumpkin & Waving Hello (x = 1420) --- */}
+        {/* Pumpkin companion */}
+        <g transform="translate(1446, 132) scale(0.95)">
+          <path d="M 0 -10 Q 2 -16 5 -18" stroke="#15803d" strokeWidth="2.6" strokeLinecap="round" fill="none" />
+          <ellipse cx="0" cy="0" rx="15" ry="11" fill="#ea580c" stroke="#c2410c" strokeWidth="0.9" />
+          <ellipse cx="-7" cy="0" rx="8" ry="10.5" fill="#ea580c" />
+          <ellipse cx="7" cy="0" rx="8" ry="10.5" fill="#ea580c" />
+        </g>
+
+        {/* Waving Skeleton */}
+        <g transform="translate(1415, 114)">
+          {/* Spine & Ribs */}
+          <line x1="0" y1="0" x2="0" y2="20" stroke="#f8fafc" strokeWidth="2.6" strokeLinecap="round" />
+          <path d="M -7 5 Q 0 7 7 5" stroke="#f8fafc" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+          <path d="M -8 10 Q 0 12 8 10" stroke="#f8fafc" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+          <path d="M -7 15 Q 0 17 7 15" stroke="#f8fafc" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+
+          {/* Tiny Beating Heart */}
+          <g style={{ animation: 'daytimeHeartBeat 0.7s ease-in-out infinite', transformOrigin: '0px 8px' }}>
+            <path d="M 0 6 C -2 4, -4 5, -3 7 C -2 9, 0 11, 0 11 C 0 11, 2 9, 3 7 C 4 5, 2 4, 0 6 Z" fill="#ec4899" />
+          </g>
+
+          {/* Sitting Legs */}
+          <path d="M 0 20 L -8 24 L -16 26 M 0 20 L 8 23 L 14 28" stroke="#f8fafc" strokeWidth="2.6" strokeLinecap="round" fill="none" />
+
+          {/* Left Arm resting on pumpkin */}
+          <path d="M 7 4 L 16 9 L 24 16" stroke="#f8fafc" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+
+          {/* Skull with sunglasses and hat */}
+          <g transform="translate(0, -9)">
+            <ellipse cx="0" cy="0" rx="7.5" ry="8.5" fill="#f8fafc" />
+            <rect x="-4" y="6" width="8" height="4.5" fill="#f8fafc" rx="1" />
+            <path d="M -2.5 8 L 2.5 8 M -1.5 6.5 L -1.5 9.5 M 0 6.5 L 0 9.5 M 1.5 6.5 L 1.5 9.5" stroke="#09090b" strokeWidth="0.7" />
+
+            {/* Cool Sunglasses */}
+            <g transform="translate(0, 0)">
+              <path d="M -7 -2 L 7 -2 L 6 3 L 1 3 L 0 0 L -1 0 L -2 3 L -6 3 Z" fill="#0f172a" />
+              <line x1="-5" y1="-1" x2="-3" y2="1.5" stroke="#ffffff" strokeWidth="0.8" strokeLinecap="round" />
+              <line x1="3" y1="-1" x2="5" y2="1.5" stroke="#ffffff" strokeWidth="0.8" strokeLinecap="round" />
+            </g>
+
+            {/* Hat */}
+            {isBirthday ? (
+              <g transform="translate(0, -8) rotate(10)">
+                <path d="M -6 0 L 0 -16 L 6 0 Z" fill="#8b5cf6" stroke="#7c3aed" strokeWidth="0.8" />
+                <path d="M -4 -4 L 0 -16 L 1.5 -9 Z" fill="#facc15" />
+                <path d="M -2 0 L 0 -16 L 0 -7 Z" fill="#ec4899" />
+                <ellipse cx="0" cy="0" rx="6.5" ry="1.6" fill="#fef08a" stroke="#facc15" strokeWidth="0.5" />
+                <circle cx="0" cy="-16" r="2.3" fill="#facc15" stroke="#eab308" strokeWidth="0.6" />
+              </g>
+            ) : (
+              <g transform="translate(0, -8) rotate(6)">
+                <ellipse cx="0" cy="0" rx="12" ry="3" fill="#fef08a" stroke="#eab308" strokeWidth="0.8" />
+                <path d="M -6 0 Q 0 -8 6 0 Z" fill="#fde047" stroke="#eab308" strokeWidth="0.8" />
+                <path d="M -6 0 Q 0 -1.5 6 0" stroke="#38bdf8" strokeWidth="1.6" fill="none" />
+              </g>
+            )}
+          </g>
+
+          {/* Right Arm Waving Hello */}
+          <g style={{ transformOrigin: '-7px 4px', animation: 'daytimeSkeletonWave 3.5s ease-in-out infinite' }}>
+            <path d="M -7 4 L -16 -6 L -20 -18" stroke="#f8fafc" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+            <path d="M -20 -18 L -18 -24 M -20 -18 L -21 -25 M -20 -18 L -24 -23" stroke="#f8fafc" strokeWidth="1.4" strokeLinecap="round" />
+          </g>
+        </g>
+
+        {/* Pumpkin Trio (Right, x = 1710) */}
+        <g transform="translate(1710, 134)">
+          <path d="M 0 -11 Q 2 -18 6 -20" stroke="#15803d" strokeWidth="2.8" strokeLinecap="round" fill="none" />
+          <ellipse cx="0" cy="0" rx="15" ry="11" fill="#ea580c" stroke="#c2410c" strokeWidth="0.9" />
+          <ellipse cx="-7" cy="0" rx="8" ry="10.5" fill="#ea580c" />
+          <ellipse cx="7" cy="0" rx="8" ry="10.5" fill="#ea580c" />
+        </g>
+        <g transform="translate(1732, 138) scale(0.75)">
+          <path d="M 0 -10 Q 2 -15 5 -17" stroke="#15803d" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+          <ellipse cx="0" cy="0" rx="14" ry="10" fill="#f97316" stroke="#c2410c" strokeWidth="0.9" />
+          <ellipse cx="-6" cy="0" rx="7.5" ry="9.5" fill="#f97316" />
+          <ellipse cx="6" cy="0" rx="7.5" ry="9.5" fill="#f97316" />
+        </g>
+
+        {/* --- Swara's Birthday Celebration Sign & Balloons (Oct 31) --- */}
+        {isBirthday && (
+          <g transform="translate(630, 110)">
+            {/* Wooden Posts */}
+            <rect x="-24" y="0" width="4" height="42" fill="#78350f" rx="1" />
+            <rect x="20" y="0" width="4" height="42" fill="#78350f" rx="1" />
+            {/* Plaque */}
+            <rect x="-50" y="-18" width="100" height="26" rx="4" fill="#fef08a" stroke="#d97706" strokeWidth="1.5" />
+            <text x="0" y="-4" textAnchor="middle" fill="#b45309" fontSize="8.5" fontWeight="800" fontFamily="sans-serif" letterSpacing="0.8">
+              HAPPY BIRTHDAY
+            </text>
+            <text x="0" y="5.5" textAnchor="middle" fill="#ea580c" fontSize="8" fontWeight="800" fontFamily="sans-serif" letterSpacing="1.2">
+              SWARA!
+            </text>
+
+            {/* Colorful Helium Party Balloons tied to Sign */}
+            <g style={{ transformOrigin: '0 0', animation: 'balloonBob 4s ease-in-out infinite' }}>
+              {/* Strings */}
+              <path d="M -46 -26 Q -40 -10 -24 0" stroke="rgba(255, 255, 255, 0.85)" strokeWidth="0.9" fill="none" />
+              <path d="M -34 -34 Q -30 -14 -22 0" stroke="rgba(255, 255, 255, 0.85)" strokeWidth="0.9" fill="none" />
+              <path d="M -40 -46 Q -36 -22 -23 0" stroke="rgba(255, 255, 255, 0.85)" strokeWidth="0.9" fill="none" />
+
+              {/* Pink Balloon */}
+              <ellipse cx="-46" cy="-26" rx="6.5" ry="8.5" fill="#ec4899" />
+              <ellipse cx="-48" cy="-28" rx="1.5" ry="3.5" fill="rgba(255,255,255,0.4)" />
+              {/* Cyan Balloon */}
+              <ellipse cx="-34" cy="-34" rx="7" ry="9" fill="#38bdf8" />
+              <ellipse cx="-36" cy="-36" rx="1.6" ry="3.8" fill="rgba(255,255,255,0.4)" />
+              {/* Gold Balloon */}
+              <ellipse cx="-40" cy="-46" rx="6.5" ry="8.5" fill="#facc15" />
+              <ellipse cx="-42" cy="-48" rx="1.5" ry="3.5" fill="rgba(255,255,255,0.4)" />
+            </g>
+
+            {/* Scattered Confetti Specks in the Grass */}
+            {[
+              { cx: -80, cy: 30, color: '#ec4899' },
+              { cx: -60, cy: 36, color: '#38bdf8' },
+              { cx: 30, cy: 34, color: '#facc15' },
+              { cx: 55, cy: 28, color: '#a855f7' },
+              { cx: 75, cy: 36, color: '#4ade80' },
+            ].map((cf, cfi) => (
+              <circle key={cfi} cx={cf.cx} cy={cf.cy} r="2" fill={cf.color} />
+            ))}
+          </g>
+        )}
       </svg>
     </div>
   )
@@ -4572,6 +5131,11 @@ export default function Slideshow({
       {/* Weather + delights (rain, snow, fireflies, birds — in front of photos) */}
       <canvas ref={fxRef} className="absolute inset-0 w-full h-full pointer-events-none z-20" />
 
+      {/* October daytime seasonal delights: pumpkin patch & sunflowers in FOREGROUND */}
+      {isOctober(seasonalDate) && (phase === 'day' || phase === 'dawn') && (
+        <DaytimePumpkinPatch isBirthday={isSwaraBirthday(seasonalDate)} />
+      )}
+
       {/* October dusk/night spooky delights: graveyard & skeletons in FOREGROUND (photos float up from behind) */}
       {isOctober(seasonalDate) && (phase === 'dusk' || phase === 'night') && (
         <SpookyGraveyard isBirthday={isSwaraBirthday(seasonalDate)} />
@@ -4580,6 +5144,11 @@ export default function Slideshow({
       {/* November autumn harvest & Thanksgiving / Diwali horizon in FOREGROUND (photos float up from behind) */}
       {(isNovember(seasonalDate) || isDiwaliSeason(seasonalDate) || isThanksgivingWeek(seasonalDate)) && (
         <AutumnHarvestHorizon seasonalDate={seasonalDate} phase={phase} />
+      )}
+
+      {/* October daytime seasonal delights: party bunting & sunglasses-wearing acrobatic spiders */}
+      {isOctober(seasonalDate) && (phase === 'day' || phase === 'dawn') && (
+        <DaytimePartyBuntingAndSpiders isBirthday={isSwaraBirthday(seasonalDate)} />
       )}
 
       {/* October dusk/night spooky delights: webs & spiders dangling in FRONT of photos */}

@@ -349,6 +349,39 @@ interface FallingLeaf {
   color: string
 }
 
+interface FallingCandy {
+  x: number
+  baseX: number
+  y: number
+  size: number
+  speed: number
+  sway: number
+  angle: number
+  rotSpeed: number
+  offset: number
+  candyType: 'candycorn' | 'wrapped' | 'peppermint'
+  color: string
+}
+
+interface BatCakeDelivery {
+  x: number
+  y: number
+  baseY: number
+  speed: number
+  dir: 1 | -1
+  scale: number
+  sparkles: WitchSparkle[]
+  isBehind: boolean
+}
+
+interface WhimsicalCloud {
+  x: number
+  y: number
+  speed: number
+  scale: number
+  cloudType: 'cupcake' | 'ghost' | 'pumpkin'
+}
+
 interface SkyLantern {
   x: number
   baseX: number
@@ -419,6 +452,10 @@ export function startFxCanvas(
   let nextBatSwarm = performance.now() + rand(45_000, 90_000)
   let witch: Witch | null = null
   let nextWitch = performance.now() + rand(8_000, 18_000)
+  let batCake: BatCakeDelivery | null = null
+  let nextBatCake = performance.now() + rand(8_000, 20_000)
+  let candies: FallingCandy[] = []
+  let whimsicalClouds: WhimsicalCloud[] = []
   let santa: Santa | null = null
   let nextSanta = performance.now() + rand(15_000, 45_000)
   let nextRocket = performance.now() + 500
@@ -535,6 +572,31 @@ export function startFxCanvas(
       sway: rand(12, 28),
       offset: rand(0, Math.PI * 2),
       color: lanternColors[Math.floor(Math.random() * lanternColors.length)],
+    }))
+
+    const candyTypes: ('candycorn' | 'wrapped' | 'peppermint')[] = ['candycorn', 'wrapped', 'peppermint', 'candycorn']
+    const candyColors = ['#f43f5e', '#ec4899', '#a855f7', '#38bdf8', '#fb923c', '#4ade80', '#facc15']
+    candies = Array.from({ length: Math.round(24 * density) }, () => ({
+      x: Math.random() * w,
+      baseX: Math.random() * w,
+      y: Math.random() * h,
+      size: rand(14, 22),
+      speed: rand(30, 62),
+      sway: rand(18, 42),
+      angle: rand(0, Math.PI * 2),
+      rotSpeed: rand(-1.2, 1.2),
+      offset: rand(0, Math.PI * 2),
+      candyType: candyTypes[Math.floor(Math.random() * candyTypes.length)],
+      color: candyColors[Math.floor(Math.random() * candyColors.length)],
+    }))
+
+    const cloudTypes: ('cupcake' | 'ghost' | 'pumpkin')[] = ['cupcake', 'ghost', 'pumpkin']
+    whimsicalClouds = Array.from({ length: 3 }, (_, idx) => ({
+      x: (w / 3) * idx + rand(20, 100),
+      y: h * rand(0.06, 0.22),
+      speed: rand(12, 22),
+      scale: rand(0.9, 1.35),
+      cloudType: cloudTypes[idx % cloudTypes.length],
     }))
   }
 
@@ -1145,6 +1207,349 @@ export function startFxCanvas(
     ctx.restore()
   }
 
+  const drawCandy = (c: FallingCandy, t: number) => {
+    ctx.save()
+    ctx.translate(c.x, c.y)
+    ctx.rotate(c.angle)
+    const s = c.size
+
+    if (c.candyType === 'candycorn') {
+      // Classic 3-tier candy corn with rounded corners
+      // 1. White Tip (top)
+      ctx.fillStyle = '#ffffff'
+      ctx.beginPath()
+      ctx.moveTo(0, -s * 0.6)
+      ctx.lineTo(-s * 0.16, -s * 0.22)
+      ctx.lineTo(s * 0.16, -s * 0.22)
+      ctx.closePath()
+      ctx.fill()
+
+      // 2. Orange Middle
+      ctx.fillStyle = '#f97316'
+      ctx.beginPath()
+      ctx.moveTo(-s * 0.16, -s * 0.22)
+      ctx.lineTo(-s * 0.32, s * 0.18)
+      ctx.lineTo(s * 0.32, s * 0.18)
+      ctx.lineTo(s * 0.16, -s * 0.22)
+      ctx.closePath()
+      ctx.fill()
+
+      // 3. Golden Yellow Base with rounded bottom
+      ctx.fillStyle = '#facc15'
+      ctx.beginPath()
+      ctx.moveTo(-s * 0.32, s * 0.18)
+      ctx.quadraticCurveTo(-s * 0.38, s * 0.55, 0, s * 0.55)
+      ctx.quadraticCurveTo(s * 0.38, s * 0.55, s * 0.32, s * 0.18)
+      ctx.closePath()
+      ctx.fill()
+    } else if (c.candyType === 'wrapped') {
+      // Shiny wrapped hard candy with crinkled wrapper tails
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.75)'
+      ctx.strokeStyle = c.color
+      ctx.lineWidth = 0.8
+
+      // Left wrapper tail
+      ctx.beginPath()
+      ctx.moveTo(-s * 0.35, 0)
+      ctx.lineTo(-s * 0.7, -s * 0.32)
+      ctx.lineTo(-s * 0.62, 0)
+      ctx.lineTo(-s * 0.72, s * 0.32)
+      ctx.closePath()
+      ctx.fill()
+      ctx.stroke()
+
+      // Right wrapper tail
+      ctx.beginPath()
+      ctx.moveTo(s * 0.35, 0)
+      ctx.lineTo(s * 0.7, -s * 0.32)
+      ctx.lineTo(s * 0.62, 0)
+      ctx.lineTo(s * 0.72, s * 0.32)
+      ctx.closePath()
+      ctx.fill()
+      ctx.stroke()
+
+      // Candy Center Oval
+      ctx.fillStyle = c.color
+      ctx.beginPath()
+      ctx.ellipse(0, 0, s * 0.45, s * 0.32, 0, 0, Math.PI * 2)
+      ctx.fill()
+
+      // Shiny highlight curve
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)'
+      ctx.lineWidth = 1.2
+      ctx.beginPath()
+      ctx.arc(0, -s * 0.08, s * 0.25, Math.PI * 1.1, Math.PI * 1.8)
+      ctx.stroke()
+    } else {
+      // Peppermint swirl pinwheel
+      ctx.fillStyle = '#ffffff'
+      ctx.beginPath()
+      ctx.arc(0, 0, s * 0.45, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.strokeStyle = '#e2e8f0'
+      ctx.lineWidth = 0.8
+      ctx.stroke()
+
+      // Swirl blades
+      ctx.fillStyle = c.color
+      for (let i = 0; i < 4; i++) {
+        const a = (i * Math.PI) / 2
+        ctx.beginPath()
+        ctx.moveTo(0, 0)
+        ctx.arc(0, 0, s * 0.45, a, a + Math.PI / 4)
+        ctx.closePath()
+        ctx.fill()
+      }
+    }
+    ctx.restore()
+  }
+
+  const drawWhimsicalCloud = (
+    targetCtx: CanvasRenderingContext2D,
+    c: WhimsicalCloud,
+    t: number
+  ) => {
+    targetCtx.save()
+    targetCtx.translate(c.x, c.y)
+    targetCtx.scale(c.scale, c.scale)
+    targetCtx.fillStyle = 'rgba(255, 255, 255, 0.46)'
+
+    if (c.cloudType === 'cupcake') {
+      // Cupcake Cloud: Billowing dome puff top + cherry puff + cup base
+      targetCtx.beginPath()
+      targetCtx.arc(0, -22, 6, 0, Math.PI * 2) // cherry / candle puff
+      targetCtx.arc(-14, -10, 13, 0, Math.PI * 2)
+      targetCtx.arc(0, -14, 15, 0, Math.PI * 2)
+      targetCtx.arc(14, -10, 13, 0, Math.PI * 2)
+      targetCtx.arc(-18, 6, 10, 0, Math.PI * 2)
+      targetCtx.arc(0, 10, 12, 0, Math.PI * 2)
+      targetCtx.arc(18, 6, 10, 0, Math.PI * 2)
+      targetCtx.fill()
+
+      // Frosting highlight curve
+      targetCtx.strokeStyle = 'rgba(255, 255, 255, 0.8)'
+      targetCtx.lineWidth = 1.2
+      targetCtx.beginPath()
+      targetCtx.arc(0, -14, 11, Math.PI * 1.1, Math.PI * 1.7)
+      targetCtx.stroke()
+    } else if (c.cloudType === 'ghost') {
+      // Friendly Ghost Cloud: Head puff + 2 arm puffs + wispy tail
+      targetCtx.beginPath()
+      targetCtx.arc(0, -14, 16, 0, Math.PI * 2)
+      targetCtx.arc(-18, -4, 9, 0, Math.PI * 2)
+      targetCtx.arc(18, -4, 9, 0, Math.PI * 2)
+      targetCtx.arc(-8, 10, 10, 0, Math.PI * 2)
+      targetCtx.arc(8, 12, 11, 0, Math.PI * 2)
+      targetCtx.arc(0, 4, 14, 0, Math.PI * 2)
+      targetCtx.fill()
+
+      // Cute eye indentations
+      targetCtx.fillStyle = 'rgba(219, 234, 254, 0.55)'
+      targetCtx.beginPath()
+      targetCtx.arc(-5, -14, 2.2, 0, Math.PI * 2)
+      targetCtx.arc(5, -14, 2.2, 0, Math.PI * 2)
+      targetCtx.fill()
+    } else {
+      // Pumpkin Cloud: 3 side-by-side billowing puffs + little cloud stem
+      targetCtx.beginPath()
+      targetCtx.rect(-3, -24, 6, 8)
+      targetCtx.arc(-16, -4, 15, 0, Math.PI * 2)
+      targetCtx.arc(0, -6, 18, 0, Math.PI * 2)
+      targetCtx.arc(16, -4, 15, 0, Math.PI * 2)
+      targetCtx.arc(0, 8, 14, 0, Math.PI * 2)
+      targetCtx.fill()
+    }
+    targetCtx.restore()
+  }
+
+  const drawBatCakeMission = (
+    targetCtx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    scale: number,
+    dir: 1 | -1,
+    t: number,
+    isBirthday = false
+  ) => {
+    targetCtx.save()
+    targetCtx.translate(x, y)
+    targetCtx.scale(dir * scale, scale)
+
+    const sway = Math.sin(t / 380) * 0.08
+    const flap = t / 85
+
+    // 1. Left bat
+    targetCtx.save()
+    targetCtx.translate(-44, -22)
+    drawBat(targetCtx, 0, 0, flap, 0.9, 1, 0.08, false, false, 'day')
+    // Tiny cool black sunglasses
+    targetCtx.fillStyle = '#0f172a'
+    targetCtx.fillRect(-4, -4, 3.2, 2.2)
+    targetCtx.fillRect(0.8, -4, 3.2, 2.2)
+    targetCtx.fillRect(-1.2, -3.2, 2.4, 0.8)
+    targetCtx.strokeStyle = 'rgba(255,255,255,0.7)'
+    targetCtx.lineWidth = 0.5
+    targetCtx.beginPath()
+    targetCtx.moveTo(-3, -3.2)
+    targetCtx.lineTo(-1.8, -2.4)
+    targetCtx.stroke()
+    targetCtx.restore()
+
+    // 2. Right bat
+    targetCtx.save()
+    targetCtx.translate(44, -22)
+    drawBat(targetCtx, 0, 0, flap + 0.45, 0.9, 1, -0.08, false, false, 'day')
+    // Tiny cool black sunglasses
+    targetCtx.fillStyle = '#0f172a'
+    targetCtx.fillRect(-4, -4, 3.2, 2.2)
+    targetCtx.fillRect(0.8, -4, 3.2, 2.2)
+    targetCtx.fillRect(-1.2, -3.2, 2.4, 0.8)
+    targetCtx.strokeStyle = 'rgba(255,255,255,0.7)'
+    targetCtx.lineWidth = 0.5
+    targetCtx.beginPath()
+    targetCtx.moveTo(-3, -3.2)
+    targetCtx.lineTo(-1.8, -2.4)
+    targetCtx.stroke()
+    targetCtx.restore()
+
+    // 3. Silky Golden Hanging Ribbons from Bat Claws down to Cake
+    targetCtx.strokeStyle = '#f59e0b'
+    targetCtx.lineWidth = 1.6
+    targetCtx.lineCap = 'round'
+    targetCtx.beginPath()
+    targetCtx.moveTo(-42, -14)
+    targetCtx.quadraticCurveTo(-38, 2, -26, 12)
+    targetCtx.moveTo(42, -14)
+    targetCtx.quadraticCurveTo(38, 2, 26, 12)
+    targetCtx.stroke()
+
+    // Ribbon bow knots at cake attachment points
+    targetCtx.fillStyle = '#ec4899'
+    targetCtx.beginPath()
+    targetCtx.arc(-26, 12, 2.5, 0, Math.PI * 2)
+    targetCtx.arc(26, 12, 2.5, 0, Math.PI * 2)
+    targetCtx.fill()
+
+    // 4. The 3-Tier Birthday Cake
+    targetCtx.save()
+    targetCtx.translate(0, 14)
+    targetCtx.rotate(sway)
+
+    // Soft cake drop shadow
+    targetCtx.fillStyle = 'rgba(15, 23, 42, 0.15)'
+    targetCtx.beginPath()
+    targetCtx.ellipse(0, 32, 34, 6, 0, 0, Math.PI * 2)
+    targetCtx.fill()
+
+    // --- Bottom Tier (Sky Blue with Cream Frosting & Sprinkles) ---
+    targetCtx.fillStyle = '#38bdf8'
+    targetCtx.beginPath()
+    if (typeof targetCtx.roundRect === 'function') {
+      targetCtx.roundRect(-30, 10, 60, 20, [0, 0, 4, 4])
+    } else {
+      targetCtx.rect(-30, 10, 60, 20)
+    }
+    targetCtx.fill()
+    targetCtx.strokeStyle = '#0284c7'
+    targetCtx.lineWidth = 0.8
+    targetCtx.stroke()
+
+    // Bottom tier scalloped white border
+    targetCtx.fillStyle = '#ffffff'
+    for (let bx = -27; bx <= 27; bx += 9) {
+      targetCtx.beginPath()
+      targetCtx.arc(bx, 11, 4.5, 0, Math.PI)
+      targetCtx.fill()
+    }
+    // Bottom tier colorful sprinkles
+    const spColors = ['#f43f5e', '#facc15', '#a855f7', '#4ade80', '#ffffff']
+    for (let si = 0; si < 8; si++) {
+      targetCtx.fillStyle = spColors[si % spColors.length]
+      targetCtx.fillRect(-24 + si * 6.5, 20 + (si % 2 === 0 ? -2 : 3), 3, 1.6)
+    }
+
+    // --- Middle Tier (Strawberry Pink with Icing Drips) ---
+    targetCtx.fillStyle = '#ec4899'
+    targetCtx.beginPath()
+    if (typeof targetCtx.roundRect === 'function') {
+      targetCtx.roundRect(-21, -4, 42, 16, [0, 0, 3, 3])
+    } else {
+      targetCtx.rect(-21, -4, 42, 16)
+    }
+    targetCtx.fill()
+    targetCtx.strokeStyle = '#be185d'
+    targetCtx.lineWidth = 0.8
+    targetCtx.stroke()
+
+    // Middle tier dripping white frosting
+    targetCtx.fillStyle = '#ffffff'
+    targetCtx.beginPath()
+    targetCtx.moveTo(-21, -4)
+    targetCtx.lineTo(21, -4)
+    targetCtx.lineTo(21, 0)
+    targetCtx.quadraticCurveTo(16, 6, 12, 1)
+    targetCtx.quadraticCurveTo(7, 7, 3, 0)
+    targetCtx.quadraticCurveTo(-2, 7, -7, 1)
+    targetCtx.quadraticCurveTo(-12, 6, -16, 0)
+    targetCtx.lineTo(-21, 0)
+    targetCtx.closePath()
+    targetCtx.fill()
+
+    // --- Top Tier (Golden Vanilla Buttercream) ---
+    targetCtx.fillStyle = '#fef08a'
+    targetCtx.beginPath()
+    if (typeof targetCtx.roundRect === 'function') {
+      targetCtx.roundRect(-13, -16, 26, 14, [0, 0, 2, 2])
+    } else {
+      targetCtx.rect(-13, -16, 26, 14)
+    }
+    targetCtx.fill()
+    targetCtx.strokeStyle = '#facc15'
+    targetCtx.lineWidth = 0.8
+    targetCtx.stroke()
+
+    // Top tier decorative piping
+    targetCtx.fillStyle = '#f43f5e'
+    for (let tx = -10; tx <= 10; tx += 5) {
+      targetCtx.beginPath()
+      targetCtx.arc(tx, -16, 2.2, 0, Math.PI * 2)
+      targetCtx.fill()
+    }
+
+    // --- 3 Lit Birthday Candles ---
+    const candleX = [-8, 0, 8]
+    const candleColors = ['#f43f5e', '#38bdf8', '#a855f7']
+    for (let ci = 0; ci < 3; ci++) {
+      const cx = candleX[ci]
+      targetCtx.fillStyle = candleColors[ci]
+      targetCtx.fillRect(cx - 1.5, -28, 3, 12)
+      targetCtx.strokeStyle = '#475569'
+      targetCtx.lineWidth = 0.8
+      targetCtx.beginPath()
+      targetCtx.moveTo(cx, -28)
+      targetCtx.lineTo(cx, -30)
+      targetCtx.stroke()
+
+      const flicker = Math.sin(t / 50 + ci * 2) * 1.5
+      const flameGlow = targetCtx.createRadialGradient(cx, -33 + flicker * 0.4, 0.5, cx, -33 + flicker * 0.4, 8)
+      flameGlow.addColorStop(0, 'rgba(254, 240, 138, 0.95)')
+      flameGlow.addColorStop(0.4, 'rgba(249, 115, 22, 0.75)')
+      flameGlow.addColorStop(1, 'rgba(249, 115, 22, 0)')
+      targetCtx.fillStyle = flameGlow
+      targetCtx.beginPath()
+      targetCtx.arc(cx, -33 + flicker * 0.4, 8, 0, Math.PI * 2)
+      targetCtx.fill()
+
+      targetCtx.fillStyle = '#ffffff'
+      targetCtx.beginPath()
+      targetCtx.ellipse(cx, -33 + flicker * 0.4, 1.4, 3 + flicker * 0.4, 0, 0, Math.PI * 2)
+      targetCtx.fill()
+    }
+
+    targetCtx.restore()
+    targetCtx.restore()
+  }
+
   const drawWitch = (
     targetCtx: CanvasRenderingContext2D,
     x: number,
@@ -1730,6 +2135,8 @@ export function startFxCanvas(
     const creaturesPossible = calm && (daylight || november)
     const witchPossible = october && calm
     const santaPossible = christmasDay && calm
+    const wantsCandy = daylight && (october || swaraBirthday) && calm
+    const batCakePossible = daylight && (october || swaraBirthday) && calm
 
     const active =
       wantsWeather ||
@@ -1738,15 +2145,18 @@ export function startFxCanvas(
       wantsLanterns ||
       wantsDiwaliFireworks ||
       wantsSwaraFireworks ||
+      wantsCandy ||
       batSwarm !== null ||
       flock !== null ||
       witch !== null ||
+      batCake !== null ||
       santa !== null ||
       christmasDay ||
       newYearSeason ||
       (batsPossible && t > nextBatSwarm) ||
       (creaturesPossible && t > nextFlock) ||
       (witchPossible && (t > nextWitch || getQueryParam('witch') === '1')) ||
+      (batCakePossible && (t > nextBatCake || getQueryParam('batcake') === '1')) ||
       (santaPossible && t > nextSanta)
 
     if (!active) {
@@ -2073,6 +2483,123 @@ export function startFxCanvas(
       }
     } else {
       santa = null
+    }
+
+    // Bat Cake Air-Delivery Mission ("The Bat Drop"):
+    // Two friendly bats carrying a 3-tier birthday cake across the daytime sky!
+    if (batCakePossible) {
+      if (!batCake && (t > nextBatCake || getQueryParam('batcake') === '1')) {
+        const dir: 1 | -1 = Math.random() < 0.5 ? 1 : -1
+        const scale = rand(1.6, 2.0)
+        const baseY = h * rand(0.12, 0.28)
+        const isBehind = getQueryParam('batcake') === '1' ? false : (Math.random() < 0.35 && !!bgCtx)
+        const margin = 260
+        batCake = {
+          x: dir === 1 ? -margin : w + margin,
+          y: baseY,
+          baseY,
+          speed: rand(95, 130),
+          dir,
+          scale,
+          sparkles: [],
+          isBehind,
+        }
+      }
+      if (batCake) {
+        batCake.x += batCake.dir * batCake.speed * dt
+        batCake.y = batCake.baseY + Math.sin(t / 420) * 12
+
+        // Confectionery sugar sparkles & candle puffs
+        if (Math.random() < 0.55) {
+          const cakeColors = ['#f43f5e', '#ec4899', '#38bdf8', '#facc15', '#ffffff']
+          batCake.sparkles.push({
+            x: batCake.x - batCake.dir * rand(8, 26) * batCake.scale,
+            y: batCake.y + rand(12, 34) * batCake.scale,
+            vx: -batCake.dir * rand(15, 45) + rand(-8, 8),
+            vy: rand(10, 30),
+            alpha: rand(0.85, 1.0),
+            size: rand(2.0, 4.5),
+            length: rand(5, 9),
+            angle: rand(0, Math.PI * 2),
+            rotSpeed: rand(-2, 2),
+            color: cakeColors[Math.floor(Math.random() * cakeColors.length)],
+            kind: Math.random() < 0.5 ? 'star' : 'dot',
+          })
+        }
+
+        // Update cake sparkles
+        for (let i = batCake.sparkles.length - 1; i >= 0; i--) {
+          const sp = batCake.sparkles[i]
+          sp.x += sp.vx * dt
+          sp.y += sp.vy * dt
+          sp.alpha -= dt * 0.8
+          if (sp.alpha <= 0) {
+            batCake.sparkles.splice(i, 1)
+          }
+        }
+
+        const gone = batCake.dir === 1 ? batCake.x - 300 > w : batCake.x + 300 < 0
+        if (gone) {
+          batCake = null
+          nextBatCake = getQueryParam('batcake') === '1' ? t + 1000 : (swaraBirthday ? t + rand(25_000, 45_000) : t + rand(35_000, 60_000))
+        } else {
+          const targetCtx = (batCake.isBehind && bgCtx) ? bgCtx : ctx
+          if (batCake.isBehind && bgCtx) bgHadDraw = true
+
+          // Draw cake sparkles
+          for (const sp of batCake.sparkles) {
+            targetCtx.save()
+            targetCtx.globalAlpha = Math.max(0, sp.alpha)
+            targetCtx.fillStyle = sp.color
+            if (sp.kind === 'star') {
+              targetCtx.translate(sp.x, sp.y)
+              targetCtx.beginPath()
+              const s = sp.size
+              targetCtx.moveTo(0, -s)
+              targetCtx.quadraticCurveTo(0, 0, s, 0)
+              targetCtx.quadraticCurveTo(0, 0, 0, s)
+              targetCtx.quadraticCurveTo(0, 0, -s, 0)
+              targetCtx.quadraticCurveTo(0, 0, 0, -s)
+              targetCtx.fill()
+            } else {
+              targetCtx.beginPath()
+              targetCtx.arc(sp.x, sp.y, sp.size, 0, Math.PI * 2)
+              targetCtx.fill()
+            }
+            targetCtx.restore()
+          }
+
+          drawBatCakeMission(targetCtx, batCake.x, batCake.y, batCake.scale, batCake.dir, t, swaraBirthday)
+        }
+      }
+    } else {
+      batCake = null
+    }
+
+    // Daytime October / Swara's Birthday: Whimsical Cupcake & Ghost Clouds + Candy Flurries
+    if (wantsCandy) {
+      const cloudTargetCtx = bgCtx ?? ctx
+      if (bgCtx) bgHadDraw = true
+      for (const wc of whimsicalClouds) {
+        wc.x += wc.speed * dt
+        if (wc.x > w + 140) {
+          wc.x = -140
+          wc.y = h * rand(0.06, 0.22)
+        }
+        drawWhimsicalCloud(cloudTargetCtx, wc, t)
+      }
+
+      // Falling Candy Flurries (candy corn, wrapped hard candies, peppermints)
+      for (const c of candies) {
+        c.y += c.speed * dt
+        if (c.y > h + 30) {
+          c.y = -35
+          c.baseX = Math.random() * w
+        }
+        c.x = c.baseX + Math.sin(t / 1400 + c.offset) * c.sway
+        c.angle += c.rotSpeed * dt
+        drawCandy(c, t)
+      }
     }
 
     // Christmas Day: falling wrapped gifts in the background!
