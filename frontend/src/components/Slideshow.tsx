@@ -3344,25 +3344,57 @@ function DaytimePumpkinPatch({ isBirthday = false }: { isBirthday?: boolean }) {
             99% { transform: translate3d(-70px, 84px, 0) scaleX(1); }
             100% { transform: translate3d(-70px, 84px, 0) scaleX(1); }
           }
-          @keyframes zombieLimpBob {
-            0%, 100% { transform: translateY(0) rotate(-2deg); }
-            50% { transform: translateY(-4px) rotate(3deg); }
+          /* Zombie Shambling Gait: Staggered Lurch & Drag (prevents gliding effect) */
+          @keyframes zombieLurchStep {
+            0% { transform: translate3d(0px, 0px, 0) rotate(0deg); }
+            18% { transform: translate3d(14px, 5px, 0) rotate(9deg); }
+            34% { transform: translate3d(16px, 4px, 0) rotate(7deg); }
+            50% { transform: translate3d(12px, 1px, 0) rotate(2deg); }
+            70% { transform: translate3d(5px, -3px, 0) rotate(-4deg); }
+            88% { transform: translate3d(1px, -1px, 0) rotate(-1deg); }
+            100% { transform: translate3d(0px, 0px, 0) rotate(0deg); }
           }
-          @keyframes zombieHeadLoll {
-            0%, 100% { transform: rotate(-5deg); }
-            50% { transform: rotate(7deg); }
+          /* Stepping Front Leg: Quick forward reach, ground plant, and push back */
+          @keyframes zombieSteppingLeg {
+            0% { transform: rotate(-20deg); }
+            18% { transform: rotate(-30deg); }
+            38% { transform: rotate(12deg); }
+            65% { transform: rotate(20deg); }
+            85% { transform: rotate(4deg); }
+            100% { transform: rotate(-20deg); }
           }
-          @keyframes zombieArmsBob {
-            0%, 100% { transform: rotate(-3deg); }
-            50% { transform: rotate(6deg); }
+          /* Dragging Back Leg: Stiff trailing leg with lazy scraping drag */
+          @keyframes zombieDraggingLeg {
+            0% { transform: rotate(18deg); }
+            25% { transform: rotate(26deg); }
+            55% { transform: rotate(12deg); }
+            78% { transform: rotate(-10deg); }
+            92% { transform: rotate(-4deg); }
+            100% { transform: rotate(18deg); }
           }
-          @keyframes zombieLegSwingL {
-            0%, 100% { transform: rotate(-18deg); }
-            50% { transform: rotate(18deg); }
+          /* Loose, dead zombie arms swinging with the stumble */
+          @keyframes zombieArmsSwing {
+            0% { transform: rotate(-4deg); }
+            18% { transform: rotate(12deg); }
+            38% { transform: rotate(6deg); }
+            65% { transform: rotate(-9deg); }
+            85% { transform: rotate(-2deg); }
+            100% { transform: rotate(-4deg); }
           }
-          @keyframes zombieLegSwingR {
-            0%, 100% { transform: rotate(18deg); }
-            50% { transform: rotate(-18deg); }
+          /* Loose floppy head jolting on impact */
+          @keyframes zombieHeadJolt {
+            0% { transform: rotate(-4deg); }
+            18% { transform: rotate(13deg) translateY(1.5px); }
+            35% { transform: rotate(8deg); }
+            65% { transform: rotate(-9deg) translateY(-1px); }
+            85% { transform: rotate(-2deg); }
+            100% { transform: rotate(-4deg); }
+          }
+          /* Ground shadow pulse on footstep impact */
+          @keyframes zombieShadowPulse {
+            0%, 100% { transform: scale(1); opacity: 0.28; }
+            18% { transform: scale(1.2, 1.15); opacity: 0.40; }
+            65% { transform: scale(0.85, 0.85); opacity: 0.18; }
           }
         `}</style>
 
@@ -3382,28 +3414,35 @@ function DaytimePumpkinPatch({ isBirthday = false }: { isBirthday?: boolean }) {
           }}
         >
           <g transform="scale(0.85)">
-            {/* Zombie Limping Body */}
-            <g style={{ animation: 'zombieLimpBob 2.8s ease-in-out infinite', transformOrigin: '0 20px' }}>
-              {/* Shadow underneath */}
-              <ellipse cx="2" cy="40" rx="14" ry="4" fill="rgba(0, 0, 0, 0.28)" />
+            {/* Zombie Stumbling / Lurching Body Cadence */}
+            <g style={{ animation: 'zombieLurchStep 2.8s ease-in-out infinite', transformOrigin: '0 36px' }}>
+              {/* Shadow underneath with ground impact pulse */}
+              <ellipse
+                cx="2"
+                cy="40"
+                rx="14"
+                ry="4"
+                fill="rgba(0, 0, 0, 0.28)"
+                style={{ animation: 'zombieShadowPulse 2.8s ease-in-out infinite', transformOrigin: '2px 40px' }}
+              />
 
               {/* Back Arm (Left Arm, reaching forward) */}
-              <g style={{ transformOrigin: '-2px 8px', animation: 'zombieArmsBob 3.6s ease-in-out infinite' }}>
+              <g style={{ transformOrigin: '-2px 8px', animation: 'zombieArmsSwing 2.8s ease-in-out infinite' }}>
                 <path d="M -4 6 L 6 5 L 5 11 L -5 10 Z" fill="#581c87" />
                 <path d="M 0 8 L 14 7 L 24 9" stroke="#4ade80" strokeWidth="3" strokeLinecap="round" fill="none" />
                 <path d="M 24 9 L 28 8 M 24 9 L 28 10 M 24 9 L 27 12" stroke="#4ade80" strokeWidth="1.2" strokeLinecap="round" />
               </g>
 
-              {/* Left Leg (Back Leg) */}
-              <g style={{ transformOrigin: '-3px 22px', animation: 'zombieLegSwingL 2.8s ease-in-out infinite' }}>
+              {/* Left Leg (Dragging Rear Leg) */}
+              <g style={{ transformOrigin: '-3px 22px', animation: 'zombieDraggingLeg 2.8s ease-in-out infinite' }}>
                 <line x1="-3" y1="22" x2="-5" y2="34" stroke="#334155" strokeWidth="4.2" strokeLinecap="round" />
                 <path d="M -8 33 L -2 33 L -3 36 L -5 34 L -7 36 Z" fill="#334155" />
                 <line x1="-5" y1="34" x2="-6" y2="39" stroke="#4ade80" strokeWidth="2.4" strokeLinecap="round" />
                 <path d="M -9 39 L -2 39 C 0 39, 0 42, -4 42 L -9 42 Z" fill="#78350f" />
               </g>
 
-              {/* Right Leg (Front Leg) */}
-              <g style={{ transformOrigin: '3px 22px', animation: 'zombieLegSwingR 2.8s ease-in-out infinite' }}>
+              {/* Right Leg (Stepping Front Leg) */}
+              <g style={{ transformOrigin: '3px 22px', animation: 'zombieSteppingLeg 2.8s ease-in-out infinite' }}>
                 <line x1="3" y1="22" x2="6" y2="34" stroke="#475569" strokeWidth="4.5" strokeLinecap="round" />
                 <circle cx="4.5" cy="28" r="1.5" fill="#4ade80" />
                 <path d="M 1 33 L 7 33 L 6 36 L 4 34 L 2 36 Z" fill="#475569" />
@@ -3421,15 +3460,15 @@ function DaytimePumpkinPatch({ isBirthday = false }: { isBirthday?: boolean }) {
               <path d="M 0 11 L 3 14 L -1 16 Z" fill="#4c1d95" />
               <line x1="0" y1="13" x2="2.5" y2="13" stroke="#f8fafc" strokeWidth="0.9" />
 
-              {/* Front Arm (Right Arm, reaching forward) */}
-              <g style={{ transformOrigin: '2px 8px', animation: 'zombieArmsBob 3.6s ease-in-out infinite', animationDelay: '0.3s' }}>
+              {/* Front Arm (Right Arm, reaching forward with inertia delay) */}
+              <g style={{ transformOrigin: '2px 8px', animation: 'zombieArmsSwing 2.8s ease-in-out infinite', animationDelay: '0.2s' }}>
                 <path d="M 0 6 L 8 6 L 7 12 L -1 11 Z" fill="#6d28d9" />
                 <path d="M 4 9 L 18 8 L 27 10" stroke="#4ade80" strokeWidth="3.2" strokeLinecap="round" fill="none" />
                 <path d="M 27 10 L 31 9 M 27 10 L 31 11 M 27 10 L 30 13" stroke="#4ade80" strokeWidth="1.2" strokeLinecap="round" />
               </g>
 
-              {/* Zombie Head (with head loll animation) */}
-              <g style={{ transformOrigin: '0 6px', animation: 'zombieHeadLoll 5.2s ease-in-out infinite' }}>
+              {/* Zombie Head (with head loll & jolt animation) */}
+              <g style={{ transformOrigin: '0 6px', animation: 'zombieHeadJolt 2.8s ease-in-out infinite' }}>
                 <rect x="-7.5" y="-9" width="15" height="15" rx="3.5" fill="#4ade80" stroke="#22c55e" strokeWidth="0.9" />
                 <path d="M -8.5 -8 C -7 -13, -3 -11, -1 -14 C 1 -11, 4 -14, 7.5 -9 L 8.5 -5 L -8.5 -5 Z" fill="#1e1b4b" />
                 <path d="M 0 -6 L 4 -4 M 1 -6.5 L 1 -4 M 3 -5.5 L 3 -3" stroke="#166534" strokeWidth="0.8" strokeLinecap="round" />
