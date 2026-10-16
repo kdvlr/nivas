@@ -2980,25 +2980,25 @@ function DaytimePumpkinPatch({ isBirthday = false }: { isBirthday?: boolean }) {
         <g
           style={{
             willChange: 'transform',
-            animation: isZombieMid ? 'none' : 'zombieStroll 68s linear infinite',
+            animation: isZombieMid ? 'none' : 'zombieStroll 200s linear infinite',
             transform: isZombieMid ? 'translate3d(680px, 80px, 0)' : undefined,
           }}
         >
           <g transform="scale(0.85)">
             {/* Zombie Limping Body */}
-            <g style={{ animation: 'zombieLimpBob 1.1s ease-in-out infinite', transformOrigin: '0 20px' }}>
+            <g style={{ animation: 'zombieLimpBob 2.8s ease-in-out infinite', transformOrigin: '0 20px' }}>
               {/* Shadow underneath */}
               <ellipse cx="2" cy="40" rx="14" ry="4" fill="rgba(0, 0, 0, 0.28)" />
 
               {/* Back Arm (Left Arm, reaching forward) */}
-              <g style={{ transformOrigin: '-2px 8px', animation: 'zombieArmsBob 1.4s ease-in-out infinite' }}>
+              <g style={{ transformOrigin: '-2px 8px', animation: 'zombieArmsBob 3.6s ease-in-out infinite' }}>
                 <path d="M -4 6 L 6 5 L 5 11 L -5 10 Z" fill="#581c87" />
                 <path d="M 0 8 L 14 7 L 24 9" stroke="#4ade80" strokeWidth="3" strokeLinecap="round" fill="none" />
                 <path d="M 24 9 L 28 8 M 24 9 L 28 10 M 24 9 L 27 12" stroke="#4ade80" strokeWidth="1.2" strokeLinecap="round" />
               </g>
 
               {/* Left Leg (Back Leg) */}
-              <g style={{ transformOrigin: '-3px 22px', animation: 'zombieLegSwingL 1.1s ease-in-out infinite' }}>
+              <g style={{ transformOrigin: '-3px 22px', animation: 'zombieLegSwingL 2.8s ease-in-out infinite' }}>
                 <line x1="-3" y1="22" x2="-5" y2="34" stroke="#334155" strokeWidth="4.2" strokeLinecap="round" />
                 <path d="M -8 33 L -2 33 L -3 36 L -5 34 L -7 36 Z" fill="#334155" />
                 <line x1="-5" y1="34" x2="-6" y2="39" stroke="#4ade80" strokeWidth="2.4" strokeLinecap="round" />
@@ -3006,7 +3006,7 @@ function DaytimePumpkinPatch({ isBirthday = false }: { isBirthday?: boolean }) {
               </g>
 
               {/* Right Leg (Front Leg) */}
-              <g style={{ transformOrigin: '3px 22px', animation: 'zombieLegSwingR 1.1s ease-in-out infinite' }}>
+              <g style={{ transformOrigin: '3px 22px', animation: 'zombieLegSwingR 2.8s ease-in-out infinite' }}>
                 <line x1="3" y1="22" x2="6" y2="34" stroke="#475569" strokeWidth="4.5" strokeLinecap="round" />
                 <circle cx="4.5" cy="28" r="1.5" fill="#4ade80" />
                 <path d="M 1 33 L 7 33 L 6 36 L 4 34 L 2 36 Z" fill="#475569" />
@@ -3025,14 +3025,14 @@ function DaytimePumpkinPatch({ isBirthday = false }: { isBirthday?: boolean }) {
               <line x1="0" y1="13" x2="2.5" y2="13" stroke="#f8fafc" strokeWidth="0.9" />
 
               {/* Front Arm (Right Arm, reaching forward) */}
-              <g style={{ transformOrigin: '2px 8px', animation: 'zombieArmsBob 1.4s ease-in-out infinite', animationDelay: '0.15s' }}>
+              <g style={{ transformOrigin: '2px 8px', animation: 'zombieArmsBob 3.6s ease-in-out infinite', animationDelay: '0.3s' }}>
                 <path d="M 0 6 L 8 6 L 7 12 L -1 11 Z" fill="#6d28d9" />
                 <path d="M 4 9 L 18 8 L 27 10" stroke="#4ade80" strokeWidth="3.2" strokeLinecap="round" fill="none" />
                 <path d="M 27 10 L 31 9 M 27 10 L 31 11 M 27 10 L 30 13" stroke="#4ade80" strokeWidth="1.2" strokeLinecap="round" />
               </g>
 
               {/* Zombie Head (with head loll animation) */}
-              <g style={{ transformOrigin: '0 6px', animation: 'zombieHeadLoll 2.2s ease-in-out infinite' }}>
+              <g style={{ transformOrigin: '0 6px', animation: 'zombieHeadLoll 5.2s ease-in-out infinite' }}>
                 <rect x="-7.5" y="-9" width="15" height="15" rx="3.5" fill="#4ade80" stroke="#22c55e" strokeWidth="0.9" />
                 <path d="M -8.5 -8 C -7 -13, -3 -11, -1 -14 C 1 -11, 4 -14, 7.5 -9 L 8.5 -5 L -8.5 -5 Z" fill="#1e1b4b" />
                 <path d="M 0 -6 L 4 -4 M 1 -6.5 L 1 -4 M 3 -5.5 L 3 -3" stroke="#166534" strokeWidth="0.8" strokeLinecap="round" />
