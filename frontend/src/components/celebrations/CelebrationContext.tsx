@@ -8,7 +8,6 @@ import {
   type ReactNode,
 } from 'react'
 import { CELEBRATIONS, type Celebration, type CelebrationName } from './animations'
-import { isSwaraBirthday } from '../sky/queryParam'
 
 const DURATION_MS = 3800
 
@@ -54,9 +53,6 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
       let pool = CELEBRATIONS
       if (name) {
         pool = CELEBRATIONS.filter((c) => c.name === name)
-      } else if (isSwaraBirthday()) {
-        const bdayCelebration = CELEBRATIONS.filter((c) => c.name === 'birthday-cake')
-        pool = bdayCelebration.length > 0 ? bdayCelebration : CELEBRATIONS
       } else if (CELEBRATIONS.length > 1 && lastRef.current) {
         // random, but never the same one twice in a row
         pool = CELEBRATIONS.filter((c) => c.name !== lastRef.current)
