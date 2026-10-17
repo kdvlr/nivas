@@ -4,7 +4,7 @@ import struct
 import threading
 import time
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
@@ -91,8 +91,19 @@ router = APIRouter(prefix="/api/photos", tags=["photos"])
 
 PHOTOS_DIR = get_settings().photos_dir
 
-IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".heic", ".heif"}
 VIDEO_EXTENSIONS = {".mp4", ".webm", ".mov", ".ogg"}
+
+def _to_timestamp(dt_str: str | None) -> float | None:
+    if not dt_str:
+        return None
+    try:
+        dt = datetime.fromisoformat(dt_str)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.timestamp()
+    except Exception:
+        return None
 
 # Thread-safe geocode processing tracker
 GEOCODE_LOCK = threading.Lock()
@@ -637,74 +648,127 @@ def get_photos(db: Session = Depends(get_db)):
 
     media_items = []
     paired_images = set()
+    paired_videos = set()
     
-    # 1. Pair Live Photos (Apple Live Photos are ONLY .mov / .MOV motion clips)
+    # 1. Pair Live Photos (Apple Live Photos are .mov motion clips or clips with _hevc/_h264/_live)
     for vid_rel_str, vid_rec in video_map.items():
         vid_rel_path = Path(vid_rec.file_path)
         vid_ext = vid_rel_path.suffix.lower()
         vid_base = vid_rel_path.stem
         vid_dir = vid_rel_path.parent
         
-        found_pair = False
-        if vid_ext == ".mov":
-            if vid_base.endswith("_hevc"):
-                base_name = vid_base[:-5]
-            else:
-                base_name = vid_base
-                
-            for img_ext in IMAGE_EXTENSIONS:
-                img_rel_path = vid_dir / f"{base_name}{img_ext}"
-                img_rel_str = img_rel_path.as_posix().lower()
-                if img_rel_str in image_map:
-                    img_data = image_map[img_rel_str]
-                    
-                    media_items.append({
-                        "url": f"/api/photos/media/{urllib.parse.quote(img_data['rel_path'].as_posix())}",
-                        "displayUrl": f"/api/photos/display/{urllib.parse.quote(img_data['rel_path'].as_posix())}",
-                        "thumbnailUrl": f"/api/photos/thumbnail/{urllib.parse.quote(img_data['rel_path'].as_posix())}",
-                        "videoUrl": f"/api/photos/media/{urllib.parse.quote(vid_rel_path.as_posix())}",
-                        # Byte size of the clip, so the slideshow can decide whether
-                        # autoplaying it is worth the bandwidth on a kiosk tablet.
-                        "media_bytes": vid_rec.file_size,
-                        "posterUrl": f"/api/photos/poster/{urllib.parse.quote(vid_rel_path.as_posix())}",
-                        "playbackUrl": f"/api/photos/playback/{urllib.parse.quote(vid_rel_path.as_posix())}",
-                        "type": "live_photo",
-                        "name": img_data["name"],
-                        "width": img_data["width"],
-                        "height": img_data["height"],
-                        "orientation": img_data["orientation"],
-                        "date_taken": img_data["date_taken"],
-                        "location_name": img_data["location_name"]
-                    })
-                    paired_images.add(img_rel_str)
-                    found_pair = True
-                    break
-                    
-        if found_pair:
+        # Apple Live Photos are .mov motion clips (e.g. IMG_9671_HEVC.MOV or IMG_0104.MOV)
+        # or exports with explicit motion clip suffixes (_hevc, _h264, _live)
+        is_live_candidate = (vid_ext == ".mov") or bool(re.search(r'_(hevc|h264|live)', vid_base, re.IGNORECASE))
+        if not is_live_candidate:
             continue
+            
+        clean_stem = re.sub(r'_(hevc|h264|live)', '', vid_base, flags=re.IGNORECASE)
+        base_candidate = re.sub(r'-[0-9]+$', '', clean_stem)
+        
+        candidates = []
+        # (a) Exact match on clean_stem or base_candidate
+        for base in [clean_stem, base_candidate]:
+            for ext_test in IMAGE_EXTENSIONS:
+                test_path = (vid_dir / f"{base}{ext_test}").as_posix().lower()
+                if test_path in image_map and test_path not in paired_images:
+                    img_data = image_map[test_path]
+                    if img_data not in candidates:
+                        candidates.append(img_data)
+                        
+        # (b) Collision prefix: base_candidate-<number> (e.g. IMG_0209-1137641.JPG)
+        base_prefix = base_candidate.lower() + "-"
+        for k, img_data in image_map.items():
+            if k in paired_images:
+                continue
+            kp = Path(img_data["rel_path"])
+            if kp.parent == vid_dir:
+                k_stem = kp.stem.lower()
+                if k_stem.startswith(base_prefix) and img_data not in candidates:
+                    candidates.append(img_data)
+                    
+        if not candidates:
+            # Check if this video is an alternate motion clip of an already-paired image
+            # (e.g. both IMG_1234.MOV and IMG_1234_HEVC.MOV exist for IMG_1234.JPG)
+            for base in [clean_stem, base_candidate]:
+                for ext_test in IMAGE_EXTENSIONS:
+                    test_path = (vid_dir / f"{base}{ext_test}").as_posix().lower()
+                    if test_path in paired_images:
+                        paired_videos.add(vid_rel_str)
+                        break
+                if vid_rel_str in paired_videos:
+                    break
+            continue
+            
+        chosen = None
+        if len(candidates) == 1:
+            chosen = candidates[0]
+        else:
+            v_ts = _to_timestamp(vid_rec.date_taken)
+            if v_ts:
+                best = None
+                best_diff = 86400 * 30  # within 30 days
+                for cand in candidates:
+                    c_ts = _to_timestamp(cand["date_taken"])
+                    if c_ts:
+                        diff = abs(v_ts - c_ts)
+                        if diff < best_diff:
+                            best_diff = diff
+                            best = cand
+                if best:
+                    chosen = best
+            if not chosen:
+                chosen = candidates[0]
                 
-        if not found_pair:
-            # Standalone video (use actual parsed metadata width/height/orientation)
-            vid_loc = None
-            if vid_rec.location_name and vid_rec.location_name != "Resolving...":
-                vid_loc = vid_rec.location_name
-
+        if chosen:
+            chosen_rel_str = chosen["rel_path"].as_posix().lower()
+            paired_images.add(chosen_rel_str)
+            paired_videos.add(vid_rel_str)
+            
             media_items.append({
-                "url": f"/api/photos/media/{urllib.parse.quote(vid_rel_path.as_posix())}",
-                "thumbnailUrl": f"/api/photos/thumbnail/{urllib.parse.quote(vid_rel_path.as_posix())}",
+                "url": f"/api/photos/media/{urllib.parse.quote(chosen['rel_path'].as_posix())}",
+                "displayUrl": f"/api/photos/display/{urllib.parse.quote(chosen['rel_path'].as_posix())}",
+                "thumbnailUrl": f"/api/photos/thumbnail/{urllib.parse.quote(chosen['rel_path'].as_posix())}",
+                "videoUrl": f"/api/photos/media/{urllib.parse.quote(vid_rel_path.as_posix())}",
+                # Byte size of the clip, so the slideshow can decide whether
+                # autoplaying it is worth the bandwidth on a kiosk tablet.
                 "media_bytes": vid_rec.file_size,
                 "posterUrl": f"/api/photos/poster/{urllib.parse.quote(vid_rel_path.as_posix())}",
                 "playbackUrl": f"/api/photos/playback/{urllib.parse.quote(vid_rel_path.as_posix())}",
-                "type": "video",
-                "name": vid_rel_path.name,
-                "width": vid_rec.width,
-                "height": vid_rec.height,
-                "orientation": vid_rec.orientation,
-                "date_taken": vid_rec.date_taken or (datetime.fromtimestamp(vid_rec.last_modified).isoformat() if vid_rec.last_modified else None),
-                "location_name": vid_loc
+                "type": "live_photo",
+                "name": chosen["name"],
+                "width": chosen["width"],
+                "height": chosen["height"],
+                "orientation": chosen["orientation"],
+                "date_taken": chosen["date_taken"],
+                "location_name": chosen["location_name"]
             })
-            
-    # 2. Add remaining standalone images
+
+    # 2. Add remaining standalone videos
+    for vid_rel_str, vid_rec in video_map.items():
+        if vid_rel_str in paired_videos:
+            continue
+        vid_rel_path = Path(vid_rec.file_path)
+        vid_loc = None
+        if vid_rec.location_name and vid_rec.location_name != "Resolving...":
+            vid_loc = vid_rec.location_name
+
+        media_items.append({
+            "url": f"/api/photos/media/{urllib.parse.quote(vid_rel_path.as_posix())}",
+            "thumbnailUrl": f"/api/photos/thumbnail/{urllib.parse.quote(vid_rel_path.as_posix())}",
+            "media_bytes": vid_rec.file_size,
+            "posterUrl": f"/api/photos/poster/{urllib.parse.quote(vid_rel_path.as_posix())}",
+            "playbackUrl": f"/api/photos/playback/{urllib.parse.quote(vid_rel_path.as_posix())}",
+            "type": "video",
+            "name": vid_rel_path.name,
+            "width": vid_rec.width,
+            "height": vid_rec.height,
+            "orientation": vid_rec.orientation,
+            "date_taken": vid_rec.date_taken or (datetime.fromtimestamp(vid_rec.last_modified).isoformat() if vid_rec.last_modified else None),
+            "location_name": vid_loc
+        })
+        
+    # 3. Add remaining standalone images
     for img_rel_str, img_data in image_map.items():
         if img_rel_str not in paired_images:
             media_items.append({
