@@ -452,11 +452,11 @@ export function startFxCanvas(
   let flock: Flock | null = null
   let nextFlock = performance.now() + rand(15_000, 60_000)
   let batSwarm: BatSwarm | null = null
-  let nextBatSwarm = performance.now() + rand(45_000, 90_000)
+  let nextBatSwarm = performance.now() + (getQueryParam('bats') === '1' ? 0 : rand(8_000, 20_000))
   let witch: Witch | null = null
   let nextWitch = performance.now() + rand(8_000, 18_000)
   let batCake: BatCakeDelivery | null = null
-  let nextBatCake = performance.now() + rand(8_000, 20_000)
+  let nextBatCake = performance.now() + (Boolean(getQueryParam('batcake')) ? 0 : 2_500)
   let candies: FallingCandy[] = []
   let whimsicalClouds: WhimsicalCloud[] = []
   let santa: Santa | null = null
@@ -501,6 +501,11 @@ export function startFxCanvas(
     nextBatSwarm = 0
   }
   window.addEventListener('trigger-bats', handleTriggerBats)
+
+  const handleTriggerBatCake = () => {
+    nextBatCake = 0
+  }
+  window.addEventListener('trigger-batcake', handleTriggerBatCake)
 
   const seed = (w: number, h: number, density: number) => {
     drops = Array.from({ length: Math.round(130 * density) }, () => ({
@@ -2302,7 +2307,7 @@ export function startFxCanvas(
     const witchPossible = october && calm
     const santaPossible = christmasDay && calm
     const wantsCandy = daylight && (swaraBirthday || getQueryParam('candy') === '1') && calm
-    const batCakePossible = daylight && (swaraBirthday || Boolean(getQueryParam('batcake'))) && calm
+    const batCakePossible = (swaraBirthday || Boolean(getQueryParam('batcake'))) && calm
 
     const active =
       wantsWeather ||
@@ -2319,7 +2324,7 @@ export function startFxCanvas(
       santa !== null ||
       christmasDay ||
       newYearSeason ||
-      (batsPossible && t > nextBatSwarm) ||
+      (batsPossible && (t > nextBatSwarm || getQueryParam('bats') === '1')) ||
       (creaturesPossible && t > nextFlock) ||
       (witchPossible && (t > nextWitch || getQueryParam('witch') === '1')) ||
       (batCakePossible && (t > nextBatCake || Boolean(getQueryParam('batcake')))) ||
@@ -2364,7 +2369,7 @@ export function startFxCanvas(
 
     // 1. October Bat Swarms (spooky, erratic, high-density colony with leathery scalloped wings & glowing red eyes)
     if (batsPossible) {
-      if (!batSwarm && t > nextBatSwarm) {
+      if (!batSwarm && (t > nextBatSwarm || getQueryParam('bats') === '1')) {
         batSwarm = createBatSwarm(w, h)
       }
       if (batSwarm) {
@@ -2372,7 +2377,7 @@ export function startFxCanvas(
         const gone = batSwarm.dir === 1 ? batSwarm.x - 750 > w : batSwarm.x + 750 < 0
         if (gone) {
           batSwarm = null
-          nextBatSwarm = t + rand(150_000, 210_000) // Spaced out: around 3 minutes
+          nextBatSwarm = getQueryParam('bats') === '1' ? t + 3000 : t + rand(60_000, 110_000) // Spaced out: 1-2 minutes
         } else {
           for (const b of batSwarm.bats) {
             // Compute erratic swooping and deep vertical diving
@@ -2652,14 +2657,13 @@ export function startFxCanvas(
     }
 
     // Bat Cake Air-Delivery Mission ("The Bat Drop"):
-    // Two friendly bats carrying a 3-tier birthday cake across the daytime sky!
+    // Two friendly bats carrying a 3-tier birthday cake across the sky!
     if (batCakePossible) {
       if (!batCake && (t > nextBatCake || Boolean(getQueryParam('batcake')))) {
         const isMid = getQueryParam('batcake') === 'mid'
         const dir: 1 | -1 = isMid ? 1 : (Math.random() < 0.5 ? 1 : -1)
         const scale = rand(1.7, 2.0)
         const baseY = h * rand(0.14, 0.24)
-        const isBehind = Boolean(getQueryParam('batcake')) ? false : (Math.random() < 0.35 && !!bgCtx)
         const margin = 260
         batCake = {
           x: isMid ? w * 0.44 : (dir === 1 ? -margin : w + margin),
@@ -2669,7 +2673,7 @@ export function startFxCanvas(
           dir,
           scale,
           sparkles: [],
-          isBehind,
+          isBehind: false,
         }
       }
       if (batCake) {
@@ -2708,10 +2712,9 @@ export function startFxCanvas(
         const gone = batCake.dir === 1 ? batCake.x - 300 > w : batCake.x + 300 < 0
         if (gone) {
           batCake = null
-          nextBatCake = Boolean(getQueryParam('batcake')) ? t + 1000 : (swaraBirthday ? t + rand(25_000, 45_000) : t + rand(35_000, 60_000))
+          nextBatCake = Boolean(getQueryParam('batcake')) ? t + 1000 : (swaraBirthday ? t + rand(16_000, 30_000) : t + rand(25_000, 45_000))
         } else {
-          const targetCtx = (batCake.isBehind && bgCtx) ? bgCtx : ctx
-          if (batCake.isBehind && bgCtx) bgHadDraw = true
+          const targetCtx = ctx // Always draw on foreground canvas in front of photos!
 
           // Draw cake sparkles
           for (const sp of batCake.sparkles) {
@@ -3251,5 +3254,6 @@ export function startFxCanvas(
     window.removeEventListener('resize', resize)
     window.removeEventListener('trigger-geese', handleTriggerGeese)
     window.removeEventListener('trigger-bats', handleTriggerBats)
+    window.removeEventListener('trigger-batcake', handleTriggerBatCake)
   }
 }
