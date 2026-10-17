@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chore Canyon Stunt Jump</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Inter:wght@600;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #0f172a;
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+        }
+        .stunt-font {
+            font-family: 'Bangers', cursive;
+            letter-spacing: 0.06em;
+        }
+        #canvas-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        /* Banner Slam Animation */
+        @keyframes bannerSlam {
+            0% {
+                transform: translate(-50%, -50%) scale(0.1) rotate(-12deg);
+                opacity: 0;
+            }
+            60% {
+                transform: translate(-50%, -50%) scale(1.12) rotate(3deg);
+                opacity: 1;
+            }
+            80% {
+                transform: translate(-50%, -50%) scale(0.96) rotate(-1deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(1) rotate(0deg);
+                opacity: 1;
+            }
+        }
+        .banner-active {
+            animation: bannerSlam 0.55s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+    </style>
+</head>
+<body>
+
+<div id="canvas-container">
+    <canvas id="stuntCanvas"></canvas>
+
+    <!-- Victory Banner Modal (Appears at ~5.05s on touchdown) -->
+    <div id="victoryBanner" class="fixed top-[20%] left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-0 z-30 w-auto max-w-md text-center">
+        <div class="relative bg-gradient-to-b from-blue-900 via-blue-800 to-slate-900 border-4 border-white rounded-2xl px-6 py-3 sm:px-8 sm:py-4 shadow-[0_15px_45px_rgba(0,0,0,0.85)] overflow-hidden">
+            <!-- Red & White Retro Stripes Accent -->
+            <div class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-red-600 via-white to-red-600"></div>
+            <div class="absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-r from-red-600 via-white to-red-600"></div>
+
+            <h1 class="stunt-font text-3xl sm:text-5xl text-white drop-shadow-[0_4px_0_#dc2626] tracking-wider whitespace-nowrap my-1">
+                CHORES CONQUERED!
+            </h1>
+        </div>
+    </div>
+</div>
+
+<script>
+class StuntAudio {
+    constructor() {
+        this.ctx = null;
+        const urlParams = new URLSearchParams(location.search);
+        this.enabled = urlParams.get('sound') !== '0';
+    }
+
+    init() {
+        if (!this.ctx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume().catch(() => {});
+        }
+    }
+
+    playRev() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(65, now);
+        osc.frequency.exponentialRampToValueAtTime(190, now + 0.7);
+        osc.frequency.exponentialRampToValueAtTime(130, now + 1.0);
+
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.linearRampToValueAtTime(0.14, now + 0.6);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 1.1);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 1.1);
+    }
+
+    playJumpWhoosh() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(160, now);
+        osc.frequency.exponentialRampToValueAtTime(520, now + 0.65);
+
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.7);
+    }
+
+    playChorePop(index) {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        const baseFreqs = [330, 440, 587.33];
+        const freq = baseFreqs[index % 3];
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now);
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.8, now + 0.22);
+
+        gain.gain.setValueAtTime(0.22, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.25);
+    }
+
+    playFireworkBoom() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        const bufferSize = this.ctx.sampleRate * 0.35;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.1));
+        }
+
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(800, now);
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.16, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+        noise.start(now);
+    }
+
+    playVictoryFanfare() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((freq, idx) => {
+            const now = this.ctx.currentTime + idx * 0.09;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, now);
+
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.55);
+        });
+    }
+}
+
+const canvas = document.getElementById('stuntCanvas');
+const ctx = canvas.getContext('2d', { alpha: false });
+const victoryBanner = document.getElementById('victoryBanner');
+const sound = new StuntAudio();
+
+// Offscreen canvas cache for static background, sun, mesas, canyon & ramps
+const staticBgCanvas = document.createElement('canvas');
+const staticBgCtx = staticBgCanvas.getContext('2d', { alpha: false });
+
+const TIMELINE = {
+    REV_START: 0.0,
+    RAMP_START: 0.8,
+    TAKEOFF: 1.8,
+    PEAK: 2.9,
+    CHORE_1_HIT: 3.45,
+    CHORE_2_HIT: 4.00,
+    CHORE_3_HIT: 4.55,
+    TOUCHDOWN: 5.05,
+    STOPPED: 6.3,
+    COMPLETE: 8.8
+};
+
+let width = window.innerWidth;
+let height = window.innerHeight;
+let cachedGeo = getSceneGeometry();
+let startTime = performance.now();
+let lastFrameTime = startTime;
+let screenShake = 0;
+let rafId = 0;
+let isPaused = false;
+
+let chores = [];
+let confettiParticles = [];
+let exhaustParticles = [];
+let fireworks = [];
+let fireworkSparks = [];
+let fireworkFlashes = [];
+let crowdMembers = [];
+
+let triggeredStates = {
+    revSound: false,
+    jumpSound: false,
+    touchdown: false,
+    nextFireworkTime: 5.05
+};
+
+function getSceneGeometry() {
+    const groundY = height * 0.72;
+    const canyonLeftX = width * 0.25;
+    const canyonRightX = width * 0.75;
+    const rampStartX = width * 0.13;
+    const rampLipX = width * 0.26;
+    const rampLipY = groundY - height * 0.14;
+
+    const landLipX = width * 0.74;
+    const landLipY = groundY - height * 0.08;
+    const landEndX = width * 0.85;
+
+    const peakY = groundY - height * 0.48;
+
+    return {
+        groundY,
+        canyonLeftX,
+        canyonRightX,
+        rampStartX,
+        rampLipX,
+        rampLipY,
+        landLipX,
+        landLipY,
+        landEndX,
+        peakY
+    };
+}
+
+function createChoreSprite(w, h, color, idx) {
+    const pad = 16;
+    const c = document.createElement('canvas');
+    c.width = Math.ceil(w + pad * 2);
+    c.height = Math.ceil(h + pad * 2);
+    const cctx = c.getContext('2d');
+
+    cctx.translate(c.width / 2, c.height / 2);
+
+    cctx.fillStyle = color;
+    cctx.globalAlpha = 0.28;
+    cctx.beginPath();
+    cctx.roundRect(-w / 2 - 5, -h / 2 - 5, w + 10, h + 10, 12);
+    cctx.fill();
+    cctx.globalAlpha = 1;
+
+    cctx.fillStyle = '#fefce8';
+    cctx.strokeStyle = '#1e293b';
+    cctx.lineWidth = 3;
+    cctx.beginPath();
+    cctx.roundRect(-w / 2, -h / 2, w, h, 8);
+    cctx.fill();
+    cctx.stroke();
+
+    cctx.fillStyle = color;
+    cctx.beginPath();
+    cctx.roundRect(-w / 2 + 3, -h / 2 + 3, w - 6, 18, [6, 6, 0, 0]);
+    cctx.fill();
+
+    cctx.fillStyle = '#94a3b8';
+    cctx.strokeStyle = '#334155';
+    cctx.lineWidth = 2;
+    cctx.beginPath();
+    cctx.roundRect(-14, -h / 2 - 6, 28, 10, 4);
+    cctx.fill();
+    cctx.stroke();
+
+    const startY = -h / 2 + 32;
+    const rowGap = (h - 42) / 3;
+
+    for (let r = 0; r < 3; r++) {
+        const ry = startY + r * rowGap;
+
+        cctx.strokeStyle = '#475569';
+        cctx.lineWidth = 2;
+        cctx.strokeRect(-w / 2 + 9, ry - 5, 9, 9);
+
+        cctx.strokeStyle = '#334155';
+        cctx.lineWidth = 2.4;
+        cctx.lineCap = 'round';
+        cctx.beginPath();
+        const scribbleStartX = -w / 2 + 23;
+        const scribbleEndX = w / 2 - 10;
+        cctx.moveTo(scribbleStartX, ry);
+
+        const segments = 6;
+        for (let s = 1; s <= segments; s++) {
+            const sx = scribbleStartX + ((scribbleEndX - scribbleStartX) * s) / segments;
+            const sy = ry + (s % 2 === 0 ? -4 : 4) + Math.sin(idx * 5 + r * 3 + s) * 1.6;
+            cctx.lineTo(sx, sy);
+        }
+        cctx.stroke();
+    }
+
+    cctx.strokeStyle = 'rgba(220, 38, 38, 0.55)';
+    cctx.lineWidth = 2;
+    cctx.beginPath();
+    cctx.moveTo(-w * 0.25, h * 0.28);
+    cctx.bezierCurveTo(-w * 0.05, h * 0.12, w * 0.1, h * 0.38, w * 0.3, h * 0.22);
+    cctx.stroke();
+
+    return c;
+}
+
+function buildStaticBackgroundCache() {
+    staticBgCanvas.width = width;
+    staticBgCanvas.height = height;
+    const geo = cachedGeo;
+    const sctx = staticBgCtx;
+
+    const skyGrad = sctx.createLinearGradient(0, 0, 0, height);
+    skyGrad.addColorStop(0, '#0f172a');
+    skyGrad.addColorStop(0.35, '#1e1b4b');
+    skyGrad.addColorStop(0.65, '#7c2d12');
+    skyGrad.addColorStop(0.85, '#f59e0b');
+    skyGrad.addColorStop(1, '#451a03');
+    sctx.fillStyle = skyGrad;
+    sctx.fillRect(0, 0, width, height);
+
+    sctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+    for (let i = 0; i < 36; i++) {
+        const sx = ((i * 137.5) % 100) / 100 * width;
+        const sy = ((i * 73.1) % 100) / 100 * (height * 0.42);
+        const sr = (i % 3) * 0.5 + 0.8;
+        sctx.beginPath();
+        sctx.arc(sx, sy, sr, 0, Math.PI * 2);
+        sctx.fill();
+    }
+
+    const sunX = width * 0.5;
+    const sunY = geo.groundY - height * 0.08;
+    const sunRadius = Math.min(width, height) * 0.18;
+    const sunGrad = sctx.createRadialGradient(sunX, sunY, sunRadius * 0.1, sunX, sunY, sunRadius);
+    sunGrad.addColorStop(0, 'rgba(254, 240, 138, 0.95)');
+    sunGrad.addColorStop(0.5, 'rgba(249, 115, 22, 0.55)');
+    sunGrad.addColorStop(1, 'rgba(249, 115, 22, 0)');
+    sctx.fillStyle = sunGrad;
+    sctx.beginPath();
+    sctx.arc(sunX, sunY, sunRadius, 0, Math.PI * 2);
+    sctx.fill();
+
+    sctx.fillStyle = '#431407';
+    sctx.beginPath();
+    sctx.moveTo(0, geo.groundY);
+    sctx.lineTo(width * 0.15, geo.groundY - 55);
+    sctx.lineTo(width * 0.28, geo.groundY - 55);
+    sctx.lineTo(width * 0.33, geo.groundY + 30);
+    sctx.lineTo(width * 0.64, geo.groundY + 30);
+    sctx.lineTo(width * 0.70, geo.groundY - 65);
+    sctx.lineTo(width * 0.84, geo.groundY - 65);
+    sctx.lineTo(width, geo.groundY - 20);
+    sctx.lineTo(width, height);
+    sctx.lineTo(0, height);
+    sctx.closePath();
+    sctx.fill();
+
+    const riverGrad = sctx.createLinearGradient(0, geo.groundY, 0, height);
+    riverGrad.addColorStop(0, '#1e293b');
+    riverGrad.addColorStop(1, '#0284c7');
+    sctx.fillStyle = riverGrad;
+    sctx.fillRect(geo.canyonLeftX - 20, geo.groundY, (geo.canyonRightX - geo.canyonLeftX) + 40, height - geo.groundY);
+
+    const cliffGrad = sctx.createLinearGradient(0, geo.groundY, 0, height);
+    cliffGrad.addColorStop(0, '#9a3412');
+    cliffGrad.addColorStop(0.5, '#7c2d12');
+    cliffGrad.addColorStop(1, '#431407');
+
+    sctx.fillStyle = cliffGrad;
+    sctx.beginPath();
+    sctx.moveTo(0, geo.groundY);
+    sctx.lineTo(geo.canyonLeftX, geo.groundY);
+    sctx.lineTo(geo.canyonLeftX + 28, geo.groundY + (height - geo.groundY) * 0.35);
+    sctx.lineTo(geo.canyonLeftX + 12, geo.groundY + (height - geo.groundY) * 0.7);
+    sctx.lineTo(geo.canyonLeftX + 45, height);
+    sctx.lineTo(0, height);
+    sctx.closePath();
+    sctx.fill();
+
+    sctx.beginPath();
+    sctx.moveTo(width, geo.groundY);
+    sctx.lineTo(geo.canyonRightX, geo.groundY);
+    sctx.lineTo(geo.canyonRightX - 30, geo.groundY + (height - geo.groundY) * 0.4);
+    sctx.lineTo(geo.canyonRightX - 15, geo.groundY + (height - geo.groundY) * 0.75);
+    sctx.lineTo(geo.canyonRightX - 48, height);
+    sctx.lineTo(width, height);
+    sctx.closePath();
+    sctx.fill();
+
+    sctx.strokeStyle = '#fdba74';
+    sctx.lineWidth = 4;
+    sctx.beginPath();
+    sctx.moveTo(0, geo.groundY);
+    sctx.lineTo(geo.canyonLeftX, geo.groundY);
+    sctx.moveTo(geo.canyonRightX, geo.groundY);
+    sctx.lineTo(width, geo.groundY);
+    sctx.stroke();
+
+    sctx.save();
+    sctx.beginPath();
+    sctx.moveTo(geo.rampStartX, geo.groundY);
+    sctx.lineTo(geo.rampLipX, geo.rampLipY);
+    sctx.lineTo(geo.rampLipX, geo.groundY);
+    sctx.closePath();
+    sctx.fillStyle = '#ffffff';
+    sctx.fill();
+    sctx.lineWidth = 3;
+    sctx.strokeStyle = '#1e3a8a';
+    sctx.stroke();
+
+    sctx.clip();
+    const stripeW = (geo.rampLipX - geo.rampStartX) / 5;
+    for (let i = 0; i < 6; i++) {
+        sctx.fillStyle = i % 2 === 0 ? '#dc2626' : '#1d4ed8';
+        sctx.fillRect(geo.rampStartX + i * stripeW, geo.rampLipY, stripeW * 0.55, geo.groundY - geo.rampLipY);
+    }
+    sctx.restore();
+
+    sctx.save();
+    sctx.beginPath();
+    sctx.moveTo(geo.landLipX, geo.landLipY);
+    sctx.lineTo(geo.landEndX, geo.groundY);
+    sctx.lineTo(geo.landLipX, geo.groundY);
+    sctx.closePath();
+    sctx.fillStyle = '#ffffff';
+    sctx.fill();
+    sctx.lineWidth = 3;
+    sctx.strokeStyle = '#1e3a8a';
+    sctx.stroke();
+
+    sctx.clip();
+    const landStripeW = (geo.landEndX - geo.landLipX) / 5;
+    for (let i = 0; i < 6; i++) {
+        sctx.fillStyle = i % 2 === 0 ? '#1d4ed8' : '#dc2626';
+        sctx.fillRect(geo.landLipX + i * landStripeW, geo.landLipY, landStripeW * 0.55, geo.groundY - geo.landLipY);
+    }
+    sctx.restore();
+}
+
+function getBikeTransform(t, geo) {
+    const startX = width * 0.06;
+
+    if (t < TIMELINE.RAMP_START) {
+        const rumble = Math.sin(t * 55) * 1.8;
+        const slightWheelie = -0.15 * Math.sin((t / TIMELINE.RAMP_START) * Math.PI);
+        return {
+            x: startX,
+            y: geo.groundY + rumble,
+            angle: slightWheelie
+        };
+    }
+
+    if (t < TIMELINE.TAKEOFF) {
+        const p = (t - TIMELINE.RAMP_START) / (TIMELINE.TAKEOFF - TIMELINE.RAMP_START);
+        const eased = p * p * (2.5 - 1.5 * p);
+        const x = startX + (geo.rampLipX - startX) * eased;
+
+        let y = geo.groundY;
+        let angle = -0.18;
+
+        if (x > geo.rampStartX) {
+            const rampProgress = (x - geo.rampStartX) / (geo.rampLipX - geo.rampStartX);
+            y = geo.groundY + (geo.rampLipY - geo.groundY) * Math.pow(rampProgress, 1.15);
+            const dx = geo.rampLipX - geo.rampStartX;
+            const dy = geo.rampLipY - geo.groundY;
+            angle = Math.atan2(dy, dx);
+        }
+
+        return { x, y, angle };
+    }
+
+    if (t < TIMELINE.TOUCHDOWN) {
+        const p = (t - TIMELINE.TAKEOFF) / (TIMELINE.TOUCHDOWN - TIMELINE.TAKEOFF);
+        const x = geo.rampLipX + (geo.landLipX - geo.rampLipX) * p;
+
+        const p0y = geo.rampLipY;
+        const p2y = geo.landLipY;
+        const p1y = (geo.peakY - 0.25 * p0y - 0.25 * p2y) / 0.5;
+
+        const oneMinusP = 1 - p;
+        const y = oneMinusP * oneMinusP * p0y + 2 * oneMinusP * p * p1y + p * p * p2y;
+
+        const dx = geo.landLipX - geo.rampLipX;
+        const dy = 2 * oneMinusP * (p1y - p0y) + 2 * p * (p2y - p1y);
+        const angle = Math.atan2(dy, dx);
+
+        return { x, y, angle };
+    }
+
+    const p = Math.min(1, (t - TIMELINE.TOUCHDOWN) / (TIMELINE.STOPPED - TIMELINE.TOUCHDOWN));
+    const easedOut = 1 - Math.pow(1 - p, 2.5);
+    const stopX = width * 0.91;
+    const x = geo.landLipX + (stopX - geo.landLipX) * easedOut;
+
+    let y = geo.groundY;
+    let angle = 0;
+
+    if (x < geo.landEndX) {
+        const rampP = (x - geo.landLipX) / (geo.landEndX - geo.landLipX);
+        y = geo.landLipY + (geo.groundY - geo.landLipY) * rampP;
+        angle = Math.atan2(geo.groundY - geo.landLipY, geo.landEndX - geo.landLipX);
+    } else {
+        const wheeliePhase = Math.max(0, (x - geo.landEndX) / (stopX - geo.landEndX));
+        angle = -0.38 * Math.sin(wheeliePhase * Math.PI);
+    }
+
+    return { x, y, angle };
+}
+
+function initSceneObjects() {
+    const geo = cachedGeo;
+    const choreTimes = [TIMELINE.CHORE_1_HIT, TIMELINE.CHORE_2_HIT, TIMELINE.CHORE_3_HIT];
+    const badgeColors = ['#f59e0b', '#ec4899', '#06b6d4'];
+
+    chores = choreTimes.map((hitTime, index) => {
+        const pos = getBikeTransform(hitTime, geo);
+        const w = Math.max(66, Math.min(86, width * 0.068));
+        const h = Math.max(82, Math.min(104, width * 0.082));
+        const color = badgeColors[index];
+        return {
+            index,
+            hitTime,
+            x: pos.x,
+            y: pos.y - 14,
+            baseY: pos.y - 14,
+            width: w,
+            height: h,
+            rotation: (index - 1) * 0.08,
+            color,
+            sprite: createChoreSprite(w, h, color, index),
+            smashed: false
+        };
+    });
+
+    const crowdColors = ['#ef4444', '#3b82f6', '#facc15', '#22c55e', '#ec4899', '#a855f7', '#fb923c', '#38bdf8'];
+    crowdMembers = [];
+    const crowdStartX = geo.landEndX - 10;
+    const crowdEndX = width - 15;
+    const count = Math.min(16, Math.max(10, Math.floor((crowdEndX - crowdStartX) / 18)));
+
+    for (let i = 0; i < count; i++) {
+        const row = i % 2;
+        crowdMembers.push({
+            xRatio: (i + 0.5) / count,
+            row,
+            shirtColor: crowdColors[i % crowdColors.length],
+            skinColor: ['#fde047', '#fed7aa', '#fdba74', '#d97706', '#f8fafc'][i % 5],
+            phase: Math.random() * Math.PI * 2,
+            jumpSpeed: 11 + Math.random() * 5,
+            hasSign: i % 4 === 0,
+            signColor: i % 8 === 0 ? '#ef4444' : '#facc15',
+            scale: 0.85 + (row === 0 ? 0.18 : 0)
+        });
+    }
+}
+
+function spawnChoreConfetti(x, y) {
+    const colors = [
+        '#ef4444', '#facc15', '#3b82f6', '#22c55e',
+        '#ec4899', '#a855f7', '#ffffff', '#fb923c'
+    ];
+    for (let i = 0; i < 36; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 90 + Math.random() * 320;
+        confettiParticles.push({
+            x,
+            y,
+            vx: Math.cos(angle) * speed + 70,
+            vy: Math.sin(angle) * speed - 90,
+            w: 7 + Math.random() * 7,
+            h: 5 + Math.random() * 5,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            rotation: Math.random() * Math.PI * 2,
+            vRot: (Math.random() - 0.5) * 12,
+            life: 1.0,
+            decay: 0.35 + Math.random() * 0.25
+        });
+    }
+}
+
+function launchFirework(forcedXRatio = null) {
+    const geo = cachedGeo;
+    const xRatio = forcedXRatio !== null ? forcedXRatio : (0.15 + Math.random() * 0.75);
+    const startX = width * xRatio;
+    const startY = geo.groundY + 10;
+    const targetY = height * (0.10 + Math.random() * 0.28);
+    const palettes = [
+        ['#ff2a2a', '#ffffff', '#38bdf8', '#fde047'],
+        ['#fde047', '#fb923c', '#ffffff', '#f43f5e'],
+        ['#4ade80', '#22d3ee', '#fef08a', '#ffffff'],
+        ['#f472b6', '#c084fc', '#38bdf8', '#ffffff']
+    ];
+
+    fireworks.push({
+        x: startX,
+        y: startY,
+        targetY,
+        vy: -680 - Math.random() * 220,
+        palette: palettes[Math.floor(Math.random() * palettes.length)]
+    });
+}
+
+function explodeFirework(fw) {
+    sound.playFireworkBoom();
+
+    fireworkFlashes.push({
+        x: fw.x,
+        y: fw.y,
+        r: 12,
+        maxR: 115 + Math.random() * 45,
+        color: fw.palette[0],
+        alpha: 0.55
+    });
+
+    const count = 44;
+    for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.12;
+        const isOuterRing = i % 2 === 0;
+        const speed = isOuterRing ? (180 + Math.random() * 140) : (70 + Math.random() * 140);
+        const color = fw.palette[i % fw.palette.length];
+        fireworkSparks.push({
+            x: fw.x,
+            y: fw.y,
+            prevX: fw.x,
+            prevY: fw.y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            color,
+            alpha: 1,
+            decay: 0.45 + Math.random() * 0.3,
+            size: isOuterRing ? 3.8 : 2.5
+        });
+    }
+}
+
+function drawSceneBackground() {
+    ctx.drawImage(staticBgCanvas, 0, 0);
+}
+
+function drawLandingCrowd(geo, t) {
+    const isCelebrating = t >= TIMELINE.CHORE_3_HIT;
+    const crowdStartX = geo.landEndX - 5;
+    const crowdWidth = Math.max(120, width - crowdStartX - 12);
+
+    ctx.lineCap = 'round';
+
+    for (let row = 1; row >= 0; row--) {
+        for (let i = 0; i < crowdMembers.length; i++) {
+            const person = crowdMembers[i];
+            if (person.row !== row) continue;
+
+            const px = crowdStartX + person.xRatio * crowdWidth;
+            const baseY = geo.groundY - (row === 1 ? 14 : 2);
+
+            const jumpAmp = isCelebrating ? 13 : 2.5;
+            const speedMult = isCelebrating ? 1.55 : 0.45;
+            const bounce = Math.abs(Math.sin(t * person.jumpSpeed * speedMult + person.phase)) * jumpAmp;
+            const py = baseY - bounce;
+            const s = person.scale;
+
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 3 * s;
+            ctx.beginPath();
+            ctx.moveTo(px - 3 * s, py);
+            ctx.lineTo(px - 2 * s, py - 10 * s);
+            ctx.moveTo(px + 3 * s, py);
+            ctx.lineTo(px + 2 * s, py - 10 * s);
+            ctx.stroke();
+
+            ctx.fillStyle = person.shirtColor;
+            ctx.fillRect(px - 6 * s, py - 24 * s, 12 * s, 15 * s);
+
+            const armWave = isCelebrating
+                ? Math.sin(t * 20 + person.phase) * 4 * s
+                : 0;
+
+            ctx.strokeStyle = person.shirtColor;
+            ctx.lineWidth = 3 * s;
+            ctx.beginPath();
+            ctx.moveTo(px - 5 * s, py - 21 * s);
+            if (isCelebrating) {
+                ctx.lineTo(px - 12 * s - armWave, py - 33 * s);
+                ctx.moveTo(px + 5 * s, py - 21 * s);
+                ctx.lineTo(px + 12 * s + armWave, py - 33 * s);
+            } else {
+                ctx.lineTo(px - 9 * s, py - 14 * s);
+                ctx.moveTo(px + 5 * s, py - 21 * s);
+                ctx.lineTo(px + 9 * s, py - 14 * s);
+            }
+            ctx.stroke();
+
+            ctx.fillStyle = person.skinColor;
+            ctx.beginPath();
+            ctx.arc(px, py - 30 * s, 5.5 * s, 0, Math.PI * 2);
+            ctx.fill();
+
+            if (person.hasSign && isCelebrating) {
+                const sx = px + 12 * s + armWave;
+                const sy = py - 43 * s;
+                ctx.fillStyle = person.signColor;
+                ctx.fillRect(sx - 9 * s, sy - 6 * s, 18 * s, 11 * s);
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1.2;
+                ctx.strokeRect(sx - 9 * s, sy - 6 * s, 18 * s, 11 * s);
+            }
+        }
+    }
+}
+
+function drawChores(t) {
+    for (let idx = 0; idx < chores.length; idx++) {
+        const chore = chores[idx];
+        if (chore.smashed) continue;
+
+        const bobOffset = Math.sin(t * 4.5 + idx * 1.7) * 7;
+        const curY = chore.baseY + bobOffset;
+        chore.y = curY;
+
+        ctx.save();
+        ctx.translate(chore.x, curY);
+        ctx.rotate(chore.rotation + Math.sin(t * 3 + idx) * 0.04);
+        ctx.drawImage(chore.sprite, -chore.sprite.width / 2, -chore.sprite.height / 2);
+        ctx.restore();
+    }
+}
+
+function drawDaredevilBike(bike, t) {
+    ctx.save();
+    ctx.translate(bike.x, bike.y);
+    ctx.rotate(bike.angle);
+
+    const scale = Math.max(0.72, Math.min(1.15, width / 1150));
+    ctx.scale(scale, scale);
+
+    const capeWave = Math.sin(t * 28) * 6;
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#dc2626';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(-12, -44);
+    ctx.quadraticCurveTo(-42, -48 + capeWave, -64, -34 - capeWave);
+    ctx.lineTo(-56, -22 + capeWave * 0.6);
+    ctx.quadraticCurveTo(-32, -32, -12, -32);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#cbd5e1';
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-8, -14);
+    ctx.lineTo(-42, -20);
+    ctx.lineTo(-42, -13);
+    ctx.lineTo(-8, -9);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    const wheelPositions = [-26, 28];
+    wheelPositions.forEach(wx => {
+        ctx.save();
+        ctx.translate(wx, -14);
+        ctx.rotate(t * 28);
+
+        ctx.beginPath();
+        ctx.arc(0, 0, 14, 0, Math.PI * 2);
+        ctx.fillStyle = '#0f172a';
+        ctx.fill();
+        ctx.lineWidth = 3.5;
+        ctx.strokeStyle = '#334155';
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(0, 0, 8.5, 0, Math.PI * 2);
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        for (let s = 0; s < 4; s++) {
+            ctx.rotate(Math.PI / 4);
+            ctx.beginPath();
+            ctx.moveTo(-8, 0);
+            ctx.lineTo(8, 0);
+            ctx.stroke();
+        }
+        ctx.restore();
+    });
+
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(28, -14);
+    ctx.lineTo(14, -42);
+    ctx.lineTo(8, -44);
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#1e3a8a';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(-28, -18);
+    ctx.lineTo(-12, -32);
+    ctx.lineTo(18, -34);
+    ctx.lineTo(22, -20);
+    ctx.lineTo(-8, -12);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#dc2626';
+    ctx.beginPath();
+    ctx.moveTo(-18, -23);
+    ctx.lineTo(16, -28);
+    ctx.lineTo(18, -23);
+    ctx.lineTo(-15, -18);
+    ctx.lineTo(-15, -18);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = '#1e3a8a';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(-10, -28);
+    ctx.lineTo(-4, -16);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 9;
+    ctx.beginPath();
+    ctx.moveTo(-10, -28);
+    ctx.lineTo(-2, -46);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#dc2626';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-9, -30);
+    ctx.lineTo(-2, -45);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(-2, -44);
+    ctx.lineTo(11, -42);
+    ctx.stroke();
+
+    ctx.save();
+    ctx.translate(0, -56);
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#1e3a8a';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, 10.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#dc2626';
+    ctx.beginPath();
+    ctx.arc(-2, 0, 3.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.arc(3, -1, 7.5, -0.5, 0.55);
+    ctx.lineTo(3, -1);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    ctx.restore();
+}
+
+function updateAndDrawParticles(dt) {
+    ctx.fillStyle = 'rgba(226, 232, 240, 0.45)';
+    for (let i = exhaustParticles.length - 1; i >= 0; i--) {
+        const p = exhaustParticles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.r += 16 * dt;
+        p.alpha -= 1.1 * dt;
+        if (p.alpha <= 0) {
+            exhaustParticles.splice(i, 1);
+            continue;
+        }
+        ctx.globalAlpha = p.alpha;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    for (let i = confettiParticles.length - 1; i >= 0; i--) {
+        const c = confettiParticles[i];
+        c.vy += 380 * dt;
+        c.vx *= 0.985;
+        c.x += c.vx * dt;
+        c.y += c.vy * dt;
+        c.rotation += c.vRot * dt;
+        c.life -= c.decay * dt;
+
+        if (c.life <= 0) {
+            confettiParticles.splice(i, 1);
+            continue;
+        }
+
+        ctx.save();
+        ctx.translate(c.x, c.y);
+        ctx.rotate(c.rotation);
+        ctx.fillStyle = c.color;
+        ctx.globalAlpha = Math.min(1, c.life * 1.5);
+        ctx.fillRect(-c.w / 2, -c.h / 2, c.w, c.h);
+        ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+
+    for (let i = fireworkFlashes.length - 1; i >= 0; i--) {
+        const fl = fireworkFlashes[i];
+        fl.r += (fl.maxR - fl.r) * 10 * dt;
+        fl.alpha -= 2.0 * dt;
+        if (fl.alpha <= 0) {
+            fireworkFlashes.splice(i, 1);
+            continue;
+        }
+        ctx.globalAlpha = Math.max(0, fl.alpha * 0.5);
+        ctx.fillStyle = fl.color;
+        ctx.beginPath();
+        ctx.arc(fl.x, fl.y, fl.r, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    ctx.strokeStyle = '#fef08a';
+    ctx.lineWidth = 3;
+    for (let i = fireworks.length - 1; i >= 0; i--) {
+        const fw = fireworks[i];
+        fw.y += fw.vy * dt;
+        fw.vy *= 0.985;
+
+        ctx.beginPath();
+        ctx.moveTo(fw.x, fw.y);
+        ctx.lineTo(fw.x, fw.y + 18);
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(fw.x - 3, fw.y - 3, 6, 6);
+
+        if (fw.y <= fw.targetY || fw.vy > -90) {
+            explodeFirework(fw);
+            fireworks.splice(i, 1);
+        }
+    }
+
+    if (fireworkSparks.length > 0) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.lineCap = 'round';
+        for (let i = fireworkSparks.length - 1; i >= 0; i--) {
+            const sp = fireworkSparks[i];
+            sp.prevX = sp.x;
+            sp.prevY = sp.y;
+            sp.vy += 125 * dt;
+            sp.vx *= 0.965;
+            sp.vy *= 0.965;
+            sp.x += sp.vx * dt;
+            sp.y += sp.vy * dt;
+            sp.alpha -= sp.decay * dt;
+
+            if (sp.alpha <= 0) {
+                fireworkSparks.splice(i, 1);
+                continue;
+            }
+
+            ctx.globalAlpha = Math.max(0, sp.alpha);
+            ctx.strokeStyle = sp.color;
+            ctx.lineWidth = sp.size;
+            ctx.beginPath();
+            ctx.moveTo(sp.prevX, sp.prevY);
+            ctx.lineTo(sp.x, sp.y);
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+}
+
+function resetAnimation() {
+    startTime = performance.now();
+    lastFrameTime = startTime;
+    confettiParticles = [];
+    exhaustParticles = [];
+    fireworks = [];
+    fireworkSparks = [];
+    fireworkFlashes = [];
+    screenShake = 0;
+
+    triggeredStates = {
+        revSound: false,
+        jumpSound: false,
+        touchdown: false,
+        nextFireworkTime: TIMELINE.TOUCHDOWN
+    };
+
+    if (victoryBanner) {
+        victoryBanner.classList.remove('banner-active');
+        victoryBanner.style.opacity = '0';
+    }
+    initSceneObjects();
+}
+
+function animate(now) {
+    const dt = Math.min(0.05, (now - lastFrameTime) / 1000);
+    lastFrameTime = now;
+
+    const elapsed = (now - startTime) / 1000;
+    const geo = cachedGeo;
+    const bike = getBikeTransform(elapsed, geo);
+
+    if (elapsed >= 0.05 && !triggeredStates.revSound) {
+        triggeredStates.revSound = true;
+        sound.playRev();
+    }
+
+    if (elapsed >= TIMELINE.TAKEOFF && !triggeredStates.jumpSound) {
+        triggeredStates.jumpSound = true;
+        sound.playJumpWhoosh();
+    }
+
+    chores.forEach((chore, idx) => {
+        if (!chore.smashed && elapsed >= chore.hitTime) {
+            chore.smashed = true;
+            screenShake = 9;
+            spawnChoreConfetti(chore.x, chore.y);
+            sound.playChorePop(idx);
+        }
+    });
+
+    if (elapsed >= TIMELINE.TOUCHDOWN && !triggeredStates.touchdown) {
+        triggeredStates.touchdown = true;
+        screenShake = 12;
+        if (victoryBanner) victoryBanner.classList.add('banner-active');
+        sound.playVictoryFanfare();
+
+        launchFirework(0.25);
+        launchFirework(0.45);
+        launchFirework(0.65);
+        launchFirework(0.80);
+        launchFirework(0.90);
+        triggeredStates.nextFireworkTime = elapsed + 0.30;
+    }
+
+    if (elapsed >= TIMELINE.TOUCHDOWN && elapsed < TIMELINE.COMPLETE) {
+        if (elapsed >= triggeredStates.nextFireworkTime) {
+            launchFirework();
+            if (Math.random() > 0.4) launchFirework(0.70 + Math.random() * 0.24);
+            triggeredStates.nextFireworkTime = elapsed + 0.38;
+        }
+    }
+
+    if (elapsed >= TIMELINE.COMPLETE + 1.2) {
+        resetAnimation();
+    }
+
+    if (elapsed < TIMELINE.STOPPED && Math.random() < 0.45) {
+        const cosA = Math.cos(bike.angle);
+        const sinA = Math.sin(bike.angle);
+        exhaustParticles.push({
+            x: bike.x - cosA * 38,
+            y: bike.y - sinA * 38 - 12,
+            vx: -cosA * (60 + Math.random() * 50),
+            vy: -20 + (Math.random() - 0.5) * 30,
+            r: 4 + Math.random() * 4,
+            alpha: 0.55
+        });
+    }
+
+    ctx.save();
+    if (screenShake > 0.2) {
+        const dx = (Math.random() - 0.5) * screenShake * 2;
+        const dy = (Math.random() - 0.5) * screenShake * 2;
+        ctx.translate(dx, dy);
+        screenShake *= Math.pow(0.04, dt);
+    }
+
+    drawSceneBackground();
+    drawLandingCrowd(geo, elapsed);
+    drawChores(elapsed);
+    drawDaredevilBike(bike, elapsed);
+    updateAndDrawParticles(dt);
+
+    ctx.restore();
+}
+
+function tick(now) {
+    if (isPaused || document.hidden) {
+        rafId = 0;
+        return;
+    }
+    animate(now);
+    rafId = requestAnimationFrame(tick);
+}
+
+function startLoop() {
+    if (!rafId && !isPaused && !document.hidden) {
+        lastFrameTime = performance.now();
+        rafId = requestAnimationFrame(tick);
+    }
+}
+
+function stopLoop() {
+    if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = 0;
+    }
+}
+
+function handleResize() {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+
+    cachedGeo = getSceneGeometry();
+    buildStaticBackgroundCache();
+
+    const choreTimes = [TIMELINE.CHORE_1_HIT, TIMELINE.CHORE_2_HIT, TIMELINE.CHORE_3_HIT];
+    chores.forEach((chore, idx) => {
+        const pos = getBikeTransform(choreTimes[idx], cachedGeo);
+        chore.x = pos.x;
+        chore.baseY = pos.y - 14;
+    });
+}
+
+window.addEventListener('resize', handleResize);
+
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        stopLoop();
+    } else {
+        startLoop();
+    }
+});
+
+window.addEventListener('pagehide', () => {
+    stopLoop();
+    try { sound.ctx?.close(); } catch (e) {}
+});
+
+window.addEventListener('load', () => {
+    handleResize();
+    resetAnimation();
+    startLoop();
+});
+
+window.addEventListener('click', () => sound.init(), { once: true });
+window.addEventListener('touchstart', () => sound.init(), { once: true });
+</script>
+</body>
+</html>
