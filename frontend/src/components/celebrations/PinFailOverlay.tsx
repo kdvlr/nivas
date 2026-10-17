@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import type { PinFailAnimation } from './pin-fail-animations'
 
-const DURATION_MS = 3200
+const DURATION_MS = 3400
 
 /** Fullscreen wrong-PIN animation; auto-dismisses (or tap to skip). */
 export default function PinFailOverlay({
@@ -22,7 +22,8 @@ export default function PinFailOverlay({
 
   useEffect(() => {
     const cleanup = canvasRef.current ? anim.run(canvasRef.current) : undefined
-    const timer = setTimeout(() => onDoneRef.current(), DURATION_MS)
+    const duration = anim.durationMs || DURATION_MS
+    const timer = setTimeout(() => onDoneRef.current(), duration)
     return () => {
       cleanup?.()
       clearTimeout(timer)
@@ -31,20 +32,22 @@ export default function PinFailOverlay({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 overflow-hidden"
+      className="fixed inset-0 z-50 overflow-hidden select-none cursor-pointer"
       style={{ background: anim.backdrop }}
       onClick={() => onDoneRef.current()}
     >
       <canvas ref={canvasRef} className="h-full w-full" />
-      <div className="pointer-events-none absolute inset-x-0 top-[12%] px-6 text-center">
-        <span
-          className="inline-block animate-bounce text-5xl font-black tracking-tight text-white lg:text-7xl"
-          style={{ textShadow: '0 4px 24px rgba(0,0,0,0.55)' }}
-        >
-          {tauntRef.current}
-        </span>
-      </div>
+      {!anim.hideHtmlTaunt && (
+        <div className="pointer-events-none absolute inset-x-0 top-[10%] px-6 text-center">
+          <span
+            className="inline-block animate-bounce text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.7)]"
+          >
+            {tauntRef.current}
+          </span>
+        </div>
+      )}
     </div>,
     document.body,
   )
 }
+
