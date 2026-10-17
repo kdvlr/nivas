@@ -9,7 +9,7 @@ import {
 } from 'react'
 import { REWARD_ANIMATIONS, type RewardAnimation, type RewardAnimationName } from './reward-animations'
 
-const DURATION_MS = 4500
+const DURATION_MS = 4800
 
 interface Ctx {
   /** Play a random (or specific) reward redemption animation. */
@@ -74,11 +74,14 @@ export function RewardCelebrationProvider({ children }: { children: ReactNode })
   }, [stop])
 
   useEffect(() => {
-    if (!active || !canvasRef.current) return
-    cleanupRef.current = active.run(canvasRef.current)
+    if (!active) return
+    if (active.run && canvasRef.current) {
+      cleanupRef.current = active.run(canvasRef.current)
+    }
+    const duration = active.durationMs || DURATION_MS
     timersRef.current = [
-      setTimeout(() => setFading(true), DURATION_MS - 600),
-      setTimeout(() => stop(), DURATION_MS),
+      setTimeout(() => setFading(true), Math.max(duration - 600, 0)),
+      setTimeout(() => stop(), duration),
     ]
     return () => {
       timersRef.current.forEach(clearTimeout)
@@ -96,12 +99,22 @@ export function RewardCelebrationProvider({ children }: { children: ReactNode })
           style={{ background: active.backdrop }}
           onClick={() => stop()}
         >
-          <canvas ref={canvasRef} className="h-full w-full" />
-          {active.name !== 'fairy' && (
-            <div className="pointer-events-none absolute inset-x-0 top-[12%] text-center">
+          {active.iframeSrc ? (
+            <iframe
+              key={active.name}
+              src={`${active.iframeSrc}${active.iframeSrc.includes('?') ? '&' : '?'}sound=${
+                typeof window !== 'undefined' && localStorage.getItem('nivas_celebration_sound') === 'true' ? '1' : '0'
+              }`}
+              title={active.label}
+              className="pointer-events-none h-full w-full border-0"
+            />
+          ) : (
+            <canvas ref={canvasRef} className="h-full w-full" />
+          )}
+          {!active.hideHtmlPraise && (
+            <div className="pointer-events-none absolute inset-x-0 top-[10%] text-center px-4">
               <span
-                className="inline-block animate-bounce text-7xl font-black tracking-tight text-white"
-                style={{ textShadow: '0 4px 24px rgba(0,0,0,0.45)' }}
+                className="inline-block animate-bounce text-5xl sm:text-7xl font-black tracking-tight text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.65)]"
               >
                 {praise}
               </span>
