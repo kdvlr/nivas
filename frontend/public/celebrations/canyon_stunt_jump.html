@@ -80,11 +80,22 @@
 class StuntAudio {
     constructor() {
         this.ctx = null;
-        const urlParams = new URLSearchParams(location.search);
-        this.enabled = urlParams.get('sound') !== '0';
+    }
+
+    isEnabled() {
+        try {
+            const urlParams = new URLSearchParams(location.search);
+            const soundParam = urlParams.get('sound');
+            if (soundParam === '0') return false;
+            if (soundParam === '1') return true;
+            return localStorage.getItem('nivas_celebration_sound') === 'true';
+        } catch (e) {
+            return false;
+        }
     }
 
     init() {
+        if (!this.isEnabled()) return;
         if (!this.ctx) {
             const AudioCtx = window.AudioContext || window.webkitAudioContext;
             if (AudioCtx) this.ctx = new AudioCtx();
@@ -95,7 +106,7 @@ class StuntAudio {
     }
 
     playRev() {
-        if (!this.enabled) return;
+        if (!this.isEnabled()) return;
         this.init();
         if (!this.ctx) return;
 
@@ -118,7 +129,7 @@ class StuntAudio {
     }
 
     playJumpWhoosh() {
-        if (!this.enabled) return;
+        if (!this.isEnabled()) return;
         this.init();
         if (!this.ctx) return;
 
@@ -139,7 +150,7 @@ class StuntAudio {
     }
 
     playChorePop(index) {
-        if (!this.enabled) return;
+        if (!this.isEnabled()) return;
         this.init();
         if (!this.ctx) return;
 
@@ -163,7 +174,7 @@ class StuntAudio {
     }
 
     playFireworkBoom() {
-        if (!this.enabled) return;
+        if (!this.isEnabled()) return;
         this.init();
         if (!this.ctx) return;
 
@@ -193,7 +204,7 @@ class StuntAudio {
     }
 
     playVictoryFanfare() {
-        if (!this.enabled) return;
+        if (!this.isEnabled()) return;
         this.init();
         if (!this.ctx) return;
 
@@ -1214,8 +1225,8 @@ window.addEventListener('load', () => {
     startLoop();
 });
 
-window.addEventListener('click', () => sound.init(), { once: true });
-window.addEventListener('touchstart', () => sound.init(), { once: true });
+window.addEventListener('click', () => { if (sound.isEnabled()) sound.init(); }, { once: true });
+window.addEventListener('touchstart', () => { if (sound.isEnabled()) sound.init(); }, { once: true });
 </script>
 </body>
 </html>

@@ -1233,8 +1233,9 @@
         });
 
         // Audio Initialization
+        const isSoundExplicitlyAllowed = urlParams.get("sound") === "1" || (urlParams.get("sound") !== "0" && localStorage.getItem("nivas_celebration_sound") === "true");
         try {
-            if (urlParams.get("sound") === "1" || localStorage.getItem("nivas_celebration_sound") === "true") {
+            if (isSoundExplicitlyAllowed) {
                 initAudio().then(() => {
                     soundEnabled = true;
                     if (soundIcon && soundLabel) {
@@ -1247,7 +1248,7 @@
         } catch (e) {}
 
         window.addEventListener("click", async () => {
-            if (!synthsInitialized && (urlParams.get("sound") === "1" || localStorage.getItem("nivas_celebration_sound") === "true")) {
+            if (!synthsInitialized && isSoundExplicitlyAllowed) {
                 await initAudio().catch(() => {});
                 soundEnabled = true;
             }

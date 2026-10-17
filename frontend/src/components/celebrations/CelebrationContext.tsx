@@ -103,7 +103,9 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
           {active.iframeSrc ? (
             <iframe
               key={active.name}
-              src={active.iframeSrc}
+              src={`${active.iframeSrc}${active.iframeSrc.includes('?') ? '&' : '?'}sound=${
+                typeof window !== 'undefined' && localStorage.getItem('nivas_celebration_sound') === 'true' ? '1' : '0'
+              }`}
               title={active.label}
               className="pointer-events-none h-full w-full border-0"
             />
