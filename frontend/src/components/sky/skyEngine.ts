@@ -403,6 +403,7 @@ interface FireworksRocket {
   isBottleRocket?: boolean
   stickLength?: number
   tilt?: number
+  isShapeNine?: boolean
 }
 
 interface FireworksSpark {
@@ -414,6 +415,8 @@ interface FireworksSpark {
   alpha: number
   decay: number
   size: number
+  gravity?: number
+  flicker?: boolean
 }
 
 interface FireworksFlash {
@@ -1516,34 +1519,144 @@ export function startFxCanvas(
       targetCtx.fill()
     }
 
-    // --- 3 Lit Birthday Candles ---
-    const candleX = [-8, 0, 8]
-    const candleColors = ['#f43f5e', '#38bdf8', '#a855f7']
-    for (let ci = 0; ci < 3; ci++) {
-      const cx = candleX[ci]
-      targetCtx.fillStyle = candleColors[ci]
-      targetCtx.fillRect(cx - 1.5, -28, 3, 12)
-      targetCtx.strokeStyle = '#475569'
-      targetCtx.lineWidth = 0.8
+    // --- Birthday Candles on Top Tier ---
+    if (isBirthday) {
+      // Swara's 9th Birthday: Glowing Numeral "9" Center Candle flanked by mini pastel candles!
+      // 1. Flanking mini candles
+      const sideCandles = [
+        { cx: -11, color: '#38bdf8' },
+        { cx: 11, color: '#c084fc' },
+      ]
+      for (const sc of sideCandles) {
+        targetCtx.fillStyle = sc.color
+        targetCtx.fillRect(sc.cx - 1.2, -26, 2.4, 10)
+        targetCtx.strokeStyle = '#475569'
+        targetCtx.lineWidth = 0.7
+        targetCtx.beginPath()
+        targetCtx.moveTo(sc.cx, -26)
+        targetCtx.lineTo(sc.cx, -28)
+        targetCtx.stroke()
+
+        const f = Math.sin(t / 60 + sc.cx) * 1.2
+        targetCtx.fillStyle = 'rgba(254, 240, 138, 0.85)'
+        targetCtx.beginPath()
+        targetCtx.arc(sc.cx, -30 + f * 0.3, 5, 0, Math.PI * 2)
+        targetCtx.fill()
+
+        targetCtx.fillStyle = '#ffffff'
+        targetCtx.beginPath()
+        targetCtx.ellipse(sc.cx, -30 + f * 0.3, 1.0, 2.2, 0, 0, Math.PI * 2)
+        targetCtx.fill()
+      }
+
+      // 2. Center Numeral "9" Birthday Candle
+      targetCtx.save()
+      if (dir === -1) {
+        targetCtx.scale(-1, 1) // Invert scale so the numeral 9 is never backwards when flying right-to-left
+      }
+
+      // Toothpick base inserted into frosting
+      targetCtx.strokeStyle = '#cbd5e1'
+      targetCtx.lineWidth = 1.6
       targetCtx.beginPath()
-      targetCtx.moveTo(cx, -28)
-      targetCtx.lineTo(cx, -30)
+      targetCtx.moveTo(0, -14)
+      targetCtx.lineTo(0, -18)
       targetCtx.stroke()
 
-      const flicker = Math.sin(t / 50 + ci * 2) * 1.5
-      const flameGlow = targetCtx.createRadialGradient(cx, -33 + flicker * 0.4, 0.5, cx, -33 + flicker * 0.4, 8)
+      // Candle Numeral 9 Typography
+      targetCtx.font = "900 23px system-ui, -apple-system, sans-serif"
+      targetCtx.textAlign = 'center'
+      targetCtx.textBaseline = 'bottom'
+
+      // Puffy frosting white border
+      targetCtx.lineWidth = 5
+      targetCtx.strokeStyle = '#ffffff'
+      targetCtx.lineJoin = 'round'
+      targetCtx.strokeText('9', 0, -16)
+
+      // Golden crust outline
+      targetCtx.lineWidth = 2.6
+      targetCtx.strokeStyle = '#f59e0b'
+      targetCtx.strokeText('9', 0, -16)
+
+      // Warm Golden Honeycomb Gradient
+      const candleGrad = targetCtx.createLinearGradient(0, -38, 0, -16)
+      candleGrad.addColorStop(0, '#fef08a') // bright golden yellow
+      candleGrad.addColorStop(0.45, '#facc15') // sparkling gold
+      candleGrad.addColorStop(1, '#ea580c') // warm amber
+      targetCtx.fillStyle = candleGrad
+      targetCtx.fillText('9', 0, -16)
+
+      // Sugar sprinkle accents on the 9
+      targetCtx.fillStyle = '#f43f5e'
+      targetCtx.beginPath()
+      targetCtx.arc(-2, -31, 1.1, 0, Math.PI * 2)
+      targetCtx.fill()
+      targetCtx.fillStyle = '#38bdf8'
+      targetCtx.beginPath()
+      targetCtx.arc(2.5, -29, 1.1, 0, Math.PI * 2)
+      targetCtx.fill()
+      targetCtx.fillStyle = '#4ade80'
+      targetCtx.beginPath()
+      targetCtx.arc(0, -21, 1.1, 0, Math.PI * 2)
+      targetCtx.fill()
+
+      // Wick at top of the 9
+      targetCtx.strokeStyle = '#334155'
+      targetCtx.lineWidth = 1.0
+      targetCtx.beginPath()
+      targetCtx.moveTo(0, -38)
+      targetCtx.lineTo(0, -41)
+      targetCtx.stroke()
+
+      // Candle Flame with Warm Golden Aura
+      const flicker = Math.sin(t / 45) * 1.6
+      const flameGlow = targetCtx.createRadialGradient(0, -45 + flicker * 0.4, 0.5, 0, -45 + flicker * 0.4, 12)
       flameGlow.addColorStop(0, 'rgba(254, 240, 138, 0.95)')
-      flameGlow.addColorStop(0.4, 'rgba(249, 115, 22, 0.75)')
+      flameGlow.addColorStop(0.35, 'rgba(249, 115, 22, 0.8)')
       flameGlow.addColorStop(1, 'rgba(249, 115, 22, 0)')
       targetCtx.fillStyle = flameGlow
       targetCtx.beginPath()
-      targetCtx.arc(cx, -33 + flicker * 0.4, 8, 0, Math.PI * 2)
+      targetCtx.arc(0, -45 + flicker * 0.4, 12, 0, Math.PI * 2)
       targetCtx.fill()
 
+      // Teardrop Flame Core
       targetCtx.fillStyle = '#ffffff'
       targetCtx.beginPath()
-      targetCtx.ellipse(cx, -33 + flicker * 0.4, 1.4, 3 + flicker * 0.4, 0, 0, Math.PI * 2)
+      targetCtx.ellipse(0, -45 + flicker * 0.4, 1.8, 3.8 + flicker * 0.4, 0, 0, Math.PI * 2)
       targetCtx.fill()
+
+      targetCtx.restore()
+    } else {
+      // Standard 3 Lit Birthday Candles
+      const candleX = [-8, 0, 8]
+      const candleColors = ['#f43f5e', '#38bdf8', '#a855f7']
+      for (let ci = 0; ci < 3; ci++) {
+        const cx = candleX[ci]
+        targetCtx.fillStyle = candleColors[ci]
+        targetCtx.fillRect(cx - 1.5, -28, 3, 12)
+        targetCtx.strokeStyle = '#475569'
+        targetCtx.lineWidth = 0.8
+        targetCtx.beginPath()
+        targetCtx.moveTo(cx, -28)
+        targetCtx.lineTo(cx, -30)
+        targetCtx.stroke()
+
+        const flicker = Math.sin(t / 50 + ci * 2) * 1.5
+        const flameGlow = targetCtx.createRadialGradient(cx, -33 + flicker * 0.4, 0.5, cx, -33 + flicker * 0.4, 8)
+        flameGlow.addColorStop(0, 'rgba(254, 240, 138, 0.95)')
+        flameGlow.addColorStop(0.4, 'rgba(249, 115, 22, 0.75)')
+        flameGlow.addColorStop(1, 'rgba(249, 115, 22, 0)')
+        targetCtx.fillStyle = flameGlow
+        targetCtx.beginPath()
+        targetCtx.arc(cx, -33 + flicker * 0.4, 8, 0, Math.PI * 2)
+        targetCtx.fill()
+
+        targetCtx.fillStyle = '#ffffff'
+        targetCtx.beginPath()
+        targetCtx.ellipse(cx, -33 + flicker * 0.4, 1.4, 3 + flicker * 0.4, 0, 0, Math.PI * 2)
+        targetCtx.fill()
+      }
     }
 
     targetCtx.restore()
@@ -1835,7 +1948,7 @@ export function startFxCanvas(
       targetCtx.stroke()
 
       // Trailing Streamer Banner
-      const bannerW = 145
+      const bannerW = 168
       const bannerH = 17
       const bannerX = -65 - bannerW
       const bannerY = -2
@@ -1872,12 +1985,83 @@ export function startFxCanvas(
       targetCtx.font = "bold 9px system-ui, -apple-system, sans-serif"
       targetCtx.textAlign = 'center'
       targetCtx.textBaseline = 'middle'
-      targetCtx.fillText('★ HAPPY BIRTHDAY SWARA! 🎂 ★', 0, 0)
+      targetCtx.fillText('★ HAPPY 9TH BIRTHDAY SWARA! 🎂 🎉 ★', 0, 0)
       targetCtx.restore()
 
       targetCtx.restore()
 
-      // Mini helium balloons tied to broom
+      // 1. Shimmering Rose-Gold Metallic Foil "9" Birthday Balloon
+      const bobFoil = Math.sin(t / 240 + 0.5) * 3.5
+      const foilX = -20
+      const foilY = -52 + bobFoil
+
+      // Golden curly ribbon string from broom to foil balloon
+      targetCtx.strokeStyle = '#facc15'
+      targetCtx.lineWidth = 0.9
+      targetCtx.beginPath()
+      targetCtx.moveTo(-30, 4)
+      targetCtx.bezierCurveTo(-26, -15, -16, -30, foilX, foilY + 14)
+      targetCtx.stroke()
+
+      // Small balloon tie knot / nozzle
+      targetCtx.fillStyle = '#f43f5e'
+      targetCtx.beginPath()
+      targetCtx.moveTo(foilX - 2.5, foilY + 12)
+      targetCtx.lineTo(foilX + 2.5, foilY + 12)
+      targetCtx.lineTo(foilX, foilY + 15)
+      targetCtx.closePath()
+      targetCtx.fill()
+
+      targetCtx.save()
+      targetCtx.translate(foilX, foilY)
+      if (dir === -1) {
+        targetCtx.scale(-1, 1) // Invert scale so the 9 reads correctly regardless of flight direction
+      }
+      const foilTilt = Math.sin(t / 320) * 0.12
+      targetCtx.rotate(foilTilt)
+
+      targetCtx.font = "900 24px system-ui, -apple-system, sans-serif"
+      targetCtx.textAlign = 'center'
+      targetCtx.textBaseline = 'middle'
+
+      // Puffy inflated foil balloon outer aura / seam
+      targetCtx.lineWidth = 5.5
+      targetCtx.strokeStyle = 'rgba(244, 63, 94, 0.45)'
+      targetCtx.lineJoin = 'round'
+      targetCtx.strokeText('9', 0, 0)
+
+      // Rich metallic rim
+      targetCtx.lineWidth = 3.0
+      targetCtx.strokeStyle = '#be123c'
+      targetCtx.strokeText('9', 0, 0)
+
+      // Metallic Rose-Gold Gradient Fill with 3D Sheen
+      const foilGrad = targetCtx.createLinearGradient(-8, -12, 8, 12)
+      foilGrad.addColorStop(0, '#ffe4e6') // luminous rose-gold specular
+      foilGrad.addColorStop(0.2, '#f43f5e') // vibrant celebratory rose
+      foilGrad.addColorStop(0.5, '#fecdd3') // central metallic highlight
+      foilGrad.addColorStop(0.8, '#e11d48') // deep ruby reflection
+      foilGrad.addColorStop(1, '#9f1239') // bottom shadow
+      targetCtx.fillStyle = foilGrad
+      targetCtx.fillText('9', 0, 0)
+
+      // Specular glint curve on the top loop
+      targetCtx.strokeStyle = 'rgba(255, 255, 255, 0.9)'
+      targetCtx.lineWidth = 1.3
+      targetCtx.lineCap = 'round'
+      targetCtx.beginPath()
+      targetCtx.arc(-1.5, -5.5, 4.2, -Math.PI * 0.8, -Math.PI * 0.2)
+      targetCtx.stroke()
+
+      // Specular glint on the bottom tail
+      targetCtx.beginPath()
+      targetCtx.moveTo(3.5, 3)
+      targetCtx.quadraticCurveTo(2.5, 8, -1, 9.5)
+      targetCtx.stroke()
+
+      targetCtx.restore()
+
+      // 2. Mini helium balloons tied to broom
       const drawMiniBalloon = (bx: number, by: number, bColor: string, shineColor: string) => {
         targetCtx.strokeStyle = 'rgba(255, 255, 255, 0.65)'
         targetCtx.lineWidth = 0.7
@@ -2701,15 +2885,17 @@ export function startFxCanvas(
           let rx: number
           let tilt = 0
           const isBottle = diwali && Math.random() < 0.85
+          // On Swara's Birthday: launch the special Numeral "9" Starburst Rocket!
+          const isShapeNine = wantsSwaraFireworks && (Math.random() < 0.35 || getQueryParam('firework9') === '1')
           if (diwali || wantsSwaraFireworks) {
             // Strictly constrain to side columns so central photo frame is never obstructed
             const side = Math.random() < 0.5 ? 'left' : 'right'
             if (side === 'left') {
-              rx = w * rand(0.03, 0.16)
-              tilt = rand(0.02, 0.06)
+              rx = w * rand(0.04, 0.16)
+              tilt = rand(0.015, 0.045)
             } else {
-              rx = w * rand(0.84, 0.97)
-              tilt = rand(-0.06, -0.02)
+              rx = w * rand(0.84, 0.96)
+              tilt = rand(-0.045, -0.015)
             }
           } else {
             rx = w * rand(0.08, 0.92)
@@ -2719,13 +2905,14 @@ export function startFxCanvas(
           rockets.push({
             x: rx,
             y: h + 15,
-            targetY: h * rand(0.08, 0.40),
-            speed: isBottle ? rand(720, 960) : rand(620, 880),
-            color: fireworkColors[Math.floor(Math.random() * fireworkColors.length)],
+            targetY: isShapeNine ? h * rand(0.14, 0.30) : h * rand(0.08, 0.40),
+            speed: isBottle ? rand(720, 960) : (isShapeNine ? rand(580, 760) : rand(620, 880)),
+            color: isShapeNine ? '#f43f5e' : fireworkColors[Math.floor(Math.random() * fireworkColors.length)],
             trail: [],
-            isBottleRocket: isBottle,
+            isBottleRocket: isBottle && !isShapeNine,
             stickLength: rand(24, 30),
             tilt,
+            isShapeNine,
           })
         }
       }
@@ -2751,30 +2938,103 @@ export function startFxCanvas(
         }
 
         if (r.y <= r.targetY) {
-          // Burst apex: Flash
-          flashes.push({
-            x: r.x,
-            y: r.y,
-            color: r.color,
-            radius: rand(45, 90),
-            alpha: 0.85,
-          })
-
-          // Burst apex: Sparks
-          const count = Math.floor(rand(45, 70))
-          for (let j = 0; j < count; j++) {
-            const angle = Math.random() * Math.PI * 2
-            const speed = rand(70, 240)
-            sparks.push({
+          if (r.isShapeNine) {
+            // Burst apex: Big celebratory halo flash
+            flashes.push({
               x: r.x,
               y: r.y,
-              vx: Math.cos(angle) * speed,
-              vy: Math.sin(angle) * speed,
-              color: r.color,
-              alpha: 1,
-              decay: rand(0.55, 1.1),
-              size: rand(1.6, 3.2),
+              color: '#f43f5e',
+              radius: rand(85, 115),
+              alpha: 0.95,
             })
+
+            // Generate points along the numeral "9"
+            const points: { x: number; y: number }[] = []
+            // Upper loop of 9: circle centered at (0, -0.38)
+            const loopRadius = 0.42
+            const loopCenterY = -0.38
+            for (let a = 0; a < Math.PI * 2; a += Math.PI / 12) {
+              points.push({
+                x: Math.cos(a) * loopRadius,
+                y: loopCenterY + Math.sin(a) * loopRadius,
+              })
+            }
+
+            // Descending spine and bottom hook of 9
+            const tailSteps = 16
+            for (let step = 0; step <= tailSteps; step++) {
+              const p = step / tailSteps
+              const u = 1 - p
+              // Cubic bezier down and hooking back to left
+              const x = u * u * u * 0.42 + 3 * u * u * p * 0.45 + 3 * u * p * p * 0.35 + p * p * p * (-0.28)
+              const y = u * u * u * (-0.38) + 3 * u * u * p * 0.25 + 3 * u * p * p * 0.72 + p * p * p * 0.72
+              points.push({ x, y })
+            }
+
+            const shapeScale = rand(70, 95)
+            const expansionRate = rand(1.35, 1.65)
+            const nineColors = ['#facc15', '#f43f5e', '#a855f7', '#ffffff', '#38bdf8']
+
+            for (let pi = 0; pi < points.length; pi++) {
+              const pt = points[pi]
+              const targetX = pt.x * shapeScale
+              const targetY = pt.y * shapeScale
+
+              sparks.push({
+                x: r.x,
+                y: r.y,
+                vx: targetX * expansionRate,
+                vy: targetY * expansionRate,
+                color: nineColors[pi % nineColors.length],
+                alpha: 1.0,
+                decay: rand(0.35, 0.48), // Lingers clearly for ~2-2.5 seconds
+                size: rand(2.6, 3.8),
+                gravity: 28, // gentle floating gravity so the 9 shape remains legible!
+                flicker: true,
+              })
+
+              // Accompanying diamond glitter dust
+              if (Math.random() < 0.5) {
+                sparks.push({
+                  x: r.x,
+                  y: r.y,
+                  vx: targetX * expansionRate * rand(0.8, 0.95),
+                  vy: targetY * expansionRate * rand(0.8, 0.95),
+                  color: '#fef08a',
+                  alpha: 0.85,
+                  decay: rand(0.5, 0.75),
+                  size: rand(1.4, 2.0),
+                  gravity: 38,
+                  flicker: true,
+                })
+              }
+            }
+          } else {
+            // Standard burst apex: Flash
+            flashes.push({
+              x: r.x,
+              y: r.y,
+              color: r.color,
+              radius: rand(45, 90),
+              alpha: 0.85,
+            })
+
+            // Standard burst apex: Sparks
+            const count = Math.floor(rand(45, 70))
+            for (let j = 0; j < count; j++) {
+              const angle = Math.random() * Math.PI * 2
+              const speed = rand(70, 240)
+              sparks.push({
+                x: r.x,
+                y: r.y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                color: r.color,
+                alpha: 1,
+                decay: rand(0.55, 1.1),
+                size: rand(1.6, 3.2),
+              })
+            }
           }
           rockets.splice(i, 1)
         }
@@ -2883,7 +3143,7 @@ export function startFxCanvas(
         const sp = sparks[i]
         sp.x += sp.vx * dt
         sp.y += sp.vy * dt
-        sp.vy += 120 * dt
+        sp.vy += (sp.gravity ?? 120) * dt
         sp.vx *= 0.96
         sp.vy *= 0.96
         sp.alpha -= sp.decay * dt
@@ -2891,7 +3151,8 @@ export function startFxCanvas(
         if (sp.alpha <= 0) {
           sparks.splice(i, 1)
         } else {
-          ctx.globalAlpha = sp.alpha
+          const alphaMult = sp.flicker ? 0.65 + 0.35 * Math.sin(t / 40 + i * 1.5) : 1.0
+          ctx.globalAlpha = Math.max(0, sp.alpha * alphaMult)
           ctx.fillStyle = sp.color
           ctx.beginPath()
           ctx.arc(sp.x, sp.y, sp.size, 0, Math.PI * 2)
