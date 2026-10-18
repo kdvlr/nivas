@@ -3285,11 +3285,304 @@ function SpookyWebsAndSpiders({ isBirthday = false }: { isBirthday?: boolean }) 
   )
 }
 
-function DaytimePumpkinPatch({ isBirthday = false }: { isBirthday?: boolean }) {
-  const petals = [0, 26, 52, 78, 104, 130, 156, 182, 208, 234, 260, 286, 312, 338]
+const ZOMBIE_STYLE_KEYFRAMES = `
+  @keyframes zombieStroll {
+    0% { transform: translate3d(-70px, 84px, 0) scaleX(1); }
+    7% { transform: translate3d(280px, 68px, 0) scaleX(1); }
+    15% { transform: translate3d(600px, 80px, 0) scaleX(1); }
+    23% { transform: translate3d(920px, 88px, 0) scaleX(1); }
+    31% { transform: translate3d(1240px, 72px, 0) scaleX(1); }
+    39% { transform: translate3d(1560px, 62px, 0) scaleX(1); }
+    46% { transform: translate3d(1880px, 74px, 0) scaleX(1); }
+    48% { transform: translate3d(1990px, 78px, 0) scaleX(1); }
+    49% { transform: translate3d(1990px, 78px, 0) scaleX(-1); }
+    51% { transform: translate3d(1990px, 78px, 0) scaleX(-1); }
+    58% { transform: translate3d(1650px, 64px, 0) scaleX(-1); }
+    66% { transform: translate3d(1300px, 72px, 0) scaleX(-1); }
+    74% { transform: translate3d(950px, 86px, 0) scaleX(-1); }
+    82% { transform: translate3d(600px, 80px, 0) scaleX(-1); }
+    90% { transform: translate3d(260px, 68px, 0) scaleX(-1); }
+    97% { transform: translate3d(-70px, 84px, 0) scaleX(-1); }
+    99% { transform: translate3d(-70px, 84px, 0) scaleX(1); }
+    100% { transform: translate3d(-70px, 84px, 0) scaleX(1); }
+  }
+  @keyframes zombieLurchStep {
+    0% { transform: translate3d(0px, 0px, 0) rotate(0deg); }
+    18% { transform: translate3d(14px, 5px, 0) rotate(9deg); }
+    34% { transform: translate3d(16px, 4px, 0) rotate(7deg); }
+    50% { transform: translate3d(12px, 1px, 0) rotate(2deg); }
+    70% { transform: translate3d(5px, -3px, 0) rotate(-4deg); }
+    88% { transform: translate3d(1px, -1px, 0) rotate(-1deg); }
+    100% { transform: translate3d(0px, 0px, 0) rotate(0deg); }
+  }
+  @keyframes zombieSteppingLeg {
+    0% { transform: rotate(-20deg); }
+    18% { transform: rotate(-30deg); }
+    38% { transform: rotate(12deg); }
+    65% { transform: rotate(20deg); }
+    85% { transform: rotate(4deg); }
+    100% { transform: rotate(-20deg); }
+  }
+  @keyframes zombieDraggingLeg {
+    0% { transform: rotate(18deg); }
+    25% { transform: rotate(26deg); }
+    55% { transform: rotate(12deg); }
+    78% { transform: rotate(-10deg); }
+    92% { transform: rotate(-4deg); }
+    100% { transform: rotate(18deg); }
+  }
+  @keyframes zombieArmsSwing {
+    0% { transform: rotate(-4deg); }
+    18% { transform: rotate(12deg); }
+    38% { transform: rotate(6deg); }
+    65% { transform: rotate(-9deg); }
+    85% { transform: rotate(-2deg); }
+    100% { transform: rotate(-4deg); }
+  }
+  @keyframes zombieHeadJolt {
+    0% { transform: rotate(-4deg); }
+    18% { transform: rotate(13deg) translateY(1.5px); }
+    35% { transform: rotate(8deg); }
+    65% { transform: rotate(-9deg) translateY(-1px); }
+    85% { transform: rotate(-2deg); }
+    100% { transform: rotate(-4deg); }
+  }
+  @keyframes zombieShadowPulse {
+    0%, 100% { transform: scale(1); opacity: 0.28; }
+    18% { transform: scale(1.2, 1.15); opacity: 0.40; }
+    65% { transform: scale(0.85, 0.85); opacity: 0.18; }
+  }
+`
+
+function ShamblingZombie({ isNight = false, isBirthday = false }: { isNight?: boolean; isBirthday?: boolean }) {
   const isZombieMid =
     typeof window !== 'undefined' &&
     new URLSearchParams(window.location.search || (window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '')).get('zombie') === 'mid'
+
+  return (
+    <g
+      style={{
+        willChange: 'transform',
+        animation: isZombieMid ? 'none' : 'zombieStroll 200s linear infinite',
+        transform: isZombieMid ? 'translate3d(680px, 80px, 0)' : undefined,
+      }}
+    >
+      <g transform="scale(0.85)">
+        {/* Zombie Stumbling / Lurching Body Cadence */}
+        <g style={{ animation: 'zombieLurchStep 2.8s ease-in-out infinite', transformOrigin: '0 36px' }}>
+          {/* Shadow underneath with ground impact pulse */}
+          <ellipse
+            cx="2"
+            cy="40"
+            rx="14"
+            ry="4"
+            fill="rgba(0, 0, 0, 0.28)"
+            style={{ animation: 'zombieShadowPulse 2.8s ease-in-out infinite', transformOrigin: '2px 40px' }}
+          />
+
+          {/* Back Arm (Left Arm, reaching forward) */}
+          <g style={{ transformOrigin: '-2px 8px', animation: 'zombieArmsSwing 2.8s ease-in-out infinite' }}>
+            {isNight ? (
+              // Night: Cozy Striped Pajama Sleeve
+              <>
+                <path d="M -4 6 L 6 5 L 5 11 L -5 10 Z" fill="#38bdf8" />
+                <path d="M -4 7.5 L 5.5 6.5" stroke="#0284c7" strokeWidth="1" />
+                <path d="M -4.5 9.5 L 5 8.5" stroke="#ffffff" strokeWidth="0.8" />
+                <rect x="3.5" y="4.5" width="2.5" height="6.5" rx="1" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="0.5" />
+                <path d="M 5 8 L 14 7 L 24 9" stroke="#4ade80" strokeWidth="3" strokeLinecap="round" fill="none" />
+                <path d="M 24 9 L 28 8 M 24 9 L 28 10 M 24 9 L 27 12" stroke="#4ade80" strokeWidth="1.2" strokeLinecap="round" />
+              </>
+            ) : (
+              // Daytime: Tattered Purple Shirt Sleeve
+              <>
+                <path d="M -4 6 L 6 5 L 5 11 L -5 10 Z" fill="#581c87" />
+                <path d="M 0 8 L 14 7 L 24 9" stroke="#4ade80" strokeWidth="3" strokeLinecap="round" fill="none" />
+                <path d="M 24 9 L 28 8 M 24 9 L 28 10 M 24 9 L 27 12" stroke="#4ade80" strokeWidth="1.2" strokeLinecap="round" />
+              </>
+            )}
+          </g>
+
+          {/* Left Leg (Dragging Rear Leg) */}
+          <g style={{ transformOrigin: '-3px 22px', animation: 'zombieDraggingLeg 2.8s ease-in-out infinite' }}>
+            {isNight ? (
+              // Night: Striped Pajama Pants Leg & Fuzzy Bunny Slipper
+              <>
+                <line x1="-3" y1="22" x2="-5" y2="34" stroke="#38bdf8" strokeWidth="4.8" strokeLinecap="round" />
+                <line x1="-3.4" y1="25" x2="-4.4" y2="25" stroke="#ffffff" strokeWidth="1" />
+                <line x1="-3.8" y1="29" x2="-4.8" y2="29" stroke="#0284c7" strokeWidth="1" />
+                <rect x="-7" y="32" width="4.5" height="3" rx="1" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="0.5" />
+                <line x1="-5" y1="34" x2="-6" y2="38" stroke="#4ade80" strokeWidth="2.4" strokeLinecap="round" />
+                <ellipse cx="-5.5" cy="40.5" rx="5" ry="2.8" fill="#f472b6" stroke="#db2777" strokeWidth="0.5" />
+                <path d="M -8.5 39 C -10 36, -9 35, -8 37 Z" fill="#fbcfe8" stroke="#db2777" strokeWidth="0.4" />
+                <path d="M -7.5 39 C -8 35, -7 34, -6.5 37 Z" fill="#fbcfe8" stroke="#db2777" strokeWidth="0.4" />
+                <circle cx="-10" cy="40.5" r="0.8" fill="#fda4af" />
+              </>
+            ) : (
+              // Daytime: Ragged Dark Pants & Worn Shoe
+              <>
+                <line x1="-3" y1="22" x2="-5" y2="34" stroke="#334155" strokeWidth="4.2" strokeLinecap="round" />
+                <path d="M -8 33 L -2 33 L -3 36 L -5 34 L -7 36 Z" fill="#334155" />
+                <line x1="-5" y1="34" x2="-6" y2="39" stroke="#4ade80" strokeWidth="2.4" strokeLinecap="round" />
+                <path d="M -9 39 L -2 39 C 0 39, 0 42, -4 42 L -9 42 Z" fill="#78350f" />
+              </>
+            )}
+          </g>
+
+          {/* Right Leg (Stepping Front Leg) */}
+          <g style={{ transformOrigin: '3px 22px', animation: 'zombieSteppingLeg 2.8s ease-in-out infinite' }}>
+            {isNight ? (
+              // Night: Striped Pajama Pants Leg & Fuzzy Bunny Slipper
+              <>
+                <line x1="3" y1="22" x2="6" y2="34" stroke="#38bdf8" strokeWidth="5.0" strokeLinecap="round" />
+                <line x1="3.5" y1="25" x2="4.5" y2="25" stroke="#ffffff" strokeWidth="1" />
+                <line x1="4.5" y1="29" x2="5.5" y2="29" stroke="#0284c7" strokeWidth="1" />
+                <rect x="2.5" y="26" width="3.5" height="3" rx="0.8" fill="#facc15" stroke="#ca8a04" strokeWidth="0.4" />
+                <line x1="2.5" y1="27.5" x2="6" y2="27.5" stroke="#ca8a04" strokeWidth="0.3" strokeDasharray="0.8,0.8" />
+                <rect x="3.8" y="32" width="4.8" height="3" rx="1" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="0.5" />
+                <line x1="6" y1="34" x2="7" y2="38" stroke="#4ade80" strokeWidth="2.4" strokeLinecap="round" />
+                <ellipse cx="6" cy="40.5" rx="5.2" ry="2.8" fill="#f472b6" stroke="#db2777" strokeWidth="0.5" />
+                <path d="M 9.5 39 C 11 36, 10 35, 9 37 Z" fill="#fbcfe8" stroke="#db2777" strokeWidth="0.4" />
+                <path d="M 8.5 39 C 9 35, 8 34, 7.5 37 Z" fill="#fbcfe8" stroke="#db2777" strokeWidth="0.4" />
+                <circle cx="11" cy="40.5" r="0.8" fill="#fda4af" />
+              </>
+            ) : (
+              // Daytime: Ragged Pants & Shoe
+              <>
+                <line x1="3" y1="22" x2="6" y2="34" stroke="#475569" strokeWidth="4.5" strokeLinecap="round" />
+                <circle cx="4.5" cy="28" r="1.5" fill="#4ade80" />
+                <path d="M 1 33 L 7 33 L 6 36 L 4 34 L 2 36 Z" fill="#475569" />
+                <line x1="6" y1="34" x2="7" y2="39" stroke="#4ade80" strokeWidth="2.4" strokeLinecap="round" />
+                <path d="M 2 39 L 9 39 C 11 39, 11 42, 7 42 L 2 42 Z" fill="#581c87" />
+              </>
+            )}
+          </g>
+
+          {/* Torso / Shirt */}
+          {isNight ? (
+            // Night: Cozy Striped Pajama Shirt with Buttons and Pocket
+            <g>
+              <path
+                d="M -7 6 L 7 6 L 8.5 23 L -7.5 23 Z"
+                fill="#38bdf8"
+                stroke="#0284c7"
+                strokeWidth="0.8"
+              />
+              <path d="M -7 9 L 7 9" stroke="#ffffff" strokeWidth="1.2" />
+              <path d="M -7 13 L 7.5 13" stroke="#0284c7" strokeWidth="1.2" />
+              <path d="M -7.2 17 L 8 17" stroke="#ffffff" strokeWidth="1.2" />
+              <path d="M -7.4 21 L 8.3 21" stroke="#0284c7" strokeWidth="1.2" />
+              <line x1="0" y1="6" x2="0" y2="23" stroke="#f8fafc" strokeWidth="1.6" />
+              <circle cx="0" cy="9" r="0.9" fill="#facc15" stroke="#ca8a04" strokeWidth="0.3" />
+              <circle cx="0" cy="13" r="0.9" fill="#facc15" stroke="#ca8a04" strokeWidth="0.3" />
+              <circle cx="0" cy="17" r="0.9" fill="#facc15" stroke="#ca8a04" strokeWidth="0.3" />
+              <circle cx="0" cy="21" r="0.9" fill="#facc15" stroke="#ca8a04" strokeWidth="0.3" />
+              <path d="M -5 6 L 0 9 L 5 6" stroke="#f8fafc" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+              <rect x="2.5" y="11" width="3.5" height="3.5" rx="0.6" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="0.4" />
+              <path d="M 4 12.2 C 3.5 12.2, 3.2 12.8, 3.8 13.5 C 4.5 13.5, 4.8 12.8, 4.2 12.4" fill="#facc15" />
+            </g>
+          ) : (
+            // Daytime: Tattered Purple Tunic
+            <>
+              <path
+                d="M -7 6 L 7 6 L 9 22 L 5 21 L 2 24 L -1 21 L -5 23 L -8 21 Z"
+                fill="#7c3aed"
+                stroke="#581c87"
+                strokeWidth="0.8"
+              />
+              <path d="M 0 11 L 3 14 L -1 16 Z" fill="#4c1d95" />
+              <line x1="0" y1="13" x2="2.5" y2="13" stroke="#f8fafc" strokeWidth="0.9" />
+            </>
+          )}
+
+          {/* Front Arm (Right Arm, reaching forward with inertia delay) */}
+          <g style={{ transformOrigin: '2px 8px', animation: 'zombieArmsSwing 2.8s ease-in-out infinite', animationDelay: '0.2s' }}>
+            {isNight ? (
+              // Night: Striped Pajama Sleeve
+              <>
+                <path d="M 0 6 L 8 6 L 7 12 L -1 11 Z" fill="#38bdf8" />
+                <path d="M 0 8 L 7.5 8" stroke="#ffffff" strokeWidth="1" />
+                <path d="M -0.5 10.5 L 7 10.5" stroke="#0284c7" strokeWidth="1" />
+                <rect x="5.5" y="5.5" width="2.5" height="6.5" rx="1" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="0.5" />
+                <path d="M 7 9 L 18 8 L 27 10" stroke="#4ade80" strokeWidth="3.2" strokeLinecap="round" fill="none" />
+                <path d="M 27 10 L 31 9 M 27 10 L 31 11 M 27 10 L 30 13" stroke="#4ade80" strokeWidth="1.2" strokeLinecap="round" />
+              </>
+            ) : (
+              // Daytime: Tattered Purple Sleeve
+              <>
+                <path d="M 0 6 L 8 6 L 7 12 L -1 11 Z" fill="#6d28d9" />
+                <path d="M 4 9 L 18 8 L 27 10" stroke="#4ade80" strokeWidth="3.2" strokeLinecap="round" fill="none" />
+                <path d="M 27 10 L 31 9 M 27 10 L 31 11 M 27 10 L 30 13" stroke="#4ade80" strokeWidth="1.2" strokeLinecap="round" />
+              </>
+            )}
+          </g>
+
+          {/* Zombie Head (with head loll & jolt animation) */}
+          <g style={{ transformOrigin: '0 6px', animation: 'zombieHeadJolt 2.8s ease-in-out infinite' }}>
+            <rect x="-7.5" y="-9" width="15" height="15" rx="3.5" fill="#4ade80" stroke="#22c55e" strokeWidth="0.9" />
+            <path d="M -8.5 -8 C -7 -13, -3 -11, -1 -14 C 1 -11, 4 -14, 7.5 -9 L 8.5 -5 L -8.5 -5 Z" fill="#1e1b4b" />
+            <path d="M 0 -6 L 4 -4 M 1 -6.5 L 1 -4 M 3 -5.5 L 3 -3" stroke="#166534" strokeWidth="0.8" strokeLinecap="round" />
+
+            {/* Mismatched Goofy Zombie Eyes (with sleepy half-closed lids at night!) */}
+            <circle cx="-3" cy="-1.5" r="2.8" fill="#fef08a" stroke="#1e293b" strokeWidth="0.6" />
+            <circle cx="-2.5" cy="-1.5" r="1.1" fill="#0f172a" />
+            <circle cx="3.2" cy="-1.2" r="2.2" fill="#fef08a" stroke="#1e293b" strokeWidth="0.6" />
+            <circle cx="3.4" cy="-1.0" r="0.9" fill="#0f172a" />
+            <path d="M 1.2 -2.5 Q 3.2 -1.8 5.2 -2.5" stroke="#166534" strokeWidth="0.8" strokeLinecap="round" fill="none" />
+
+            {isNight && (
+              // Sleepy Half-Closed Eyelids for Sleepwalking Zombie
+              <>
+                <path d="M -5.8 -2.5 C -5.8 -4.5, -0.2 -4.5, -0.2 -2.5 Z" fill="#22c55e" stroke="#166534" strokeWidth="0.5" />
+                <path d="M 1.2 -2.2 C 1.2 -3.8, 5.2 -3.8, 5.2 -2.2 Z" fill="#22c55e" stroke="#166534" strokeWidth="0.5" />
+              </>
+            )}
+
+            {/* Crooked Open Mouth with Cute Single Tooth */}
+            <path d="M -3 3.5 Q 0 6.5 4 3.5 Z" fill="#0f172a" />
+            <rect x="-1" y="3.2" width="1.6" height="2" fill="#ffffff" rx="0.3" />
+
+            {isNight ? (
+              // Night: Classic Floppy Sleeping Nightcap with Pom-Pom!
+              <g transform="translate(0, -9)">
+                <ellipse cx="0" cy="0.5" rx="8" ry="2.2" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="0.6" />
+                <path
+                  d="M -7.5 0 C -8 -7, -4 -13, -1 -17 C -6 -17, -14 -12, -18 -5 C -20 -1, -20 2, -19 5"
+                  stroke="#38bdf8"
+                  strokeWidth="5.5"
+                  strokeLinecap="round"
+                  fill="none"
+                />
+                <path
+                  d="M -7.5 0 C -8 -7, -4 -13, -1 -17 C -6 -17, -14 -12, -18 -5 C -20 -1, -20 2, -19 5"
+                  stroke="#ffffff"
+                  strokeWidth="5.5"
+                  strokeDasharray="3,3"
+                  strokeLinecap="round"
+                  fill="none"
+                />
+                <circle cx="-19" cy="6" r="3" fill="#fef08a" stroke="#facc15" strokeWidth="0.6" />
+                {isBirthday && (
+                  <circle cx="-1" cy="-17" r="2.2" fill="#ec4899" stroke="#facc15" strokeWidth="0.6" />
+                )}
+              </g>
+            ) : isBirthday ? (
+              // Daytime: Birthday Party Cone Hat
+              <g transform="translate(1, -9) rotate(14)">
+                <path d="M -4.5 0 L 0 -14 L 4.5 0 Z" fill="#ec4899" stroke="#db2777" strokeWidth="0.6" />
+                <path d="M -3 -4 L 0 -14 L 1 -9 Z" fill="#38bdf8" />
+                <path d="M -1.5 0 L 0 -14 L 0 -6 Z" fill="#facc15" />
+                <circle cx="0" cy="-14" r="1.8" fill="#facc15" />
+              </g>
+            ) : null}
+          </g>
+        </g>
+      </g>
+    </g>
+  )
+}
+
+function DaytimePumpkinPatch({ isBirthday = false }: { isBirthday?: boolean }) {
+  const petals = [0, 26, 52, 78, 104, 130, 156, 182, 208, 234, 260, 286, 312, 338]
 
   return (
     <div
@@ -3324,78 +3617,7 @@ function DaytimePumpkinPatch({ isBirthday = false }: { isBirthday?: boolean }) {
             0%, 100% { transform: translateY(0) rotate(0deg); }
             50% { transform: translateY(-4px) rotate(2deg); }
           }
-          @keyframes zombieStroll {
-            0% { transform: translate3d(-70px, 84px, 0) scaleX(1); }
-            7% { transform: translate3d(280px, 68px, 0) scaleX(1); }
-            15% { transform: translate3d(600px, 80px, 0) scaleX(1); }
-            23% { transform: translate3d(920px, 88px, 0) scaleX(1); }
-            31% { transform: translate3d(1240px, 72px, 0) scaleX(1); }
-            39% { transform: translate3d(1560px, 62px, 0) scaleX(1); }
-            46% { transform: translate3d(1880px, 74px, 0) scaleX(1); }
-            48% { transform: translate3d(1990px, 78px, 0) scaleX(1); }
-            49% { transform: translate3d(1990px, 78px, 0) scaleX(-1); }
-            51% { transform: translate3d(1990px, 78px, 0) scaleX(-1); }
-            58% { transform: translate3d(1650px, 64px, 0) scaleX(-1); }
-            66% { transform: translate3d(1300px, 72px, 0) scaleX(-1); }
-            74% { transform: translate3d(950px, 86px, 0) scaleX(-1); }
-            82% { transform: translate3d(600px, 80px, 0) scaleX(-1); }
-            90% { transform: translate3d(260px, 68px, 0) scaleX(-1); }
-            97% { transform: translate3d(-70px, 84px, 0) scaleX(-1); }
-            99% { transform: translate3d(-70px, 84px, 0) scaleX(1); }
-            100% { transform: translate3d(-70px, 84px, 0) scaleX(1); }
-          }
-          /* Zombie Shambling Gait: Staggered Lurch & Drag (prevents gliding effect) */
-          @keyframes zombieLurchStep {
-            0% { transform: translate3d(0px, 0px, 0) rotate(0deg); }
-            18% { transform: translate3d(14px, 5px, 0) rotate(9deg); }
-            34% { transform: translate3d(16px, 4px, 0) rotate(7deg); }
-            50% { transform: translate3d(12px, 1px, 0) rotate(2deg); }
-            70% { transform: translate3d(5px, -3px, 0) rotate(-4deg); }
-            88% { transform: translate3d(1px, -1px, 0) rotate(-1deg); }
-            100% { transform: translate3d(0px, 0px, 0) rotate(0deg); }
-          }
-          /* Stepping Front Leg: Quick forward reach, ground plant, and push back */
-          @keyframes zombieSteppingLeg {
-            0% { transform: rotate(-20deg); }
-            18% { transform: rotate(-30deg); }
-            38% { transform: rotate(12deg); }
-            65% { transform: rotate(20deg); }
-            85% { transform: rotate(4deg); }
-            100% { transform: rotate(-20deg); }
-          }
-          /* Dragging Back Leg: Stiff trailing leg with lazy scraping drag */
-          @keyframes zombieDraggingLeg {
-            0% { transform: rotate(18deg); }
-            25% { transform: rotate(26deg); }
-            55% { transform: rotate(12deg); }
-            78% { transform: rotate(-10deg); }
-            92% { transform: rotate(-4deg); }
-            100% { transform: rotate(18deg); }
-          }
-          /* Loose, dead zombie arms swinging with the stumble */
-          @keyframes zombieArmsSwing {
-            0% { transform: rotate(-4deg); }
-            18% { transform: rotate(12deg); }
-            38% { transform: rotate(6deg); }
-            65% { transform: rotate(-9deg); }
-            85% { transform: rotate(-2deg); }
-            100% { transform: rotate(-4deg); }
-          }
-          /* Loose floppy head jolting on impact */
-          @keyframes zombieHeadJolt {
-            0% { transform: rotate(-4deg); }
-            18% { transform: rotate(13deg) translateY(1.5px); }
-            35% { transform: rotate(8deg); }
-            65% { transform: rotate(-9deg) translateY(-1px); }
-            85% { transform: rotate(-2deg); }
-            100% { transform: rotate(-4deg); }
-          }
-          /* Ground shadow pulse on footstep impact */
-          @keyframes zombieShadowPulse {
-            0%, 100% { transform: scale(1); opacity: 0.28; }
-            18% { transform: scale(1.2, 1.15); opacity: 0.40; }
-            65% { transform: scale(0.85, 0.85); opacity: 0.18; }
-          }
+          ${ZOMBIE_STYLE_KEYFRAMES}
         `}</style>
 
         {/* --- Background Rolling Green Knolls --- */}
@@ -3406,97 +3628,7 @@ function DaytimePumpkinPatch({ isBirthday = false }: { isBirthday?: boolean }) {
         />
 
         {/* --- Meadow Walking Zombie (Shuffling across background ridge behind foreground hill) --- */}
-        <g
-          style={{
-            willChange: 'transform',
-            animation: isZombieMid ? 'none' : 'zombieStroll 200s linear infinite',
-            transform: isZombieMid ? 'translate3d(680px, 80px, 0)' : undefined,
-          }}
-        >
-          <g transform="scale(0.85)">
-            {/* Zombie Stumbling / Lurching Body Cadence */}
-            <g style={{ animation: 'zombieLurchStep 2.8s ease-in-out infinite', transformOrigin: '0 36px' }}>
-              {/* Shadow underneath with ground impact pulse */}
-              <ellipse
-                cx="2"
-                cy="40"
-                rx="14"
-                ry="4"
-                fill="rgba(0, 0, 0, 0.28)"
-                style={{ animation: 'zombieShadowPulse 2.8s ease-in-out infinite', transformOrigin: '2px 40px' }}
-              />
-
-              {/* Back Arm (Left Arm, reaching forward) */}
-              <g style={{ transformOrigin: '-2px 8px', animation: 'zombieArmsSwing 2.8s ease-in-out infinite' }}>
-                <path d="M -4 6 L 6 5 L 5 11 L -5 10 Z" fill="#581c87" />
-                <path d="M 0 8 L 14 7 L 24 9" stroke="#4ade80" strokeWidth="3" strokeLinecap="round" fill="none" />
-                <path d="M 24 9 L 28 8 M 24 9 L 28 10 M 24 9 L 27 12" stroke="#4ade80" strokeWidth="1.2" strokeLinecap="round" />
-              </g>
-
-              {/* Left Leg (Dragging Rear Leg) */}
-              <g style={{ transformOrigin: '-3px 22px', animation: 'zombieDraggingLeg 2.8s ease-in-out infinite' }}>
-                <line x1="-3" y1="22" x2="-5" y2="34" stroke="#334155" strokeWidth="4.2" strokeLinecap="round" />
-                <path d="M -8 33 L -2 33 L -3 36 L -5 34 L -7 36 Z" fill="#334155" />
-                <line x1="-5" y1="34" x2="-6" y2="39" stroke="#4ade80" strokeWidth="2.4" strokeLinecap="round" />
-                <path d="M -9 39 L -2 39 C 0 39, 0 42, -4 42 L -9 42 Z" fill="#78350f" />
-              </g>
-
-              {/* Right Leg (Stepping Front Leg) */}
-              <g style={{ transformOrigin: '3px 22px', animation: 'zombieSteppingLeg 2.8s ease-in-out infinite' }}>
-                <line x1="3" y1="22" x2="6" y2="34" stroke="#475569" strokeWidth="4.5" strokeLinecap="round" />
-                <circle cx="4.5" cy="28" r="1.5" fill="#4ade80" />
-                <path d="M 1 33 L 7 33 L 6 36 L 4 34 L 2 36 Z" fill="#475569" />
-                <line x1="6" y1="34" x2="7" y2="39" stroke="#4ade80" strokeWidth="2.4" strokeLinecap="round" />
-                <path d="M 2 39 L 9 39 C 11 39, 11 42, 7 42 L 2 42 Z" fill="#581c87" />
-              </g>
-
-              {/* Tattered Tunic / Shirt Body */}
-              <path
-                d="M -7 6 L 7 6 L 9 22 L 5 21 L 2 24 L -1 21 L -5 23 L -8 21 Z"
-                fill="#7c3aed"
-                stroke="#581c87"
-                strokeWidth="0.8"
-              />
-              <path d="M 0 11 L 3 14 L -1 16 Z" fill="#4c1d95" />
-              <line x1="0" y1="13" x2="2.5" y2="13" stroke="#f8fafc" strokeWidth="0.9" />
-
-              {/* Front Arm (Right Arm, reaching forward with inertia delay) */}
-              <g style={{ transformOrigin: '2px 8px', animation: 'zombieArmsSwing 2.8s ease-in-out infinite', animationDelay: '0.2s' }}>
-                <path d="M 0 6 L 8 6 L 7 12 L -1 11 Z" fill="#6d28d9" />
-                <path d="M 4 9 L 18 8 L 27 10" stroke="#4ade80" strokeWidth="3.2" strokeLinecap="round" fill="none" />
-                <path d="M 27 10 L 31 9 M 27 10 L 31 11 M 27 10 L 30 13" stroke="#4ade80" strokeWidth="1.2" strokeLinecap="round" />
-              </g>
-
-              {/* Zombie Head (with head loll & jolt animation) */}
-              <g style={{ transformOrigin: '0 6px', animation: 'zombieHeadJolt 2.8s ease-in-out infinite' }}>
-                <rect x="-7.5" y="-9" width="15" height="15" rx="3.5" fill="#4ade80" stroke="#22c55e" strokeWidth="0.9" />
-                <path d="M -8.5 -8 C -7 -13, -3 -11, -1 -14 C 1 -11, 4 -14, 7.5 -9 L 8.5 -5 L -8.5 -5 Z" fill="#1e1b4b" />
-                <path d="M 0 -6 L 4 -4 M 1 -6.5 L 1 -4 M 3 -5.5 L 3 -3" stroke="#166534" strokeWidth="0.8" strokeLinecap="round" />
-
-                {/* Mismatched Goofy Zombie Eyes */}
-                <circle cx="-3" cy="-1.5" r="2.8" fill="#fef08a" stroke="#1e293b" strokeWidth="0.6" />
-                <circle cx="-2.5" cy="-1.5" r="1.1" fill="#0f172a" />
-                <circle cx="3.2" cy="-1.2" r="2.2" fill="#fef08a" stroke="#1e293b" strokeWidth="0.6" />
-                <circle cx="3.4" cy="-1.0" r="0.9" fill="#0f172a" />
-                <path d="M 1.2 -2.5 Q 3.2 -1.8 5.2 -2.5" stroke="#166534" strokeWidth="0.8" strokeLinecap="round" fill="none" />
-
-                {/* Crooked Open Mouth with Cute Single Tooth */}
-                <path d="M -3 3.5 Q 0 6.5 4 3.5 Z" fill="#0f172a" />
-                <rect x="-1" y="3.2" width="1.6" height="2" fill="#ffffff" rx="0.3" />
-
-                {/* Birthday Party Cone Hat (Swara's Birthday) */}
-                {isBirthday && (
-                  <g transform="translate(1, -9) rotate(14)">
-                    <path d="M -4.5 0 L 0 -14 L 4.5 0 Z" fill="#ec4899" stroke="#db2777" strokeWidth="0.6" />
-                    <path d="M -3 -4 L 0 -14 L 1 -9 Z" fill="#38bdf8" />
-                    <path d="M -1.5 0 L 0 -14 L 0 -6 Z" fill="#facc15" />
-                    <circle cx="0" cy="-14" r="1.8" fill="#facc15" />
-                  </g>
-                )}
-              </g>
-            </g>
-          </g>
-        </g>
+        <ShamblingZombie isNight={false} isBirthday={isBirthday} />
 
         {/* --- Foreground Lush Grass Horizon --- */}
         <path
@@ -3879,6 +4011,7 @@ function SpookyGraveyard({ isBirthday = false }: { isBirthday?: boolean }) {
             35% { transform: translate(35px, -14px); opacity: 0.96; }
             70% { transform: translate(-25px, -8px); opacity: 0.80; }
           }
+          ${ZOMBIE_STYLE_KEYFRAMES}
         `}</style>
 
         {/* --- Background Rolling Hill Silhouette --- */}
@@ -3901,6 +4034,9 @@ function SpookyGraveyard({ isBirthday = false }: { isBirthday?: boolean }) {
           <path d="M 1365 118 L 1435 118 M 1365 132 L 1435 132" />
           <path d="M 1525 118 L 1575 118 M 1525 132 L 1575 132" />
         </g>
+
+        {/* --- Shambling Pajama Zombie (Sleepwalking across graveyard ridge) --- */}
+        <ShamblingZombie isNight={true} isBirthday={isBirthday} />
 
         {/* --- Foreground Hill Silhouette --- */}
         <path
