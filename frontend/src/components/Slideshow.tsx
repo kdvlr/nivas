@@ -3522,18 +3522,14 @@ function ShamblingZombie({ isNight = false, isBirthday = false }: { isNight?: bo
             <path d="M -8.5 -8 C -7 -13, -3 -11, -1 -14 C 1 -11, 4 -14, 7.5 -9 L 8.5 -5 L -8.5 -5 Z" fill="#1e1b4b" />
             <path d="M 0 -6 L 4 -4 M 1 -6.5 L 1 -4 M 3 -5.5 L 3 -3" stroke="#166534" strokeWidth="0.8" strokeLinecap="round" />
 
-            {/* Mismatched Goofy Zombie Eyes (with sleepy half-closed lids at night!) */}
-            <circle cx="-3" cy="-1.5" r="2.8" fill="#fef08a" stroke="#1e293b" strokeWidth="0.6" />
-            <circle cx="-2.5" cy="-1.5" r="1.1" fill="#0f172a" />
-            <circle cx="3.2" cy="-1.2" r="2.2" fill="#fef08a" stroke="#1e293b" strokeWidth="0.6" />
-            <circle cx="3.4" cy="-1.0" r="0.9" fill="#0f172a" />
-            <path d="M 1.2 -2.5 Q 3.2 -1.8 5.2 -2.5" stroke="#166534" strokeWidth="0.8" strokeLinecap="round" fill="none" />
-
-            {isNight && (
-              // Sleepy Half-Closed Eyelids for Sleepwalking Zombie
+            {/* Mismatched Goofy Zombie Eyes (only during daytime when not wearing sleep mask over eyes) */}
+            {!isNight && (
               <>
-                <path d="M -5.8 -2.5 C -5.8 -4.5, -0.2 -4.5, -0.2 -2.5 Z" fill="#22c55e" stroke="#166534" strokeWidth="0.5" />
-                <path d="M 1.2 -2.2 C 1.2 -3.8, 5.2 -3.8, 5.2 -2.2 Z" fill="#22c55e" stroke="#166534" strokeWidth="0.5" />
+                <circle cx="-3" cy="-1.5" r="2.8" fill="#fef08a" stroke="#1e293b" strokeWidth="0.6" />
+                <circle cx="-2.5" cy="-1.5" r="1.1" fill="#0f172a" />
+                <circle cx="3.2" cy="-1.2" r="2.2" fill="#fef08a" stroke="#1e293b" strokeWidth="0.6" />
+                <circle cx="3.4" cy="-1.0" r="0.9" fill="#0f172a" />
+                <path d="M 1.2 -2.5 Q 3.2 -1.8 5.2 -2.5" stroke="#166534" strokeWidth="0.8" strokeLinecap="round" fill="none" />
               </>
             )}
 
@@ -3542,33 +3538,36 @@ function ShamblingZombie({ isNight = false, isBirthday = false }: { isNight?: bo
             <rect x="-1" y="3.2" width="1.6" height="2" fill="#ffffff" rx="0.3" />
 
             {isNight ? (
-              // Night: Cute Satin Sleep Mask pushed up on forehead!
-              <g transform="translate(0, -5) rotate(-3)">
+              // Night: Cute Satin Sleep Mask covering his eyes!
+              <g transform="translate(0, -0.8) rotate(-1)">
                 {/* Elastic strap wrapping around head */}
-                <path d="M -8 -0.5 L -7 -0.5 M 7 -0.5 L 8 -0.5" stroke="#0284c7" strokeWidth="1.2" strokeLinecap="round" />
+                <path d="M -8.2 0 L -7.2 0 M 7.2 0 L 8.2 0" stroke="#0284c7" strokeWidth="0.9" strokeLinecap="round" />
 
-                {/* Sleep mask soft cushion body */}
-                <rect x="-7.2" y="-3.5" width="14.4" height="6" rx="2.5" fill="#38bdf8" stroke="#0284c7" strokeWidth="0.7" />
-
-                {/* Mask white piping trim */}
-                <rect x="-6.6" y="-3" width="13.2" height="5" rx="2" fill="none" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="0.5" />
+                {/* Soft contoured sleep mask covering both eyes */}
+                <path
+                  d="M -7.5 -0.8
+                     C -7.5 -4.2, -3.8 -4.6, -1.2 -3.4
+                     C -0.6 -3.1, 0.6 -3.1, 1.2 -3.4
+                     C 3.8 -4.6, 7.5 -4.2, 7.5 -0.8
+                     C 7.5 2.0, 5.6 3.2, 2.6 3.2
+                     C 1.4 3.2, 0.8 1.8, 0 1.8
+                     C -0.8 1.8, -1.4 3.2, -2.6 3.2
+                     C -5.6 3.2, -7.5 2.0, -7.5 -0.8 Z"
+                  fill="#38bdf8"
+                  stroke="#0284c7"
+                  strokeWidth="0.5"
+                />
 
                 {/* Cute sleepy closed eyelashes embroidered on mask */}
-                {/* Left mask eye */}
-                <path d="M -4.5 0 Q -3 1.4 -1.5 0" stroke="#0f172a" strokeWidth="0.8" fill="none" strokeLinecap="round" />
-                <line x1="-3" y1="0.8" x2="-3" y2="1.8" stroke="#0f172a" strokeWidth="0.6" strokeLinecap="round" />
-                <line x1="-4" y1="0.5" x2="-4.4" y2="1.4" stroke="#0f172a" strokeWidth="0.6" strokeLinecap="round" />
-                <line x1="-2" y1="0.5" x2="-1.6" y2="1.4" stroke="#0f172a" strokeWidth="0.6" strokeLinecap="round" />
+                <path d="M -5.2 0 Q -3.3 1.5 -1.4 0" stroke="#0f172a" strokeWidth="0.55" fill="none" strokeLinecap="round" />
+                <path d="M -5.0 0.1 L -5.7 -0.5" stroke="#0f172a" strokeWidth="0.45" strokeLinecap="round" />
 
-                {/* Right mask eye */}
-                <path d="M 1.5 0 Q 3 1.4 4.5 0" stroke="#0f172a" strokeWidth="0.8" fill="none" strokeLinecap="round" />
-                <line x1="3" y1="0.8" x2="3" y2="1.8" stroke="#0f172a" strokeWidth="0.6" strokeLinecap="round" />
-                <line x1="2" y1="0.5" x2="1.6" y2="1.4" stroke="#0f172a" strokeWidth="0.6" strokeLinecap="round" />
-                <line x1="4" y1="0.5" x2="4.4" y2="1.4" stroke="#0f172a" strokeWidth="0.6" strokeLinecap="round" />
+                <path d="M 1.4 0 Q 3.3 1.5 5.2 0" stroke="#0f172a" strokeWidth="0.55" fill="none" strokeLinecap="round" />
+                <path d="M 5.0 0.1 L 5.7 -0.5" stroke="#0f172a" strokeWidth="0.45" strokeLinecap="round" />
 
                 {/* Swara's Birthday festive mini ribbon bow pinned to the mask */}
                 {isBirthday && (
-                  <g transform="translate(6, -3)">
+                  <g transform="translate(6, -2.8)">
                     <circle cx="0" cy="0" r="1.4" fill="#ec4899" />
                     <path d="M -1.8 -1.2 L 1.8 1.2 M -1.8 1.2 L 1.8 -1.2" stroke="#facc15" strokeWidth="0.6" />
                   </g>
