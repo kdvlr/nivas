@@ -3542,27 +3542,36 @@ function ShamblingZombie({ isNight = false, isBirthday = false }: { isNight?: bo
             <rect x="-1" y="3.2" width="1.6" height="2" fill="#ffffff" rx="0.3" />
 
             {isNight ? (
-              // Night: Classic Floppy Sleeping Nightcap with Pom-Pom!
-              <g transform="translate(0, -9)">
-                <ellipse cx="0" cy="0.5" rx="8" ry="2.2" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="0.6" />
-                <path
-                  d="M -7.5 0 C -8 -7, -4 -13, -1 -17 C -6 -17, -14 -12, -18 -5 C -20 -1, -20 2, -19 5"
-                  stroke="#38bdf8"
-                  strokeWidth="5.5"
-                  strokeLinecap="round"
-                  fill="none"
-                />
-                <path
-                  d="M -7.5 0 C -8 -7, -4 -13, -1 -17 C -6 -17, -14 -12, -18 -5 C -20 -1, -20 2, -19 5"
-                  stroke="#ffffff"
-                  strokeWidth="5.5"
-                  strokeDasharray="3,3"
-                  strokeLinecap="round"
-                  fill="none"
-                />
-                <circle cx="-19" cy="6" r="3" fill="#fef08a" stroke="#facc15" strokeWidth="0.6" />
+              // Night: Cute Satin Sleep Mask pushed up on forehead!
+              <g transform="translate(0, -5) rotate(-3)">
+                {/* Elastic strap wrapping around head */}
+                <path d="M -8 -0.5 L -7 -0.5 M 7 -0.5 L 8 -0.5" stroke="#0284c7" strokeWidth="1.2" strokeLinecap="round" />
+
+                {/* Sleep mask soft cushion body */}
+                <rect x="-7.2" y="-3.5" width="14.4" height="6" rx="2.5" fill="#38bdf8" stroke="#0284c7" strokeWidth="0.7" />
+
+                {/* Mask white piping trim */}
+                <rect x="-6.6" y="-3" width="13.2" height="5" rx="2" fill="none" stroke="rgba(255, 255, 255, 0.7)" strokeWidth="0.5" />
+
+                {/* Cute sleepy closed eyelashes embroidered on mask */}
+                {/* Left mask eye */}
+                <path d="M -4.5 0 Q -3 1.4 -1.5 0" stroke="#0f172a" strokeWidth="0.8" fill="none" strokeLinecap="round" />
+                <line x1="-3" y1="0.8" x2="-3" y2="1.8" stroke="#0f172a" strokeWidth="0.6" strokeLinecap="round" />
+                <line x1="-4" y1="0.5" x2="-4.4" y2="1.4" stroke="#0f172a" strokeWidth="0.6" strokeLinecap="round" />
+                <line x1="-2" y1="0.5" x2="-1.6" y2="1.4" stroke="#0f172a" strokeWidth="0.6" strokeLinecap="round" />
+
+                {/* Right mask eye */}
+                <path d="M 1.5 0 Q 3 1.4 4.5 0" stroke="#0f172a" strokeWidth="0.8" fill="none" strokeLinecap="round" />
+                <line x1="3" y1="0.8" x2="3" y2="1.8" stroke="#0f172a" strokeWidth="0.6" strokeLinecap="round" />
+                <line x1="2" y1="0.5" x2="1.6" y2="1.4" stroke="#0f172a" strokeWidth="0.6" strokeLinecap="round" />
+                <line x1="4" y1="0.5" x2="4.4" y2="1.4" stroke="#0f172a" strokeWidth="0.6" strokeLinecap="round" />
+
+                {/* Swara's Birthday festive mini ribbon bow pinned to the mask */}
                 {isBirthday && (
-                  <circle cx="-1" cy="-17" r="2.2" fill="#ec4899" stroke="#facc15" strokeWidth="0.6" />
+                  <g transform="translate(6, -3)">
+                    <circle cx="0" cy="0" r="1.4" fill="#ec4899" />
+                    <path d="M -1.8 -1.2 L 1.8 1.2 M -1.8 1.2 L 1.8 -1.2" stroke="#facc15" strokeWidth="0.6" />
+                  </g>
                 )}
               </g>
             ) : isBirthday ? (
