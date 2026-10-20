@@ -3591,56 +3591,117 @@ function ShamblingZombie({ isNight = false, isBirthday = false }: { isNight?: bo
 
 const MUMMY_STYLE_KEYFRAMES = `
   @keyframes mummyGraveyardPath {
-    0%, 2.5% { transform: translate3d(1140px, 88px, 0) scaleX(1); }
-    3.5%, 5.5% { transform: translate3d(1156px, 88px, 0) scaleX(1); }
-    6.5%, 7.5% { transform: translate3d(1140px, 88px, 0) scaleX(1); }
+    0%, 3.4% { transform: translate3d(1140px, 88px, 0) scaleX(1); }
+    3.5%, 6.4% { transform: translate3d(1156px, 88px, 0) scaleX(1); }
+    6.5%, 8.4% { transform: translate3d(1140px, 88px, 0) scaleX(1); }
     8.5%, 9.9% { transform: translate3d(1124px, 88px, 0) scaleX(-1); }
 
     10% { transform: translate3d(1140px, 88px, 0) scaleX(-1); }
     15% { transform: translate3d(996px, 96px, 0) scaleX(-1); }
 
-    15.1%, 17.5% { transform: translate3d(996px, 96px, 0) scaleX(-1); }
-    18.5%, 21% { transform: translate3d(974px, 96px, 0) scaleX(-1); }
+    15.1%, 18.4% { transform: translate3d(996px, 96px, 0) scaleX(-1); }
+    18.5%, 22.4% { transform: translate3d(974px, 96px, 0) scaleX(-1); }
     22.5%, 23.9% { transform: translate3d(996px, 96px, 0) scaleX(-1); }
 
     24% { transform: translate3d(996px, 96px, 0) scaleX(-1); }
     29% { transform: translate3d(735px, 100px, 0) scaleX(-1); }
 
-    29.1%, 31.5% { transform: translate3d(735px, 100px, 0) scaleX(-1); }
-    32.5%, 35% { transform: translate3d(712px, 100px, 0) scaleX(-1); }
+    29.1%, 32.4% { transform: translate3d(735px, 100px, 0) scaleX(-1); }
+    32.5%, 36.4% { transform: translate3d(712px, 100px, 0) scaleX(-1); }
     36.5%, 37.9% { transform: translate3d(735px, 100px, 0) scaleX(-1); }
 
     38% { transform: translate3d(735px, 100px, 0) scaleX(-1); }
     44% { transform: translate3d(380px, 90px, 0) scaleX(-1); }
 
-    44.1%, 46.5% { transform: translate3d(380px, 90px, 0) scaleX(-1); }
-    47.5%, 50% { transform: translate3d(398px, 90px, 0) scaleX(1); }
+    44.1%, 47.4% { transform: translate3d(380px, 90px, 0) scaleX(-1); }
+    47.5%, 50.9% { transform: translate3d(398px, 90px, 0) scaleX(1); }
     51%, 51.9% { transform: translate3d(380px, 90px, 0) scaleX(-1); }
 
     52% { transform: translate3d(380px, 90px, 0) scaleX(-1); }
     57% { transform: translate3d(197px, 102px, 0) scaleX(-1); }
 
-    57.1%, 59% { transform: translate3d(197px, 102px, 0) scaleX(-1); }
-    60%, 62% { transform: translate3d(174px, 102px, 0) scaleX(-1); }
-    62.5%, 63.5% { transform: translate3d(174px, 98px, 0) scaleX(-1); }
+    57.1%, 59.9% { transform: translate3d(197px, 102px, 0) scaleX(-1); }
+    60%, 62.9% { transform: translate3d(174px, 102px, 0) scaleX(-1); }
+    63%, 63.9% { transform: translate3d(174px, 98px, 0) scaleX(-1); }
     64%, 64.9% { transform: translate3d(197px, 102px, 0) scaleX(1); }
 
     65% { transform: translate3d(197px, 102px, 0) scaleX(1); }
     78% { transform: translate3d(1140px, 88px, 0) scaleX(1); }
 
-    78.1%, 80.5% { transform: translate3d(1140px, 88px, 0) scaleX(1); }
-    81.5%, 83.5% { transform: translate3d(1156px, 88px, 0) scaleX(1); }
-    83.8%, 83.9% { transform: translate3d(1140px, 88px, 0) scaleX(1); }
+    78.1%, 81.4% { transform: translate3d(1140px, 88px, 0) scaleX(1); }
+    81.5%, 83.9% { transform: translate3d(1156px, 88px, 0) scaleX(1); }
 
     84% { transform: translate3d(1140px, 88px, 0) scaleX(1); }
     89% { transform: translate3d(1364px, 104px, 0) scaleX(1); }
 
-    89.1%, 91% { transform: translate3d(1364px, 104px, 0) scaleX(1); }
-    92%, 94% { transform: translate3d(1382px, 104px, 0) scaleX(1); }
+    89.1%, 91.9% { transform: translate3d(1364px, 104px, 0) scaleX(1); }
+    92%, 94.4% { transform: translate3d(1382px, 104px, 0) scaleX(1); }
     94.5%, 94.9% { transform: translate3d(1364px, 104px, 0) scaleX(-1); }
 
     95% { transform: translate3d(1364px, 104px, 0) scaleX(-1); }
     100% { transform: translate3d(1140px, 88px, 0) scaleX(1); }
+  }
+
+  @keyframes mummyShowCrouch {
+    0%, 3.4% { opacity: 1; }
+    3.5%, 6.4% { opacity: 0; }
+    6.5%, 8.4% { opacity: 1; }
+    8.5%, 9.9% { opacity: 0; }
+    10%, 14.9% { opacity: 0; }
+    15%, 18.4% { opacity: 1; }
+    18.5%, 22.4% { opacity: 0; }
+    22.5%, 23.9% { opacity: 1; }
+    24%, 28.9% { opacity: 0; }
+    29%, 32.4% { opacity: 1; }
+    32.5%, 36.4% { opacity: 0; }
+    36.5%, 37.9% { opacity: 1; }
+    38%, 43.9% { opacity: 0; }
+    44%, 47.4% { opacity: 1; }
+    47.5%, 50.9% { opacity: 0; }
+    51%, 51.9% { opacity: 1; }
+    52%, 56.9% { opacity: 0; }
+    57%, 59.9% { opacity: 1; }
+    60%, 62.9% { opacity: 0; }
+    63%, 64.9% { opacity: 1; }
+    65%, 77.9% { opacity: 0; }
+    78%, 81.4% { opacity: 1; }
+    81.5%, 83.9% { opacity: 0; }
+    84%, 88.9% { opacity: 0; }
+    89%, 91.9% { opacity: 1; }
+    92%, 94.4% { opacity: 0; }
+    94.5%, 94.9% { opacity: 1; }
+    95%, 100% { opacity: 0; }
+  }
+
+  @keyframes mummyShowPeeker {
+    0%, 3.4% { opacity: 0; }
+    3.5%, 6.4% { opacity: 1; }
+    6.5%, 8.4% { opacity: 0; }
+    8.5%, 9.9% { opacity: 1; }
+    10%, 14.9% { opacity: 0; }
+    15%, 18.4% { opacity: 0; }
+    18.5%, 22.4% { opacity: 1; }
+    22.5%, 23.9% { opacity: 0; }
+    24%, 28.9% { opacity: 0; }
+    29%, 32.4% { opacity: 0; }
+    32.5%, 36.4% { opacity: 1; }
+    36.5%, 37.9% { opacity: 0; }
+    38%, 43.9% { opacity: 0; }
+    44%, 47.4% { opacity: 0; }
+    47.5%, 50.9% { opacity: 1; }
+    51%, 51.9% { opacity: 0; }
+    52%, 56.9% { opacity: 0; }
+    57%, 59.9% { opacity: 0; }
+    60%, 62.9% { opacity: 1; }
+    63%, 64.9% { opacity: 0; }
+    65%, 77.9% { opacity: 0; }
+    78%, 81.4% { opacity: 0; }
+    81.5%, 83.9% { opacity: 1; }
+    84%, 88.9% { opacity: 0; }
+    89%, 91.9% { opacity: 0; }
+    92%, 94.4% { opacity: 1; }
+    94.5%, 94.9% { opacity: 0; }
+    95%, 100% { opacity: 0; }
   }
 
   @keyframes mummyShowRunner {
@@ -3658,23 +3719,6 @@ const MUMMY_STYLE_KEYFRAMES = `
     84%, 88.9% { opacity: 1; }
     89%, 94.9% { opacity: 0; }
     95%, 100% { opacity: 1; }
-  }
-
-  @keyframes mummyShowPeeker {
-    0%, 9.9% { opacity: 1; }
-    10%, 14.9% { opacity: 0; }
-    15%, 23.9% { opacity: 1; }
-    24%, 28.9% { opacity: 0; }
-    29%, 37.9% { opacity: 1; }
-    38%, 43.9% { opacity: 0; }
-    44%, 51.9% { opacity: 1; }
-    52%, 56.9% { opacity: 0; }
-    57%, 64.9% { opacity: 1; }
-    65%, 77.9% { opacity: 0; }
-    78%, 83.9% { opacity: 1; }
-    84%, 88.9% { opacity: 0; }
-    89%, 94.9% { opacity: 1; }
-    95%, 100% { opacity: 0; }
   }
 
   @keyframes mummyScamperLegL {
@@ -3719,16 +3763,19 @@ function HideAndSeekMummy({ isBirthday = false }: { isBirthday?: boolean }) {
       ? new URLSearchParams(window.location.search || (window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '')).get('mummy')
       : null
 
+  const isMummyCrouch = mummyParam === 'crouch'
   const isMummyPeek = mummyParam === 'peek'
   const isMummyRun = mummyParam === 'run'
 
-  const outerTransform = isMummyPeek
-    ? 'translate3d(1156px, 88px, 0) scaleX(1)'
-    : isMummyRun
-      ? 'translate3d(880px, 98px, 0) scaleX(-1)'
-      : undefined
+  const outerTransform = isMummyCrouch
+    ? 'translate3d(1140px, 88px, 0) scaleX(1)'
+    : isMummyPeek
+      ? 'translate3d(1156px, 88px, 0) scaleX(1)'
+      : isMummyRun
+        ? 'translate3d(880px, 98px, 0) scaleX(-1)'
+        : undefined
 
-  const outerAnimation = isMummyPeek || isMummyRun ? 'none' : 'mummyGraveyardPath 60s ease-in-out infinite'
+  const outerAnimation = isMummyCrouch || isMummyPeek || isMummyRun ? 'none' : 'mummyGraveyardPath 60s ease-in-out infinite'
 
   return (
     <g
@@ -3740,11 +3787,77 @@ function HideAndSeekMummy({ isBirthday = false }: { isBirthday?: boolean }) {
       }}
     >
       <g transform="scale(0.85)">
-        {/* --- PEEKER POSE (Active during hiding & peeking stops) --- */}
+        {/* --- 1. CROUCH POSE (Hiding low behind headstones) --- */}
         <g
           style={{
-            animation: isMummyRun ? 'none' : isMummyPeek ? 'none' : 'mummyShowPeeker 60s step-end infinite',
-            opacity: isMummyRun ? 0 : 1,
+            animation: isMummyRun || isMummyPeek ? 'none' : isMummyCrouch ? 'none' : 'mummyShowCrouch 60s step-end infinite',
+            opacity: isMummyCrouch ? 1 : isMummyPeek || isMummyRun ? 0 : undefined,
+            pointerEvents: 'none',
+          }}
+        >
+          {/* Ground contact shadow (wider & darker when crouching low) */}
+          <ellipse cx="0" cy="22" rx="11" ry="3.2" fill="rgba(0,0,0,0.45)" />
+
+          {/* Trailing loose bandage bunched up on ground */}
+          <g style={{ transformOrigin: '-2px 19px', animation: 'mummyBandageRest 2.4s ease-in-out infinite' }}>
+            <path d="M -2 19 Q -6 22 -11 20 Q -15 22 -18 21" stroke="#f5f5f4" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+            <path d="M -2 19 Q -6 22 -11 20 Q -15 22 -18 21" stroke="#d6d3d1" strokeWidth="0.8" strokeDasharray="1.5 2" fill="none" />
+          </g>
+
+          {/* Bent knees / crouched legs */}
+          <path d="M -6 16 L -9 19 L -5 21" stroke="#f5f5f4" strokeWidth="3.2" strokeLinecap="round" fill="none" />
+          <ellipse cx="-4" cy="21.5" rx="3.5" ry="1.8" fill="#e7e5e4" />
+
+          <path d="M 6 16 L 9 19 L 5 21" stroke="#f5f5f4" strokeWidth="3.2" strokeLinecap="round" fill="none" />
+          <ellipse cx="4" cy="21.5" rx="3.5" ry="1.8" fill="#e7e5e4" />
+
+          {/* Compact squatted torso (tucked down low) */}
+          <rect x="-6" y="9" width="12" height="9" rx="2.5" fill="#f5f5f4" stroke="#d6d3d1" strokeWidth="0.7" />
+          <path d="M -6 11 L 6 13 M -6 15 L 6 16" stroke="#a8a29e" strokeWidth="0.6" />
+
+          {/* Wrapped arms hugging knees in crouch */}
+          <path d="M -6 10 L -9 14 L -5 17" stroke="#f5f5f4" strokeWidth="2.4" strokeLinecap="round" fill="none" />
+          <ellipse cx="-5" cy="17" rx="1.8" ry="1.4" fill="#e7e5e4" />
+          <path d="M 6 10 L 9 14 L 5 17" stroke="#f5f5f4" strokeWidth="2.4" strokeLinecap="round" fill="none" />
+          <ellipse cx="5" cy="17" rx="1.8" ry="1.4" fill="#e7e5e4" />
+
+          {/* Head ducked down low between knees */}
+          <g transform="translate(0, 1)">
+            <rect x="-7.5" y="-8.5" width="15" height="14.5" rx="3.5" fill="#f5f5f4" stroke="#d6d3d1" strokeWidth="0.8" />
+            <path d="M -7.5 -5 L 7.5 -4 M -7.5 3 L 7.5 4" stroke="#a8a29e" strokeWidth="0.7" />
+
+            {/* Dark eye slit */}
+            <rect x="-6" y="-2" width="12" height="4" rx="1.2" fill="#1c1917" />
+
+            {/* Glowing amber eyes peering up cautiously */}
+            <g style={{ transformOrigin: '0 0', animation: 'mummyPeekerBlink 3.6s ease-in-out infinite' }}>
+              <ellipse cx="-2.8" cy="-0.6" rx="2.2" ry="1.5" fill="#f59e0b" />
+              <circle cx="-2.8" cy="-0.6" r="1.1" fill="#fef08a" />
+              <circle cx="-2.6" cy="-0.9" r="0.4" fill="#ffffff" />
+              <ellipse cx="2.8" cy="-0.6" rx="2.2" ry="1.5" fill="#f59e0b" />
+              <circle cx="2.8" cy="-0.6" r="1.1" fill="#fef08a" />
+              <circle cx="3.0" cy="-0.9" r="0.4" fill="#ffffff" />
+            </g>
+
+            {/* Top bandage tuft */}
+            <path d="M 0 -8.5 C -1 -11, 1 -12, 2 -9" stroke="#f5f5f4" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+
+            {/* Swara's Birthday Festive Party Hat */}
+            {isBirthday && (
+              <g transform="translate(2, -9) rotate(8)">
+                <path d="M -3.5 0 L 0 -11 L 3.5 0 Z" fill="#ec4899" stroke="#db2777" strokeWidth="0.6" />
+                <path d="M -2 -3 L 0 -11 L 1 -7 Z" fill="#38bdf8" />
+                <circle cx="0" cy="-11" r="1.4" fill="#facc15" />
+              </g>
+            )}
+          </g>
+        </g>
+
+        {/* --- 2. PEEKER POSE (Active during peeking stops) --- */}
+        <g
+          style={{
+            animation: isMummyRun || isMummyCrouch ? 'none' : isMummyPeek ? 'none' : 'mummyShowPeeker 60s step-end infinite',
+            opacity: isMummyPeek ? 1 : isMummyCrouch || isMummyRun ? 0 : undefined,
             pointerEvents: 'none',
           }}
         >
@@ -3803,11 +3916,11 @@ function HideAndSeekMummy({ isBirthday = false }: { isBirthday?: boolean }) {
           <ellipse cx="-7" cy="6" rx="2.2" ry="1.6" fill="#e7e5e4" stroke="#a8a29e" strokeWidth="0.5" />
         </g>
 
-        {/* --- RUNNER POSE (Active during high-speed dashes between headstones) --- */}
+        {/* --- 3. RUNNER POSE (Active during high-speed dashes between headstones) --- */}
         <g
           style={{
-            animation: isMummyRun ? 'none' : isMummyPeek ? 'none' : 'mummyShowRunner 60s step-end infinite',
-            opacity: isMummyRun ? 1 : 0,
+            animation: isMummyRun ? 'none' : isMummyCrouch || isMummyPeek ? 'none' : 'mummyShowRunner 60s step-end infinite',
+            opacity: isMummyRun ? 1 : isMummyCrouch || isMummyPeek ? 0 : undefined,
             pointerEvents: 'none',
           }}
         >
