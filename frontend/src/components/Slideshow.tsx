@@ -3589,6 +3589,313 @@ function ShamblingZombie({ isNight = false, isBirthday = false }: { isNight?: bo
   )
 }
 
+const MUMMY_STYLE_KEYFRAMES = `
+  @keyframes mummyGraveyardPath {
+    0%, 2.5% { transform: translate3d(1140px, 88px, 0) scaleX(1); }
+    3.5%, 5.5% { transform: translate3d(1156px, 88px, 0) scaleX(1); }
+    6.5%, 7.5% { transform: translate3d(1140px, 88px, 0) scaleX(1); }
+    8.5%, 9.9% { transform: translate3d(1124px, 88px, 0) scaleX(-1); }
+
+    10% { transform: translate3d(1140px, 88px, 0) scaleX(-1); }
+    15% { transform: translate3d(996px, 96px, 0) scaleX(-1); }
+
+    15.1%, 17.5% { transform: translate3d(996px, 96px, 0) scaleX(-1); }
+    18.5%, 21% { transform: translate3d(974px, 96px, 0) scaleX(-1); }
+    22.5%, 23.9% { transform: translate3d(996px, 96px, 0) scaleX(-1); }
+
+    24% { transform: translate3d(996px, 96px, 0) scaleX(-1); }
+    29% { transform: translate3d(735px, 100px, 0) scaleX(-1); }
+
+    29.1%, 31.5% { transform: translate3d(735px, 100px, 0) scaleX(-1); }
+    32.5%, 35% { transform: translate3d(712px, 100px, 0) scaleX(-1); }
+    36.5%, 37.9% { transform: translate3d(735px, 100px, 0) scaleX(-1); }
+
+    38% { transform: translate3d(735px, 100px, 0) scaleX(-1); }
+    44% { transform: translate3d(380px, 90px, 0) scaleX(-1); }
+
+    44.1%, 46.5% { transform: translate3d(380px, 90px, 0) scaleX(-1); }
+    47.5%, 50% { transform: translate3d(398px, 90px, 0) scaleX(1); }
+    51%, 51.9% { transform: translate3d(380px, 90px, 0) scaleX(-1); }
+
+    52% { transform: translate3d(380px, 90px, 0) scaleX(-1); }
+    57% { transform: translate3d(197px, 102px, 0) scaleX(-1); }
+
+    57.1%, 59% { transform: translate3d(197px, 102px, 0) scaleX(-1); }
+    60%, 62% { transform: translate3d(174px, 102px, 0) scaleX(-1); }
+    62.5%, 63.5% { transform: translate3d(174px, 98px, 0) scaleX(-1); }
+    64%, 64.9% { transform: translate3d(197px, 102px, 0) scaleX(1); }
+
+    65% { transform: translate3d(197px, 102px, 0) scaleX(1); }
+    78% { transform: translate3d(1140px, 88px, 0) scaleX(1); }
+
+    78.1%, 80.5% { transform: translate3d(1140px, 88px, 0) scaleX(1); }
+    81.5%, 83.5% { transform: translate3d(1156px, 88px, 0) scaleX(1); }
+    83.8%, 83.9% { transform: translate3d(1140px, 88px, 0) scaleX(1); }
+
+    84% { transform: translate3d(1140px, 88px, 0) scaleX(1); }
+    89% { transform: translate3d(1364px, 104px, 0) scaleX(1); }
+
+    89.1%, 91% { transform: translate3d(1364px, 104px, 0) scaleX(1); }
+    92%, 94% { transform: translate3d(1382px, 104px, 0) scaleX(1); }
+    94.5%, 94.9% { transform: translate3d(1364px, 104px, 0) scaleX(-1); }
+
+    95% { transform: translate3d(1364px, 104px, 0) scaleX(-1); }
+    100% { transform: translate3d(1140px, 88px, 0) scaleX(1); }
+  }
+
+  @keyframes mummyShowRunner {
+    0%, 9.9% { opacity: 0; }
+    10%, 14.9% { opacity: 1; }
+    15%, 23.9% { opacity: 0; }
+    24%, 28.9% { opacity: 1; }
+    29%, 37.9% { opacity: 0; }
+    38%, 43.9% { opacity: 1; }
+    44%, 51.9% { opacity: 0; }
+    52%, 56.9% { opacity: 1; }
+    57%, 64.9% { opacity: 0; }
+    65%, 77.9% { opacity: 1; }
+    78%, 83.9% { opacity: 0; }
+    84%, 88.9% { opacity: 1; }
+    89%, 94.9% { opacity: 0; }
+    95%, 100% { opacity: 1; }
+  }
+
+  @keyframes mummyShowPeeker {
+    0%, 9.9% { opacity: 1; }
+    10%, 14.9% { opacity: 0; }
+    15%, 23.9% { opacity: 1; }
+    24%, 28.9% { opacity: 0; }
+    29%, 37.9% { opacity: 1; }
+    38%, 43.9% { opacity: 0; }
+    44%, 51.9% { opacity: 1; }
+    52%, 56.9% { opacity: 0; }
+    57%, 64.9% { opacity: 1; }
+    65%, 77.9% { opacity: 0; }
+    78%, 83.9% { opacity: 1; }
+    84%, 88.9% { opacity: 0; }
+    89%, 94.9% { opacity: 1; }
+    95%, 100% { opacity: 0; }
+  }
+
+  @keyframes mummyScamperLegL {
+    0%, 100% { transform: rotate(-28deg); }
+    50% { transform: rotate(26deg); }
+  }
+
+  @keyframes mummyScamperLegR {
+    0%, 100% { transform: rotate(26deg); }
+    50% { transform: rotate(-28deg); }
+  }
+
+  @keyframes mummyArmsPump {
+    0%, 100% { transform: rotate(-16deg); }
+    50% { transform: rotate(18deg); }
+  }
+
+  @keyframes mummyBandageStream {
+    0%, 100% { transform: rotate(0deg) scaleY(1); }
+    50% { transform: rotate(-8deg) scaleY(1.25); }
+  }
+
+  @keyframes mummyRunBob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+  }
+
+  @keyframes mummyPeekerBlink {
+    0%, 88%, 100% { transform: scaleY(1); }
+    92% { transform: scaleY(0.1); }
+  }
+
+  @keyframes mummyBandageRest {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(5deg); }
+  }
+`
+
+function HideAndSeekMummy({ isBirthday = false }: { isBirthday?: boolean }) {
+  const mummyParam =
+    typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search || (window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '')).get('mummy')
+      : null
+
+  const isMummyPeek = mummyParam === 'peek'
+  const isMummyRun = mummyParam === 'run'
+
+  const outerTransform = isMummyPeek
+    ? 'translate3d(1156px, 88px, 0) scaleX(1)'
+    : isMummyRun
+      ? 'translate3d(880px, 98px, 0) scaleX(-1)'
+      : undefined
+
+  const outerAnimation = isMummyPeek || isMummyRun ? 'none' : 'mummyGraveyardPath 60s ease-in-out infinite'
+
+  return (
+    <g
+      style={{
+        willChange: 'transform',
+        animation: outerAnimation,
+        transform: outerTransform,
+        transformOrigin: '0 0',
+      }}
+    >
+      <g transform="scale(0.85)">
+        {/* --- PEEKER POSE (Active during hiding & peeking stops) --- */}
+        <g
+          style={{
+            animation: isMummyRun ? 'none' : isMummyPeek ? 'none' : 'mummyShowPeeker 60s step-end infinite',
+            opacity: isMummyRun ? 0 : 1,
+            pointerEvents: 'none',
+          }}
+        >
+          {/* Ground contact shadow */}
+          <ellipse cx="0" cy="22" rx="9" ry="2.5" fill="rgba(0,0,0,0.4)" />
+
+          {/* Trailing loose bandage ribbon */}
+          <g style={{ transformOrigin: '-2px 16px', animation: 'mummyBandageRest 2.4s ease-in-out infinite' }}>
+            <path d="M -2 16 Q -8 20 -14 21" stroke="#f5f5f4" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+            <path d="M -2 16 Q -8 20 -14 21" stroke="#d6d3d1" strokeWidth="0.8" strokeDasharray="1.5 2" fill="none" />
+          </g>
+
+          {/* Wrapped Feet */}
+          <ellipse cx="-3" cy="21" rx="3" ry="1.8" fill="#e7e5e4" />
+          <ellipse cx="3" cy="21" rx="3" ry="1.8" fill="#e7e5e4" />
+
+          {/* Wrapped Torso */}
+          <rect x="-5.5" y="4" width="11" height="13" rx="2.5" fill="#f5f5f4" stroke="#d6d3d1" strokeWidth="0.7" />
+          <path d="M -5.5 7 L 5.5 9 M -5.5 12 L 5.5 13" stroke="#a8a29e" strokeWidth="0.6" />
+          <path d="M 5.5 7 L -5.5 10" stroke="#78716c" strokeWidth="0.5" opacity="0.5" />
+
+          {/* Head (peeking & slightly tilted) */}
+          <g transform="translate(1, -5) rotate(8)">
+            <rect x="-7.5" y="-8.5" width="15" height="14.5" rx="3.5" fill="#f5f5f4" stroke="#d6d3d1" strokeWidth="0.8" />
+            <path d="M -7.5 -5 L 7.5 -4 M -7.5 3 L 7.5 4" stroke="#a8a29e" strokeWidth="0.7" />
+            <path d="M -7.5 -6 L 7.5 -2" stroke="#78716c" strokeWidth="0.5" opacity="0.5" />
+
+            {/* Dark eye slit */}
+            <rect x="-6" y="-2" width="12" height="4" rx="1.2" fill="#1c1917" />
+
+            {/* Glowing amber eyes with blinking animation */}
+            <g style={{ transformOrigin: '0 0', animation: 'mummyPeekerBlink 3.6s ease-in-out infinite' }}>
+              <ellipse cx="-2.8" cy="0" rx="2.2" ry="1.5" fill="#f59e0b" />
+              <circle cx="-2.8" cy="0" r="1.1" fill="#fef08a" />
+              <circle cx="-2.6" cy="-0.3" r="0.4" fill="#ffffff" />
+              <ellipse cx="2.8" cy="0" rx="2.2" ry="1.5" fill="#f59e0b" />
+              <circle cx="2.8" cy="0" r="1.1" fill="#fef08a" />
+              <circle cx="3.0" cy="-0.3" r="0.4" fill="#ffffff" />
+            </g>
+
+            {/* Top bandage tuft */}
+            <path d="M 0 -8.5 C -1 -11, 1 -12, 2 -9" stroke="#f5f5f4" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+
+            {/* Swara's Birthday Festive Party Hat */}
+            {isBirthday && (
+              <g transform="translate(3, -9) rotate(15)">
+                <path d="M -3.5 0 L 0 -11 L 3.5 0 Z" fill="#ec4899" stroke="#db2777" strokeWidth="0.6" />
+                <path d="M -2 -3 L 0 -11 L 1 -7 Z" fill="#38bdf8" />
+                <path d="M -1 0 L 0 -11 L 0 -5 Z" fill="#facc15" />
+                <circle cx="0" cy="-11" r="1.4" fill="#facc15" />
+              </g>
+            )}
+          </g>
+
+          {/* Little wrapped hand gripping edge of stone */}
+          <ellipse cx="-7" cy="6" rx="2.2" ry="1.6" fill="#e7e5e4" stroke="#a8a29e" strokeWidth="0.5" />
+        </g>
+
+        {/* --- RUNNER POSE (Active during high-speed dashes between headstones) --- */}
+        <g
+          style={{
+            animation: isMummyRun ? 'none' : isMummyPeek ? 'none' : 'mummyShowRunner 60s step-end infinite',
+            opacity: isMummyRun ? 1 : 0,
+            pointerEvents: 'none',
+          }}
+        >
+          {/* Elongated sprint shadow */}
+          <ellipse cx="-2" cy="18" rx="13" ry="2.6" fill="rgba(0,0,0,0.35)" />
+
+          {/* Trailing loose bandage streaming back horizontally in wind */}
+          <g style={{ transformOrigin: '-5px 10px', animation: 'mummyBandageStream 0.18s ease-in-out infinite' }}>
+            <path
+              d="M -5 10 Q -12 8 -18 12 Q -24 6 -30 10"
+              stroke="#f5f5f4"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              fill="none"
+            />
+            <path
+              d="M -5 10 Q -12 8 -18 12 Q -24 6 -30 10"
+              stroke="#d6d3d1"
+              strokeWidth="0.8"
+              strokeDasharray="1.5 2"
+              fill="none"
+            />
+          </g>
+
+          {/* Scampering Body & Limbs */}
+          <g style={{ animation: 'mummyRunBob 0.11s ease-in-out infinite' }}>
+            <g transform="rotate(18, 0, 8)">
+              {/* Back Arm pumping */}
+              <g style={{ transformOrigin: '-4px 4px', animation: 'mummyArmsPump 0.22s ease-in-out infinite' }}>
+                <path d="M -4 4 L -11 8 L -16 6" stroke="#f5f5f4" strokeWidth="2.6" strokeLinecap="round" fill="none" />
+                <circle cx="-16" cy="6" r="1.5" fill="#e7e5e4" />
+              </g>
+
+              {/* Back Leg scampering */}
+              <g style={{ transformOrigin: '-3px 12px', animation: 'mummyScamperLegR 0.22s ease-in-out infinite' }}>
+                <path d="M -3 12 L -9 17 L -14 16" stroke="#f5f5f4" strokeWidth="3.2" strokeLinecap="round" fill="none" />
+                <ellipse cx="-15" cy="16.5" rx="2.5" ry="1.5" fill="#e7e5e4" />
+              </g>
+
+              {/* Front Leg scampering */}
+              <g style={{ transformOrigin: '3px 12px', animation: 'mummyScamperLegL 0.22s ease-in-out infinite' }}>
+                <path d="M 3 12 L 8 16 L 9 20" stroke="#f5f5f4" strokeWidth="3.2" strokeLinecap="round" fill="none" />
+                <ellipse cx="9" cy="20.5" rx="2.8" ry="1.6" fill="#e7e5e4" />
+              </g>
+
+              {/* Torso */}
+              <rect x="-5" y="2" width="10" height="12" rx="2.5" fill="#f5f5f4" stroke="#d6d3d1" strokeWidth="0.7" />
+              <path d="M -5 5 L 5 7 M -5 9 L 5 11" stroke="#a8a29e" strokeWidth="0.6" />
+
+              {/* Front Arm pumping */}
+              <g style={{ transformOrigin: '4px 4px', animation: 'mummyArmsPump 0.22s ease-in-out infinite', animationDelay: '0.11s' }}>
+                <path d="M 4 4 L 11 2 L 15 5" stroke="#f5f5f4" strokeWidth="2.6" strokeLinecap="round" fill="none" />
+                <circle cx="15" cy="5" r="1.5" fill="#e7e5e4" />
+              </g>
+
+              {/* Head leaning forward into sprint */}
+              <g transform="translate(2, -6)">
+                <rect x="-7" y="-8" width="14" height="14" rx="3.5" fill="#f5f5f4" stroke="#d6d3d1" strokeWidth="0.8" />
+                <path d="M -7 -4 L 7 -3 M -7 3 L 7 4" stroke="#a8a29e" strokeWidth="0.7" />
+                <rect x="-5.5" y="-2" width="11" height="3.8" rx="1.2" fill="#1c1917" />
+                <ellipse cx="-2.5" cy="-0.1" rx="2" ry="1.4" fill="#f59e0b" />
+                <circle cx="-2.5" cy="-0.1" r="0.9" fill="#fef08a" />
+                <ellipse cx="2.5" cy="-0.1" rx="2" ry="1.4" fill="#f59e0b" />
+                <circle cx="2.5" cy="-0.1" r="0.9" fill="#fef08a" />
+                <path d="M 0 -8 C -1 -10, 1 -11, 2 -8.5" stroke="#f5f5f4" strokeWidth="1.4" strokeLinecap="round" fill="none" />
+
+                {/* Swara's Birthday Festive Party Hat */}
+                {isBirthday && (
+                  <g transform="translate(1, -9) rotate(26)">
+                    <path d="M -3.5 0 L 0 -11 L 3.5 0 Z" fill="#ec4899" stroke="#db2777" strokeWidth="0.6" />
+                    <path d="M -2 -3 L 0 -11 L 1 -7 Z" fill="#38bdf8" />
+                    <path d="M -1 0 L 0 -11 L 0 -5 Z" fill="#facc15" />
+                    <circle cx="0" cy="-11" r="1.4" fill="#facc15" />
+                  </g>
+                )}
+              </g>
+            </g>
+
+            {/* Little dust poofs behind running feet */}
+            <circle cx="-12" cy="18" r="1.8" fill="#475569" opacity="0.35" />
+            <circle cx="-16" cy="16" r="1.2" fill="#475569" opacity="0.25" />
+          </g>
+        </g>
+      </g>
+    </g>
+  )
+}
+
 function DaytimePumpkinPatch({ isBirthday = false }: { isBirthday?: boolean }) {
   const petals = [0, 26, 52, 78, 104, 130, 156, 182, 208, 234, 260, 286, 312, 338]
 
@@ -3626,6 +3933,7 @@ function DaytimePumpkinPatch({ isBirthday = false }: { isBirthday?: boolean }) {
             50% { transform: translateY(-4px) rotate(2deg); }
           }
           ${ZOMBIE_STYLE_KEYFRAMES}
+          ${MUMMY_STYLE_KEYFRAMES}
         `}</style>
 
         {/* --- Background Rolling Green Knolls --- */}
@@ -4020,6 +4328,7 @@ function SpookyGraveyard({ isBirthday = false }: { isBirthday?: boolean }) {
             70% { transform: translate(-25px, -8px); opacity: 0.80; }
           }
           ${ZOMBIE_STYLE_KEYFRAMES}
+          ${MUMMY_STYLE_KEYFRAMES}
         `}</style>
 
         {/* --- Background Rolling Hill Silhouette --- */}
@@ -4067,6 +4376,9 @@ function SpookyGraveyard({ isBirthday = false }: { isBirthday?: boolean }) {
           <path d="M 1844 65 Q 1865 52 1888 56 Q 1902 58 1912 50" strokeWidth="2.5" fill="none" />
           <path d="M 1840 52 Q 1834 30 1822 20 Q 1814 12 1804 10 M 1822 20 Q 1832 12 1840 6" strokeWidth="2" fill="none" />
         </g>
+
+        {/* --- Hide-and-Seek Mummy (Dashing and hiding behind headstones) --- */}
+        <HideAndSeekMummy isBirthday={isBirthday} />
 
         {/* --- Tombstones & Headstones --- */}
         {/* Tombstone 1: Classic "R.I.P." Headstone (x = 180, tilted) */}
