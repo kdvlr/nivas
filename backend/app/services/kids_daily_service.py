@@ -1415,10 +1415,12 @@ class KidsDailyService:
     def _generate_with_gemini(self, date_str: str, api_key: str, model_name: str) -> Optional[Dict[str, Any]]:
         from google import genai
         from google.genai import types
+        from ..config import get_settings
         import random
         import uuid
         import os
 
+        s = get_settings()
         base_url = s.gemini_base_url or os.environ.get("GEMINI_BASE_URL") or os.environ.get("LITELLM_BASE_URL")
         http_opts = {"api_version": "v1beta"}
         if base_url:
