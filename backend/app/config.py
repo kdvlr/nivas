@@ -10,7 +10,8 @@ class Settings(BaseSettings):
     tz: str = "America/New_York"
 
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-3.8-flash"
+    gemini_base_url: str = ""
+    gemini_model: str = "gemini-flash"
     google_maps_api_key: str = ""
 
     icloud_username: str = ""

@@ -31,6 +31,7 @@ export type CelebrationName =
   | 'ninja-chop'
   | 'chore-tower'
   | 'canyon-stunt'
+  | 'danny-go-vase'
 
 export interface Celebration {
   name: CelebrationName
@@ -1463,6 +1464,16 @@ export const CELEBRATIONS: Celebration[] = [
     hideHtmlPraise: true,
     praise: ['Chores Conquered!', 'Legendary Jump!', 'Stunt Champ!'],
     iframeSrc: '/celebrations/canyon_stunt_jump.html?embed=1',
+  },
+  {
+    name: 'danny-go-vase',
+    emoji: '🏺',
+    label: 'Danny Go! In a Vase',
+    backdrop: '#0f172a',
+    durationMs: 16000,
+    hideHtmlPraise: true,
+    praise: ['Rock that vase!', 'Boom-chacka-boom!', 'Danny Go beat dropped!'],
+    iframeSrc: '/celebrations/danny_go_vase_song.html?embed=1',
   },
   {
     name: 'confetti',

@@ -1,0 +1,1951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Danny Go! Making a Song In A Vase (NIVAS)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --primary: #0284c7;
+      --primary-container: #bae6fd;
+      --on-primary: #ffffff;
+      --secondary: #eab308;
+      --accent-pink: #ec4899;
+      --accent-purple: #8b5cf6;
+      --surface: #0f172a;
+      --surface-card: rgba(30, 41, 59, 0.85);
+      --surface-border: rgba(255, 255, 255, 0.12);
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      background-color: var(--surface);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Standalone App Frame */
+    .app-header {
+      width: 100%;
+      max-width: 1200px;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      z-index: 20;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #0284c7, #eab308);
+      display: grid;
+      place-items: center;
+      font-size: 24px;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4);
+    }
+
+    .brand-text h1 {
+      font-family: 'Fredoka', cursive, sans-serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #38bdf8, #facc15, #f472b6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-text p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .input-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--surface-border);
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      backdrop-filter: blur(8px);
+    }
+
+    .input-chip label {
+      color: var(--secondary);
+      font-weight: 700;
+      font-family: 'Fredoka', cursive;
+    }
+
+    .input-chip input {
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-weight: 700;
+      width: 90px;
+      outline: none;
+      font-family: inherit;
+    }
+
+    /* Stage Canvas Container */
+    .stage-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 1200px;
+      aspect-ratio: 16 / 9;
+      max-height: calc(100vh - 220px);
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 24px 64px -12px rgba(0, 0, 0, 0.65), 0 0 0 1px var(--surface-border);
+      background: radial-gradient(circle at 50% 30%, #1e1b4b 0%, #0f172a 70%, #020617 100%);
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    canvas#dannyCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: manipulation;
+    }
+
+    /* Overlay HUD elements */
+    .lyrics-hud {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 24px;
+      border-radius: 9999px;
+      background: rgba(15, 23, 42, 0.82);
+      backdrop-filter: blur(16px);
+      border: 2px solid rgba(250, 204, 21, 0.45);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 24px rgba(250, 204, 21, 0.2);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      max-width: 90%;
+      z-index: 10;
+    }
+
+    .lyrics-note-icon {
+      font-size: 1.5rem;
+      animation: noteBounce 0.8s ease-in-out infinite alternate;
+    }
+
+    @keyframes noteBounce {
+      from { transform: translateY(0px) rotate(-8deg) scale(0.95); }
+      to { transform: translateY(-4px) rotate(8deg) scale(1.1); }
+    }
+
+    .lyrics-text {
+      font-family: 'Fredoka', cursive, sans-serif;
+      font-size: clamp(1rem, 2vw, 1.45rem);
+      font-weight: 700;
+      color: #fff;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .lyrics-text .highlight {
+      color: #fde047;
+      text-shadow: 0 0 12px rgba(250, 204, 21, 0.8);
+    }
+
+    /* Audio Enable Prompt / Big Play Button */
+    .sound-gate {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      z-index: 30;
+      transition: opacity 0.35s ease, visibility 0.35s ease;
+      cursor: pointer;
+    }
+
+    .sound-gate.dismissed {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .big-pulse-btn {
+      width: 96px;
+      height: 96px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #0284c7, #38bdf8);
+      border: 4px solid #fff;
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 40px;
+      box-shadow: 0 0 35px rgba(56, 189, 248, 0.6);
+      animation: gatePulse 1.8s infinite;
+      cursor: pointer;
+    }
+
+    @keyframes gatePulse {
+      0% { transform: scale(0.96); box-shadow: 0 0 20px rgba(56, 189, 248, 0.4); }
+      50% { transform: scale(1.08); box-shadow: 0 0 45px rgba(56, 189, 248, 0.9); }
+      100% { transform: scale(0.96); box-shadow: 0 0 20px rgba(56, 189, 248, 0.4); }
+    }
+
+    .sound-gate-title {
+      font-family: 'Fredoka', cursive, sans-serif;
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #fff;
+      text-align: center;
+    }
+
+    .sound-gate-sub {
+      font-size: 0.95rem;
+      color: #bae6fd;
+      text-align: center;
+      max-width: 380px;
+    }
+
+    /* Interactive Bottom Control Deck */
+    .deck-container {
+      width: 100%;
+      max-width: 1200px;
+      padding: 16px 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      z-index: 20;
+    }
+
+    .timeline-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .timeline-slider-wrap {
+      flex: 1;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 9999px;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .timeline-progress {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      background: linear-gradient(90deg, #0284c7, #eab308, #ec4899);
+      border-radius: 9999px;
+      width: 0%;
+      pointer-events: none;
+    }
+
+    .timeline-handle {
+      position: absolute;
+      top: 50%;
+      left: 0%;
+      transform: translate(-50%, -50%);
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+      pointer-events: none;
+    }
+
+    .time-label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      font-family: monospace;
+      color: var(--text-muted);
+      min-width: 70px;
+    }
+
+    .controls-grid {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .btn-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .app-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--surface-border);
+      color: var(--text);
+      font-family: 'Fredoka', cursive, sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: 14px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.18s ease;
+      touch-action: manipulation;
+    }
+
+    .app-btn:hover {
+      background: rgba(255, 255, 255, 0.16);
+      transform: translateY(-1px);
+    }
+
+    .app-btn:active {
+      transform: translateY(1px) scale(0.98);
+    }
+
+    .app-btn.primary {
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      color: #fff;
+      border-color: #38bdf8;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+    }
+
+    .app-btn.primary:hover {
+      background: linear-gradient(135deg, #0369a1, #0284c7);
+    }
+
+    .app-btn.fun {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #fff;
+      border-color: #fde047;
+      box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3);
+    }
+
+    .pad-btn {
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      font-family: 'Fredoka', cursive;
+      color: #e2e8f0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .pad-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: #facc15;
+      color: #fff;
+    }
+
+    .pad-btn:active {
+      transform: scale(0.92);
+      background: #facc15;
+      color: #0f172a;
+    }
+
+    /* Embed Mode styling (for Nivas celebration overlay) */
+    body.embed {
+      margin: 0;
+      padding: 0;
+      background: transparent;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      justify-content: center;
+    }
+
+    body.embed .app-header,
+    body.embed .deck-container {
+      display: none !important;
+    }
+
+    body.embed .stage-wrapper {
+      width: 100vw;
+      height: 100vh;
+      max-width: 100vw;
+      max-height: 100vh;
+      border-radius: 0;
+      border: none;
+      box-shadow: none;
+      background: radial-gradient(circle at 50% 30%, #1e1b4b 0%, #0f172a 75%, #020617 100%);
+    }
+
+    @media (max-width: 768px) {
+      .app-header {
+        padding: 10px 14px;
+      }
+      .brand-text p { display: none; }
+      .deck-container { padding: 10px 14px 16px; }
+      .pad-bank { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-icon">🏺</div>
+      <div class="brand-text">
+        <h1>Danny Go! In a Vase</h1>
+        <p>A high-energy musical celebration inside the magic NIVAS vase</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div class="input-chip">
+        <label for="childName">Rockstar:</label>
+        <input type="text" id="childName" value="Leo" maxlength="14" placeholder="Name" />
+      </div>
+      <button class="app-btn" id="soundToggleBtn">🔊 Sound: ON</button>
+      <button class="app-btn" id="fsBtn">⛶ Fullscreen</button>
+    </div>
+  </header>
+
+  <!-- Stage Canvas -->
+  <div class="stage-wrapper" id="stageWrapper">
+    <canvas id="dannyCanvas"></canvas>
+
+    <!-- Interactive Lyrics Banner -->
+    <div class="lyrics-hud" id="lyricsHud">
+      <span class="lyrics-note-icon">🎵</span>
+      <span class="lyrics-text" id="lyricsText">♪ Welcome to NIVAS! We're making a song in a vase! ♪</span>
+    </div>
+
+    <!-- Click To Start Audio Gate -->
+    <div class="sound-gate" id="soundGate">
+      <div class="big-pulse-btn" id="gatePlayBtn">▶</div>
+      <div class="sound-gate-title">Ready to Rock with Danny Go?</div>
+      <div class="sound-gate-sub">Tap anywhere to turn on the music, pump the bass, and make a song inside the vase!</div>
+    </div>
+  </div>
+
+  <!-- Interactive Control Deck -->
+  <div class="deck-container">
+    <div class="timeline-row">
+      <span class="time-label" id="timeCurrent">0:00</span>
+      <div class="timeline-slider-wrap" id="timelineScrubber">
+        <div class="timeline-progress" id="timelineProgress"></div>
+        <div class="timeline-handle" id="timelineHandle"></div>
+      </div>
+      <span class="time-label" id="timeDuration">0:16</span>
+    </div>
+
+    <div class="controls-grid">
+      <div class="btn-group">
+        <button class="app-btn primary" id="playPauseBtn">
+          <span id="playIcon">⏸</span> <span id="playLabel">Pause</span>
+        </button>
+        <button class="app-btn" id="replayBtn">↺ Replay</button>
+        <button class="app-btn fun" id="jumpBtn">🚀 Danny Leap!</button>
+        <button class="app-btn fun" id="wiggleBtn">🕺 Wiggle Dance!</button>
+      </div>
+
+      <!-- Interactive Beat Sound Pads -->
+      <div class="btn-group pad-bank">
+        <button class="pad-btn" id="padKick">🥁 Kick</button>
+        <button class="pad-btn" id="padRim">🏺 Vase Rim</button>
+        <button class="pad-btn" id="padChime">✨ Chime</button>
+        <button class="pad-btn" id="padHorn">🎺 Horn Stab</button>
+        <button class="pad-btn" id="padConfetti">🎉 Confetti</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+'use strict';
+
+/**
+ * Audio Synthesizer Engine (Danny Go EDM Kids Dance Style)
+ * 100% Web Audio API - zero network latency, zero missing mp3s.
+ */
+class DannyMusicEngine {
+  constructor() {
+    this.ctx = null;
+    this.bpm = 128;
+    this.stepInterval = (60 / this.bpm) / 4; // 16th note in seconds (~0.117s)
+    this.isPlaying = false;
+    this.isMuted = false;
+    this.masterGain = null;
+    this.currentStep = 0;
+    this.nextNoteTime = 0;
+    this.timerID = null;
+
+    // Melody Pattern: Pentatonic uplifting hook
+    this.melodyNotes = [
+      60, 0, 64, 0, 67, 0, 72, 72,  // C4, E4, G4, C5, C5
+      69, 0, 67, 0, 64, 60, 62, 0,  // A4, G4, E4, C4, D4
+      65, 0, 69, 0, 72, 0, 74, 74,  // F4, A4, C5, D5, D5
+      76, 72, 69, 67, 72, 0, 0, 0   // E5, C5, A4, G4, C5
+    ];
+
+    // Bassline Pattern (Punchy 16th note funk)
+    this.bassNotes = [
+      36, 36, 48, 36, 36, 48, 36, 41, // C2, C2, C3, C2, C2, C3, C2, F2
+      36, 36, 48, 36, 43, 41, 39, 36, // C2, C2, C3, C2, G2, F2, Eb2, C2
+      41, 41, 53, 41, 41, 53, 41, 46, // F2, F2, F3, F2, F2, F3, F2, Bb2
+      43, 43, 55, 43, 48, 46, 43, 36  // G2, G2, G3, G2, C3, Bb2, G2, C2
+    ];
+  }
+
+  init() {
+    if (this.ctx) {
+      if (this.ctx.state === 'suspended') {
+        this.ctx.resume().catch(() => {});
+      }
+      return;
+    }
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    this.ctx = new AudioCtx();
+    this.masterGain = this.ctx.createGain();
+    this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : 0.85, this.ctx.currentTime);
+    this.masterGain.connect(this.ctx.destination);
+  }
+
+  setMuted(muted) {
+    this.isMuted = muted;
+    if (this.masterGain && this.ctx) {
+      this.masterGain.gain.setTargetAtTime(muted ? 0 : 0.85, this.ctx.currentTime, 0.03);
+    }
+  }
+
+  midiToFreq(midi) {
+    if (!midi || midi <= 0) return 0;
+    return 440 * Math.pow(2, (midi - 69) / 12);
+  }
+
+  // Punchy 808-style Kick Drum
+  playKick(time) {
+    if (!this.ctx || this.isMuted) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    const t = time || this.ctx.currentTime;
+
+    osc.frequency.setValueAtTime(140, t);
+    osc.frequency.exponentialRampToValueAtTime(32, t + 0.16);
+
+    gain.gain.setValueAtTime(1.0, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start(t);
+    osc.stop(t + 0.23);
+  }
+
+  // Resonant Ceramic Vase Percussion (Frequency Modulated Ping)
+  playVaseRim(time, pitchShift = 1) {
+    if (!this.ctx || this.isMuted) return;
+    const t = time || this.ctx.currentTime;
+
+    const carrier = this.ctx.createOscillator();
+    const mod = this.ctx.createOscillator();
+    const modGain = this.ctx.createGain();
+    const mainGain = this.ctx.createGain();
+
+    carrier.type = 'triangle';
+    carrier.frequency.setValueAtTime(740 * pitchShift, t);
+    carrier.frequency.exponentialRampToValueAtTime(420 * pitchShift, t + 0.12);
+
+    mod.type = 'sine';
+    mod.frequency.setValueAtTime(1240 * pitchShift, t);
+
+    modGain.gain.setValueAtTime(380, t);
+    modGain.gain.exponentialRampToValueAtTime(1, t + 0.08);
+
+    mod.connect(carrier.frequency);
+
+    mainGain.gain.setValueAtTime(0.65, t);
+    mainGain.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+
+    carrier.connect(mainGain);
+    mainGain.connect(this.masterGain);
+
+    carrier.start(t);
+    mod.start(t);
+    carrier.stop(t + 0.15);
+    mod.stop(t + 0.15);
+  }
+
+  // Snappy Electro Clap / Snare
+  playClap(time) {
+    if (!this.ctx || this.isMuted) return;
+    const t = time || this.ctx.currentTime;
+    const bufferSize = this.ctx.sampleRate * 0.12;
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(1400, t);
+    filter.Q.setValueAtTime(2.2, t);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.7, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.12);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.masterGain);
+
+    noise.start(t);
+    noise.stop(t + 0.13);
+  }
+
+  // Funky Synth Bass Note
+  playBass(midi, time) {
+    if (!this.ctx || this.isMuted || !midi) return;
+    const t = time || this.ctx.currentTime;
+    const freq = this.midiToFreq(midi);
+
+    const osc = this.ctx.createOscillator();
+    const filter = this.ctx.createBiquadFilter();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(freq, t);
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(1800, t);
+    filter.frequency.exponentialRampToValueAtTime(280, t + 0.12);
+    filter.Q.setValueAtTime(5, t);
+
+    gain.gain.setValueAtTime(0.55, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.13);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start(t);
+    osc.stop(t + 0.14);
+  }
+
+  // Danny Lead Synth Hook
+  playLead(midi, time) {
+    if (!this.ctx || this.isMuted || !midi) return;
+    const t = time || this.ctx.currentTime;
+    const freq = this.midiToFreq(midi);
+
+    const osc1 = this.ctx.createOscillator();
+    const osc2 = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    const filter = this.ctx.createBiquadFilter();
+
+    osc1.type = 'sawtooth';
+    osc2.type = 'square';
+    osc1.frequency.setValueAtTime(freq, t);
+    osc2.frequency.setValueAtTime(freq * 1.004, t); // Chorus detune
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(3200, t);
+    filter.frequency.exponentialRampToValueAtTime(1100, t + 0.2);
+
+    gain.gain.setValueAtTime(0.35, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+
+    osc1.connect(filter);
+    osc2.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc1.start(t);
+    osc2.start(t);
+    osc1.stop(t + 0.24);
+    osc2.stop(t + 0.24);
+  }
+
+  // Brass Fanfare / Horn Stab
+  playBrass(time) {
+    if (!this.ctx || this.isMuted) return;
+    const t = time || this.ctx.currentTime;
+    const chord = [60, 64, 67, 72]; // C major triad
+    chord.forEach((note, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(this.midiToFreq(note + 12), t);
+
+      gain.gain.setValueAtTime(0.18, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start(t);
+      osc.stop(t + 0.36);
+    });
+  }
+
+  // Cartoon Boing / Jump sound
+  playBoing(time) {
+    if (!this.ctx || this.isMuted) return;
+    const t = time || this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(160, t);
+    osc.frequency.exponentialRampToValueAtTime(680, t + 0.28);
+
+    gain.gain.setValueAtTime(0.5, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.32);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(t);
+    osc.stop(t + 0.33);
+  }
+
+  // Sparkle Chime
+  playChime(time) {
+    if (!this.ctx || this.isMuted) return;
+    const t = time || this.ctx.currentTime;
+    const notes = [72, 76, 79, 84, 88];
+    notes.forEach((n, i) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const nt = t + i * 0.045;
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(this.midiToFreq(n), nt);
+      gain.gain.setValueAtTime(0.25, nt);
+      gain.gain.exponentialRampToValueAtTime(0.001, nt + 0.25);
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start(nt);
+      osc.stop(nt + 0.26);
+    });
+  }
+
+  // Step Sequencer Scheduler
+  startSequencer() {
+    this.init();
+    if (this.isPlaying) return;
+    this.isPlaying = true;
+    this.currentStep = 0;
+    this.nextNoteTime = this.ctx.currentTime + 0.05;
+    this.scheduleLoop();
+  }
+
+  stopSequencer() {
+    this.isPlaying = false;
+    if (this.timerID) {
+      clearTimeout(this.timerID);
+      this.timerID = null;
+    }
+  }
+
+  scheduleLoop() {
+    if (!this.isPlaying || !this.ctx) return;
+    while (this.nextNoteTime < this.ctx.currentTime + 0.12) {
+      this.scheduleStep(this.currentStep, this.nextNoteTime);
+      this.nextNoteTime += this.stepInterval;
+      this.currentStep = (this.currentStep + 1) % 32;
+    }
+    this.timerID = setTimeout(() => this.scheduleLoop(), 35);
+  }
+
+  scheduleStep(step, time) {
+    // 4-on-the-floor kick
+    if (step % 4 === 0) {
+      this.playKick(time);
+      window.dispatchEvent(new CustomEvent('beat-kick', { detail: { step } }));
+    }
+
+    // Snare / Clap on 4 and 12 (standard 2 & 4)
+    if (step === 4 || step === 12 || step === 20 || step === 28) {
+      this.playClap(time);
+      window.dispatchEvent(new CustomEvent('beat-clap', { detail: { step } }));
+    }
+
+    // Vase rim percussion syncopation
+    if (step === 2 || step === 6 || step === 10 || step === 14 || step === 18 || step === 26) {
+      this.playVaseRim(time, step % 2 === 0 ? 1 : 1.25);
+      window.dispatchEvent(new CustomEvent('beat-vase', { detail: { step } }));
+    }
+
+    // Funky Bassline
+    const bass = this.bassNotes[step];
+    if (bass) {
+      this.playBass(bass, time);
+    }
+
+    // Catchy Lead Melody
+    const lead = this.melodyNotes[step];
+    if (lead) {
+      this.playLead(lead, time);
+    }
+  }
+}
+
+/**
+ * Visual Canvas Engine
+ * Hand-illustrated 60fps Danny Go inside the magical NIVAS vase
+ */
+class DannyGoVaseScene {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.width = canvas.width;
+    this.height = canvas.height;
+
+    this.audio = new DannyMusicEngine();
+    this.running = false;
+    this.rafId = 0;
+    this.lastTime = 0;
+    this.elapsed = 0;
+    this.duration = 16.0; // 16 second loopable song cycle
+
+    // Visual states
+    this.vaseWobble = 0;
+    this.vaseSquash = 1;
+    this.dannyYOffset = 0;
+    this.dannyJumpVelocity = 0;
+    this.dannyArmAngleL = 0;
+    this.dannyArmAngleR = 0;
+    this.isWiggling = false;
+    this.wiggleTimer = 0;
+    this.isLeaping = false;
+
+    // Particle arrays
+    this.notes = [];
+    this.confetti = [];
+    this.soundWaves = [];
+    this.spotlights = [];
+
+    // Child name
+    this.childName = 'Leo';
+
+    // Timeline Lyrics
+    this.lyricsTimeline = [
+      { start: 0.0, end: 3.5, text: "Hey! It's Danny Go... making a song in a vase!", highlight: "in a vase!" },
+      { start: 3.5, end: 7.2, text: "♪ Tap on the rim, boom-chacka-boom! NIVAS rocks the room! ♪", highlight: "NIVAS rocks the room!" },
+      { start: 7.2, end: 11.5, text: "♪ Shake it down, jump up high! Watch that music touch the sky! ♪", highlight: "jump up high!" },
+      { start: 11.5, end: 16.0, text: "♪ In the vase! We got that beat! Dance together on your feet! ♪", highlight: "Dance together!" }
+    ];
+
+    this.initSpotlights();
+    this.bindEvents();
+  }
+
+  initSpotlights() {
+    this.spotlights = [
+      { x: 0.2, angle: -0.25, color: 'rgba(56, 189, 248, 0.25)', speed: 0.8 },
+      { x: 0.5, angle: 0.05, color: 'rgba(250, 204, 21, 0.22)', speed: 1.1 },
+      { x: 0.8, angle: 0.3, color: 'rgba(244, 114, 182, 0.25)', speed: 0.9 }
+    ];
+  }
+
+  bindEvents() {
+    window.addEventListener('beat-kick', () => {
+      this.vaseSquash = 0.92;
+      this.vaseWobble = (Math.random() - 0.5) * 0.12;
+      this.spawnSoundWave();
+      if (!this.isLeaping) {
+        this.dannyYOffset = -12;
+      }
+    });
+
+    window.addEventListener('beat-vase', () => {
+      this.spawnNote();
+      this.vaseWobble = (Math.random() - 0.5) * 0.08;
+    });
+
+    window.addEventListener('beat-clap', () => {
+      if (Math.random() > 0.4) {
+        this.spawnConfettiBurst(6);
+      }
+    });
+  }
+
+  resize() {
+    const rect = this.canvas.parentElement.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    this.width = rect.width;
+    this.height = rect.height;
+    this.canvas.width = Math.floor(rect.width * dpr);
+    this.canvas.height = Math.floor(rect.height * dpr);
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    this.ctx.scale(dpr, dpr);
+  }
+
+  // Triggers
+  triggerLeap() {
+    this.audio.playBoing();
+    this.isLeaping = true;
+    this.dannyJumpVelocity = -22;
+    this.spawnConfettiBurst(25);
+  }
+
+  triggerWiggle() {
+    this.isWiggling = true;
+    this.wiggleTimer = 1.8;
+    this.audio.playBrass();
+  }
+
+  spawnNote() {
+    const symbols = ['♪', '♫', '♬', '𝄞', '✨', '⭐'];
+    const colors = ['#38bdf8', '#facc15', '#f472b6', '#4ade80', '#c084fc'];
+    const vaseX = this.width * 0.5;
+    const vaseY = this.height * 0.54;
+
+    this.notes.push({
+      x: vaseX + (Math.random() - 0.5) * 110,
+      y: vaseY,
+      vx: (Math.random() - 0.5) * 3,
+      vy: -3.5 - Math.random() * 3,
+      symbol: symbols[Math.floor(Math.random() * symbols.length)],
+      color: colors[Math.floor(Math.random() * colors.length)],
+      size: 20 + Math.random() * 16,
+      rot: (Math.random() - 0.5) * 0.5,
+      rotSpeed: (Math.random() - 0.5) * 0.08,
+      life: 1.0
+    });
+  }
+
+  spawnSoundWave() {
+    const vaseX = this.width * 0.5;
+    const vaseY = this.height * 0.52;
+    this.soundWaves.push({
+      x: vaseX,
+      y: vaseY,
+      r: 20,
+      maxR: Math.min(this.width, this.height) * 0.55,
+      alpha: 0.65,
+      color: Math.random() > 0.5 ? '#38bdf8' : '#facc15'
+    });
+  }
+
+  spawnConfettiBurst(count = 20) {
+    const colors = ['#f43f5e', '#ec4899', '#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#facc15'];
+    const centerX = this.width * 0.5;
+    const centerY = this.height * 0.45;
+
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 4 + Math.random() * 9;
+      this.confetti.push({
+        x: centerX,
+        y: centerY,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 4,
+        size: 7 + Math.random() * 8,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        rotation: Math.random() * 360,
+        rotSpeed: (Math.random() - 0.5) * 15,
+        life: 1.0,
+        decay: 0.012 + Math.random() * 0.015
+      });
+    }
+  }
+
+  // Animation Update
+  update(dt) {
+    this.elapsed = (this.elapsed + dt) % this.duration;
+
+    // Physical elastic bounce recovery on the vase
+    this.vaseSquash += (1.0 - this.vaseSquash) * 0.18;
+    this.vaseWobble += (0.0 - this.vaseWobble) * 0.15;
+
+    // Danny leap physics
+    if (this.isLeaping) {
+      this.dannyYOffset += this.dannyJumpVelocity;
+      this.dannyJumpVelocity += 0.85; // Gravity
+      if (this.dannyYOffset >= 0) {
+        this.dannyYOffset = 0;
+        this.isLeaping = false;
+        this.vaseSquash = 0.86;
+        this.audio.playVaseRim(null, 0.8);
+      }
+    } else {
+      this.dannyYOffset += (0 - this.dannyYOffset) * 0.2;
+    }
+
+    // Wiggle timer
+    if (this.isWiggling) {
+      this.wiggleTimer -= dt;
+      if (this.wiggleTimer <= 0) this.isWiggling = false;
+    }
+
+    // Sound waves
+    for (let i = this.soundWaves.length - 1; i >= 0; i--) {
+      const sw = this.soundWaves[i];
+      sw.r += 6;
+      sw.alpha = 0.65 * (1 - sw.r / sw.maxR);
+      if (sw.r >= sw.maxR) {
+        this.soundWaves.splice(i, 1);
+      }
+    }
+
+    // Notes
+    for (let i = this.notes.length - 1; i >= 0; i--) {
+      const n = this.notes[i];
+      n.x += n.vx;
+      n.y += n.vy;
+      n.rot += n.rotSpeed;
+      n.life -= 0.015;
+      if (n.life <= 0) {
+        this.notes.splice(i, 1);
+      }
+    }
+
+    // Confetti
+    for (let i = this.confetti.length - 1; i >= 0; i--) {
+      const c = this.confetti[i];
+      c.x += c.vx;
+      c.y += c.vy;
+      c.vy += 0.28; // Gravity
+      c.vx *= 0.98;
+      c.rotation += c.rotSpeed;
+      c.life -= c.decay;
+      if (c.life <= 0 || c.y > this.height) {
+        this.confetti.splice(i, 1);
+      }
+    }
+
+    // Sync HUD lyrics
+    this.updateLyricsHud();
+  }
+
+  updateLyricsHud() {
+    const textEl = document.getElementById('lyricsText');
+    if (!textEl) return;
+
+    const currentLine = this.lyricsTimeline.find(
+      l => this.elapsed >= l.start && this.elapsed < l.end
+    ) || this.lyricsTimeline[0];
+
+    const childGreeting = this.childName ? ` ${this.childName}!` : '!';
+    let lineStr = currentLine.text.replace('Danny Go', `Danny Go & ${this.childName}`);
+
+    if (currentLine.highlight) {
+      const parts = lineStr.split(currentLine.highlight);
+      if (parts.length === 2) {
+        textEl.innerHTML = `${parts[0]}<span class="highlight">${currentLine.highlight}</span>${parts[1]}`;
+      } else {
+        textEl.textContent = lineStr;
+      }
+    } else {
+      textEl.textContent = lineStr;
+    }
+  }
+
+  // Draw Functions
+  draw() {
+    const ctx = this.ctx;
+    const w = this.width;
+    const h = this.height;
+
+    ctx.clearRect(0, 0, w, h);
+
+    // 1. Stage Background & Disco Lights
+    this.drawStageBackground(ctx, w, h);
+
+    // 2. Soundwaves emanating from the vase
+    this.drawSoundWaves(ctx);
+
+    // 3. The Back Rim & Inside of the Vase
+    const scale = Math.min(w / 1000, h / 600);
+    const centerX = w * 0.5;
+    const centerY = h * 0.65;
+
+    ctx.save();
+    ctx.translate(centerX, centerY);
+
+    // Danny is drawn before front of vase, but after back interior
+    this.drawVaseBackInterior(ctx, scale);
+
+    // 4. Danny Go Character (Popping out of vase!)
+    this.drawDannyGo(ctx, scale);
+
+    // 5. The Front of the Magical NIVAS Vase
+    this.drawVaseFront(ctx, scale);
+
+    ctx.restore();
+
+    // 6. Floating Musical Notes
+    this.drawNotes(ctx);
+
+    // 7. Confetti stream
+    this.drawConfetti(ctx);
+
+    // 8. Front Lighting & Sparkles
+    this.drawStageForeground(ctx, w, h);
+  }
+
+  drawStageBackground(ctx, w, h) {
+    // Disco Stage Gradient
+    const bgGrad = ctx.createRadialGradient(w * 0.5, h * 0.35, 10, w * 0.5, h * 0.5, w * 0.8);
+    bgGrad.addColorStop(0, '#1e1b4b');
+    bgGrad.addColorStop(0.5, '#0f172a');
+    bgGrad.addColorStop(1, '#020617');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, w, h);
+
+    // Dynamic Top Marquee Sign
+    ctx.save();
+    const marqueeY = Math.max(34, h * 0.08);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Neon Backglow
+    ctx.shadowColor = 'rgba(56, 189, 248, 0.7)';
+    ctx.shadowBlur = 18;
+    ctx.fillStyle = '#fde047';
+    ctx.font = '800 clamp(16px, 2.5vw, 26px) "Fredoka", cursive, sans-serif';
+    const marqueeTitle = `★ DANNY GO! IN THE VASE ★`;
+    ctx.fillText(marqueeTitle, w * 0.5, marqueeY);
+
+    if (this.childName) {
+      ctx.shadowColor = 'rgba(244, 114, 182, 0.8)';
+      ctx.fillStyle = '#f472b6';
+      ctx.font = '700 clamp(11px, 1.6vw, 16px) "Fredoka", cursive, sans-serif';
+      ctx.fillText(`FEATURING ROCKSTAR ${this.childName.toUpperCase()}`, w * 0.5, marqueeY + 24);
+    }
+    ctx.restore();
+
+    // Rhythmic Stage Floor Grid
+    const floorY = h * 0.72;
+    const floorGrad = ctx.createLinearGradient(0, floorY, 0, h);
+    floorGrad.addColorStop(0, 'rgba(30, 41, 59, 0.95)');
+    floorGrad.addColorStop(1, 'rgba(15, 23, 42, 1)');
+    ctx.fillStyle = floorGrad;
+    ctx.fillRect(0, floorY, w, h - floorY);
+
+    // Animated disco floor grid tiles
+    const tileW = w / 12;
+    const tileH = (h - floorY) / 3;
+    for (let row = 0; row < 3; row++) {
+      for (let col = 0; col < 12; col++) {
+        const tilePhase = Math.sin(this.elapsed * 8 + col * 0.6 + row);
+        if (tilePhase > 0.45) {
+          ctx.fillStyle = (col % 2 === 0) ? 'rgba(56, 189, 248, 0.12)' : 'rgba(236, 72, 153, 0.12)';
+          ctx.fillRect(col * tileW + 2, floorY + row * tileH + 2, tileW - 4, tileH - 4);
+        }
+      }
+    }
+
+    // Floor glow horizon
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.5)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(0, floorY);
+    ctx.lineTo(w, floorY);
+    ctx.stroke();
+
+    // Sweeping Stage Spotlights
+    this.spotlights.forEach((spot, i) => {
+      const angle = spot.angle + Math.sin(this.elapsed * spot.speed) * 0.22;
+      const topX = w * spot.x;
+      const beamW = w * 0.22;
+      const bottomX = topX + Math.tan(angle) * (h - 20);
+
+      ctx.save();
+      const beamGrad = ctx.createLinearGradient(topX, 0, bottomX, h);
+      beamGrad.addColorStop(0, spot.color);
+      beamGrad.addColorStop(0.85, spot.color.replace('0.25', '0.04').replace('0.22', '0.03'));
+      beamGrad.addColorStop(1, 'transparent');
+
+      ctx.fillStyle = beamGrad;
+      ctx.beginPath();
+      ctx.moveTo(topX - 15, 0);
+      ctx.lineTo(topX + 15, 0);
+      ctx.lineTo(bottomX + beamW, h);
+      ctx.lineTo(bottomX - beamW, h);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    });
+
+    // Equalizer light poles on sides
+    const eqBars = 8;
+    for (let i = 0; i < eqBars; i++) {
+      const t = this.elapsed * 4 + i;
+      const barH = 30 + Math.sin(t * 1.5) * 20 + Math.cos(t * 0.8) * 15;
+      const alpha = 0.4 + Math.sin(t) * 0.2;
+
+      // Left stack
+      ctx.fillStyle = `rgba(56, 189, 248, ${alpha})`;
+      ctx.fillRect(30 + i * 16, floorY - barH, 10, barH);
+
+      // Right stack
+      ctx.fillStyle = `rgba(244, 114, 182, ${alpha})`;
+      ctx.fillRect(w - 30 - (i + 1) * 16, floorY - barH, 10, barH);
+    }
+  }
+
+  drawSoundWaves(ctx) {
+    this.soundWaves.forEach(sw => {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(sw.x, sw.y, sw.r, 0, Math.PI * 2);
+      ctx.strokeStyle = sw.color;
+      ctx.lineWidth = 4;
+      ctx.globalAlpha = Math.max(0, sw.alpha);
+      ctx.shadowColor = sw.color;
+      ctx.shadowBlur = 12;
+      ctx.stroke();
+      ctx.restore();
+    });
+  }
+
+  drawVaseBackInterior(ctx, scale) {
+    ctx.save();
+    ctx.scale(scale, scale);
+    const rimY = -70;
+    const rimW = 100;
+    const rimH = 26;
+
+    // Inside hollow of the vase
+    ctx.beginPath();
+    ctx.ellipse(0, rimY, rimW, rimH, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#090d16'; // Deep resonance void
+    ctx.fill();
+
+    // Interior glow
+    const innerGrad = ctx.createRadialGradient(0, rimY + 5, 5, 0, rimY + 5, rimW);
+    innerGrad.addColorStop(0, '#facc15');
+    innerGrad.addColorStop(0.3, '#0284c7');
+    innerGrad.addColorStop(1, '#090d16');
+    ctx.fillStyle = innerGrad;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  drawDannyGo(ctx, scale) {
+    ctx.save();
+    ctx.scale(scale, scale);
+
+    // Apply Danny bounce, leap, and wiggle
+    let dannyY = -75 + this.dannyYOffset;
+    let dannyX = 0;
+    let dannyRot = 0;
+
+    if (this.isWiggling) {
+      dannyX = Math.sin(this.elapsed * 24) * 14;
+      dannyRot = Math.sin(this.elapsed * 24) * 0.12;
+    } else {
+      dannyRot = Math.sin(this.elapsed * 6) * 0.04;
+      dannyY += Math.sin(this.elapsed * 12) * 5;
+    }
+
+    ctx.translate(dannyX, dannyY);
+    ctx.rotate(dannyRot);
+
+    // 1. Torso / Shirt (Iconic Danny Go Royal Blue T-shirt)
+    ctx.fillStyle = '#1e88e5'; // Danny Blue
+    ctx.beginPath();
+    ctx.roundRect(-42, -50, 84, 90, [20, 20, 8, 8]);
+    ctx.fill();
+
+    // Shirt Collar
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(0, -48, 16, 0, Math.PI);
+    ctx.fill();
+
+    // 2. Yellow Suspenders (Signature Danny Go Yellow Suspenders!)
+    ctx.fillStyle = '#fdd835'; // Vibrant Bright Yellow
+    // Left Suspender
+    ctx.fillRect(-28, -50, 12, 90);
+    // Right Suspender
+    ctx.fillRect(16, -50, 12, 90);
+
+    // Metallic Clasps on Suspenders
+    ctx.fillStyle = '#cfd8dc';
+    ctx.fillRect(-29, -6, 14, 7);
+    ctx.fillRect(15, -6, 14, 7);
+    ctx.fillStyle = '#90a4ae';
+    ctx.fillRect(-28, -4, 12, 3);
+    ctx.fillRect(16, -4, 12, 3);
+
+    // 3. Arms & Hands
+    const armWaveL = Math.sin(this.elapsed * 12) * 0.4;
+    const armWaveR = Math.cos(this.elapsed * 12) * 0.4;
+
+    // Left Arm (Holding Golden Mic)
+    ctx.save();
+    ctx.translate(-42, -35);
+    ctx.rotate(-0.5 + armWaveL + (this.isWiggling ? Math.sin(this.elapsed * 20) * 0.6 : 0));
+    ctx.fillStyle = '#1e88e5'; // Sleeve
+    ctx.beginPath();
+    ctx.arc(0, 0, 14, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffd1aa'; // Forearm skin
+    ctx.fillRect(-8, 0, 16, 42);
+
+    // Hand & Microphone
+    ctx.beginPath();
+    ctx.arc(0, 44, 11, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff'; // White glove / hand
+    ctx.fill();
+
+    // Golden Mic
+    ctx.fillStyle = '#374151'; // Handle
+    ctx.fillRect(-4, 35, 8, 26);
+    ctx.fillStyle = '#facc15'; // Golden grill
+    ctx.beginPath();
+    ctx.arc(0, 32, 9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Right Arm (Holding Shiny Drumstick / Tapping Vase)
+    ctx.save();
+    ctx.translate(42, -35);
+    ctx.rotate(0.5 + armWaveR + (this.isWiggling ? -Math.sin(this.elapsed * 20) * 0.6 : 0));
+    ctx.fillStyle = '#1e88e5'; // Sleeve
+    ctx.beginPath();
+    ctx.arc(0, 0, 14, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffd1aa'; // Forearm skin
+    ctx.fillRect(-8, 0, 16, 42);
+
+    // Hand & Drumstick
+    ctx.beginPath();
+    ctx.arc(0, 44, 11, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+
+    // Wooden Drumstick
+    ctx.fillStyle = '#fde047';
+    ctx.fillRect(-3, 30, 6, 38);
+    ctx.beginPath();
+    ctx.arc(0, 28, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // 4. Head & Face
+    ctx.save();
+    const headBob = Math.sin(this.elapsed * 12) * 3;
+    ctx.translate(0, -82 + headBob);
+
+    // Neck
+    ctx.fillStyle = '#ffd1aa';
+    ctx.fillRect(-12, 18, 24, 18);
+
+    // Head base (Skin)
+    ctx.beginPath();
+    ctx.arc(0, 0, 36, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffd1aa';
+    ctx.fill();
+
+    // Friendly Rosy Cheeks
+    ctx.fillStyle = 'rgba(244, 63, 94, 0.35)';
+    ctx.beginPath();
+    ctx.arc(-22, 10, 8, 0, Math.PI * 2);
+    ctx.arc(22, 10, 8, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eyes (Big, lively, blinking occasionally)
+    const isBlinking = (Math.floor(this.elapsed * 2.5) % 8 === 0 && (this.elapsed * 10) % 1 > 0.7);
+    if (isBlinking) {
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(-14, -4, 8, 0.2 * Math.PI, 0.8 * Math.PI);
+      ctx.arc(14, -4, 8, 0.2 * Math.PI, 0.8 * Math.PI);
+      ctx.stroke();
+    } else {
+      // Eye whites
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(-14, -4, 9, 0, Math.PI * 2);
+      ctx.arc(14, -4, 9, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Pupils (looking lively)
+      ctx.fillStyle = '#1e293b';
+      ctx.beginPath();
+      ctx.arc(-13, -4, 5, 0, Math.PI * 2);
+      ctx.arc(15, -4, 5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Sparkle highlights in eyes
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(-15, -6, 2.2, 0, Math.PI * 2);
+      ctx.arc(13, -6, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Eyebrows (Bouncy & Expressive)
+    ctx.strokeStyle = '#64748b';
+    ctx.lineWidth = 3.5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(-14, -16, 10, 1.1 * Math.PI, 1.8 * Math.PI);
+    ctx.arc(14, -16, 10, 1.2 * Math.PI, 1.9 * Math.PI);
+    ctx.stroke();
+
+    // Big Danny Go Smile / Singing Mouth
+    const singing = Math.sin(this.elapsed * 12) > 0.2;
+    if (singing) {
+      // Open Singing Mouth
+      ctx.fillStyle = '#be123c';
+      ctx.beginPath();
+      ctx.arc(0, 12, 14, 0, Math.PI);
+      ctx.fill();
+      // White Teeth
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(-9, 12, 18, 5);
+      // Tongue
+      ctx.fillStyle = '#fb7185';
+      ctx.beginPath();
+      ctx.arc(0, 22, 8, Math.PI, 0);
+      ctx.fill();
+    } else {
+      // Big Happy Grin
+      ctx.strokeStyle = '#be123c';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.arc(0, 10, 13, 0.1 * Math.PI, 0.9 * Math.PI);
+      ctx.stroke();
+    }
+
+    // Brown Hair Fringe
+    ctx.fillStyle = '#473322';
+    ctx.beginPath();
+    ctx.arc(-16, -26, 10, 0, Math.PI * 2);
+    ctx.arc(0, -28, 12, 0, Math.PI * 2);
+    ctx.arc(16, -26, 10, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 5. Signature Backwards Blue Baseball Cap!
+    ctx.fillStyle = '#1565c0'; // Cap Blue
+    ctx.beginPath();
+    ctx.arc(0, -24, 38, Math.PI, 0); // Cap dome
+    ctx.fill();
+
+    // Backwards Cap Brim (Sticking out behind)
+    ctx.fillStyle = '#0d47a1'; // Darker brim
+    ctx.beginPath();
+    ctx.ellipse(24, -20, 24, 8, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Top button on cap
+    ctx.fillStyle = '#fdd835'; // Yellow cap button
+    ctx.beginPath();
+    ctx.arc(0, -62, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+    ctx.restore();
+  }
+
+  drawVaseFront(ctx, scale) {
+    ctx.save();
+    ctx.scale(scale * this.vaseSquash, scale / this.vaseSquash);
+    ctx.rotate(this.vaseWobble);
+
+    const rimY = -70;
+    const rimW = 100;
+    const rimH = 26;
+    const vaseH = 190;
+
+    // 1. Ceramic Handles on Left and Right
+    ctx.lineWidth = 14;
+    ctx.strokeStyle = '#f59e0b'; // Gold Ceramic Handles
+    ctx.lineCap = 'round';
+
+    // Left Handle
+    ctx.beginPath();
+    ctx.arc(-95, -10, 36, 0.6 * Math.PI, 1.6 * Math.PI);
+    ctx.stroke();
+
+    // Right Handle
+    ctx.beginPath();
+    ctx.arc(95, -10, 36, -0.6 * Math.PI, 0.4 * Math.PI);
+    ctx.stroke();
+
+    // 2. Vase Body Outer Silhouette
+    const vaseGrad = ctx.createLinearGradient(-120, 0, 120, 0);
+    vaseGrad.addColorStop(0, '#0284c7');    // Royal Cyan-Blue
+    vaseGrad.addColorStop(0.35, '#38bdf8'); // Ceramic reflection highlight
+    vaseGrad.addColorStop(0.7, '#0284c7');
+    vaseGrad.addColorStop(1, '#0369a1');    // Shadow
+
+    ctx.fillStyle = vaseGrad;
+    ctx.beginPath();
+    // Start at left rim
+    ctx.moveTo(-rimW, rimY);
+    // Curve down into neck
+    ctx.bezierCurveTo(-rimW * 0.8, -40, -110, 0, -125, 45);
+    // Bulge of the amphora
+    ctx.bezierCurveTo(-135, 95, -100, vaseH - 20, -60, vaseH);
+    // Base pedestal
+    ctx.lineTo(60, vaseH);
+    // Rise up right side
+    ctx.bezierCurveTo(100, vaseH - 20, 135, 95, 125, 45);
+    ctx.bezierCurveTo(110, 0, rimW * 0.8, -40, rimW, rimY);
+    // Connect across front rim lip
+    ctx.ellipse(0, rimY, rimW, rimH, 0, 0, Math.PI);
+    ctx.closePath();
+    ctx.fill();
+
+    // 3. Ornate Golden Bands & Patterns
+    // Top Neck Band
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(-70, -32, 140, 10);
+
+    // Decorative Zig-zag on neck
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    for (let x = -65; x <= 65; x += 10) {
+      ctx.lineTo(x, (x % 20 === 0) ? -30 : -24);
+    }
+    ctx.stroke();
+
+    // 4. Center Golden Plaque ("NIVAS")
+    const plaqueY = 48;
+    ctx.save();
+    ctx.shadowColor = 'rgba(250, 204, 21, 0.7)';
+    ctx.shadowBlur = 18;
+
+    // Plaque background oval
+    const plaqueGrad = ctx.createRadialGradient(0, plaqueY, 10, 0, plaqueY, 75);
+    plaqueGrad.addColorStop(0, '#fef08a');
+    plaqueGrad.addColorStop(0.7, '#eab308');
+    plaqueGrad.addColorStop(1, '#ca8a04');
+
+    ctx.fillStyle = plaqueGrad;
+    ctx.beginPath();
+    ctx.ellipse(0, plaqueY, 78, 38, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.restore();
+
+    // Plaque Text: "NIVAS"
+    ctx.fillStyle = '#1e1b4b';
+    ctx.font = '800 28px "Fredoka", cursive, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('NIVAS', 0, plaqueY - 2);
+
+    // Little musical note decoration under NIVAS
+    ctx.fillStyle = '#4338ca';
+    ctx.font = '700 13px "Fredoka", cursive, sans-serif';
+    ctx.fillText('♫ IN A VASE ♫', 0, plaqueY + 18);
+
+    // 5. Lower Decorative Equalizer Waves on Vase
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    for (let x = -80; x <= 80; x += 5) {
+      const y = 120 + Math.sin(x * 0.12 + this.elapsed * 6) * 7;
+      if (x === -80) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // 6. Pedestal Base Trim
+    ctx.fillStyle = '#eab308';
+    ctx.beginPath();
+    ctx.roundRect(-68, vaseH - 6, 136, 18, [6, 6, 10, 10]);
+    ctx.fill();
+
+    // 7. Front Rim Lip (Completing 3D Ellipse Rim)
+    const rimGrad = ctx.createLinearGradient(-rimW, rimY, rimW, rimY);
+    rimGrad.addColorStop(0, '#f59e0b');
+    rimGrad.addColorStop(0.5, '#fde047');
+    rimGrad.addColorStop(1, '#f59e0b');
+
+    ctx.strokeStyle = rimGrad;
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.ellipse(0, rimY, rimW, rimH, 0, 0, Math.PI);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  drawNotes(ctx) {
+    this.notes.forEach(n => {
+      ctx.save();
+      ctx.translate(n.x, n.y);
+      ctx.rotate(n.rot);
+      ctx.fillStyle = n.color;
+      ctx.globalAlpha = Math.max(0, n.life);
+      ctx.font = `700 ${n.size}px "Fredoka", sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = n.color;
+      ctx.shadowBlur = 10;
+      ctx.fillText(n.symbol, 0, 0);
+      ctx.restore();
+    });
+  }
+
+  drawConfetti(ctx) {
+    this.confetti.forEach(c => {
+      ctx.save();
+      ctx.translate(c.x, c.y);
+      ctx.rotate((c.rotation * Math.PI) / 180);
+      ctx.fillStyle = c.color;
+      ctx.globalAlpha = Math.max(0, c.life);
+      ctx.fillRect(-c.size * 0.5, -c.size * 0.5, c.size, c.size * 0.6);
+      ctx.restore();
+    });
+  }
+
+  drawStageForeground(ctx, w, h) {
+    // Dynamic lens flare sparkles in top corners
+    const sparkleT = this.elapsed * 3;
+    const sAlpha = 0.5 + Math.sin(sparkleT) * 0.3;
+    ctx.fillStyle = `rgba(250, 204, 21, ${sAlpha})`;
+    ctx.font = '24px sans-serif';
+    ctx.fillText('✨', w * 0.15, h * 0.18);
+    ctx.fillText('⭐', w * 0.85, h * 0.15);
+  }
+
+  // Loop Control
+  start() {
+    if (this.running) return;
+    this.running = true;
+    this.lastTime = performance.now();
+    this.audio.startSequencer();
+
+    const loop = (now) => {
+      if (!this.running) return;
+      const dt = Math.min((now - this.lastTime) / 1000, 0.1);
+      this.lastTime = now;
+
+      this.update(dt);
+      this.draw();
+
+      this.updateTimelineUI();
+      this.rafId = requestAnimationFrame(loop);
+    };
+    this.rafId = requestAnimationFrame(loop);
+  }
+
+  pause() {
+    this.running = false;
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = 0;
+    }
+    this.audio.stopSequencer();
+  }
+
+  replay() {
+    this.elapsed = 0;
+    this.audio.currentStep = 0;
+    this.notes = [];
+    this.confetti = [];
+    this.triggerLeap();
+    if (!this.running) {
+      this.start();
+    }
+  }
+
+  updateTimelineUI() {
+    const curEl = document.getElementById('timeCurrent');
+    const progEl = document.getElementById('timelineProgress');
+    const handleEl = document.getElementById('timelineHandle');
+    if (!curEl || !progEl || !handleEl) return;
+
+    const pct = (this.elapsed / this.duration) * 100;
+    progEl.style.width = `${pct}%`;
+    handleEl.style.left = `${pct}%`;
+
+    const sec = Math.floor(this.elapsed);
+    curEl.textContent = `0:${sec.toString().padStart(2, '0')}`;
+  }
+
+  seek(ratio) {
+    this.elapsed = Math.max(0, Math.min(this.duration, ratio * this.duration));
+    this.audio.currentStep = Math.floor((this.elapsed / this.duration) * 32) % 32;
+    this.updateTimelineUI();
+  }
+}
+
+// App Initialization
+let scene = null;
+
+function initApp() {
+  const canvas = document.getElementById('dannyCanvas');
+  scene = new DannyGoVaseScene(canvas);
+
+  // Check URL parameters for child name or embed mode
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has('embed')) {
+    document.body.classList.add('embed');
+  }
+
+  const childInput = document.getElementById('childName');
+  if (childInput) {
+    if (urlParams.has('child')) {
+      childInput.value = urlParams.get('child');
+    }
+    scene.childName = childInput.value || 'Rockstar';
+    childInput.addEventListener('input', (e) => {
+      scene.childName = e.target.value.trim() || 'Rockstar';
+    });
+  }
+
+  // Handle window resizing
+  const onResize = () => scene.resize();
+  window.addEventListener('resize', onResize);
+  scene.resize();
+
+  // Play/Pause Button
+  const playPauseBtn = document.getElementById('playPauseBtn');
+  const playIcon = document.getElementById('playIcon');
+  const playLabel = document.getElementById('playLabel');
+
+  const togglePlay = () => {
+    if (scene.running) {
+      scene.pause();
+      playIcon.textContent = '▶';
+      playLabel.textContent = 'Play';
+    } else {
+      scene.start();
+      playIcon.textContent = '⏸';
+      playLabel.textContent = 'Pause';
+    }
+  };
+
+  playPauseBtn?.addEventListener('click', togglePlay);
+
+  // Replay
+  document.getElementById('replayBtn')?.addEventListener('click', () => {
+    scene.replay();
+    playIcon.textContent = '⏸';
+    playLabel.textContent = 'Pause';
+  });
+
+  // Fun Interactive triggers
+  document.getElementById('jumpBtn')?.addEventListener('click', () => scene.triggerLeap());
+  document.getElementById('wiggleBtn')?.addEventListener('click', () => scene.triggerWiggle());
+
+  // Beat Pads
+  document.getElementById('padKick')?.addEventListener('click', () => {
+    scene.audio.init();
+    scene.audio.playKick();
+    window.dispatchEvent(new CustomEvent('beat-kick'));
+  });
+
+  document.getElementById('padRim')?.addEventListener('click', () => {
+    scene.audio.init();
+    scene.audio.playVaseRim(null, 1.2);
+    window.dispatchEvent(new CustomEvent('beat-vase'));
+  });
+
+  document.getElementById('padChime')?.addEventListener('click', () => {
+    scene.audio.init();
+    scene.audio.playChime();
+    scene.spawnNote();
+  });
+
+  document.getElementById('padHorn')?.addEventListener('click', () => {
+    scene.audio.init();
+    scene.audio.playBrass();
+    scene.spawnConfettiBurst(12);
+  });
+
+  document.getElementById('padConfetti')?.addEventListener('click', () => {
+    scene.audio.init();
+    scene.audio.playBoing();
+    scene.spawnConfettiBurst(35);
+  });
+
+  // Sound Toggle & Initial Settings
+  const soundBtn = document.getElementById('soundToggleBtn');
+  let soundOn = true;
+
+  const soundParam = urlParams.get('sound');
+  if (soundParam === '0') {
+    soundOn = false;
+  } else if (soundParam === '1') {
+    soundOn = true;
+  } else {
+    try {
+      const savedSound = localStorage.getItem('nivas_celebration_sound');
+      if (savedSound === 'false') soundOn = false;
+    } catch (e) {}
+  }
+
+  scene.audio.setMuted(!soundOn);
+  if (soundBtn) {
+    soundBtn.textContent = soundOn ? '🔊 Sound: ON' : '🔇 Sound: MUTED';
+  }
+
+  soundBtn?.addEventListener('click', () => {
+    soundOn = !soundOn;
+    scene.audio.setMuted(!soundOn);
+    try {
+      localStorage.setItem('nivas_celebration_sound', soundOn ? 'true' : 'false');
+    } catch (e) {}
+    soundBtn.textContent = soundOn ? '🔊 Sound: ON' : '🔇 Sound: MUTED';
+  });
+
+  // Interactive Stage Taps
+  canvas.addEventListener('pointerdown', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const normX = x / rect.width;
+    const normY = y / rect.height;
+
+    // Audio unlock
+    scene.audio.init();
+
+    if (normX >= 0.35 && normX <= 0.65 && normY >= 0.22 && normY <= 0.82) {
+      if (normY < 0.52) {
+        // Tapped Danny Go!
+        scene.triggerLeap();
+      } else {
+        // Tapped the Vase Body / Rim!
+        scene.audio.playVaseRim(null, 1.25);
+        scene.spawnNote();
+        window.dispatchEvent(new CustomEvent('beat-vase'));
+      }
+    } else {
+      // Tapped side stage
+      scene.spawnConfettiBurst(14);
+      scene.spawnNote();
+      scene.audio.playChime();
+    }
+  });
+
+  // Keyboard Shortcuts
+  window.addEventListener('keydown', (e) => {
+    if (e.target && e.target.tagName === 'INPUT') return;
+    if (e.code === 'Space') {
+      e.preventDefault();
+      togglePlay();
+    } else if (e.key === 'j' || e.key === 'J') {
+      scene.triggerLeap();
+    } else if (e.key === 'w' || e.key === 'W') {
+      scene.triggerWiggle();
+    } else if (e.key === '1') {
+      document.getElementById('padKick')?.click();
+    } else if (e.key === '2') {
+      document.getElementById('padRim')?.click();
+    } else if (e.key === '3') {
+      document.getElementById('padChime')?.click();
+    } else if (e.key === '4') {
+      document.getElementById('padHorn')?.click();
+    } else if (e.key === '5') {
+      document.getElementById('padConfetti')?.click();
+    }
+  });
+
+  // Fullscreen
+  document.getElementById('fsBtn')?.addEventListener('click', () => {
+    const wrapper = document.getElementById('stageWrapper');
+    if (!document.fullscreenElement) {
+      wrapper?.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  });
+
+  // Timeline scrubber click
+  const scrubber = document.getElementById('timelineScrubber');
+  scrubber?.addEventListener('click', (e) => {
+    const rect = scrubber.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    scene.seek(ratio);
+  });
+
+  // Audio Gate / Autoplay barrier resolution
+  const soundGate = document.getElementById('soundGate');
+  const dismissGate = () => {
+    soundGate?.classList.add('dismissed');
+    scene.audio.init();
+    scene.start();
+    playIcon.textContent = '⏸';
+    playLabel.textContent = 'Pause';
+  };
+
+  soundGate?.addEventListener('click', dismissGate);
+
+  // Auto-start if embedded or in low-barrier environments
+  if (urlParams.has('embed') || urlParams.get('autoplay') === '1') {
+    soundGate?.classList.add('dismissed');
+    scene.audio.init();
+    scene.start();
+  }
+
+  // Tab visibility management (Pause when hidden)
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      if (scene.running) {
+        scene.pause();
+        playIcon.textContent = '▶';
+        playLabel.textContent = 'Play';
+      }
+    }
+  });
+
+  window.addEventListener('pagehide', () => {
+    scene.pause();
+    try { scene.audio.ctx?.close(); } catch (e) {}
+  });
+}
+
+window.addEventListener('DOMContentLoaded', initApp);
+</script>
+</body>
+</html>

@@ -1417,8 +1417,13 @@ class KidsDailyService:
         from google.genai import types
         import random
         import uuid
+        import os
 
-        client = genai.Client(api_key=api_key)
+        base_url = s.gemini_base_url or os.environ.get("GEMINI_BASE_URL") or os.environ.get("LITELLM_BASE_URL")
+        http_opts = {"api_version": "v1beta"}
+        if base_url:
+            http_opts["base_url"] = base_url.rstrip("/")
+        client = genai.Client(api_key=api_key, http_options=http_opts)
         history = self._get_recent_history(date_str, days_back=60)
         forbidden_words = history["used_words"]
         forbidden_word_list = history["used_word_list"]
@@ -1466,7 +1471,10 @@ class KidsDailyService:
             "CRITICAL: All 4 sections (Word, Fun Fact, 5yo Challenge, 9yo Challenge) MUST be completely fresh, unique, varied, kid-friendly, and specific to the designated themes."
         )
 
-        candidate_models = [model_name, "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-flash-latest"]
+        if base_url:
+            candidate_models = [model_name, "gemini-flash", "gemini-2.5-flash"]
+        else:
+            candidate_models = [model_name, "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-flash-latest"]
         unique_models = list(dict.fromkeys(candidate_models))
 
         # Validation feedback is supplied verbatim to the next attempt, so the

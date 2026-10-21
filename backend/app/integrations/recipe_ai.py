@@ -275,8 +275,13 @@ def calculate_nutrition_ai(title: str, servings: str, ingredients: list[str], st
 
     from google import genai
     from google.genai import types
+    import os
 
-    client = genai.Client(api_key=api_key)
+    base_url = s.gemini_base_url or os.environ.get("GEMINI_BASE_URL") or os.environ.get("LITELLM_BASE_URL")
+    http_opts = {"api_version": "v1beta"}
+    if base_url:
+        http_opts["base_url"] = base_url.rstrip("/")
+    client = genai.Client(api_key=api_key, http_options=http_opts)
 
     ingredients_text = "\n".join(f"- {ing}" for ing in ingredients) if ingredients else "None specified"
     steps_text = "\n".join(f"{i+1}. {step}" for i, step in enumerate(steps)) if steps else "None specified"
@@ -294,7 +299,10 @@ def calculate_nutrition_ai(title: str, servings: str, ingredients: list[str], st
         "total carbohydrate, dietary fiber, sugars, and protein per serving."
     )
 
-    models_to_try = [s.gemini_model, "gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.7-flash"]
+    if base_url:
+        models_to_try = [s.gemini_model, "gemini-flash", "gemini-2.5-flash"]
+    else:
+        models_to_try = [s.gemini_model, "gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.7-flash"]
     seen = set()
     models_to_try = [m for m in models_to_try if not (m in seen or seen.add(m))]
 
@@ -414,8 +422,13 @@ def gemini_extract(url: str, html: str) -> dict:
         raise RuntimeError("Site not supported by the scraper and GEMINI_API_KEY is not set")
     from google import genai
     from google.genai import types
+    import os
 
-    client = genai.Client(api_key=s.gemini_api_key)
+    base_url = s.gemini_base_url or os.environ.get("GEMINI_BASE_URL") or os.environ.get("LITELLM_BASE_URL")
+    http_opts = {"api_version": "v1beta"}
+    if base_url:
+        http_opts["base_url"] = base_url.rstrip("/")
+    client = genai.Client(api_key=s.gemini_api_key, http_options=http_opts)
     prompt = (
         "Extract the recipe from this web page content and standardize it.\n"
         "- Ingredients: one per entry, 'quantity unit ingredient (prep note)' form, "
@@ -426,7 +439,10 @@ def gemini_extract(url: str, html: str) -> dict:
         f"Source URL: {url}\n\nPAGE CONTENT:\n{_page_text(html)}"
     )
 
-    models_to_try = [s.gemini_model, "gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.7-flash"]
+    if base_url:
+        models_to_try = [s.gemini_model, "gemini-flash", "gemini-2.5-flash"]
+    else:
+        models_to_try = [s.gemini_model, "gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.7-flash"]
     seen = set()
     models_to_try = [m for m in models_to_try if not (m in seen or seen.add(m))]
 
