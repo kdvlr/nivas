@@ -109,14 +109,16 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!sadOptions) return
-    let duration = 6600
-    if (canvasRef.current) {
+    const isStorm = sadOptions.animation === 'storm'
+    const duration = isStorm ? 4400 : 7600
+
+    if (isStorm && canvasRef.current) {
       const runner = runSadAnimation(canvasRef.current, sadOptions)
       cleanupRef.current = runner.cleanup
-      duration = runner.durationMs
     }
+
     timersRef.current = [
-      setTimeout(() => setFading(true), Math.max(duration - 600, 0)),
+      setTimeout(() => setFading(true), Math.max(duration - 650, 0)),
       setTimeout(() => stop(), duration),
     ]
     return () => {
@@ -146,6 +148,17 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
                 typeof window !== 'undefined' && localStorage.getItem('nivas_celebration_sound') === 'true' ? '1' : '0'
               }`}
               title={active.label}
+              className="pointer-events-none h-full w-full border-0"
+            />
+          ) : sadOptions && sadOptions.animation !== 'storm' ? (
+            <iframe
+              key={`sad-icecream-${Date.now()}`}
+              src={`/celebrations/ice_cream_tragedy.html?embed=1&title=${encodeURIComponent(
+                sadOptions.title || 'Room Not Clean',
+              )}&points=${Math.abs(sadOptions.coinsLost ?? 10)}&sound=${
+                typeof window !== 'undefined' && localStorage.getItem('nivas_celebration_sound') === 'true' ? '1' : '0'
+              }`}
+              title="Ice Cream Tragedy"
               className="pointer-events-none h-full w-full border-0"
             />
           ) : (

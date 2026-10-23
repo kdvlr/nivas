@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ice Cream Tragedy · Chore Penalty Celebration</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800;900&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --primary: #f43f5e;
+      --primary-dark: #be123c;
+      --surface: #0f172a;
+      --card-bg: rgba(15, 23, 42, 0.92);
+      --border-glow: rgba(244, 63, 94, 0.5);
+      --text: #f8fafc;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      background: #0f172a;
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      min-height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Standalone Container Frame */
+    .app-wrapper {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .stage-container {
+      width: min(100vw, 1200px);
+      aspect-ratio: 16 / 9;
+      max-height: 90vh;
+      background: radial-gradient(circle at 50% 20%, #38bdf8 0%, #0284c7 40%, #0369a1 70%, #0f172a 100%);
+      border-radius: 28px;
+      overflow: hidden;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7), 0 0 40px rgba(244, 63, 94, 0.25);
+      position: relative;
+    }
+
+    svg#scene {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Standalone Control Bar */
+    .controls-bar {
+      position: absolute;
+      bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(12px);
+      padding: 8px 18px;
+      border-radius: 9999px;
+      z-index: 50;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .controls-bar button {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      font-family: 'Fredoka', cursive;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .controls-bar button:hover {
+      background: rgba(244, 63, 94, 0.25);
+      border-color: #f43f5e;
+      color: #fecdd3;
+      transform: translateY(-1px);
+    }
+
+    .controls-bar button.primary {
+      background: linear-gradient(135deg, #f43f5e, #be123c);
+      border-color: #fb7185;
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(244, 63, 94, 0.4);
+    }
+
+    .controls-bar .points-input-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #cbd5e1;
+      font-weight: 700;
+      font-family: 'Fredoka', cursive;
+    }
+
+    .controls-bar input[type="number"] {
+      width: 50px;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 6px;
+      color: #f43f5e;
+      font-weight: 800;
+      font-size: 14px;
+      text-align: center;
+      padding: 3px 0;
+      outline: none;
+    }
+
+    /* Embed Mode (Inside Celebration Modal / Fullscreen) */
+    body.embed {
+      background: transparent !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+    }
+
+    body.embed .controls-bar {
+      display: none !important;
+    }
+
+    body.embed .stage-container {
+      width: 100vw !important;
+      height: 100vh !important;
+      max-height: 100vh !important;
+      border-radius: 0 !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-wrapper">
+    <div class="stage-container">
+      <svg id="scene" viewBox="0 0 1200 675" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <!-- Background Gradients -->
+          <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#38bdf8" />
+            <stop offset="55%" stop-color="#bae6fd" />
+            <stop offset="100%" stop-color="#fef08a" />
+          </linearGradient>
+
+          <linearGradient id="duskSkyGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#1e1b4b" />
+            <stop offset="50%" stop-color="#312e81" />
+            <stop offset="85%" stop-color="#4c1d95" />
+            <stop offset="100%" stop-color="#831843" />
+          </linearGradient>
+
+          <linearGradient id="hill1Grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#4ade80" />
+            <stop offset="100%" stop-color="#16a34a" />
+          </linearGradient>
+
+          <linearGradient id="hill2Grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#86efac" />
+            <stop offset="100%" stop-color="#22c55e" />
+          </linearGradient>
+
+          <linearGradient id="sidewalkGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#f1f5f9" />
+            <stop offset="10%" stop-color="#e2e8f0" />
+            <stop offset="100%" stop-color="#cbd5e1" />
+          </linearGradient>
+
+          <!-- Ice Cream & Waffle Gradients -->
+          <linearGradient id="coneGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#fcd34d" />
+            <stop offset="45%" stop-color="#f59e0b" />
+            <stop offset="100%" stop-color="#b45309" />
+          </linearGradient>
+
+          <linearGradient id="strawberryGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#fda4af" />
+            <stop offset="40%" stop-color="#fb7185" />
+            <stop offset="100%" stop-color="#e11d48" />
+          </linearGradient>
+
+          <linearGradient id="mintGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#a7f3d0" />
+            <stop offset="50%" stop-color="#34d399" />
+            <stop offset="100%" stop-color="#059669" />
+          </linearGradient>
+
+          <linearGradient id="vanillaGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#fef9c3" />
+            <stop offset="50%" stop-color="#fef08a" />
+            <stop offset="100%" stop-color="#fde047" />
+          </linearGradient>
+
+          <!-- Kid Shading Gradients -->
+          <linearGradient id="skinGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#fed7aa" />
+            <stop offset="100%" stop-color="#fdba74" />
+          </linearGradient>
+
+          <linearGradient id="hairGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#78350f" />
+            <stop offset="100%" stop-color="#451a03" />
+          </linearGradient>
+
+          <linearGradient id="shirtGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#fde047" />
+            <stop offset="100%" stop-color="#eab308" />
+          </linearGradient>
+
+          <linearGradient id="shortsGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#38bdf8" />
+            <stop offset="100%" stop-color="#0284c7" />
+          </linearGradient>
+
+          <!-- Storm Cloud Gradient -->
+          <linearGradient id="cloudGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#64748b" />
+            <stop offset="50%" stop-color="#475569" />
+            <stop offset="100%" stop-color="#334155" />
+          </linearGradient>
+
+          <!-- Filter for Glows -->
+          <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="8" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+        </defs>
+
+        <!-- 1. SKY & BACKGROUND -->
+        <rect id="bgSky" width="1200" height="675" fill="url(#skyGrad)" />
+
+        <!-- Distant Clouds -->
+        <g id="distantClouds" opacity="0.85">
+          <path d="M 120 130 q 30 -40 80 -30 q 50 -35 100 -10 q 50 -15 80 25 q 40 10 35 45 q -20 40 -80 35 l -180 0 q -50 0 -45 -40 z" fill="#ffffff" />
+          <path d="M 780 160 q 25 -30 65 -25 q 40 -30 80 -10 q 40 -10 65 20 q 30 10 30 35 q -15 35 -65 30 l -145 0 q -40 0 -35 -35 z" fill="#ffffff" opacity="0.75" />
+        </g>
+
+        <!-- Rolling Green Hills -->
+        <path d="M -50 480 Q 250 360 600 440 T 1250 410 L 1250 675 L -50 675 Z" fill="url(#hill2Grad)" />
+        <path d="M -50 490 Q 380 430 820 480 T 1250 470 L 1250 675 L -50 675 Z" fill="url(#hill1Grad)" />
+
+        <!-- Distant Trees & Park Fence -->
+        <g id="parkDeco" opacity="0.6">
+          <circle cx="160" cy="420" r="45" fill="#15803d" />
+          <circle cx="210" cy="405" r="55" fill="#166534" />
+          <circle cx="1020" cy="430" r="50" fill="#15803d" />
+          <circle cx="1075" cy="415" r="60" fill="#166534" />
+        </g>
+
+        <!-- Paved Sidewalk -->
+        <rect x="0" y="525" width="1200" height="150" fill="url(#sidewalkGrad)" />
+        <line x1="0" y1="525" x2="1200" y2="525" stroke="#94a3b8" stroke-width="5" />
+        <line x1="240" y1="525" x2="190" y2="675" stroke="#cbd5e1" stroke-width="2.5" />
+        <line x1="560" y1="525" x2="520" y2="675" stroke="#cbd5e1" stroke-width="2.5" />
+        <line x1="880" y1="525" x2="850" y2="675" stroke="#cbd5e1" stroke-width="2.5" />
+
+        <!-- Dark Mood Dimmer Overlay (fades in on calamity) -->
+        <rect id="moodOverlay" width="1200" height="675" fill="#0f172a" opacity="0" pointer-events="none" />
+
+        <!-- 2. STAGE FLOOR SHADOWS -->
+        <ellipse id="kidShadow" cx="600" cy="545" rx="90" ry="16" fill="rgba(15, 23, 42, 0.4)" />
+        <ellipse id="splatShadow" cx="715" cy="542" rx="0" ry="0" fill="rgba(15, 23, 42, 0.3)" />
+
+        <!-- 3. SPLATTED ICE CREAM POOL ON GROUND (Revealed at Splat) -->
+        <g id="splatGroup" opacity="0" transform="translate(710, 538)">
+          <!-- Splat Shockwave Ring -->
+          <circle id="splatShockwave" cx="0" cy="0" r="0" fill="none" stroke="#f43f5e" stroke-width="6" opacity="0" />
+          <!-- Strawberry Splat Base -->
+          <path d="M -65 0 C -75 -15, -45 -22, -25 -15 C -5 -25, 25 -25, 45 -12 C 75 -20, 80 5, 65 14 C 45 24, 15 22, -5 18 C -35 25, -60 18, -65 0 Z" fill="#e11d48" />
+          <path d="M -50 -3 C -58 -12, -35 -16, -20 -10 C -5 -18, 20 -18, 35 -8 C 55 -12, 60 4, 48 10 C 35 17, 10 16, -5 12 C -25 18, -45 12, -50 -3 Z" fill="#fb7185" />
+          <!-- Mint Scoop Debris -->
+          <ellipse cx="-25" cy="4" rx="22" ry="11" fill="#059669" />
+          <ellipse cx="-22" cy="2" rx="16" ry="8" fill="#34d399" />
+          <!-- Vanilla Splats -->
+          <circle cx="35" cy="6" r="10" fill="#fde047" />
+          <!-- Sprinkles scattered -->
+          <rect x="-35" y="-6" width="9" height="3.5" rx="1.7" transform="rotate(32 -35 -6)" fill="#ffffff" />
+          <rect x="18" y="-4" width="9" height="3.5" rx="1.7" transform="rotate(-40 18 -4)" fill="#38bdf8" />
+          <rect x="42" y="8" width="9" height="3.5" rx="1.7" transform="rotate(15 42 8)" fill="#a855f7" />
+          <rect x="-10" y="10" width="9" height="3.5" rx="1.7" transform="rotate(85 -10 10)" fill="#fde047" />
+          <!-- Fallen Cherry with stem -->
+          <circle cx="58" cy="-2" r="11" fill="#9f1239" />
+          <circle cx="55" cy="-5" r="3.5" fill="#f43f5e" />
+          <path d="M 58 -12 Q 72 -28 66 -35" fill="none" stroke="#78350f" stroke-width="2.5" stroke-linecap="round" />
+        </g>
+
+        <!-- Flying Splat Droplets Layer -->
+        <g id="splatDroplets"></g>
+
+        <!-- 4. THE KID (CHARACTER RIG) -->
+        <g id="kidCharacter" transform="translate(600, 360)">
+          <!-- Legs & Sneakers -->
+          <g id="kidLegs">
+            <!-- Left Leg -->
+            <rect x="-42" y="115" width="28" height="48" rx="8" fill="url(#shortsGrad)" />
+            <rect x="-36" y="152" width="18" height="24" fill="url(#skinGrad)" />
+            <!-- Left Sneaker -->
+            <path d="M -46 172 L -12 172 C -8 172, -6 178, -6 182 L -48 182 C -48 176, -46 172, -46 172 Z" fill="#e11d48" />
+            <rect x="-48" y="180" width="44" height="6" rx="2" fill="#ffffff" />
+            <circle cx="-16" cy="176" r="3" fill="#ffffff" />
+
+            <!-- Right Leg -->
+            <rect x="14" y="115" width="28" height="48" rx="8" fill="url(#shortsGrad)" />
+            <rect x="20" y="152" width="18" height="24" fill="url(#skinGrad)" />
+            <!-- Right Sneaker -->
+            <path d="M 12 172 L 46 172 C 50 172, 52 178, 52 182 L 10 182 C 10 176, 12 172, 12 172 Z" fill="#e11d48" />
+            <rect x="10" y="180" width="44" height="6" rx="2" fill="#ffffff" />
+            <circle cx="42" cy="176" r="3" fill="#ffffff" />
+          </g>
+
+          <!-- Torso & T-Shirt -->
+          <g id="kidTorso">
+            <path d="M -48 45 L 48 45 L 56 125 L -56 125 Z" fill="url(#shirtGrad)" />
+            <!-- T-Shirt Sleeves -->
+            <path d="M -48 45 L -72 82 L -50 92 L -35 55 Z" fill="#eab308" />
+            <path d="M 48 45 L 72 82 L 50 92 L 35 55 Z" fill="#eab308" />
+            <!-- Star Graphic on Chest -->
+            <polygon points="0,68 4,80 16,80 7,88 10,100 0,92 -10,100 -7,88 -16,80 -4,80" fill="#f97316" />
+          </g>
+
+          <!-- Head & Neck -->
+          <g id="kidHead" transform="translate(0, 0)">
+            <!-- Neck -->
+            <rect x="-16" y="25" width="32" height="25" rx="6" fill="url(#skinGrad)" />
+
+            <!-- Head Base Oval -->
+            <ellipse cx="0" cy="-10" rx="62" ry="58" fill="url(#skinGrad)" />
+
+            <!-- Cute Big Ears -->
+            <circle cx="-62" cy="-8" r="14" fill="url(#skinGrad)" />
+            <circle cx="-62" cy="-8" r="8" fill="#fda4af" opacity="0.6" />
+            <circle cx="62" cy="-8" r="14" fill="url(#skinGrad)" />
+            <circle cx="62" cy="-8" r="8" fill="#fda4af" opacity="0.6" />
+
+            <!-- Rosy Cheeks -->
+            <ellipse cx="-34" cy="6" rx="14" ry="9" fill="#fb7185" opacity="0.45" />
+            <ellipse cx="34" cy="6" rx="14" ry="9" fill="#fb7185" opacity="0.45" />
+
+            <!-- Nose -->
+            <path d="M -4 2 Q 0 8 4 2" fill="none" stroke="#ea580c" stroke-width="2.8" stroke-linecap="round" />
+
+            <!-- Fluffy Stylish Hair -->
+            <path d="M -62 -22 C -66 -65, -30 -75, 0 -75 C 35 -75, 68 -62, 64 -20 C 58 -28, 48 -35, 35 -38 C 20 -42, -5 -40, -25 -32 C -42 -24, -55 -20, -62 -22 Z" fill="url(#hairGrad)" />
+            <!-- Extra Hair Bang Tufts -->
+            <path d="M -22 -62 Q -12 -85 8 -70 Q 2 -55 -8 -50 Z" fill="#5c2606" />
+            <path d="M 12 -65 Q 26 -86 42 -66 Q 30 -52 18 -50 Z" fill="#5c2606" />
+            <path d="M -48 -45 Q -65 -60 -40 -62 Z" fill="#5c2606" />
+
+            <!-- FACIAL EXPRESSIONS (Switched via code) -->
+            <!-- 1. Happy Face (Act 1) -->
+            <g id="faceHappy">
+              <!-- Happy Curved Eyes `^ ^` -->
+              <path d="M -36 -14 Q -24 -28 -12 -14" fill="none" stroke="#1e293b" stroke-width="4.5" stroke-linecap="round" />
+              <path d="M 12 -14 Q 24 -28 36 -14" fill="none" stroke="#1e293b" stroke-width="4.5" stroke-linecap="round" />
+              <!-- Sweet Smiling Mouth with licking tongue -->
+              <path d="M -18 16 Q 0 35 22 16" fill="#be123c" stroke="#881337" stroke-width="2.5" />
+              <!-- Pink Licking Tongue (pokes out to right) -->
+              <path id="lickingTongue" d="M 6 18 Q 28 14 30 24 Q 20 32 8 26 Z" fill="#fb7185" stroke="#f43f5e" stroke-width="1.5" />
+            </g>
+
+            <!-- 2. Shocked Face (Act 2 - Scoop slips) -->
+            <g id="faceShocked" opacity="0">
+              <!-- Huge Eyebrows Raised -->
+              <path d="M -36 -38 Q -24 -46 -12 -38" fill="none" stroke="#451a03" stroke-width="4" stroke-linecap="round" />
+              <path d="M 12 -38 Q 24 -46 36 -38" fill="none" stroke="#451a03" stroke-width="4" stroke-linecap="round" />
+              <!-- Giant Bug-Eyes `O O` -->
+              <ellipse cx="-24" cy="-14" rx="17" ry="20" fill="#ffffff" stroke="#1e293b" stroke-width="3" />
+              <ellipse cx="24" cy="-14" rx="17" ry="20" fill="#ffffff" stroke="#1e293b" stroke-width="3" />
+              <circle cx="-24" cy="-14" r="6" fill="#0f172a" />
+              <circle cx="-21" cy="-17" r="2.5" fill="#ffffff" />
+              <circle cx="24" cy="-14" r="6" fill="#0f172a" />
+              <circle cx="27" cy="-17" r="2.5" fill="#ffffff" />
+              <!-- Dropped "O" Mouth -->
+              <ellipse cx="0" cy="22" rx="13" ry="18" fill="#881337" stroke="#4c0519" stroke-width="3" />
+            </g>
+
+            <!-- 3. Crying Face (Act 3, 4, 5 - Screaming weeping) -->
+            <g id="faceCrying" opacity="0">
+              <!-- Eyebrows furrowed in pain -->
+              <path d="M -36 -28 L -14 -35" stroke="#451a03" stroke-width="4" stroke-linecap="round" />
+              <path d="M 36 -28 L 14 -35" stroke="#451a03" stroke-width="4" stroke-linecap="round" />
+              <!-- Squeezed Weeping Eyes `> <` -->
+              <path d="M -36 -22 L -18 -12 L -36 -2" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M 36 -22 L 18 -12 L 36 -2" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+              <!-- Big Open Wailing Mouth `D:` -->
+              <path d="M -24 14 Q 0 8 24 14 Q 28 38 0 42 Q -28 38 -24 14 Z" fill="#881337" stroke="#4c0519" stroke-width="3" />
+              <!-- Vibrating Uvula / Tongue -->
+              <ellipse cx="0" cy="34" rx="11" ry="6" fill="#f43f5e" />
+            </g>
+          </g>
+
+          <!-- ARMS RIGGING -->
+          <!-- Normal Happy Arm Position (Holds cone close to mouth) -->
+          <g id="armsHappy">
+            <!-- Left hand holding cone base -->
+            <path d="M -52 75 Q -30 95 18 80" fill="none" stroke="url(#skinGrad)" stroke-width="20" stroke-linecap="round" />
+            <!-- Right hand wrapped around cone -->
+            <path d="M 52 75 Q 40 85 24 75" fill="none" stroke="url(#skinGrad)" stroke-width="20" stroke-linecap="round" />
+          </g>
+
+          <!-- SPREAD ARMS IN UTTER DESPAIR (Act 3 & 4) -->
+          <g id="armsDespair" opacity="0">
+            <!-- Right Arm Flailing Out to Right -->
+            <path id="armRightDespair" d="M 45 65 Q 95 60 145 70" fill="none" stroke="url(#skinGrad)" stroke-width="19" stroke-linecap="round" />
+            <!-- Open palm fingers on right hand -->
+            <g id="handRightOpen" transform="translate(145, 70)">
+              <circle cx="0" cy="0" r="11" fill="url(#skinGrad)" />
+              <circle cx="12" cy="-6" r="4.5" fill="url(#skinGrad)" />
+              <circle cx="15" cy="1" r="4.5" fill="url(#skinGrad)" />
+              <circle cx="13" cy="8" r="4.5" fill="url(#skinGrad)" />
+              <circle cx="8" cy="14" r="4" fill="url(#skinGrad)" />
+            </g>
+
+            <!-- Left Arm Stretched to Left Holding Empty Cone -->
+            <path id="armLeftDespair" d="M -45 65 Q -95 60 -135 68" fill="none" stroke="url(#skinGrad)" stroke-width="19" stroke-linecap="round" />
+            <g id="handLeftGrip" transform="translate(-135, 68)">
+              <circle cx="0" cy="0" r="11" fill="url(#skinGrad)" />
+            </g>
+          </g>
+        </g> <!-- End Kid -->
+
+        <!-- 5. WAFFLE CONE & SCOOPS RIG -->
+        <!-- In Hand (Follows Kid or Kid's Left Hand) -->
+        <g id="waffleConeGroup" transform="translate(628, 410)">
+          <!-- Waffle Cone -->
+          <polygon points="-22,0 22,0 0,68" fill="url(#coneGrad)" stroke="#92400e" stroke-width="2" />
+          <!-- Waffle Pattern Crosshatches -->
+          <line x1="-15" y1="12" x2="10" y2="35" stroke="#92400e" stroke-width="2" opacity="0.75" />
+          <line x1="15" y1="12" x2="-10" y2="35" stroke="#92400e" stroke-width="2" opacity="0.75" />
+          <line x1="-9" y1="30" x2="6" y2="48" stroke="#92400e" stroke-width="2" opacity="0.75" />
+          <line x1="9" y1="30" x2="-6" y2="48" stroke="#92400e" stroke-width="2" opacity="0.75" />
+          <!-- Cone Crispy Lip -->
+          <ellipse cx="0" cy="0" rx="23" ry="7" fill="#d97706" stroke="#92400e" stroke-width="2" />
+
+          <!-- GLORIOUS TOWER OF ICE CREAM SCOOPS (Detaches at Fall) -->
+          <g id="scoopTower" transform="translate(0, 0)">
+            <!-- Bottom Mint Scoop -->
+            <circle cx="-2" cy="-14" r="24" fill="url(#mintGrad)" />
+            <!-- Chocolate chips on mint -->
+            <circle cx="-12" cy="-10" r="2.5" fill="#451a03" />
+            <circle cx="6" cy="-8" r="2" fill="#451a03" />
+            <circle cx="-4" cy="-22" r="2.2" fill="#451a03" />
+
+            <!-- Middle Vanilla Scoop -->
+            <circle cx="2" cy="-36" r="25" fill="url(#vanillaGrad)" />
+
+            <!-- Top Giant Strawberry Scoop -->
+            <circle cx="0" cy="-60" r="27" fill="url(#strawberryGrad)" />
+            <!-- Strawberry Drips hanging down -->
+            <path d="M -18 -48 Q -16 -32 -13 -32 Q -10 -32 -8 -48" fill="#e11d48" />
+            <path d="M 8 -46 Q 12 -28 15 -28 Q 18 -28 20 -46" fill="#e11d48" />
+
+            <!-- Shiny Glaze Highlight -->
+            <path d="M -16 -75 A 22 22 0 0 1 12 -75" fill="none" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round" opacity="0.6" />
+
+            <!-- Rainbow Sprinkles on Top -->
+            <rect x="-14" y="-68" width="8" height="3" rx="1.5" transform="rotate(25 -14 -68)" fill="#ffffff" />
+            <rect x="2" y="-74" width="8" height="3" rx="1.5" transform="rotate(-30 2 -74)" fill="#38bdf8" />
+            <rect x="14" y="-62" width="8" height="3" rx="1.5" transform="rotate(45 14 -62)" fill="#a855f7" />
+            <rect x="-8" y="-56" width="8" height="3" rx="1.5" transform="rotate(10 -8 -56)" fill="#fde047" />
+
+            <!-- Big Shiny Red Cherry on Top! -->
+            <circle cx="0" cy="-90" r="11" fill="#9f1239" />
+            <circle cx="-3" cy="-93" r="3.5" fill="#f43f5e" />
+            <path d="M 0 -101 Q 16 -120 10 -126" fill="none" stroke="#78350f" stroke-width="2.8" stroke-linecap="round" />
+          </g>
+        </g>
+
+        <!-- 6. TEAR FOUNTAIN STREAM PARTICLES (Dynamic SVG elements) -->
+        <g id="tearFountainLayer"></g>
+
+        <!-- 7. PERSONAL RAIN CLOUD OVER KID (Act 4 & 5) -->
+        <g id="personalCloud" opacity="0" transform="translate(600, 180)">
+          <!-- Dark Storm Cloud -->
+          <path d="M -70 15 Q -90 -10 -65 -35 Q -70 -70 -30 -75 Q 0 -95 40 -70 Q 80 -80 85 -40 Q 110 -25 95 15 Z" fill="url(#cloudGrad)" />
+          <!-- Cloud Eyes (sad > <) -->
+          <path d="M -28 -22 L -18 -15 L -28 -8" stroke="#1e293b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+          <path d="M 28 -22 L 18 -15 L 28 -8" stroke="#1e293b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+          <!-- Cloud Raindrops (falling down toward kid) -->
+          <g id="cloudDrops">
+            <line x1="-35" y1="20" x2="-40" y2="45" stroke="#60a5fa" stroke-width="3" stroke-linecap="round" opacity="0.8" />
+            <line x1="-5" y1="25" x2="-10" y2="55" stroke="#60a5fa" stroke-width="3" stroke-linecap="round" opacity="0.8" />
+            <line x1="25" y1="18" x2="20" y2="48" stroke="#60a5fa" stroke-width="3" stroke-linecap="round" opacity="0.8" />
+          </g>
+        </g>
+
+        <!-- 8. THE MISCHIEVOUS CARTOON BIRD (THE SEAGULL YOINK!) -->
+        <g id="seagullBird" opacity="0" transform="translate(1300, 120)">
+          <!-- Bird Body -->
+          <ellipse cx="0" cy="0" rx="34" ry="18" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" />
+          <ellipse cx="0" cy="4" rx="28" ry="12" fill="#f1f5f9" />
+
+          <!-- Flapping Wings -->
+          <g id="seagullWingLeft">
+            <path d="M -8 -8 C -15 -35, 10 -45, 18 -55 C 22 -45, 15 -25, 12 -5 Z" fill="#64748b" stroke="#334155" stroke-width="2" />
+            <!-- Dark Wingtips -->
+            <path d="M 10 -42 C 16 -50, 18 -55, 18 -55 C 22 -45, 17 -35, 12 -30 Z" fill="#1e293b" />
+          </g>
+
+          <!-- Head & Beak -->
+          <circle cx="28" cy="-6" r="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+          <!-- Cheeky Eyebrow & Beady Pupil -->
+          <path d="M 24 -14 Q 32 -18 35 -13" fill="none" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round" />
+          <circle cx="30" cy="-8" r="3.2" fill="#0f172a" />
+          <circle cx="32" cy="-9" r="1" fill="#ffffff" />
+
+          <!-- Bright Yellow Beak (Clamps the cone!) -->
+          <polygon points="38,-10 58,-4 38,4" fill="#f59e0b" stroke="#d97706" stroke-width="1.5" />
+          <!-- Red spot on gull beak -->
+          <circle cx="48" cy="0" r="2.5" fill="#dc2626" />
+
+          <!-- Webbed Orange Feet tucked in -->
+          <path d="M -12 16 L -6 24 L 2 24 L 0 16" fill="#f97316" />
+
+          <!-- STOLEN CONE IN BEAK (Shown once stolen!) -->
+          <g id="stolenConeInBeak" opacity="0" transform="translate(48, 5) rotate(48)">
+            <polygon points="-14,0 14,0 0,44" fill="url(#coneGrad)" stroke="#92400e" stroke-width="1.5" />
+            <ellipse cx="0" cy="0" rx="15" ry="4" fill="#d97706" />
+          </g>
+        </g>
+
+        <!-- 9. FINAL GAME-SHOW PENALTY BANNER (Act 5 & 6) -->
+        <g id="penaltyBanner" opacity="0" transform="translate(600, -180)">
+          <!-- Glass Card Plate -->
+          <rect x="-340" y="-70" width="680" height="150" rx="32" fill="var(--card-bg)" stroke="#f43f5e" stroke-width="3.5" filter="url(#softGlow)" />
+          <rect x="-338" y="-68" width="676" height="146" rx="30" fill="none" stroke="rgba(255, 255, 255, 0.2)" stroke-width="1.5" />
+
+          <!-- Top Red Alert Pill Badge -->
+          <g transform="translate(0, -70)">
+            <rect x="-140" y="-18" width="280" height="36" rx="18" fill="#be123c" stroke="#f43f5e" stroke-width="2" />
+            <text id="bannerChoreTag" x="0" y="5" text-anchor="middle" fill="#ffffff" font-family="'Outfit', sans-serif" font-weight="900" font-size="14" letter-spacing="1.5">
+              ⚠️ ROOM NOT CLEAN
+            </text>
+          </g>
+
+          <!-- MAIN PROMPT INSTRUCTION TITLE: "Removed x points from your account" -->
+          <text id="bannerTitle" x="0" y="0" text-anchor="middle" fill="#ffffff" font-family="'Outfit', sans-serif" font-weight="900" font-size="28" letter-spacing="-0.5">
+            Removed 10 points from your account
+          </text>
+
+          <!-- Points Lost Badge Pill with Broken Coin Icon -->
+          <g transform="translate(0, 42)">
+            <rect x="-160" y="-16" width="320" height="34" rx="17" fill="rgba(244, 63, 94, 0.2)" stroke="#f43f5e" stroke-width="1.8" />
+            <text id="bannerSubtitle" x="0" y="7" text-anchor="middle" fill="#fda4af" font-family="'Fredoka', cursive" font-weight="700" font-size="16">
+              −10 🪙 💔  Clean up next time to get them back!
+            </text>
+          </g>
+        </g>
+      </svg>
+    </div>
+
+    <!-- Standalone Controls (Auto-hidden in embed mode) -->
+    <div class="controls-bar">
+      <div class="points-input-group">
+        <label for="pointsInput">Penalty:</label>
+        <input type="number" id="pointsInput" value="10" min="1" max="100" />
+        <span>pts</span>
+      </div>
+      <button id="soundBtn">🔊 Sound: ON</button>
+      <button id="replayBtn" class="primary">↻ Replay</button>
+    </div>
+  </div>
+
+  <script>
+    'use strict';
+
+    // -------------------------------------------------------------------------
+    // PARAMS & SETTINGS
+    // -------------------------------------------------------------------------
+    const urlParams = new URLSearchParams(window.location.search);
+    const isEmbed = urlParams.has('embed') || window.location.hash.includes('embed');
+    if (isEmbed) document.body.classList.add('embed');
+
+    let choreTitle = urlParams.get('title') || 'Room Not Clean';
+    let pointsLost = Math.abs(parseInt(urlParams.get('points'), 10) || 10);
+    let soundEnabled = urlParams.get('sound') !== '0' && localStorage.getItem('nivas_celebration_sound') !== 'false';
+
+    const pointsInput = document.getElementById('pointsInput');
+    if (pointsInput) {
+      pointsInput.value = pointsLost;
+      pointsInput.addEventListener('change', (e) => {
+        pointsLost = Math.max(1, Math.abs(parseInt(e.target.value, 10) || 10));
+        updateBannerText();
+      });
+    }
+
+    const soundBtn = document.getElementById('soundBtn');
+    if (soundBtn) {
+      soundBtn.textContent = soundEnabled ? '🔊 Sound: ON' : '🔇 Sound: OFF';
+      soundBtn.addEventListener('click', () => {
+        soundEnabled = !soundEnabled;
+        soundBtn.textContent = soundEnabled ? '🔊 Sound: ON' : '🔇 Sound: OFF';
+        localStorage.setItem('nivas_celebration_sound', soundEnabled ? 'true' : 'false');
+      });
+    }
+
+    // -------------------------------------------------------------------------
+    // PROCEDURAL WEB AUDIO SYNTHESIZER
+    // -------------------------------------------------------------------------
+    let audioCtx = null;
+
+    function getAudioContext() {
+      if (!audioCtx && typeof window !== 'undefined') {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) audioCtx = new AudioContextClass();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+      }
+      return audioCtx;
+    }
+
+    function playTone(freq, type, start, dur, startGain = 0.2, endGain = 0.001) {
+      if (!soundEnabled) return;
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+      gain.gain.setValueAtTime(0, ctx.currentTime + start);
+      gain.gain.linearRampToValueAtTime(startGain, ctx.currentTime + start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(endGain, ctx.currentTime + start + dur);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + start);
+      osc.stop(ctx.currentTime + start + dur + 0.05);
+    }
+
+    function playSlideWhistle(startFreq, endFreq, start, dur) {
+      if (!soundEnabled) return;
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(startFreq, ctx.currentTime + start);
+      osc.frequency.exponentialRampToValueAtTime(endFreq, ctx.currentTime + start + dur);
+      gain.gain.setValueAtTime(0, ctx.currentTime + start);
+      gain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + start + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + start);
+      osc.stop(ctx.currentTime + start + dur + 0.05);
+    }
+
+    function playWetSplat(start) {
+      if (!soundEnabled) return;
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      // Low punchy impact
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(150, ctx.currentTime + start);
+      osc.frequency.exponentialRampToValueAtTime(38, ctx.currentTime + start + 0.22);
+      gain.gain.setValueAtTime(0.4, ctx.currentTime + start);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + 0.28);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + start);
+      osc.stop(ctx.currentTime + start + 0.3);
+
+      // Squish high pop
+      const pop = ctx.createOscillator();
+      const popGain = ctx.createGain();
+      pop.type = 'sine';
+      pop.frequency.setValueAtTime(450, ctx.currentTime + start);
+      pop.frequency.exponentialRampToValueAtTime(110, ctx.currentTime + start + 0.14);
+      popGain.gain.setValueAtTime(0.3, ctx.currentTime + start);
+      popGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + 0.18);
+      pop.connect(popGain);
+      popGain.connect(ctx.destination);
+      pop.start(ctx.currentTime + start);
+      pop.stop(ctx.currentTime + start + 0.2);
+    }
+
+    function playWahWahCrying(start) {
+      if (!soundEnabled) return;
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      // Classic cartoon crying descending wah-wah notes
+      const notes = [
+        { f: 392, d: 0.32, bend: null },
+        { f: 369, d: 0.32, bend: null },
+        { f: 349, d: 0.35, bend: null },
+        { f: 329, d: 1.25, bend: 261 }, // F4 to C4 slide
+      ];
+      let offset = start;
+      notes.forEach((n) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(900, ctx.currentTime + offset);
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(n.f, ctx.currentTime + offset);
+        if (n.bend) {
+          osc.frequency.setValueAtTime(n.f, ctx.currentTime + offset + 0.3);
+          osc.frequency.exponentialRampToValueAtTime(n.bend, ctx.currentTime + offset + n.d);
+        }
+
+        gain.gain.setValueAtTime(0, ctx.currentTime + offset);
+        gain.gain.linearRampToValueAtTime(0.24, ctx.currentTime + offset + 0.04);
+        gain.gain.setValueAtTime(0.22, ctx.currentTime + offset + n.d - 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + offset + n.d);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + offset);
+        osc.stop(ctx.currentTime + offset + n.d + 0.05);
+
+        offset += n.d + 0.06;
+      });
+    }
+
+    function playBirdYoink(start) {
+      if (!soundEnabled) return;
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      // Flutter swoosh
+      playSlideWhistle(1200, 3200, start, 0.25);
+      // Cheeky gull chirp
+      playTone(2800, 'triangle', start + 0.22, 0.12, 0.25);
+      // Pop as cone is snatched
+      playTone(650, 'sine', start + 0.28, 0.09, 0.35);
+    }
+
+    function playPenaltyGong(start) {
+      if (!soundEnabled) return;
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(146.83, ctx.currentTime + start); // D3
+      gain.gain.setValueAtTime(0, ctx.currentTime + start);
+      gain.gain.linearRampToValueAtTime(0.35, ctx.currentTime + start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + 1.8);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + start);
+      osc.stop(ctx.currentTime + start + 1.9);
+    }
+
+    // -------------------------------------------------------------------------
+    // ANIMATION ENGINE & TIMELINE
+    // -------------------------------------------------------------------------
+    const DURATION = 7.2; // total seconds
+
+    const scene = document.getElementById('scene');
+    const moodOverlay = document.getElementById('moodOverlay');
+    const kidCharacter = document.getElementById('kidCharacter');
+    const kidHead = document.getElementById('kidHead');
+    const faceHappy = document.getElementById('faceHappy');
+    const faceShocked = document.getElementById('faceShocked');
+    const faceCrying = document.getElementById('faceCrying');
+    const armsHappy = document.getElementById('armsHappy');
+    const armsDespair = document.getElementById('armsDespair');
+    const waffleConeGroup = document.getElementById('waffleConeGroup');
+    const scoopTower = document.getElementById('scoopTower');
+    const splatGroup = document.getElementById('splatGroup');
+    const splatShockwave = document.getElementById('splatShockwave');
+    const splatDroplets = document.getElementById('splatDroplets');
+    const personalCloud = document.getElementById('personalCloud');
+    const seagullBird = document.getElementById('seagullBird');
+    const seagullWingLeft = document.getElementById('seagullWingLeft');
+    const stolenConeInBeak = document.getElementById('stolenConeInBeak');
+    const penaltyBanner = document.getElementById('penaltyBanner');
+    const bannerTitle = document.getElementById('bannerTitle');
+    const bannerSubtitle = document.getElementById('bannerSubtitle');
+    const bannerChoreTag = document.getElementById('bannerChoreTag');
+    const tearFountainLayer = document.getElementById('tearFountainLayer');
+
+    function updateBannerText() {
+      bannerTitle.textContent = `Removed ${pointsLost} points from your account`;
+      bannerSubtitle.textContent = `−${pointsLost} 🪙 💔   Clean up next time to get them back!`;
+      bannerChoreTag.textContent = `⚠️ ${choreTitle.toUpperCase()}`;
+    }
+    updateBannerText();
+
+    let startTime = null;
+    let animFrame = null;
+    let audioScheduled = false;
+
+    // Particle systems
+    const tearPool = [];
+    for (let i = 0; i < 60; i++) {
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('r', '4');
+      circle.setAttribute('fill', '#38bdf8');
+      circle.setAttribute('opacity', '0');
+      tearFountainLayer.appendChild(circle);
+      tearPool.push({ el: circle, active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0 });
+    }
+
+    const dropletPool = [];
+    for (let i = 0; i < 24; i++) {
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('r', (Math.random() * 4 + 3).toString());
+      circle.setAttribute('fill', Math.random() < 0.6 ? '#f43f5e' : (Math.random() < 0.5 ? '#10b981' : '#fde047'));
+      circle.setAttribute('opacity', '0');
+      splatDroplets.appendChild(circle);
+      dropletPool.push({ el: circle, active: false, x: 0, y: 0, vx: 0, vy: 0 });
+    }
+
+    function triggerAudioTimeline() {
+      if (audioScheduled) return;
+      audioScheduled = true;
+      // 1. Cheerful lick notes
+      playTone(523.25, 'sine', 0.2, 0.25, 0.18); // C5
+      playTone(659.25, 'sine', 0.55, 0.25, 0.18); // E5
+      playTone(783.99, 'sine', 0.9, 0.25, 0.18); // G5
+      // 2. Slip whistle
+      playSlideWhistle(850, 240, 1.7, 0.45);
+      // 3. Splat!
+      setTimeout(() => playWetSplat(0), 2250);
+      // 4. Wah wah crying
+      setTimeout(() => playWahWahCrying(0), 2600);
+      // 5. Bird swoop & yoink
+      setTimeout(() => playBirdYoink(0), 4050);
+      // 6. Penalty gong
+      setTimeout(() => playPenaltyGong(0), 4950);
+    }
+
+    function render(t) {
+      // ---------------------------------------------------------
+      // ACT 1: PURE BLISS (t: 0.0s to 1.7s)
+      // ---------------------------------------------------------
+      if (t < 1.7) {
+        // Kid happily bobbing
+        const bounce = Math.sin(t * 8) * 8;
+        kidCharacter.setAttribute('transform', `translate(600, ${360 + bounce})`);
+        kidHead.setAttribute('transform', `translate(0, ${Math.sin(t * 8) * 2}) rotate(${Math.sin(t * 4) * 4})`);
+
+        // Face is happy
+        faceHappy.setAttribute('opacity', '1');
+        faceShocked.setAttribute('opacity', '0');
+        faceCrying.setAttribute('opacity', '0');
+        armsHappy.setAttribute('opacity', '1');
+        armsDespair.setAttribute('opacity', '0');
+
+        // Tongue licks out toward the ice cream
+        const tongueWiggle = Math.sin(t * 14) * 4;
+        const lickingTongue = document.getElementById('lickingTongue');
+        if (lickingTongue) lickingTongue.setAttribute('transform', `translate(${tongueWiggle}, 0)`);
+
+        // Cone is held comfortably in hand
+        waffleConeGroup.setAttribute('transform', `translate(630, ${410 + bounce}) rotate(-8)`);
+        scoopTower.setAttribute('transform', 'translate(0, 0)');
+        splatGroup.setAttribute('opacity', '0');
+        personalCloud.setAttribute('opacity', '0');
+        seagullBird.setAttribute('opacity', '0');
+        penaltyBanner.setAttribute('opacity', '0');
+        moodOverlay.setAttribute('opacity', '0');
+      }
+
+      // ---------------------------------------------------------
+      // ACT 2: THE SLIP & CALAMITY (t: 1.7s to 2.25s)
+      // ---------------------------------------------------------
+      else if (t >= 1.7 && t < 2.25) {
+        const dropT = t - 1.7; // 0 to 0.55s
+
+        // Kid freezes in horror
+        kidCharacter.setAttribute('transform', 'translate(600, 360)');
+        kidHead.setAttribute('transform', 'translate(0, -4) scale(1.05)');
+
+        // Face switches to SHOCKED
+        faceHappy.setAttribute('opacity', '0');
+        faceShocked.setAttribute('opacity', '1');
+        faceCrying.setAttribute('opacity', '0');
+
+        // Waffle cone tilts forward slightly
+        waffleConeGroup.setAttribute('transform', 'translate(635, 412) rotate(14)');
+
+        // SCOOP FALLS OFF!
+        if (dropT < 0.15) {
+          // Wobble on cone lip
+          const wobble = Math.sin(dropT * 40) * 12;
+          scoopTower.setAttribute('transform', `translate(${wobble}, ${dropT * 30}) rotate(${wobble * 1.5})`);
+        } else {
+          // Parabolic fall to ground
+          const fallTime = dropT - 0.15; // 0 to 0.4s
+          const fallY = 0.5 * 2400 * fallTime * fallTime; // drops ~190px
+          const fallX = fallTime * 140;
+          const fallRot = fallTime * 180;
+          scoopTower.setAttribute('transform', `translate(${fallX}, ${fallY}) rotate(${fallRot})`);
+        }
+
+        splatGroup.setAttribute('opacity', '0');
+      }
+
+      // ---------------------------------------------------------
+      // ACT 3: SPLAT & WIDE-ARMED CRYING (t: 2.25s to 4.0s)
+      // ---------------------------------------------------------
+      else if (t >= 2.25 && t < 4.0) {
+        const cryT = t - 2.25;
+
+        // Splat hits ground!
+        scoopTower.setAttribute('transform', 'translate(0, 9999)'); // hide original scoop tower
+        splatGroup.setAttribute('opacity', '1');
+
+        // Splat shockwave expands once
+        if (cryT < 0.4) {
+          const swScale = cryT / 0.4;
+          splatShockwave.setAttribute('r', (swScale * 75).toString());
+          splatShockwave.setAttribute('opacity', (1 - swScale).toString());
+        } else {
+          splatShockwave.setAttribute('opacity', '0');
+        }
+
+        // Spawn flying splat droplets
+        if (cryT < 0.5) {
+          dropletPool.forEach((d, idx) => {
+            if (!d.active) {
+              d.active = true;
+              d.x = 710;
+              d.y = 535;
+              const ang = (Math.PI * 2 * idx) / dropletPool.length + (Math.random() - 0.5) * 0.4;
+              const spd = Math.random() * 220 + 80;
+              d.vx = Math.cos(ang) * spd;
+              d.vy = Math.sin(ang) * spd * 0.5 - 120;
+            }
+            d.x += d.vx * 0.016;
+            d.y += d.vy * 0.016;
+            d.vy += 800 * 0.016; // gravity
+            if (d.y > 540) d.y = 540;
+            d.el.setAttribute('cx', d.x.toString());
+            d.el.setAttribute('cy', d.y.toString());
+            d.el.setAttribute('opacity', '1');
+          });
+        }
+
+        // Kid shakes and trembles with wide-spread arms in agony
+        const cryShake = Math.sin(t * 36) * 3;
+        kidCharacter.setAttribute('transform', `translate(${600 + cryShake}, ${360 + Math.abs(cryShake)})`);
+
+        // Face is CRYING with tear fountains
+        faceHappy.setAttribute('opacity', '0');
+        faceShocked.setAttribute('opacity', '0');
+        faceCrying.setAttribute('opacity', '1');
+
+        // Arms are FLUNG WIDE OPEN in despair
+        armsHappy.setAttribute('opacity', '0');
+        armsDespair.setAttribute('opacity', '1');
+
+        // Left hand holds the empty waffle cone out to the left
+        waffleConeGroup.setAttribute('transform', `translate(${465 + cryShake}, ${428 + cryShake}) rotate(25)`);
+
+        // TEAR FOUNTAIN PARTICLES EMITTING FROM EYES!
+        tearPool.forEach((p, idx) => {
+          if (!p.active && Math.random() < 0.28) {
+            p.active = true;
+            const isLeft = idx % 2 === 0;
+            p.x = isLeft ? 576 : 624;
+            p.y = 350;
+            p.vx = isLeft ? -(Math.random() * 160 + 120) : (Math.random() * 160 + 120);
+            p.vy = -(Math.random() * 220 + 180);
+            p.life = 1.0;
+          }
+          if (p.active) {
+            p.x += p.vx * 0.016;
+            p.y += p.vy * 0.016;
+            p.vy += 950 * 0.016; // gravity
+            p.life -= 0.018;
+            if (p.y > 540 || p.life <= 0) {
+              p.active = false;
+              p.el.setAttribute('opacity', '0');
+            } else {
+              p.el.setAttribute('cx', p.x.toString());
+              p.el.setAttribute('cy', p.y.toString());
+              p.el.setAttribute('opacity', p.life.toString());
+            }
+          }
+        });
+
+        // Mood darkens slightly
+        moodOverlay.setAttribute('opacity', (Math.min(0.4, cryT * 0.35)).toString());
+
+        // Personal rain cloud appears over kid!
+        personalCloud.setAttribute('opacity', (Math.min(1, cryT * 2)).toString());
+        personalCloud.setAttribute('transform', `translate(600, ${180 + Math.sin(t * 4) * 6})`);
+      }
+
+      // ---------------------------------------------------------
+      // ACT 4: THE SEAGULL SWOOP & CONE HEIST (t: 4.0s to 5.1s)
+      // ---------------------------------------------------------
+      else if (t >= 4.0 && t < 5.1) {
+        const birdT = (t - 4.0) / 1.1; // 0 to 1
+        seagullBird.setAttribute('opacity', '1');
+
+        // Bird flapping
+        const flapAngle = Math.sin(t * 32) * 28;
+        seagullWingLeft.setAttribute('transform', `rotate(${flapAngle})`);
+
+        // Bird Swoop Bezier Path:
+        // Starts: (1250, 100) -> Dives to hand (465, 428) at birdT = 0.32 -> Swoops away to (-150, 80)
+        let bx, by;
+        if (birdT < 0.32) {
+          // Diving toward hand
+          const p = birdT / 0.32;
+          bx = 1250 + (465 - 1250) * p;
+          by = 100 + (428 - 100) * Math.pow(p, 1.4);
+          seagullBird.setAttribute('transform', `translate(${bx}, ${by}) rotate(25)`);
+          waffleConeGroup.setAttribute('opacity', '1');
+          stolenConeInBeak.setAttribute('opacity', '0');
+        } else {
+          // Cone YOINKED! Bird flies up & away carrying the cone in beak
+          const p = (birdT - 0.32) / 0.68;
+          bx = 465 + (-160 - 465) * p;
+          by = 428 + (60 - 428) * Math.pow(p, 0.75) - Math.sin(p * Math.PI) * 50;
+          seagullBird.setAttribute('transform', `translate(${bx}, ${by}) rotate(-18) scale(0.95)`);
+
+          // Kid's hand is now EMPTY!
+          waffleConeGroup.setAttribute('opacity', '0');
+          stolenConeInBeak.setAttribute('opacity', '1');
+
+          // Kid stops crying and stares up in pure dumbfounded shock
+          faceHappy.setAttribute('opacity', '0');
+          faceShocked.setAttribute('opacity', '1');
+          faceCrying.setAttribute('opacity', '0');
+          // Hide tears
+          tearPool.forEach(p => p.el.setAttribute('opacity', '0'));
+        }
+      }
+
+      // ---------------------------------------------------------
+      // ACT 5 & 6: TOTAL DEFEAT & PENALTY BANNER (t: 5.1s to 7.2s)
+      // ---------------------------------------------------------
+      else if (t >= 5.1) {
+        const endT = t - 5.1;
+        seagullBird.setAttribute('opacity', '0'); // bird has flown off screen
+
+        // Kid slumps down onto knees in defeat
+        kidCharacter.setAttribute('transform', 'translate(600, 395) scale(0.95, 0.9)');
+        kidHead.setAttribute('transform', 'translate(0, 16) rotate(12)');
+        faceCrying.setAttribute('opacity', '1');
+        faceShocked.setAttribute('opacity', '0');
+
+        // Personal storm cloud rains over slumped kid
+        personalCloud.setAttribute('opacity', '0.9');
+
+        // PENALTY BANNER DROPS FROM SKY WITH JUICY SPRING BOUNCE!
+        penaltyBanner.setAttribute('opacity', '1');
+        const springT = Math.min(1, endT / 0.6);
+        // Elastic overshoot formula
+        const springY = -180 + (220 - (-180)) * (1 - Math.cos(springT * Math.PI * 0.5) * Math.cos(springT * Math.PI * 2.5) * Math.exp(-springT * 3));
+        const finalY = springT >= 0.9 ? 220 : springY;
+        penaltyBanner.setAttribute('transform', `translate(600, ${finalY})`);
+      }
+    }
+
+    // ---------------------------------------------------------
+    // ANIMATION LOOP RUNNER
+    // ---------------------------------------------------------
+    function tick(now) {
+      if (!startTime) startTime = now;
+      const elapsed = (now - startTime) / 1000;
+
+      // Start sound sequence right at start
+      if (elapsed > 0.05 && !audioScheduled) {
+        triggerAudioTimeline();
+      }
+
+      if (elapsed <= DURATION) {
+        render(elapsed);
+        animFrame = requestAnimationFrame(tick);
+      } else {
+        // Hold final frame
+        render(DURATION);
+      }
+    }
+
+    function startAnimation() {
+      if (animFrame) cancelAnimationFrame(animFrame);
+      startTime = null;
+      audioScheduled = false;
+      tearPool.forEach(p => { p.active = false; p.el.setAttribute('opacity', '0'); });
+      dropletPool.forEach(d => { d.active = false; d.el.setAttribute('opacity', '0'); });
+      render(0);
+      animFrame = requestAnimationFrame(tick);
+    }
+
+    // Auto-start on load
+    window.addEventListener('load', () => {
+      startAnimation();
+    });
+
+    const replayBtn = document.getElementById('replayBtn');
+    if (replayBtn) {
+      replayBtn.addEventListener('click', () => {
+        startAnimation();
+      });
+    }
+
+    // Allow clicking anywhere to replay in standalone mode
+    if (!isEmbed) {
+      scene.addEventListener('click', () => {
+        startAnimation();
+      });
+    }
+  </script>
+</body>
+</html>
