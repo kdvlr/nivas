@@ -110,7 +110,7 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!sadOptions) return
     const isStorm = sadOptions.animation === 'storm'
-    const duration = isStorm ? 4400 : 7600
+    const duration = isStorm ? 4400 : 9800
 
     if (isStorm && canvasRef.current) {
       const runner = runSadAnimation(canvasRef.current, sadOptions)

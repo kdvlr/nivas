@@ -6,14 +6,14 @@
   <title>Ice Cream Tragedy · Chore Penalty Celebration</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800;900&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800;900&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
   <style>
     :root {
       --primary: #f43f5e;
       --primary-dark: #be123c;
       --surface: #0f172a;
-      --card-bg: rgba(15, 23, 42, 0.92);
-      --border-glow: rgba(244, 63, 94, 0.5);
+      --card-bg: rgba(15, 23, 42, 0.94);
+      --border-glow: rgba(244, 63, 94, 0.6);
       --text: #f8fafc;
     }
 
@@ -37,7 +37,6 @@
       justify-content: center;
     }
 
-    /* Standalone Container Frame */
     .app-wrapper {
       width: 100vw;
       height: 100vh;
@@ -51,11 +50,11 @@
     .stage-container {
       width: min(100vw, 1200px);
       aspect-ratio: 16 / 9;
-      max-height: 90vh;
-      background: radial-gradient(circle at 50% 20%, #38bdf8 0%, #0284c7 40%, #0369a1 70%, #0f172a 100%);
+      max-height: 92vh;
+      background: radial-gradient(circle at 50% 25%, #38bdf8 0%, #0284c7 45%, #0369a1 75%, #0f172a 100%);
       border-radius: 28px;
       overflow: hidden;
-      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7), 0 0 40px rgba(244, 63, 94, 0.25);
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.75), 0 0 40px rgba(244, 63, 94, 0.3);
       position: relative;
     }
 
@@ -65,30 +64,29 @@
       display: block;
     }
 
-    /* Standalone Control Bar */
     .controls-bar {
       position: absolute;
-      bottom: 16px;
+      bottom: 18px;
       display: flex;
       align-items: center;
-      gap: 12px;
-      background: rgba(15, 23, 42, 0.85);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(12px);
-      padding: 8px 18px;
+      gap: 14px;
+      background: rgba(15, 23, 42, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      backdrop-filter: blur(14px);
+      padding: 8px 22px;
       border-radius: 9999px;
       z-index: 50;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     }
 
     .controls-bar button {
       background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.22);
       color: #fff;
       font-family: 'Fredoka', cursive;
       font-size: 14px;
       font-weight: 600;
-      padding: 6px 14px;
+      padding: 7px 16px;
       border-radius: 9999px;
       cursor: pointer;
       transition: all 0.2s ease;
@@ -98,7 +96,7 @@
     }
 
     .controls-bar button:hover {
-      background: rgba(244, 63, 94, 0.25);
+      background: rgba(244, 63, 94, 0.3);
       border-color: #f43f5e;
       color: #fecdd3;
       transform: translateY(-1px);
@@ -108,7 +106,7 @@
       background: linear-gradient(135deg, #f43f5e, #be123c);
       border-color: #fb7185;
       color: #fff;
-      box-shadow: 0 4px 12px rgba(244, 63, 94, 0.4);
+      box-shadow: 0 4px 14px rgba(244, 63, 94, 0.45);
     }
 
     .controls-bar .points-input-group {
@@ -122,19 +120,18 @@
     }
 
     .controls-bar input[type="number"] {
-      width: 50px;
-      background: rgba(0, 0, 0, 0.4);
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      border-radius: 6px;
-      color: #f43f5e;
+      width: 52px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 8px;
+      color: #fb7185;
       font-weight: 800;
-      font-size: 14px;
+      font-size: 15px;
       text-align: center;
-      padding: 3px 0;
+      padding: 4px 0;
       outline: none;
     }
 
-    /* Embed Mode (Inside Celebration Modal / Fullscreen) */
     body.embed {
       background: transparent !important;
       padding: 0 !important;
@@ -166,20 +163,14 @@
           <!-- Background Gradients -->
           <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stop-color="#38bdf8" />
-            <stop offset="55%" stop-color="#bae6fd" />
+            <stop offset="50%" stop-color="#7dd3fc" />
+            <stop offset="85%" stop-color="#bae6fd" />
             <stop offset="100%" stop-color="#fef08a" />
-          </linearGradient>
-
-          <linearGradient id="duskSkyGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#1e1b4b" />
-            <stop offset="50%" stop-color="#312e81" />
-            <stop offset="85%" stop-color="#4c1d95" />
-            <stop offset="100%" stop-color="#831843" />
           </linearGradient>
 
           <linearGradient id="hill1Grad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stop-color="#4ade80" />
-            <stop offset="100%" stop-color="#16a34a" />
+            <stop offset="100%" stop-color="#15803d" />
           </linearGradient>
 
           <linearGradient id="hill2Grad" x1="0" y1="0" x2="0" y2="1">
@@ -189,14 +180,14 @@
 
           <linearGradient id="sidewalkGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stop-color="#f1f5f9" />
-            <stop offset="10%" stop-color="#e2e8f0" />
+            <stop offset="8%" stop-color="#e2e8f0" />
             <stop offset="100%" stop-color="#cbd5e1" />
           </linearGradient>
 
           <!-- Ice Cream & Waffle Gradients -->
           <linearGradient id="coneGrad" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0%" stop-color="#fcd34d" />
-            <stop offset="45%" stop-color="#f59e0b" />
+            <stop offset="40%" stop-color="#f59e0b" />
             <stop offset="100%" stop-color="#b45309" />
           </linearGradient>
 
@@ -239,68 +230,82 @@
             <stop offset="100%" stop-color="#0284c7" />
           </linearGradient>
 
-          <!-- Storm Cloud Gradient -->
+          <!-- Seagull Shading Gradients -->
+          <linearGradient id="gullBodyGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#ffffff" />
+            <stop offset="65%" stop-color="#f8fafc" />
+            <stop offset="100%" stop-color="#cbd5e1" />
+          </linearGradient>
+
+          <linearGradient id="gullWingGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#94a3b8" />
+            <stop offset="60%" stop-color="#64748b" />
+            <stop offset="100%" stop-color="#334155" />
+          </linearGradient>
+
+          <linearGradient id="gullBeakGrad" x1="1" y1="0" x2="0" y2="0">
+            <stop offset="0%" stop-color="#fbbf24" />
+            <stop offset="70%" stop-color="#f59e0b" />
+            <stop offset="100%" stop-color="#d97706" />
+          </linearGradient>
+
           <linearGradient id="cloudGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stop-color="#64748b" />
             <stop offset="50%" stop-color="#475569" />
             <stop offset="100%" stop-color="#334155" />
           </linearGradient>
 
-          <!-- Filter for Glows -->
           <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
-            <feGaussianBlur stdDeviation="8" result="blur" />
+            <feGaussianBlur stdDeviation="9" result="blur" />
             <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+
+          <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="rgba(15,23,42,0.35)" />
           </filter>
         </defs>
 
-        <!-- 1. SKY & BACKGROUND -->
+        <!-- 1. SKY & PARK LANDSCAPE -->
         <rect id="bgSky" width="1200" height="675" fill="url(#skyGrad)" />
 
-        <!-- Distant Clouds -->
-        <g id="distantClouds" opacity="0.85">
-          <path d="M 120 130 q 30 -40 80 -30 q 50 -35 100 -10 q 50 -15 80 25 q 40 10 35 45 q -20 40 -80 35 l -180 0 q -50 0 -45 -40 z" fill="#ffffff" />
-          <path d="M 780 160 q 25 -30 65 -25 q 40 -30 80 -10 q 40 -10 65 20 q 30 10 30 35 q -15 35 -65 30 l -145 0 q -40 0 -35 -35 z" fill="#ffffff" opacity="0.75" />
+        <g id="distantClouds" opacity="0.9">
+          <path d="M 100 130 q 35 -40 85 -30 q 50 -35 105 -10 q 50 -15 85 25 q 40 10 35 45 q -20 40 -85 35 l -190 0 q -50 0 -45 -40 z" fill="#ffffff" />
+          <path d="M 760 150 q 25 -30 70 -25 q 45 -30 85 -10 q 45 -10 70 20 q 30 10 30 35 q -15 35 -70 30 l -155 0 q -40 0 -35 -35 z" fill="#ffffff" opacity="0.8" />
         </g>
 
-        <!-- Rolling Green Hills -->
-        <path d="M -50 480 Q 250 360 600 440 T 1250 410 L 1250 675 L -50 675 Z" fill="url(#hill2Grad)" />
-        <path d="M -50 490 Q 380 430 820 480 T 1250 470 L 1250 675 L -50 675 Z" fill="url(#hill1Grad)" />
+        <!-- Rolling Hills -->
+        <path d="M -50 480 Q 250 350 600 430 T 1250 400 L 1250 675 L -50 675 Z" fill="url(#hill2Grad)" />
+        <path d="M -50 490 Q 380 420 820 470 T 1250 460 L 1250 675 L -50 675 Z" fill="url(#hill1Grad)" />
 
-        <!-- Distant Trees & Park Fence -->
-        <g id="parkDeco" opacity="0.6">
-          <circle cx="160" cy="420" r="45" fill="#15803d" />
-          <circle cx="210" cy="405" r="55" fill="#166534" />
-          <circle cx="1020" cy="430" r="50" fill="#15803d" />
-          <circle cx="1075" cy="415" r="60" fill="#166534" />
+        <g id="parkDeco" opacity="0.65">
+          <circle cx="150" cy="415" r="48" fill="#15803d" />
+          <circle cx="205" cy="398" r="58" fill="#166534" />
+          <circle cx="1010" cy="425" r="52" fill="#15803d" />
+          <circle cx="1070" cy="410" r="62" fill="#166534" />
         </g>
 
-        <!-- Paved Sidewalk -->
+        <!-- Sidewalk -->
         <rect x="0" y="525" width="1200" height="150" fill="url(#sidewalkGrad)" />
         <line x1="0" y1="525" x2="1200" y2="525" stroke="#94a3b8" stroke-width="5" />
         <line x1="240" y1="525" x2="190" y2="675" stroke="#cbd5e1" stroke-width="2.5" />
         <line x1="560" y1="525" x2="520" y2="675" stroke="#cbd5e1" stroke-width="2.5" />
         <line x1="880" y1="525" x2="850" y2="675" stroke="#cbd5e1" stroke-width="2.5" />
 
-        <!-- Dark Mood Dimmer Overlay (fades in on calamity) -->
         <rect id="moodOverlay" width="1200" height="675" fill="#0f172a" opacity="0" pointer-events="none" />
 
         <!-- 2. STAGE FLOOR SHADOWS -->
-        <ellipse id="kidShadow" cx="600" cy="545" rx="90" ry="16" fill="rgba(15, 23, 42, 0.4)" />
-        <ellipse id="splatShadow" cx="715" cy="542" rx="0" ry="0" fill="rgba(15, 23, 42, 0.3)" />
+        <ellipse id="kidShadow" cx="600" cy="546" rx="92" ry="16" fill="rgba(15, 23, 42, 0.4)" />
+        <ellipse id="birdGroundShadow" cx="600" cy="544" rx="0" ry="0" fill="rgba(15, 23, 42, 0.3)" />
 
         <!-- 3. SPLATTED ICE CREAM POOL ON GROUND (Revealed at Splat) -->
         <g id="splatGroup" opacity="0" transform="translate(710, 538)">
-          <!-- Splat Shockwave Ring -->
           <circle id="splatShockwave" cx="0" cy="0" r="0" fill="none" stroke="#f43f5e" stroke-width="6" opacity="0" />
-          <!-- Strawberry Splat Base -->
           <path d="M -65 0 C -75 -15, -45 -22, -25 -15 C -5 -25, 25 -25, 45 -12 C 75 -20, 80 5, 65 14 C 45 24, 15 22, -5 18 C -35 25, -60 18, -65 0 Z" fill="#e11d48" />
           <path d="M -50 -3 C -58 -12, -35 -16, -20 -10 C -5 -18, 20 -18, 35 -8 C 55 -12, 60 4, 48 10 C 35 17, 10 16, -5 12 C -25 18, -45 12, -50 -3 Z" fill="#fb7185" />
-          <!-- Mint Scoop Debris -->
           <ellipse cx="-25" cy="4" rx="22" ry="11" fill="#059669" />
           <ellipse cx="-22" cy="2" rx="16" ry="8" fill="#34d399" />
-          <!-- Vanilla Splats -->
           <circle cx="35" cy="6" r="10" fill="#fde047" />
-          <!-- Sprinkles scattered -->
+          <!-- Sprinkles -->
           <rect x="-35" y="-6" width="9" height="3.5" rx="1.7" transform="rotate(32 -35 -6)" fill="#ffffff" />
           <rect x="18" y="-4" width="9" height="3.5" rx="1.7" transform="rotate(-40 18 -4)" fill="#38bdf8" />
           <rect x="42" y="8" width="9" height="3.5" rx="1.7" transform="rotate(15 42 8)" fill="#a855f7" />
@@ -316,194 +321,245 @@
 
         <!-- 4. THE KID (CHARACTER RIG) -->
         <g id="kidCharacter" transform="translate(600, 360)">
-          <!-- Legs & Sneakers -->
-          <g id="kidLegs">
-            <!-- Left Leg -->
-            <rect x="-42" y="115" width="28" height="48" rx="8" fill="url(#shortsGrad)" />
-            <rect x="-36" y="152" width="18" height="24" fill="url(#skinGrad)" />
-            <!-- Left Sneaker -->
-            <path d="M -46 172 L -12 172 C -8 172, -6 178, -6 182 L -48 182 C -48 176, -46 172, -46 172 Z" fill="#e11d48" />
-            <rect x="-48" y="180" width="44" height="6" rx="2" fill="#ffffff" />
-            <circle cx="-16" cy="176" r="3" fill="#ffffff" />
+          <!-- Standing Rig -->
+          <g id="kidStandingRig">
+            <!-- Legs & Sneakers -->
+            <g id="kidLegs">
+              <rect x="-42" y="115" width="28" height="48" rx="8" fill="url(#shortsGrad)" />
+              <rect x="-36" y="152" width="18" height="24" fill="url(#skinGrad)" />
+              <path d="M -46 172 L -12 172 C -8 172, -6 178, -6 182 L -48 182 C -48 176, -46 172, -46 172 Z" fill="#e11d48" />
+              <rect x="-48" y="180" width="44" height="6" rx="2" fill="#ffffff" />
+              <circle cx="-16" cy="176" r="3" fill="#ffffff" />
 
-            <!-- Right Leg -->
-            <rect x="14" y="115" width="28" height="48" rx="8" fill="url(#shortsGrad)" />
-            <rect x="20" y="152" width="18" height="24" fill="url(#skinGrad)" />
-            <!-- Right Sneaker -->
-            <path d="M 12 172 L 46 172 C 50 172, 52 178, 52 182 L 10 182 C 10 176, 12 172, 12 172 Z" fill="#e11d48" />
-            <rect x="10" y="180" width="44" height="6" rx="2" fill="#ffffff" />
-            <circle cx="42" cy="176" r="3" fill="#ffffff" />
-          </g>
-
-          <!-- Torso & T-Shirt -->
-          <g id="kidTorso">
-            <path d="M -48 45 L 48 45 L 56 125 L -56 125 Z" fill="url(#shirtGrad)" />
-            <!-- T-Shirt Sleeves -->
-            <path d="M -48 45 L -72 82 L -50 92 L -35 55 Z" fill="#eab308" />
-            <path d="M 48 45 L 72 82 L 50 92 L 35 55 Z" fill="#eab308" />
-            <!-- Star Graphic on Chest -->
-            <polygon points="0,68 4,80 16,80 7,88 10,100 0,92 -10,100 -7,88 -16,80 -4,80" fill="#f97316" />
-          </g>
-
-          <!-- Head & Neck -->
-          <g id="kidHead" transform="translate(0, 0)">
-            <!-- Neck -->
-            <rect x="-16" y="25" width="32" height="25" rx="6" fill="url(#skinGrad)" />
-
-            <!-- Head Base Oval -->
-            <ellipse cx="0" cy="-10" rx="62" ry="58" fill="url(#skinGrad)" />
-
-            <!-- Cute Big Ears -->
-            <circle cx="-62" cy="-8" r="14" fill="url(#skinGrad)" />
-            <circle cx="-62" cy="-8" r="8" fill="#fda4af" opacity="0.6" />
-            <circle cx="62" cy="-8" r="14" fill="url(#skinGrad)" />
-            <circle cx="62" cy="-8" r="8" fill="#fda4af" opacity="0.6" />
-
-            <!-- Rosy Cheeks -->
-            <ellipse cx="-34" cy="6" rx="14" ry="9" fill="#fb7185" opacity="0.45" />
-            <ellipse cx="34" cy="6" rx="14" ry="9" fill="#fb7185" opacity="0.45" />
-
-            <!-- Nose -->
-            <path d="M -4 2 Q 0 8 4 2" fill="none" stroke="#ea580c" stroke-width="2.8" stroke-linecap="round" />
-
-            <!-- Fluffy Stylish Hair -->
-            <path d="M -62 -22 C -66 -65, -30 -75, 0 -75 C 35 -75, 68 -62, 64 -20 C 58 -28, 48 -35, 35 -38 C 20 -42, -5 -40, -25 -32 C -42 -24, -55 -20, -62 -22 Z" fill="url(#hairGrad)" />
-            <!-- Extra Hair Bang Tufts -->
-            <path d="M -22 -62 Q -12 -85 8 -70 Q 2 -55 -8 -50 Z" fill="#5c2606" />
-            <path d="M 12 -65 Q 26 -86 42 -66 Q 30 -52 18 -50 Z" fill="#5c2606" />
-            <path d="M -48 -45 Q -65 -60 -40 -62 Z" fill="#5c2606" />
-
-            <!-- FACIAL EXPRESSIONS (Switched via code) -->
-            <!-- 1. Happy Face (Act 1) -->
-            <g id="faceHappy">
-              <!-- Happy Curved Eyes `^ ^` -->
-              <path d="M -36 -14 Q -24 -28 -12 -14" fill="none" stroke="#1e293b" stroke-width="4.5" stroke-linecap="round" />
-              <path d="M 12 -14 Q 24 -28 36 -14" fill="none" stroke="#1e293b" stroke-width="4.5" stroke-linecap="round" />
-              <!-- Sweet Smiling Mouth with licking tongue -->
-              <path d="M -18 16 Q 0 35 22 16" fill="#be123c" stroke="#881337" stroke-width="2.5" />
-              <!-- Pink Licking Tongue (pokes out to right) -->
-              <path id="lickingTongue" d="M 6 18 Q 28 14 30 24 Q 20 32 8 26 Z" fill="#fb7185" stroke="#f43f5e" stroke-width="1.5" />
+              <rect x="14" y="115" width="28" height="48" rx="8" fill="url(#shortsGrad)" />
+              <rect x="20" y="152" width="18" height="24" fill="url(#skinGrad)" />
+              <path d="M 12 172 L 46 172 C 50 172, 52 178, 52 182 L 10 182 C 10 176, 12 172, 12 172 Z" fill="#e11d48" />
+              <rect x="10" y="180" width="44" height="6" rx="2" fill="#ffffff" />
+              <circle cx="42" cy="176" r="3" fill="#ffffff" />
             </g>
 
-            <!-- 2. Shocked Face (Act 2 - Scoop slips) -->
-            <g id="faceShocked" opacity="0">
-              <!-- Huge Eyebrows Raised -->
-              <path d="M -36 -38 Q -24 -46 -12 -38" fill="none" stroke="#451a03" stroke-width="4" stroke-linecap="round" />
-              <path d="M 12 -38 Q 24 -46 36 -38" fill="none" stroke="#451a03" stroke-width="4" stroke-linecap="round" />
-              <!-- Giant Bug-Eyes `O O` -->
-              <ellipse cx="-24" cy="-14" rx="17" ry="20" fill="#ffffff" stroke="#1e293b" stroke-width="3" />
-              <ellipse cx="24" cy="-14" rx="17" ry="20" fill="#ffffff" stroke="#1e293b" stroke-width="3" />
-              <circle cx="-24" cy="-14" r="6" fill="#0f172a" />
-              <circle cx="-21" cy="-17" r="2.5" fill="#ffffff" />
-              <circle cx="24" cy="-14" r="6" fill="#0f172a" />
-              <circle cx="27" cy="-17" r="2.5" fill="#ffffff" />
-              <!-- Dropped "O" Mouth -->
-              <ellipse cx="0" cy="22" rx="13" ry="18" fill="#881337" stroke="#4c0519" stroke-width="3" />
+            <!-- Torso & T-Shirt -->
+            <g id="kidTorso">
+              <path d="M -48 45 L 48 45 L 56 125 L -56 125 Z" fill="url(#shirtGrad)" />
+              <path d="M -48 45 L -72 82 L -50 92 L -35 55 Z" fill="#eab308" />
+              <path d="M 48 45 L 72 82 L 50 92 L 35 55 Z" fill="#eab308" />
+              <polygon points="0,68 4,80 16,80 7,88 10,100 0,92 -10,100 -7,88 -16,80 -4,80" fill="#f97316" />
             </g>
 
-            <!-- 3. Crying Face (Act 3, 4, 5 - Screaming weeping) -->
-            <g id="faceCrying" opacity="0">
-              <!-- Eyebrows furrowed in pain -->
-              <path d="M -36 -28 L -14 -35" stroke="#451a03" stroke-width="4" stroke-linecap="round" />
-              <path d="M 36 -28 L 14 -35" stroke="#451a03" stroke-width="4" stroke-linecap="round" />
-              <!-- Squeezed Weeping Eyes `> <` -->
-              <path d="M -36 -22 L -18 -12 L -36 -2" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
-              <path d="M 36 -22 L 18 -12 L 36 -2" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
-              <!-- Big Open Wailing Mouth `D:` -->
-              <path d="M -24 14 Q 0 8 24 14 Q 28 38 0 42 Q -28 38 -24 14 Z" fill="#881337" stroke="#4c0519" stroke-width="3" />
-              <!-- Vibrating Uvula / Tongue -->
-              <ellipse cx="0" cy="34" rx="11" ry="6" fill="#f43f5e" />
+            <!-- Head & Neck -->
+            <g id="kidHead" transform="translate(0, 0)">
+              <rect x="-16" y="25" width="32" height="25" rx="6" fill="url(#skinGrad)" />
+              <ellipse cx="0" cy="-10" rx="62" ry="58" fill="url(#skinGrad)" />
+              <circle cx="-62" cy="-8" r="14" fill="url(#skinGrad)" />
+              <circle cx="-62" cy="-8" r="8" fill="#fda4af" opacity="0.6" />
+              <circle cx="62" cy="-8" r="14" fill="url(#skinGrad)" />
+              <circle cx="62" cy="-8" r="8" fill="#fda4af" opacity="0.6" />
+              <ellipse cx="-34" cy="6" rx="14" ry="9" fill="#fb7185" opacity="0.45" />
+              <ellipse cx="34" cy="6" rx="14" ry="9" fill="#fb7185" opacity="0.45" />
+              <path d="M -4 2 Q 0 8 4 2" fill="none" stroke="#ea580c" stroke-width="2.8" stroke-linecap="round" />
+
+              <!-- Hair -->
+              <path d="M -62 -22 C -66 -65, -30 -75, 0 -75 C 35 -75, 68 -62, 64 -20 C 58 -28, 48 -35, 35 -38 C 20 -42, -5 -40, -25 -32 C -42 -24, -55 -20, -62 -22 Z" fill="url(#hairGrad)" />
+              <path d="M -22 -62 Q -12 -85 8 -70 Q 2 -55 -8 -50 Z" fill="#5c2606" />
+              <path d="M 12 -65 Q 26 -86 42 -66 Q 30 -52 18 -50 Z" fill="#5c2606" />
+              <path d="M -48 -45 Q -65 -60 -40 -62 Z" fill="#5c2606" />
+
+              <!-- Facial Expressions -->
+              <!-- 1. Happy Face -->
+              <g id="faceHappy">
+                <path d="M -36 -14 Q -24 -28 -12 -14" fill="none" stroke="#1e293b" stroke-width="4.5" stroke-linecap="round" />
+                <path d="M 12 -14 Q 24 -28 36 -14" fill="none" stroke="#1e293b" stroke-width="4.5" stroke-linecap="round" />
+                <path d="M -18 16 Q 0 35 22 16" fill="#be123c" stroke="#881337" stroke-width="2.5" />
+                <path id="lickingTongue" d="M 6 18 Q 28 14 30 24 Q 20 32 8 26 Z" fill="#fb7185" stroke="#f43f5e" stroke-width="1.5" />
+              </g>
+
+              <!-- 2. Shocked Face -->
+              <g id="faceShocked" opacity="0">
+                <path d="M -36 -38 Q -24 -46 -12 -38" fill="none" stroke="#451a03" stroke-width="4" stroke-linecap="round" />
+                <path d="M 12 -38 Q 24 -46 36 -38" fill="none" stroke="#451a03" stroke-width="4" stroke-linecap="round" />
+                <ellipse cx="-24" cy="-14" rx="17" ry="20" fill="#ffffff" stroke="#1e293b" stroke-width="3" />
+                <ellipse cx="24" cy="-14" rx="17" ry="20" fill="#ffffff" stroke="#1e293b" stroke-width="3" />
+                <circle cx="-24" cy="-14" r="6" fill="#0f172a" />
+                <circle cx="-21" cy="-17" r="2.5" fill="#ffffff" />
+                <circle cx="24" cy="-14" r="6" fill="#0f172a" />
+                <circle cx="27" cy="-17" r="2.5" fill="#ffffff" />
+                <ellipse cx="0" cy="22" rx="13" ry="18" fill="#881337" stroke="#4c0519" stroke-width="3" />
+              </g>
+
+              <!-- 3. Crying Face -->
+              <g id="faceCrying" opacity="0">
+                <path d="M -36 -28 L -14 -35" stroke="#451a03" stroke-width="4" stroke-linecap="round" />
+                <path d="M 36 -28 L 14 -35" stroke="#451a03" stroke-width="4" stroke-linecap="round" />
+                <path d="M -36 -22 L -18 -12 L -36 -2" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M 36 -22 L 18 -12 L 36 -2" fill="none" stroke="#1e293b" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M -24 14 Q 0 8 24 14 Q 28 38 0 42 Q -28 38 -24 14 Z" fill="#881337" stroke="#4c0519" stroke-width="3" />
+                <ellipse cx="0" cy="34" rx="11" ry="6" fill="#f43f5e" />
+              </g>
+
+              <!-- 4. Dumbfounded Stare (tracks bird in sky!) -->
+              <g id="faceDumbfounded" opacity="0">
+                <ellipse cx="-24" cy="-18" rx="15" ry="16" fill="#ffffff" stroke="#1e293b" stroke-width="3" />
+                <ellipse cx="24" cy="-18" rx="15" ry="16" fill="#ffffff" stroke="#1e293b" stroke-width="3" />
+                <circle id="pupilLeft" cx="-24" cy="-24" r="5.5" fill="#0f172a" />
+                <circle id="pupilRight" cx="24" cy="-24" r="5.5" fill="#0f172a" />
+                <ellipse cx="0" cy="24" rx="12" ry="16" fill="#881337" stroke="#4c0519" stroke-width="2.5" />
+              </g>
+            </g>
+
+            <!-- ARMS RIGGING -->
+            <!-- Happy Arm Position -->
+            <g id="armsHappy">
+              <path d="M -52 75 Q -25 95 18 80" fill="none" stroke="url(#skinGrad)" stroke-width="20" stroke-linecap="round" />
+              <path d="M 52 75 Q 38 85 24 75" fill="none" stroke="url(#skinGrad)" stroke-width="20" stroke-linecap="round" />
+            </g>
+
+            <!-- SPREAD ARMS IN UTTER DESPAIR -->
+            <g id="armsDespair" opacity="0">
+              <!-- Left Arm Flailing Out to Left (Open fingers) -->
+              <path id="armLeftDespair" d="M -45 65 Q -95 55 -145 65" fill="none" stroke="url(#skinGrad)" stroke-width="19" stroke-linecap="round" />
+              <g id="handLeftOpen" transform="translate(-145, 65)">
+                <circle cx="0" cy="0" r="11" fill="url(#skinGrad)" />
+                <circle cx="-12" cy="-6" r="4.5" fill="url(#skinGrad)" />
+                <circle cx="-15" cy="1" r="4.5" fill="url(#skinGrad)" />
+                <circle cx="-13" cy="8" r="4.5" fill="url(#skinGrad)" />
+                <circle cx="-8" cy="14" r="4" fill="url(#skinGrad)" />
+              </g>
+
+              <!-- Right Arm Stretched Out Holding Cone -->
+              <path id="armRightDespair" d="M 45 65 Q 95 55 145 65" fill="none" stroke="url(#skinGrad)" stroke-width="19" stroke-linecap="round" />
+              <g id="handRightGrip" transform="translate(145, 65)">
+                <circle cx="0" cy="0" r="11" fill="url(#skinGrad)" />
+                <!-- Open fingers once stolen -->
+                <circle id="fingerRight1" cx="12" cy="-6" r="4.5" fill="url(#skinGrad)" opacity="0" />
+                <circle id="fingerRight2" cx="15" cy="2" r="4.5" fill="url(#skinGrad)" opacity="0" />
+                <circle id="fingerRight3" cx="12" cy="10" r="4.5" fill="url(#skinGrad)" opacity="0" />
+              </g>
             </g>
           </g>
 
-          <!-- ARMS RIGGING -->
-          <!-- Normal Happy Arm Position (Holds cone close to mouth) -->
-          <g id="armsHappy">
-            <!-- Left hand holding cone base -->
-            <path d="M -52 75 Q -30 95 18 80" fill="none" stroke="url(#skinGrad)" stroke-width="20" stroke-linecap="round" />
-            <!-- Right hand wrapped around cone -->
-            <path d="M 52 75 Q 40 85 24 75" fill="none" stroke="url(#skinGrad)" stroke-width="20" stroke-linecap="round" />
-          </g>
+          <!-- Slumped Defeat Rig (Act 5 & 6): Kid facing forward on knees, looking heartbroken at empty hands -->
+          <g id="kidSlumpedRig" opacity="0" transform="translate(0, 30)">
+            <!-- Folded knees/legs on ground -->
+            <ellipse cx="-26" cy="130" rx="20" ry="12" fill="url(#shortsGrad)" />
+            <ellipse cx="26" cy="130" rx="20" ry="12" fill="url(#shortsGrad)" />
+            <rect x="-35" y="115" width="70" height="22" rx="10" fill="url(#shortsGrad)" />
+            <ellipse cx="-42" cy="134" rx="14" ry="7" fill="#dc2626" />
+            <ellipse cx="42" cy="134" rx="14" ry="7" fill="#dc2626" />
 
-          <!-- SPREAD ARMS IN UTTER DESPAIR (Act 3 & 4) -->
-          <g id="armsDespair" opacity="0">
-            <!-- Right Arm Flailing Out to Right -->
-            <path id="armRightDespair" d="M 45 65 Q 95 60 145 70" fill="none" stroke="url(#skinGrad)" stroke-width="19" stroke-linecap="round" />
-            <!-- Open palm fingers on right hand -->
-            <g id="handRightOpen" transform="translate(145, 70)">
-              <circle cx="0" cy="0" r="11" fill="url(#skinGrad)" />
-              <circle cx="12" cy="-6" r="4.5" fill="url(#skinGrad)" />
-              <circle cx="15" cy="1" r="4.5" fill="url(#skinGrad)" />
-              <circle cx="13" cy="8" r="4.5" fill="url(#skinGrad)" />
-              <circle cx="8" cy="14" r="4" fill="url(#skinGrad)" />
+            <!-- Slumped Torso & Sleeves -->
+            <path d="M -38 65 Q 0 52 38 65 L 32 120 L -32 120 Z" fill="url(#shirtGrad)" />
+            <!-- Short sleeves -->
+            <path d="M -38 65 Q -52 75 -44 92 L -34 86 Z" fill="url(#shirtGrad)" />
+            <path d="M 38 65 Q 52 75 44 92 L 34 86 Z" fill="url(#shirtGrad)" />
+            <!-- Star on shirt drooping slightly -->
+            <polygon points="0,82 4,94 16,94 7,101 10,113 0,105 -10,113 -7,101 -16,94 -4,94" fill="#f59e0b" opacity="0.9" transform="scale(0.85) translate(0, 10)" />
+
+            <!-- Slumped Arms Reaching Out, Open Empty Palms -->
+            <path d="M -34 68 Q -55 85 -50 110" fill="none" stroke="url(#skinGrad)" stroke-width="17" stroke-linecap="round" />
+            <path d="M 34 68 Q 55 85 50 110" fill="none" stroke="url(#skinGrad)" stroke-width="17" stroke-linecap="round" />
+            <!-- Empty Hands (Palms open, pleading to the sky) -->
+            <g transform="translate(-48, 114)">
+              <circle cx="0" cy="0" r="10" fill="url(#skinGrad)" />
+              <circle cx="-8" cy="-3" r="3.8" fill="url(#skinGrad)" />
+              <circle cx="-10" cy="3" r="3.8" fill="url(#skinGrad)" />
+              <circle cx="-7" cy="9" r="3.8" fill="url(#skinGrad)" />
+            </g>
+            <g transform="translate(48, 114)">
+              <circle cx="0" cy="0" r="10" fill="url(#skinGrad)" />
+              <circle cx="8" cy="-3" r="3.8" fill="url(#skinGrad)" />
+              <circle cx="10" cy="3" r="3.8" fill="url(#skinGrad)" />
+              <circle cx="7" cy="9" r="3.8" fill="url(#skinGrad)" />
             </g>
 
-            <!-- Left Arm Stretched to Left Holding Empty Cone -->
-            <path id="armLeftDespair" d="M -45 65 Q -95 60 -135 68" fill="none" stroke="url(#skinGrad)" stroke-width="19" stroke-linecap="round" />
-            <g id="handLeftGrip" transform="translate(-135, 68)">
-              <circle cx="0" cy="0" r="11" fill="url(#skinGrad)" />
+            <!-- Head tilted down slightly in sorrow -->
+            <g transform="translate(0, 15)">
+              <ellipse cx="0" cy="0" rx="60" ry="54" fill="url(#skinGrad)" />
+              <circle cx="-60" cy="0" r="13" fill="url(#skinGrad)" />
+              <circle cx="60" cy="0" r="13" fill="url(#skinGrad)" />
+              <!-- Hair -->
+              <path d="M -60 -15 C -64 -55, -28 -68, 0 -68 C 32 -68, 64 -55, 60 -15 C 54 -24, 44 -30, 32 -32 C 18 -35, -5 -33, -24 -26 C -40 -19, -52 -15, -60 -15 Z" fill="url(#hairGrad)" />
+              <path d="M -20 -55 Q -10 -75 8 -62 Q 2 -48 -8 -45 Z" fill="#5c2606" />
+              <path d="M 10 -58 Q 24 -76 38 -58 Q 28 -46 16 -44 Z" fill="#5c2606" />
+
+              <!-- Droopy Sad Eyebrows -->
+              <path d="M -32 -18 Q -22 -10 -12 -15" fill="none" stroke="#451a03" stroke-width="3.5" stroke-linecap="round" />
+              <path d="M 32 -18 Q 22 -10 12 -15" fill="none" stroke="#451a03" stroke-width="3.5" stroke-linecap="round" />
+
+              <!-- Big Glossy Sad Downcast Eyes -->
+              <ellipse cx="-20" cy="-2" rx="12" ry="14" fill="#ffffff" stroke="#1e293b" stroke-width="2.5" />
+              <ellipse cx="20" cy="-2" rx="12" ry="14" fill="#ffffff" stroke="#1e293b" stroke-width="2.5" />
+              <circle cx="-20" cy="2" r="6" fill="#0f172a" />
+              <circle cx="20" cy="2" r="6" fill="#0f172a" />
+              <circle cx="-22" cy="0" r="2.5" fill="#ffffff" />
+              <circle cx="18" cy="0" r="2.5" fill="#ffffff" />
+              <!-- Watery shimmer -->
+              <ellipse cx="-20" cy="8" rx="8" ry="3" fill="#67e8f9" opacity="0.6" />
+              <ellipse cx="20" cy="8" rx="8" ry="3" fill="#67e8f9" opacity="0.6" />
+
+              <!-- Quivering Downturned Pout -->
+              <path d="M -14 26 Q 0 18 14 26" fill="none" stroke="#881337" stroke-width="3.5" stroke-linecap="round" />
+              <path d="M -10 26 Q 0 20 10 26" fill="#f43f5e" opacity="0.5" />
+
+              <!-- Single big anime teardrop on cheek -->
+              <path d="M -32 6 Q -27 18 -32 24 Q -37 18 -32 6" fill="#38bdf8" stroke="#0284c7" stroke-width="1" />
             </g>
           </g>
-        </g> <!-- End Kid -->
+        </g>
 
         <!-- 5. WAFFLE CONE & SCOOPS RIG -->
-        <!-- In Hand (Follows Kid or Kid's Left Hand) -->
         <g id="waffleConeGroup" transform="translate(628, 410)">
-          <!-- Waffle Cone -->
+          <!-- Waffle Cone Body -->
           <polygon points="-22,0 22,0 0,68" fill="url(#coneGrad)" stroke="#92400e" stroke-width="2" />
-          <!-- Waffle Pattern Crosshatches -->
           <line x1="-15" y1="12" x2="10" y2="35" stroke="#92400e" stroke-width="2" opacity="0.75" />
           <line x1="15" y1="12" x2="-10" y2="35" stroke="#92400e" stroke-width="2" opacity="0.75" />
           <line x1="-9" y1="30" x2="6" y2="48" stroke="#92400e" stroke-width="2" opacity="0.75" />
           <line x1="9" y1="30" x2="-6" y2="48" stroke="#92400e" stroke-width="2" opacity="0.75" />
-          <!-- Cone Crispy Lip -->
           <ellipse cx="0" cy="0" rx="23" ry="7" fill="#d97706" stroke="#92400e" stroke-width="2" />
 
-          <!-- GLORIOUS TOWER OF ICE CREAM SCOOPS (Detaches at Fall) -->
+          <!-- GLORIOUS TOWER OF SCOOPS (falls off in Act 2, hidden in Act 3+) -->
           <g id="scoopTower" transform="translate(0, 0)">
-            <!-- Bottom Mint Scoop -->
             <circle cx="-2" cy="-14" r="24" fill="url(#mintGrad)" />
-            <!-- Chocolate chips on mint -->
             <circle cx="-12" cy="-10" r="2.5" fill="#451a03" />
             <circle cx="6" cy="-8" r="2" fill="#451a03" />
             <circle cx="-4" cy="-22" r="2.2" fill="#451a03" />
 
-            <!-- Middle Vanilla Scoop -->
             <circle cx="2" cy="-36" r="25" fill="url(#vanillaGrad)" />
 
-            <!-- Top Giant Strawberry Scoop -->
             <circle cx="0" cy="-60" r="27" fill="url(#strawberryGrad)" />
-            <!-- Strawberry Drips hanging down -->
             <path d="M -18 -48 Q -16 -32 -13 -32 Q -10 -32 -8 -48" fill="#e11d48" />
             <path d="M 8 -46 Q 12 -28 15 -28 Q 18 -28 20 -46" fill="#e11d48" />
-
-            <!-- Shiny Glaze Highlight -->
             <path d="M -16 -75 A 22 22 0 0 1 12 -75" fill="none" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round" opacity="0.6" />
 
-            <!-- Rainbow Sprinkles on Top -->
             <rect x="-14" y="-68" width="8" height="3" rx="1.5" transform="rotate(25 -14 -68)" fill="#ffffff" />
             <rect x="2" y="-74" width="8" height="3" rx="1.5" transform="rotate(-30 2 -74)" fill="#38bdf8" />
             <rect x="14" y="-62" width="8" height="3" rx="1.5" transform="rotate(45 14 -62)" fill="#a855f7" />
             <rect x="-8" y="-56" width="8" height="3" rx="1.5" transform="rotate(10 -8 -56)" fill="#fde047" />
 
-            <!-- Big Shiny Red Cherry on Top! -->
             <circle cx="0" cy="-90" r="11" fill="#9f1239" />
             <circle cx="-3" cy="-93" r="3.5" fill="#f43f5e" />
             <path d="M 0 -101 Q 16 -120 10 -126" fill="none" stroke="#78350f" stroke-width="2.8" stroke-linecap="round" />
           </g>
         </g>
 
-        <!-- 6. TEAR FOUNTAIN STREAM PARTICLES (Dynamic SVG elements) -->
-        <g id="tearFountainLayer"></g>
+        <!-- 6. CONTINUOUS TEAR FOUNTAIN STREAMS & SPLASH PARTICLES -->
+        <g id="tearFountainLayer">
+          <!-- Continuous cartoon firehose tear streams -->
+          <g id="tearStreams" opacity="0">
+            <path id="streamLeft" d="M 576 350 Q 510 270 420 535" fill="none" stroke="#38bdf8" stroke-width="9" stroke-linecap="round" opacity="0.88" />
+            <path id="streamLeftCore" d="M 576 350 Q 510 270 420 535" fill="none" stroke="#e0f2fe" stroke-width="4" stroke-linecap="round" opacity="0.75" />
+            <path id="streamRight" d="M 624 350 Q 690 270 780 535" fill="none" stroke="#38bdf8" stroke-width="9" stroke-linecap="round" opacity="0.88" />
+            <path id="streamRightCore" d="M 624 350 Q 690 270 780 535" fill="none" stroke="#e0f2fe" stroke-width="4" stroke-linecap="round" opacity="0.75" />
+            <!-- Splashing Puddles -->
+            <ellipse cx="420" cy="535" rx="22" ry="7" fill="#38bdf8" opacity="0.6" />
+            <ellipse cx="780" cy="535" rx="22" ry="7" fill="#38bdf8" opacity="0.6" />
+          </g>
+        </g>
 
-        <!-- 7. PERSONAL RAIN CLOUD OVER KID (Act 4 & 5) -->
+        <!-- 7. PERSONAL RAIN CLOUD OVER KID -->
         <g id="personalCloud" opacity="0" transform="translate(600, 180)">
-          <!-- Dark Storm Cloud -->
           <path d="M -70 15 Q -90 -10 -65 -35 Q -70 -70 -30 -75 Q 0 -95 40 -70 Q 80 -80 85 -40 Q 110 -25 95 15 Z" fill="url(#cloudGrad)" />
-          <!-- Cloud Eyes (sad > <) -->
           <path d="M -28 -22 L -18 -15 L -28 -8" stroke="#1e293b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
           <path d="M 28 -22 L 18 -15 L 28 -8" stroke="#1e293b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
-          <!-- Cloud Raindrops (falling down toward kid) -->
           <g id="cloudDrops">
             <line x1="-35" y1="20" x2="-40" y2="45" stroke="#60a5fa" stroke-width="3" stroke-linecap="round" opacity="0.8" />
             <line x1="-5" y1="25" x2="-10" y2="55" stroke="#60a5fa" stroke-width="3" stroke-linecap="round" opacity="0.8" />
@@ -511,72 +567,99 @@
           </g>
         </g>
 
-        <!-- 8. THE MISCHIEVOUS CARTOON BIRD (THE SEAGULL YOINK!) -->
-        <g id="seagullBird" opacity="0" transform="translate(1300, 120)">
-          <!-- Bird Body -->
-          <ellipse cx="0" cy="0" rx="34" ry="18" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" />
-          <ellipse cx="0" cy="4" rx="28" ry="12" fill="#f1f5f9" />
-
-          <!-- Flapping Wings -->
-          <g id="seagullWingLeft">
-            <path d="M -8 -8 C -15 -35, 10 -45, 18 -55 C 22 -45, 15 -25, 12 -5 Z" fill="#64748b" stroke="#334155" stroke-width="2" />
-            <!-- Dark Wingtips -->
-            <path d="M 10 -42 C 16 -50, 18 -55, 18 -55 C 22 -45, 17 -35, 12 -30 Z" fill="#1e293b" />
+        <!-- 8. DETAILED CARTOON SEAGULL RIG -->
+        <!-- Natural bird anatomy: facing LEFT into flight, wings swept back, authentic plumage -->
+        <g id="seagullBird" opacity="0" transform="translate(1300, 100)" filter="url(#dropShadow)">
+          <!-- Far Wing (Behind body, sweeps up and back) -->
+          <g id="gullFarWing" transform="translate(5, -12)">
+            <path d="M -10 -15 C 5 -45, 30 -75, 55 -95 C 40 -80, 25 -55, 10 -25 Z" fill="#64748b" stroke="#334155" stroke-width="1.5" />
+            <path d="M 35 -75 C 55 -95, 55 -95, 55 -95 C 45 -75, 35 -60, 25 -45 Z" fill="#0f172a" />
+            <circle cx="45" cy="-85" r="2.5" fill="#ffffff" />
           </g>
 
-          <!-- Head & Beak -->
-          <circle cx="28" cy="-6" r="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
-          <!-- Cheeky Eyebrow & Beady Pupil -->
-          <path d="M 24 -14 Q 32 -18 35 -13" fill="none" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round" />
-          <circle cx="30" cy="-8" r="3.2" fill="#0f172a" />
-          <circle cx="32" cy="-9" r="1" fill="#ffffff" />
+          <!-- Fan of Tail Feathers (At right rear) -->
+          <g id="gullTail" transform="translate(50, 4)">
+            <path d="M 0 0 L 38 -6 L 34 8 L 40 18 Z" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+            <path d="M 18 -2 L 40 4 L 20 10" fill="none" stroke="#94a3b8" stroke-width="1.2" />
+          </g>
 
-          <!-- Bright Yellow Beak (Clamps the cone!) -->
-          <polygon points="38,-10 58,-4 38,4" fill="#f59e0b" stroke="#d97706" stroke-width="1.5" />
-          <!-- Red spot on gull beak -->
-          <circle cx="48" cy="0" r="2.5" fill="#dc2626" />
+          <!-- Yellow/Orange Webbed Feet (tucked in cruise, drops down forward on hover/flare) -->
+          <g id="gullFeet" transform="translate(14, 22)">
+            <line x1="0" y1="0" x2="14" y2="4" stroke="#ea580c" stroke-width="3.2" stroke-linecap="round" />
+            <line x1="6" y1="0" x2="20" y2="4" stroke="#ea580c" stroke-width="3.2" stroke-linecap="round" />
+            <path id="footFlapLeft" d="M 14 4 L 24 6 L 18 10 Z" fill="#f97316" />
+            <path id="footFlapRight" d="M 20 4 L 30 6 L 24 10 Z" fill="#f97316" />
+          </g>
 
-          <!-- Webbed Orange Feet tucked in -->
-          <path d="M -12 16 L -6 24 L 2 24 L 0 16" fill="#f97316" />
+          <!-- Plump White Body & Slate Mantle Back -->
+          <g id="gullBody">
+            <path d="M 52 4 C 42 -16, 8 -22, -22 -14 C -45 -2, -42 20, -6 26 C 28 26, 45 18, 52 4 Z" fill="url(#gullBodyGrad)" stroke="#cbd5e1" stroke-width="1.5" />
+            <path d="M 38 0 C 22 -16, -2 -16, -22 -6 C -8 4, 18 8, 38 0 Z" fill="url(#gullMantleGrad)" />
+          </g>
 
-          <!-- STOLEN CONE IN BEAK (Shown once stolen!) -->
-          <g id="stolenConeInBeak" opacity="0" transform="translate(48, 5) rotate(48)">
-            <polygon points="-14,0 14,0 0,44" fill="url(#coneGrad)" stroke="#92400e" stroke-width="1.5" />
-            <ellipse cx="0" cy="0" rx="15" ry="4" fill="#d97706" />
+          <!-- Near / Front Wing (Layered with aerodynamic swept-back flight feathers) -->
+          <g id="gullNearWing" transform="translate(-5, -8)">
+            <!-- Main wing chord swept back to the right -->
+            <path d="M 0 0 C 15 -35, 45 -65, 105 -75 C 80 -55, 55 -25, 25 10 C 10 10, -5 6, 0 0 Z" fill="url(#gullWingGrad)" stroke="#475569" stroke-width="1.8" />
+            <!-- Black primary flight feathers at wingtip -->
+            <path d="M 70 -60 C 105 -75, 105 -75, 105 -75 C 90 -55, 75 -40, 60 -25 C 62 -35, 68 -48, 70 -60 Z" fill="#0f172a" />
+            <!-- Seagull Mirrors (white spots on black primaries) -->
+            <circle cx="95" cy="-70" r="3.2" fill="#ffffff" />
+            <circle cx="85" cy="-60" r="2.8" fill="#ffffff" />
+            <circle cx="75" cy="-50" r="2.2" fill="#ffffff" />
+            <!-- Feather ridges -->
+            <path d="M 35 -30 Q 30 0 20 8" fill="none" stroke="#64748b" stroke-width="1.2" opacity="0.6" />
+            <path d="M 55 -45 Q 45 -15 35 4" fill="none" stroke="#64748b" stroke-width="1.2" opacity="0.6" />
+          </g>
+
+          <!-- Head, Calculating Smug Eye & Hooked Yellow Beak -->
+          <g id="gullHead" transform="translate(-32, -6)">
+            <!-- Sleek head contour -->
+            <path d="M 8 -16 C -12 -22, -26 -14, -30 -2 C -32 10, -18 18, 4 15 Z" fill="url(#gullBodyGrad)" stroke="#cbd5e1" stroke-width="1.5" />
+            <!-- Smug bright bird eye -->
+            <circle cx="-14" cy="-6" r="5.5" fill="#fef08a" stroke="#0f172a" stroke-width="1.5" />
+            <circle cx="-15.5" cy="-6" r="2.8" fill="#0f172a" />
+            <circle cx="-16.5" cy="-7" r="1.2" fill="#ffffff" />
+            <!-- Sly Brow Ridge -->
+            <path d="M -8 -12 Q -15 -16 -21 -10" fill="none" stroke="#475569" stroke-width="2.2" stroke-linecap="round" />
+
+            <!-- Hooked Yellow Seagull Beak -->
+            <g id="gullBeak">
+              <path d="M -22 -6 L -50 -1 C -54 1, -54 6, -46 9 L -21 5 Z" fill="url(#gullBeakGrad)" stroke="#b45309" stroke-width="1.5" />
+              <path d="M -44 -1 Q -52 3 -46 9 L -40 6 Z" fill="#d97706" />
+              <!-- Red Gonys Spot on lower bill -->
+              <ellipse cx="-41" cy="6" rx="3.5" ry="2" fill="#ef4444" />
+              <!-- Nostril slit -->
+              <line x1="-30" y1="-2" x2="-35" y2="-1.5" stroke="#78350f" stroke-width="1.2" stroke-linecap="round" />
+            </g>
+
+            <!-- STOLEN CONE CLAMPED FIRMLY IN BEAK -->
+            <g id="stolenConeInBeak" opacity="0" transform="translate(-42, 6) rotate(-25)">
+              <polygon points="-22,0 22,0 0,68" fill="url(#coneGrad)" stroke="#92400e" stroke-width="2" />
+              <line x1="-15" y1="12" x2="10" y2="35" stroke="#92400e" stroke-width="2" opacity="0.75" />
+              <line x1="15" y1="12" x2="-10" y2="35" stroke="#92400e" stroke-width="2" opacity="0.75" />
+              <line x1="-9" y1="30" x2="6" y2="48" stroke="#92400e" stroke-width="2" opacity="0.75" />
+              <line x1="9" y1="30" x2="-6" y2="48" stroke="#92400e" stroke-width="2" opacity="0.75" />
+              <ellipse cx="0" cy="0" rx="23" ry="7" fill="#d97706" stroke="#92400e" stroke-width="2" />
+            </g>
           </g>
         </g>
 
-        <!-- 9. FINAL GAME-SHOW PENALTY BANNER (Act 5 & 6) -->
+        <!-- 9. GAME-SHOW PENALTY BANNER (Act 5 & 6) -->
+        <!-- Only: "Removed x points from your account" -->
         <g id="penaltyBanner" opacity="0" transform="translate(600, -180)">
-          <!-- Glass Card Plate -->
-          <rect x="-340" y="-70" width="680" height="150" rx="32" fill="var(--card-bg)" stroke="#f43f5e" stroke-width="3.5" filter="url(#softGlow)" />
-          <rect x="-338" y="-68" width="676" height="146" rx="30" fill="none" stroke="rgba(255, 255, 255, 0.2)" stroke-width="1.5" />
+          <rect x="-320" y="-46" width="640" height="92" rx="28" fill="var(--card-bg)" stroke="#f43f5e" stroke-width="3.5" filter="url(#softGlow)" />
+          <rect x="-318" y="-44" width="636" height="88" rx="26" fill="none" stroke="rgba(255, 255, 255, 0.22)" stroke-width="1.5" />
 
-          <!-- Top Red Alert Pill Badge -->
-          <g transform="translate(0, -70)">
-            <rect x="-140" y="-18" width="280" height="36" rx="18" fill="#be123c" stroke="#f43f5e" stroke-width="2" />
-            <text id="bannerChoreTag" x="0" y="5" text-anchor="middle" fill="#ffffff" font-family="'Outfit', sans-serif" font-weight="900" font-size="14" letter-spacing="1.5">
-              ⚠️ ROOM NOT CLEAN
-            </text>
-          </g>
-
-          <!-- MAIN PROMPT INSTRUCTION TITLE: "Removed x points from your account" -->
-          <text id="bannerTitle" x="0" y="0" text-anchor="middle" fill="#ffffff" font-family="'Outfit', sans-serif" font-weight="900" font-size="28" letter-spacing="-0.5">
+          <!-- EXACT USER PHRASE: "Removed x points from your account" -->
+          <text id="bannerTitle" x="0" y="10" text-anchor="middle" fill="#ffffff" font-family="'Outfit', sans-serif" font-weight="900" font-size="30" letter-spacing="-0.5">
             Removed 10 points from your account
           </text>
-
-          <!-- Points Lost Badge Pill with Broken Coin Icon -->
-          <g transform="translate(0, 42)">
-            <rect x="-160" y="-16" width="320" height="34" rx="17" fill="rgba(244, 63, 94, 0.2)" stroke="#f43f5e" stroke-width="1.8" />
-            <text id="bannerSubtitle" x="0" y="7" text-anchor="middle" fill="#fda4af" font-family="'Fredoka', cursive" font-weight="700" font-size="16">
-              −10 🪙 💔  Clean up next time to get them back!
-            </text>
-          </g>
         </g>
       </svg>
     </div>
 
-    <!-- Standalone Controls (Auto-hidden in embed mode) -->
+    <!-- Standalone Controls -->
     <div class="controls-bar">
       <div class="points-input-group">
         <label for="pointsInput">Penalty:</label>
@@ -664,7 +747,7 @@
       osc.frequency.setValueAtTime(startFreq, ctx.currentTime + start);
       osc.frequency.exponentialRampToValueAtTime(endFreq, ctx.currentTime + start + dur);
       gain.gain.setValueAtTime(0, ctx.currentTime + start);
-      gain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + start + 0.03);
+      gain.gain.linearRampToValueAtTime(0.24, ctx.currentTime + start + 0.03);
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
       osc.connect(gain);
       gain.connect(ctx.destination);
@@ -676,7 +759,6 @@
       if (!soundEnabled) return;
       const ctx = getAudioContext();
       if (!ctx) return;
-      // Low punchy impact
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'triangle';
@@ -689,7 +771,6 @@
       osc.start(ctx.currentTime + start);
       osc.stop(ctx.currentTime + start + 0.3);
 
-      // Squish high pop
       const pop = ctx.createOscillator();
       const popGain = ctx.createGain();
       pop.type = 'sine';
@@ -707,12 +788,11 @@
       if (!soundEnabled) return;
       const ctx = getAudioContext();
       if (!ctx) return;
-      // Classic cartoon crying descending wah-wah notes
       const notes = [
-        { f: 392, d: 0.32, bend: null },
-        { f: 369, d: 0.32, bend: null },
-        { f: 349, d: 0.35, bend: null },
-        { f: 329, d: 1.25, bend: 261 }, // F4 to C4 slide
+        { f: 392, d: 0.35, bend: null },
+        { f: 369, d: 0.35, bend: null },
+        { f: 349, d: 0.38, bend: null },
+        { f: 329, d: 1.6, bend: 261 },
       ];
       let offset = start;
       notes.forEach((n) => {
@@ -720,12 +800,12 @@
         const gain = ctx.createGain();
         const filter = ctx.createBiquadFilter();
         filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(900, ctx.currentTime + offset);
+        filter.frequency.setValueAtTime(880, ctx.currentTime + offset);
 
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(n.f, ctx.currentTime + offset);
         if (n.bend) {
-          osc.frequency.setValueAtTime(n.f, ctx.currentTime + offset + 0.3);
+          osc.frequency.setValueAtTime(n.f, ctx.currentTime + offset + 0.35);
           osc.frequency.exponentialRampToValueAtTime(n.bend, ctx.currentTime + offset + n.d);
         }
 
@@ -740,20 +820,23 @@
         osc.start(ctx.currentTime + offset);
         osc.stop(ctx.currentTime + offset + n.d + 0.05);
 
-        offset += n.d + 0.06;
+        offset += n.d + 0.08;
       });
     }
 
-    function playBirdYoink(start) {
+    function playGullFlightSounds(start) {
       if (!soundEnabled) return;
       const ctx = getAudioContext();
       if (!ctx) return;
-      // Flutter swoosh
-      playSlideWhistle(1200, 3200, start, 0.25);
-      // Cheeky gull chirp
-      playTone(2800, 'triangle', start + 0.22, 0.12, 0.25);
-      // Pop as cone is snatched
-      playTone(650, 'sine', start + 0.28, 0.09, 0.35);
+      // Gentle distant gull call
+      playSlideWhistle(1600, 2300, start + 0.2, 0.45);
+      // Second cheeky gull chirp as it draws closer
+      playTone(2600, 'triangle', start + 1.1, 0.18, 0.18);
+      // Snatch whoosh & pop
+      playSlideWhistle(1800, 950, start + 1.95, 0.2);
+      playTone(650, 'sine', start + 2.05, 0.09, 0.35);
+      // Caw as gull flies away
+      playSlideWhistle(2200, 2900, start + 2.35, 0.5);
     }
 
     function playPenaltyGong(start) {
@@ -763,30 +846,38 @@
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(146.83, ctx.currentTime + start); // D3
+      osc.frequency.setValueAtTime(146.83, ctx.currentTime + start);
       gain.gain.setValueAtTime(0, ctx.currentTime + start);
       gain.gain.linearRampToValueAtTime(0.35, ctx.currentTime + start + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + 1.8);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + 2.0);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(ctx.currentTime + start);
-      osc.stop(ctx.currentTime + start + 1.9);
+      osc.stop(ctx.currentTime + start + 2.1);
     }
 
-    // -------------------------------------------------------------------------
-    // ANIMATION ENGINE & TIMELINE
-    // -------------------------------------------------------------------------
-    const DURATION = 7.2; // total seconds
+    // ---------------------------------------------------------
+    // ANIMATION ENGINE & EXTENDED STORY TIMELINE
+    // ---------------------------------------------------------
+    const DURATION = 9.8; // total seconds (generous, comedic pacing)
 
     const scene = document.getElementById('scene');
     const moodOverlay = document.getElementById('moodOverlay');
     const kidCharacter = document.getElementById('kidCharacter');
+    const kidStandingRig = document.getElementById('kidStandingRig');
+    const kidSlumpedRig = document.getElementById('kidSlumpedRig');
     const kidHead = document.getElementById('kidHead');
     const faceHappy = document.getElementById('faceHappy');
     const faceShocked = document.getElementById('faceShocked');
     const faceCrying = document.getElementById('faceCrying');
+    const faceDumbfounded = document.getElementById('faceDumbfounded');
     const armsHappy = document.getElementById('armsHappy');
     const armsDespair = document.getElementById('armsDespair');
+    const fingerRight1 = document.getElementById('fingerRight1');
+    const fingerRight2 = document.getElementById('fingerRight2');
+    const fingerRight3 = document.getElementById('fingerRight3');
+    const pupilLeft = document.getElementById('pupilLeft');
+    const pupilRight = document.getElementById('pupilRight');
     const waffleConeGroup = document.getElementById('waffleConeGroup');
     const scoopTower = document.getElementById('scoopTower');
     const splatGroup = document.getElementById('splatGroup');
@@ -794,18 +885,22 @@
     const splatDroplets = document.getElementById('splatDroplets');
     const personalCloud = document.getElementById('personalCloud');
     const seagullBird = document.getElementById('seagullBird');
-    const seagullWingLeft = document.getElementById('seagullWingLeft');
+    const gullFarWing = document.getElementById('gullFarWing');
+    const gullNearWing = document.getElementById('gullNearWing');
+    const gullFeet = document.getElementById('gullFeet');
     const stolenConeInBeak = document.getElementById('stolenConeInBeak');
+    const birdGroundShadow = document.getElementById('birdGroundShadow');
     const penaltyBanner = document.getElementById('penaltyBanner');
     const bannerTitle = document.getElementById('bannerTitle');
-    const bannerSubtitle = document.getElementById('bannerSubtitle');
-    const bannerChoreTag = document.getElementById('bannerChoreTag');
     const tearFountainLayer = document.getElementById('tearFountainLayer');
+    const tearStreams = document.getElementById('tearStreams');
+    const streamLeft = document.getElementById('streamLeft');
+    const streamLeftCore = document.getElementById('streamLeftCore');
+    const streamRight = document.getElementById('streamRight');
+    const streamRightCore = document.getElementById('streamRightCore');
 
     function updateBannerText() {
       bannerTitle.textContent = `Removed ${pointsLost} points from your account`;
-      bannerSubtitle.textContent = `−${pointsLost} 🪙 💔   Clean up next time to get them back!`;
-      bannerChoreTag.textContent = `⚠️ ${choreTitle.toUpperCase()}`;
     }
     updateBannerText();
 
@@ -813,9 +908,9 @@
     let animFrame = null;
     let audioScheduled = false;
 
-    // Particle systems
+    // Tear particles
     const tearPool = [];
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 40; i++) {
       const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
       circle.setAttribute('r', '4');
       circle.setAttribute('fill', '#38bdf8');
@@ -824,6 +919,7 @@
       tearPool.push({ el: circle, active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0 });
     }
 
+    // Splat droplets
     const dropletPool = [];
     for (let i = 0; i < 24; i++) {
       const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
@@ -837,100 +933,96 @@
     function triggerAudioTimeline() {
       if (audioScheduled) return;
       audioScheduled = true;
-      // 1. Cheerful lick notes
-      playTone(523.25, 'sine', 0.2, 0.25, 0.18); // C5
-      playTone(659.25, 'sine', 0.55, 0.25, 0.18); // E5
-      playTone(783.99, 'sine', 0.9, 0.25, 0.18); // G5
-      // 2. Slip whistle
+      playTone(523.25, 'sine', 0.2, 0.25, 0.18);
+      playTone(659.25, 'sine', 0.55, 0.25, 0.18);
+      playTone(783.99, 'sine', 0.9, 0.25, 0.18);
       playSlideWhistle(850, 240, 1.7, 0.45);
-      // 3. Splat!
       setTimeout(() => playWetSplat(0), 2250);
-      // 4. Wah wah crying
       setTimeout(() => playWahWahCrying(0), 2600);
-      // 5. Bird swoop & yoink
-      setTimeout(() => playBirdYoink(0), 4050);
-      // 6. Penalty gong
-      setTimeout(() => playPenaltyGong(0), 4950);
+      setTimeout(() => playGullFlightSounds(0), 4000);
+      setTimeout(() => playPenaltyGong(0), 7300);
     }
 
     function render(t) {
       // ---------------------------------------------------------
-      // ACT 1: PURE BLISS (t: 0.0s to 1.7s)
+      // ACT 1: PURE BLISS (t: 0.0s to 1.8s)
       // ---------------------------------------------------------
-      if (t < 1.7) {
-        // Kid happily bobbing
+      if (t < 1.8) {
         const bounce = Math.sin(t * 8) * 8;
         kidCharacter.setAttribute('transform', `translate(600, ${360 + bounce})`);
+        kidStandingRig.setAttribute('opacity', '1');
+        kidSlumpedRig.setAttribute('opacity', '0');
         kidHead.setAttribute('transform', `translate(0, ${Math.sin(t * 8) * 2}) rotate(${Math.sin(t * 4) * 4})`);
 
-        // Face is happy
         faceHappy.setAttribute('opacity', '1');
         faceShocked.setAttribute('opacity', '0');
         faceCrying.setAttribute('opacity', '0');
+        faceDumbfounded.setAttribute('opacity', '0');
         armsHappy.setAttribute('opacity', '1');
         armsDespair.setAttribute('opacity', '0');
 
-        // Tongue licks out toward the ice cream
         const tongueWiggle = Math.sin(t * 14) * 4;
         const lickingTongue = document.getElementById('lickingTongue');
         if (lickingTongue) lickingTongue.setAttribute('transform', `translate(${tongueWiggle}, 0)`);
 
-        // Cone is held comfortably in hand
         waffleConeGroup.setAttribute('transform', `translate(630, ${410 + bounce}) rotate(-8)`);
+        waffleConeGroup.setAttribute('opacity', '1');
         scoopTower.setAttribute('transform', 'translate(0, 0)');
+        scoopTower.setAttribute('opacity', '1');
+
         splatGroup.setAttribute('opacity', '0');
         personalCloud.setAttribute('opacity', '0');
         seagullBird.setAttribute('opacity', '0');
         penaltyBanner.setAttribute('opacity', '0');
         moodOverlay.setAttribute('opacity', '0');
+        if (tearStreams) tearStreams.setAttribute('opacity', '0');
+        birdGroundShadow.setAttribute('rx', '0');
       }
 
       // ---------------------------------------------------------
-      // ACT 2: THE SLIP & CALAMITY (t: 1.7s to 2.25s)
+      // ACT 2: THE SLIP & CALAMITY (t: 1.8s to 2.3s)
       // ---------------------------------------------------------
-      else if (t >= 1.7 && t < 2.25) {
-        const dropT = t - 1.7; // 0 to 0.55s
+      else if (t >= 1.8 && t < 2.3) {
+        const dropT = t - 1.8; // 0 to 0.5s
 
-        // Kid freezes in horror
         kidCharacter.setAttribute('transform', 'translate(600, 360)');
+        kidStandingRig.setAttribute('opacity', '1');
+        kidSlumpedRig.setAttribute('opacity', '0');
         kidHead.setAttribute('transform', 'translate(0, -4) scale(1.05)');
 
-        // Face switches to SHOCKED
         faceHappy.setAttribute('opacity', '0');
         faceShocked.setAttribute('opacity', '1');
         faceCrying.setAttribute('opacity', '0');
+        faceDumbfounded.setAttribute('opacity', '0');
 
-        // Waffle cone tilts forward slightly
         waffleConeGroup.setAttribute('transform', 'translate(635, 412) rotate(14)');
+        waffleConeGroup.setAttribute('opacity', '1');
+        scoopTower.setAttribute('opacity', '1');
 
-        // SCOOP FALLS OFF!
-        if (dropT < 0.15) {
-          // Wobble on cone lip
+        if (dropT < 0.12) {
           const wobble = Math.sin(dropT * 40) * 12;
           scoopTower.setAttribute('transform', `translate(${wobble}, ${dropT * 30}) rotate(${wobble * 1.5})`);
         } else {
-          // Parabolic fall to ground
-          const fallTime = dropT - 0.15; // 0 to 0.4s
-          const fallY = 0.5 * 2400 * fallTime * fallTime; // drops ~190px
-          const fallX = fallTime * 140;
-          const fallRot = fallTime * 180;
+          const fallTime = dropT - 0.12;
+          const fallY = 0.5 * 2400 * fallTime * fallTime;
+          const fallX = fallTime * 150;
+          const fallRot = fallTime * 190;
           scoopTower.setAttribute('transform', `translate(${fallX}, ${fallY}) rotate(${fallRot})`);
         }
 
         splatGroup.setAttribute('opacity', '0');
+        if (tearStreams) tearStreams.setAttribute('opacity', '0');
       }
 
       // ---------------------------------------------------------
-      // ACT 3: SPLAT & WIDE-ARMED CRYING (t: 2.25s to 4.0s)
+      // ACT 3: SPLAT & WIDE-ARMED CRYING (t: 2.3s to 4.0s)
       // ---------------------------------------------------------
-      else if (t >= 2.25 && t < 4.0) {
-        const cryT = t - 2.25;
+      else if (t >= 2.3 && t < 4.0) {
+        const cryT = t - 2.3;
 
-        // Splat hits ground!
-        scoopTower.setAttribute('transform', 'translate(0, 9999)'); // hide original scoop tower
+        scoopTower.setAttribute('opacity', '0');
         splatGroup.setAttribute('opacity', '1');
 
-        // Splat shockwave expands once
         if (cryT < 0.4) {
           const swScale = cryT / 0.4;
           splatShockwave.setAttribute('r', (swScale * 75).toString());
@@ -939,145 +1031,234 @@
           splatShockwave.setAttribute('opacity', '0');
         }
 
-        // Spawn flying splat droplets
-        if (cryT < 0.5) {
-          dropletPool.forEach((d, idx) => {
-            if (!d.active) {
-              d.active = true;
-              d.x = 710;
-              d.y = 535;
-              const ang = (Math.PI * 2 * idx) / dropletPool.length + (Math.random() - 0.5) * 0.4;
-              const spd = Math.random() * 220 + 80;
-              d.vx = Math.cos(ang) * spd;
-              d.vy = Math.sin(ang) * spd * 0.5 - 120;
-            }
-            d.x += d.vx * 0.016;
-            d.y += d.vy * 0.016;
-            d.vy += 800 * 0.016; // gravity
-            if (d.y > 540) d.y = 540;
-            d.el.setAttribute('cx', d.x.toString());
-            d.el.setAttribute('cy', d.y.toString());
-            d.el.setAttribute('opacity', '1');
-          });
-        }
-
-        // Kid shakes and trembles with wide-spread arms in agony
         const cryShake = Math.sin(t * 36) * 3;
         kidCharacter.setAttribute('transform', `translate(${600 + cryShake}, ${360 + Math.abs(cryShake)})`);
+        kidStandingRig.setAttribute('opacity', '1');
+        kidSlumpedRig.setAttribute('opacity', '0');
 
-        // Face is CRYING with tear fountains
         faceHappy.setAttribute('opacity', '0');
         faceShocked.setAttribute('opacity', '0');
         faceCrying.setAttribute('opacity', '1');
+        faceDumbfounded.setAttribute('opacity', '0');
 
-        // Arms are FLUNG WIDE OPEN in despair
+        // SPREAD HANDS IN DESPAIR
         armsHappy.setAttribute('opacity', '0');
         armsDespair.setAttribute('opacity', '1');
 
-        // Left hand holds the empty waffle cone out to the left
-        waffleConeGroup.setAttribute('transform', `translate(${465 + cryShake}, ${428 + cryShake}) rotate(25)`);
+        // Right hand holds empty waffle cone out to right at (745, 425)
+        waffleConeGroup.setAttribute('transform', `translate(${745 + cryShake}, ${425 + cryShake}) rotate(-25)`);
+        waffleConeGroup.setAttribute('opacity', '1');
 
-        // TEAR FOUNTAIN PARTICLES EMITTING FROM EYES!
-        tearPool.forEach((p, idx) => {
-          if (!p.active && Math.random() < 0.28) {
-            p.active = true;
-            const isLeft = idx % 2 === 0;
-            p.x = isLeft ? 576 : 624;
-            p.y = 350;
-            p.vx = isLeft ? -(Math.random() * 160 + 120) : (Math.random() * 160 + 120);
-            p.vy = -(Math.random() * 220 + 180);
-            p.life = 1.0;
-          }
-          if (p.active) {
-            p.x += p.vx * 0.016;
-            p.y += p.vy * 0.016;
-            p.vy += 950 * 0.016; // gravity
-            p.life -= 0.018;
-            if (p.y > 540 || p.life <= 0) {
-              p.active = false;
-              p.el.setAttribute('opacity', '0');
-            } else {
-              p.el.setAttribute('cx', p.x.toString());
-              p.el.setAttribute('cy', p.y.toString());
-              p.el.setAttribute('opacity', p.life.toString());
-            }
-          }
-        });
+        // Continuous pulsing cartoon tear streams
+        if (tearStreams) {
+          tearStreams.setAttribute('opacity', '1');
+          const wave = Math.sin(t * 18) * 8;
+          const dLeft = `M 576 350 Q ${510 + wave} 270 420 535`;
+          const dRight = `M 624 350 Q ${690 - wave} 270 780 535`;
+          if (streamLeft) streamLeft.setAttribute('d', dLeft);
+          if (streamLeftCore) streamLeftCore.setAttribute('d', dLeft);
+          if (streamRight) streamRight.setAttribute('d', dRight);
+          if (streamRightCore) streamRightCore.setAttribute('d', dRight);
+        }
 
-        // Mood darkens slightly
         moodOverlay.setAttribute('opacity', (Math.min(0.4, cryT * 0.35)).toString());
-
-        // Personal rain cloud appears over kid!
         personalCloud.setAttribute('opacity', (Math.min(1, cryT * 2)).toString());
         personalCloud.setAttribute('transform', `translate(600, ${180 + Math.sin(t * 4) * 6})`);
       }
 
       // ---------------------------------------------------------
-      // ACT 4: THE SEAGULL SWOOP & CONE HEIST (t: 4.0s to 5.1s)
+      // ACT 4: THE SLOW, MAJESTIC SEAGULL APPROACH & HEIST (t: 4.0s to 7.1s)
+      // "make the bird come slowly and make it look more like a bird"
       // ---------------------------------------------------------
-      else if (t >= 4.0 && t < 5.1) {
-        const birdT = (t - 4.0) / 1.1; // 0 to 1
+      else if (t >= 4.0 && t < 7.1) {
+        const approachT = t - 4.0; // 0s to 3.1s
         seagullBird.setAttribute('opacity', '1');
+        scoopTower.setAttribute('opacity', '0');
+        splatGroup.setAttribute('opacity', '1');
+        armsDespair.setAttribute('opacity', '1');
+        armsHappy.setAttribute('opacity', '0');
+        personalCloud.setAttribute('opacity', '0.85');
 
-        // Bird flapping
-        const flapAngle = Math.sin(t * 32) * 28;
-        seagullWingLeft.setAttribute('transform', `rotate(${flapAngle})`);
+        let bx, by, bRot, bScale;
 
-        // Bird Swoop Bezier Path:
-        // Starts: (1250, 100) -> Dives to hand (465, 428) at birdT = 0.32 -> Swoops away to (-150, 80)
-        let bx, by;
-        if (birdT < 0.32) {
-          // Diving toward hand
-          const p = birdT / 0.32;
-          bx = 1250 + (465 - 1250) * p;
-          by = 100 + (428 - 100) * Math.pow(p, 1.4);
-          seagullBird.setAttribute('transform', `translate(${bx}, ${by}) rotate(25)`);
+        // Stage 4A: Slow, deliberate, majestic glide across the sky (4.0s to 5.7s, 1.7s duration)
+        if (approachT < 1.7) {
+          const p = approachT / 1.7; // 0 to 1
+          const easeP = p * p * (3 - 2 * p); // smoothstep
+
+          // Graceful slow wing flaps
+          const flap = Math.sin(approachT * 7) * 14;
+          gullNearWing.setAttribute('transform', `translate(-5, -8) rotate(${flap})`);
+          gullFarWing.setAttribute('transform', `translate(5, -12) rotate(${-flap * 0.75})`);
+          gullFeet.setAttribute('transform', 'translate(14, 22)'); // feet tucked
+
+          // Trajectory: High far right (1350, 70) down to (820, 240) in wide open space to right of kid
+          bx = 1350 + (820 - 1350) * easeP;
+          by = 70 + (240 - 70) * Math.pow(p, 1.25);
+          bRot = -10 + Math.sin(p * Math.PI * 2) * 3;
+          bScale = 0.45 + 0.45 * p; // smooth scale from distance
+
+          // Kid continues wailing in despair
+          const cryShake = Math.sin(t * 36) * 2.5;
+          kidCharacter.setAttribute('transform', `translate(${600 + cryShake}, ${360 + Math.abs(cryShake)})`);
+          kidStandingRig.setAttribute('opacity', '1');
+          kidSlumpedRig.setAttribute('opacity', '0');
+
+          waffleConeGroup.setAttribute('transform', `translate(${745 + cryShake}, ${425 + cryShake}) rotate(-25)`);
           waffleConeGroup.setAttribute('opacity', '1');
           stolenConeInBeak.setAttribute('opacity', '0');
-        } else {
-          // Cone YOINKED! Bird flies up & away carrying the cone in beak
-          const p = (birdT - 0.32) / 0.68;
-          bx = 465 + (-160 - 465) * p;
-          by = 428 + (60 - 428) * Math.pow(p, 0.75) - Math.sin(p * Math.PI) * 50;
-          seagullBird.setAttribute('transform', `translate(${bx}, ${by}) rotate(-18) scale(0.95)`);
 
-          // Kid's hand is now EMPTY!
+          if (tearStreams) {
+            tearStreams.setAttribute('opacity', '1');
+            const wave = Math.sin(t * 18) * 8;
+            const dLeft = `M 576 350 Q ${510 + wave} 270 420 535`;
+            const dRight = `M 624 350 Q ${690 - wave} 270 780 535`;
+            if (streamLeft) streamLeft.setAttribute('d', dLeft);
+            if (streamLeftCore) streamLeftCore.setAttribute('d', dLeft);
+            if (streamRight) streamRight.setAttribute('d', dRight);
+            if (streamRightCore) streamRightCore.setAttribute('d', dRight);
+          }
+
+          birdGroundShadow.setAttribute('cx', bx.toString());
+          birdGroundShadow.setAttribute('rx', (bScale * 45).toString());
+          birdGroundShadow.setAttribute('ry', (bScale * 10).toString());
+        }
+
+        // Stage 4B: Hover right beside the hand, flare landing gear, and SNATCH! (5.7s to 6.2s, 0.5s duration)
+        else if (approachT >= 1.7 && approachT < 2.2) {
+          const hoverP = (approachT - 1.7) / 0.5; // 0 to 1
+
+          // Hover flutter
+          const flap = Math.sin(approachT * 24) * 16;
+          gullNearWing.setAttribute('transform', `translate(-5, -8) rotate(${flap})`);
+          gullFarWing.setAttribute('transform', `translate(5, -12) rotate(${-flap * 0.75})`);
+
+          // Landing gear drops down forward!
+          gullFeet.setAttribute('transform', `translate(14, 22) rotate(${-hoverP * 24})`);
+
+          // Exact target: Hand is at (745, 425). Bird clamp point is at (bx - 73, by + 10)
+          // Bird center descends directly onto target (820, 240) -> (818, 415)!
+          bx = 820 + (818 - 820) * hoverP;
+          by = 240 + (415 - 240) * Math.pow(hoverP, 1.2);
+          bRot = -10 - hoverP * 4;
+          bScale = 0.9 + 0.1 * hoverP;
+
+          if (hoverP < 0.85) {
+            // Still in hand
+            waffleConeGroup.setAttribute('opacity', '1');
+            stolenConeInBeak.setAttribute('opacity', '0');
+            if (tearStreams) tearStreams.setAttribute('opacity', '1');
+          } else {
+            // *YOINK!* Cone snatches cleanly into seagull's beak!
+            waffleConeGroup.setAttribute('opacity', '0');
+            stolenConeInBeak.setAttribute('opacity', '1');
+            fingerRight1.setAttribute('opacity', '1');
+            fingerRight2.setAttribute('opacity', '1');
+            fingerRight3.setAttribute('opacity', '1');
+
+            // Kid immediately stops crying in sheer disbelief!
+            if (tearStreams) tearStreams.setAttribute('opacity', '0');
+            faceHappy.setAttribute('opacity', '0');
+            faceShocked.setAttribute('opacity', '0');
+            faceCrying.setAttribute('opacity', '0');
+            faceDumbfounded.setAttribute('opacity', '1');
+            kidHead.setAttribute('transform', 'translate(0, -2) rotate(8)');
+          }
+
+          birdGroundShadow.setAttribute('cx', bx.toString());
+          birdGroundShadow.setAttribute('rx', '46');
+          birdGroundShadow.setAttribute('ry', '12');
+        }
+
+        // Stage 4C: Triumphant climb away into distance carrying cone! (6.2s to 7.1s, 0.9s duration)
+        else {
+          const climbP = (approachT - 2.2) / 0.9; // 0 to 1
+
+          // Powerful climb strokes
+          const flap = Math.sin(approachT * 15) * 28;
+          gullNearWing.setAttribute('transform', `translate(-5, -8) rotate(${flap})`);
+          gullFarWing.setAttribute('transform', `translate(5, -12) rotate(${-flap * 0.75})`);
+          gullFeet.setAttribute('transform', 'translate(14, 22)'); // feet tucked back
+
+          // Climbs from (818, 415) up across the sky to (-170, 30)
+          bx = 818 + (-170 - 818) * climbP;
+          by = 415 + (30 - 415) * Math.pow(climbP, 0.8) - Math.sin(climbP * Math.PI) * 45;
+          bRot = 14 - climbP * 10;
+          bScale = 1.0 - climbP * 0.25;
+
           waffleConeGroup.setAttribute('opacity', '0');
           stolenConeInBeak.setAttribute('opacity', '1');
 
-          // Kid stops crying and stares up in pure dumbfounded shock
-          faceHappy.setAttribute('opacity', '0');
-          faceShocked.setAttribute('opacity', '1');
+          if (tearStreams) tearStreams.setAttribute('opacity', '0');
+          faceDumbfounded.setAttribute('opacity', '1');
           faceCrying.setAttribute('opacity', '0');
-          // Hide tears
-          tearPool.forEach(p => p.el.setAttribute('opacity', '0'));
+
+          // Kid's head & eyes track the bird flying from right to left across the sky!
+          const headRot = 8 - climbP * 18;
+          kidHead.setAttribute('transform', `translate(0, -2) rotate(${headRot})`);
+          if (pupilLeft) pupilLeft.setAttribute('cx', (-24 - climbP * 8).toString());
+          if (pupilRight) pupilRight.setAttribute('cx', (24 - climbP * 8).toString());
+
+          birdGroundShadow.setAttribute('cx', bx.toString());
+          birdGroundShadow.setAttribute('rx', (bScale * 38).toString());
         }
+
+        seagullBird.setAttribute('transform', `translate(${bx}, ${by}) rotate(${bRot}) scale(${bScale})`);
       }
 
       // ---------------------------------------------------------
-      // ACT 5 & 6: TOTAL DEFEAT & PENALTY BANNER (t: 5.1s to 7.2s)
+      // ACT 5 & 6: TOTAL DEFEAT & PENALTY BANNER (t: 7.1s to 9.8s)
       // ---------------------------------------------------------
-      else if (t >= 5.1) {
-        const endT = t - 5.1;
-        seagullBird.setAttribute('opacity', '0'); // bird has flown off screen
+      else if (t >= 7.1) {
+        const endT = t - 7.1;
+        seagullBird.setAttribute('opacity', '0');
+        birdGroundShadow.setAttribute('rx', '0');
+        waffleConeGroup.setAttribute('opacity', '0');
+        splatGroup.setAttribute('opacity', '1');
+        if (tearStreams) tearStreams.setAttribute('opacity', '0');
 
-        // Kid slumps down onto knees in defeat
-        kidCharacter.setAttribute('transform', 'translate(600, 395) scale(0.95, 0.9)');
-        kidHead.setAttribute('transform', 'translate(0, 16) rotate(12)');
-        faceCrying.setAttribute('opacity', '1');
-        faceShocked.setAttribute('opacity', '0');
+        // Kid slumps down onto knees facing forward in complete, heartbreaking defeat
+        kidStandingRig.setAttribute('opacity', '0');
+        kidSlumpedRig.setAttribute('opacity', '1');
+        kidCharacter.setAttribute('transform', 'translate(600, 385)');
 
-        // Personal storm cloud rains over slumped kid
         personalCloud.setAttribute('opacity', '0.9');
 
-        // PENALTY BANNER DROPS FROM SKY WITH JUICY SPRING BOUNCE!
+        // GAME-SHOW PENALTY BANNER DROPS WITH ELASTIC SPRING!
         penaltyBanner.setAttribute('opacity', '1');
-        const springT = Math.min(1, endT / 0.6);
-        // Elastic overshoot formula
-        const springY = -180 + (220 - (-180)) * (1 - Math.cos(springT * Math.PI * 0.5) * Math.cos(springT * Math.PI * 2.5) * Math.exp(-springT * 3));
-        const finalY = springT >= 0.9 ? 220 : springY;
+        const springT = Math.min(1, endT / 0.65);
+        const springY = -180 + (220 - (-180)) * (1 - Math.cos(springT * Math.PI * 0.5) * Math.cos(springT * Math.PI * 2.5) * Math.exp(-springT * 3.2));
+        const finalY = springT >= 0.92 ? 220 : springY;
         penaltyBanner.setAttribute('transform', `translate(600, ${finalY})`);
       }
+    }
+
+    function renderTears() {
+      tearPool.forEach((p, idx) => {
+        if (!p.active && Math.random() < 0.28) {
+          p.active = true;
+          const isLeft = idx % 2 === 0;
+          p.x = isLeft ? 576 : 624;
+          p.y = 350;
+          p.vx = isLeft ? -(Math.random() * 160 + 120) : (Math.random() * 160 + 120);
+          p.vy = -(Math.random() * 220 + 180);
+          p.life = 1.0;
+        }
+        if (p.active) {
+          p.x += p.vx * 0.016;
+          p.y += p.vy * 0.016;
+          p.vy += 950 * 0.016;
+          p.life -= 0.018;
+          if (p.y > 540 || p.life <= 0) {
+            p.active = false;
+            p.el.setAttribute('opacity', '0');
+          } else {
+            p.el.setAttribute('cx', p.x.toString());
+            p.el.setAttribute('cy', p.y.toString());
+            p.el.setAttribute('opacity', p.life.toString());
+          }
+        }
+      });
     }
 
     // ---------------------------------------------------------
@@ -1087,7 +1268,6 @@
       if (!startTime) startTime = now;
       const elapsed = (now - startTime) / 1000;
 
-      // Start sound sequence right at start
       if (elapsed > 0.05 && !audioScheduled) {
         triggerAudioTimeline();
       }
@@ -1096,7 +1276,6 @@
         render(elapsed);
         animFrame = requestAnimationFrame(tick);
       } else {
-        // Hold final frame
         render(DURATION);
       }
     }
@@ -1111,7 +1290,13 @@
       animFrame = requestAnimationFrame(tick);
     }
 
-    // Auto-start on load
+    window.render = render;
+    window.stopAnimation = () => {
+      if (animFrame) cancelAnimationFrame(animFrame);
+      animFrame = null;
+    };
+    window.startAnimation = startAnimation;
+
     window.addEventListener('load', () => {
       startAnimation();
     });
@@ -1123,7 +1308,6 @@
       });
     }
 
-    // Allow clicking anywhere to replay in standalone mode
     if (!isEmbed) {
       scene.addEventListener('click', () => {
         startAnimation();
