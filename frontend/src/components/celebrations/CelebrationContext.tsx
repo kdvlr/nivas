@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from 'react'
 import { CELEBRATIONS, type Celebration, type CelebrationName } from './animations'
-import { runSadStormAnimation, type SadAnimationOptions } from './sad-animations'
+import { runSadAnimation, type SadAnimationOptions } from './sad-animations'
 
 const DURATION_MS = 3800
 
@@ -109,10 +109,12 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!sadOptions) return
+    let duration = 6600
     if (canvasRef.current) {
-      cleanupRef.current = runSadStormAnimation(canvasRef.current, sadOptions)
+      const runner = runSadAnimation(canvasRef.current, sadOptions)
+      cleanupRef.current = runner.cleanup
+      duration = runner.durationMs
     }
-    const duration = 4200
     timersRef.current = [
       setTimeout(() => setFading(true), Math.max(duration - 600, 0)),
       setTimeout(() => stop(), duration),
