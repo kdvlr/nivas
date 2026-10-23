@@ -195,3 +195,56 @@ def test_list_chores_preserves_today_completed_chore(db, monkeypatch):
     assert item["completed"] is True
     assert item["due_date"] == today
 
+
+def test_negative_points_chore_deducts_coins_and_updates_breakdown(db, monkeypatch):
+    from app.routers.rewards import _get_balance_breakdown
+
+    # Create a negative-points chore ("Room Not Clean" -> -10 coins)
+    chore = Chore(
+        title="Room Not Clean",
+        assigned_to="Dhruv",
+        coins=-10,
+        completed=False,
+    )
+    db.add(chore)
+    db.commit()
+
+    assert chore.coins == -10
+    breakdown_before = _get_balance_breakdown(db, "Dhruv")
+    assert breakdown_before["balance"] == 0
+    assert breakdown_before["lost"] == 0
+
+    # Simulate completion of the negative chore
+    chore.completed = True
+    chore.completed_at = datetime.now(timezone.utc)
+    txn = CoinTransaction(
+        person_name=chore.assigned_to,
+        amount=chore.coins,
+        reason="chore_completed",
+        reference_id=chore.id,
+        occurrence_date="one-off",
+    )
+    db.add(txn)
+    db.commit()
+
+    # Balance breakdown should reflect negative 10 balance and 10 lost
+    breakdown_after = _get_balance_breakdown(db, "Dhruv")
+    assert breakdown_after["balance"] == -10
+    assert breakdown_after["lost"] == -10
+    assert breakdown_after["earned"] == 0
+
+    # Undoing the negative chore removes transaction and restores balance
+    chore.completed = False
+    chore.completed_at = None
+    db.query(CoinTransaction).filter(
+        CoinTransaction.person_name == chore.assigned_to,
+        CoinTransaction.reference_id == chore.id,
+        CoinTransaction.reason == "chore_completed",
+    ).delete()
+    db.commit()
+
+    breakdown_undone = _get_balance_breakdown(db, "Dhruv")
+    assert breakdown_undone["balance"] == 0
+    assert breakdown_undone["lost"] == 0
+
+

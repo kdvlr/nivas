@@ -185,7 +185,7 @@ export default function Rewards() {
                     <span className="flex-1">
                       <span className="font-medium">{tx.person_name}</span>{' '}
                       <span className="text-ink-soft">
-                        {tx.reason === 'chore_completed' && '— chore completed'}
+                        {tx.reason === 'chore_completed' && (tx.amount < 0 ? '— chore penalty' : '— chore completed')}
                         {tx.reason === 'chore_missed' && '— chore missed'}
                         {tx.reason === 'reward_redeemed' && '— reward redeemed'}
                         {!['chore_completed', 'chore_missed', 'reward_redeemed'].includes(tx.reason) && `— ${tx.reason}`}

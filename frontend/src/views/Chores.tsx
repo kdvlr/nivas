@@ -172,6 +172,7 @@ function ChoreCard({
   const d = density ?? getChoreDensity(1)
 
   const isChecked = isCompleting || chore.completed
+  const isPenalty = chore.coins < 0
 
   return (
     <motion.div
@@ -184,7 +185,9 @@ function ChoreCard({
       transition={EXPRESSIVE_ENTER}
       className={`relative overflow-hidden rounded-xl transition-all duration-300 ${
         isCompleting
-          ? 'ring-2 ring-emerald-500 shadow-lg shadow-emerald-500/25 bg-emerald-500/10'
+          ? isPenalty
+            ? 'ring-2 ring-rose-500 shadow-lg shadow-rose-500/25 bg-rose-500/10'
+            : 'ring-2 ring-emerald-500 shadow-lg shadow-emerald-500/25 bg-emerald-500/10'
           : ''
       }`}
     >
@@ -201,7 +204,7 @@ function ChoreCard({
         <Icon name="delete" className="text-2xl" />
       </motion.div>
 
-      {/* Floating reward celebration pill on completion */}
+      {/* Floating reward or penalty celebration pill on completion */}
       <AnimatePresence>
         {isCompleting && (
           <motion.div
@@ -209,11 +212,13 @@ function ChoreCard({
             animate={{ opacity: 1, y: -2, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.8 }}
             transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-            className="absolute right-12 top-2 z-10 flex items-center gap-1 rounded-full bg-emerald-500 px-2.5 py-0.5 text-xs font-bold text-white shadow-md shadow-emerald-500/40 pointer-events-none"
+            className={`absolute right-12 top-2 z-10 flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold text-white shadow-md pointer-events-none ${
+              isPenalty ? 'bg-rose-500 shadow-rose-500/40' : 'bg-emerald-500 shadow-emerald-500/40'
+            }`}
           >
-            <span>+{chore.coins}</span>
+            <span>{isPenalty ? chore.coins : `+${chore.coins}`}</span>
             <CoinIcon className="text-xs" />
-            <span>DONE!</span>
+            <span>{isPenalty ? 'DEDUCTED!' : 'DONE!'}</span>
           </motion.div>
         )}
       </AnimatePresence>
@@ -240,7 +245,7 @@ function ChoreCard({
         className={`relative flex w-full cursor-pointer items-center rounded-xl glass-inset text-left select-none shadow-sm transition-colors duration-300 ${
           d.cardPadding
         } ${
-          isCompleting ? 'bg-emerald-500/10' : ''
+          isCompleting ? (isPenalty ? 'bg-rose-500/10' : 'bg-emerald-500/10') : ''
         }`}
       >
         <motion.span
@@ -250,17 +255,23 @@ function ChoreCard({
             d.checkSize
           } ${
             isChecked
-              ? 'border-emerald-500 bg-emerald-500 text-white shadow-sm shadow-emerald-500/30'
-              : 'border-teal-300/40 text-transparent'
+              ? isPenalty
+                ? 'border-rose-500 bg-rose-500 text-white shadow-sm shadow-rose-500/30'
+                : 'border-emerald-500 bg-emerald-500 text-white shadow-sm shadow-emerald-500/30'
+              : isPenalty
+                ? 'border-rose-400/50 text-transparent'
+                : 'border-teal-300/40 text-transparent'
           }`}
         >
-          ✓
+          {isChecked ? (isPenalty ? '✕' : '✓') : ''}
         </motion.span>
         <span className="min-w-0 flex-1">
           <span
             className={`block truncate transition-colors duration-200 ${d.titleSize} ${
               isCompleting
-                ? 'text-emerald-700 dark:text-emerald-300 font-semibold'
+                ? isPenalty
+                  ? 'text-rose-700 dark:text-rose-300 font-semibold'
+                  : 'text-emerald-700 dark:text-emerald-300 font-semibold'
                 : chore.completed
                   ? 'line-through text-ink-soft'
                   : 'text-ink'
@@ -283,10 +294,21 @@ function ChoreCard({
                 {formatRecurrence(chore.recurrence)}
               </span>
             )}
+            {isPenalty && (
+              <span className="inline-flex items-center rounded-md bg-rose-500/15 px-1.5 py-0.2 font-semibold text-rose-500 text-[0.65rem] uppercase tracking-wider">
+                Penalty
+              </span>
+            )}
           </span>
         </span>
-        <span className={`flex shrink-0 items-center font-semibold text-amber-500 ${d.coinSize}`}>
-          <CoinIcon className={d.coinIconSize} /> ×{chore.coins}
+        <span
+          className={`flex shrink-0 items-center font-bold ${
+            isPenalty ? 'text-rose-500 dark:text-rose-400' : 'text-amber-500'
+          } ${d.coinSize}`}
+        >
+          {isPenalty ? '-' : ''}
+          <CoinIcon className={d.coinIconSize} />
+          {isPenalty ? ` ${Math.abs(chore.coins)}` : ` ×${chore.coins}`}
         </span>
         <motion.button
           whileHover={{ scale: 1.1 }}
@@ -347,7 +369,7 @@ export default function Chores() {
   const { data: chores, reload } = useData<ChoreItem[]>('/api/chores', ['chores'])
   const { data: people } = useData<Person[]>('/api/setup/people', ['chores'])
   const { data: balances } = useData<CoinBalance[]>('/api/rewards/balances', ['chores', 'rewards'])
-  const { celebrate, stop: stopCelebration } = useCelebration()
+  const { celebrate, celebrateSad, stop: stopCelebration } = useCelebration()
 
   const [completingId, setCompletingId] = useState<number | null>(null)
   const [leadCelebration, setLeadCelebration] = useState<{
@@ -445,7 +467,9 @@ export default function Chores() {
         navigator.vibrate([40, 60, 40])
       }
 
-      // Check if this chore moves assignee into the lead BEFORE any asynchronous calls
+      const isPenalty = chore.coins < 0
+
+      // Check if this chore moves assignee into the lead BEFORE any asynchronous calls (only for positive rewards)
       const assignee = (chore.assigned_to || '').trim().toLowerCase()
       const b = balances?.find((sb) => sb.person_name.toLowerCase() === assignee)
       const uniqueBalances = Array.from(new Set((balances || []).map((sb) => sb.balance))).sort((x, y) => y - x)
@@ -454,7 +478,7 @@ export default function Chores() {
       const leaders = (balances || []).filter((sb) => sb.balance === maxBalance)
       const isSoleLeader = leaders.length === 1 && leaders[0].person_name.toLowerCase() === assignee
 
-      const willTakeLead = !isSoleLeader && (currentBalance + chore.coins >= maxBalance)
+      const willTakeLead = !isPenalty && !isSoleLeader && (currentBalance + chore.coins >= maxBalance)
 
       if (willTakeLead) {
         pendingLeadRef.current = true
@@ -472,7 +496,12 @@ export default function Chores() {
 
       // Visual confirmation hold period on the card before celebration and list reorder
       await new Promise((resolve) => setTimeout(resolve, 650))
-      if (pendingLeadRef.current || willTakeLead || leadCelebrationRef.current) {
+      if (isPenalty) {
+        celebrateSad({
+          title: chore.title,
+          coinsLost: Math.abs(chore.coins),
+        })
+      } else if (pendingLeadRef.current || willTakeLead || leadCelebrationRef.current) {
         stopCelebration(8000)
       } else {
         celebrate()
@@ -882,17 +911,33 @@ export default function Chores() {
             {!draft.id && (
               <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                 {[
-                  { title: 'Do dishes', coins: 5, recurrence: 'daily' },
-                  { title: 'Take out trash', coins: 10, recurrence: 'weekly', weekDays: [2] }, // Wed
-                  { title: 'Clean room', coins: 15, recurrence: 'weekly', weekDays: [5] }, // Sat
-                  { title: 'Feed pets', coins: 5, recurrence: 'daily' },
+                  { title: 'Do dishes', coins: 5, recurrence: 'daily', isPenalty: false },
+                  { title: 'Take out trash', coins: 10, recurrence: 'weekly', weekDays: [2], isPenalty: false }, // Wed
+                  { title: 'Clean room', coins: 15, recurrence: 'weekly', weekDays: [5], isPenalty: false }, // Sat
+                  { title: 'Feed pets', coins: 5, recurrence: 'daily', isPenalty: false },
+                  { title: 'Room Not Clean', coins: -10, recurrence: '', isPenalty: true },
                 ].map((tpl) => (
                   <button
                     key={tpl.title}
-                    onClick={() => setDraft({ ...draft, title: tpl.title, coins: tpl.coins, recurrence: tpl.recurrence as any, weekDays: tpl.weekDays || [] })}
-                    className="shrink-0 rounded-full bg-sky-50 dark:bg-sky-900/30 px-3 py-1 text-sm font-medium text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 transition-transform active:scale-95"
+                    type="button"
+                    onClick={() =>
+                      setDraft({
+                        ...draft,
+                        title: tpl.title,
+                        coins: tpl.coins,
+                        recurrence: tpl.recurrence as any,
+                        weekDays: tpl.weekDays || [],
+                      })
+                    }
+                    className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium border transition-transform active:scale-95 flex items-center gap-1.5 ${
+                      tpl.isPenalty
+                        ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30 hover:bg-rose-500/20'
+                        : 'bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800 hover:bg-sky-100'
+                    }`}
                   >
-                    + {tpl.title}
+                    <span>{tpl.isPenalty ? '⚠️' : '+'}</span>
+                    <span>{tpl.title}</span>
+                    <span className="font-bold opacity-80">({tpl.coins > 0 ? `+${tpl.coins}` : tpl.coins})</span>
                   </button>
                 ))}
               </div>
@@ -939,20 +984,65 @@ export default function Chores() {
                 )
               })}
             </div>
-            {/* Coins */}
-            <label className="flex items-center gap-3 text-lg font-medium text-ink-soft">
-              Coins <CoinIcon />
-              <input
-                type="number"
-                min={1}
-                max={50}
-                value={draft.coins}
-                onChange={(e) =>
-                  setDraft({ ...draft, coins: Math.max(1, Math.min(50, Number(e.target.value))) })
-                }
-                className="w-24 input-glass px-4 py-3 text-lg font-normal"
-              />
-            </label>
+            {/* Coins / Points */}
+            <div className="flex flex-col gap-2">
+              <span className="text-base font-semibold text-ink-soft">Points / Impact</span>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="inline-flex rounded-xl p-1 bg-[var(--surface-container-low)] border border-[var(--outline-var)]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const mag = Math.max(1, Math.min(100, Math.abs(draft.coins || 5)))
+                      setDraft({ ...draft, coins: mag })
+                    }}
+                    className={`rounded-lg px-4 py-2 text-sm font-semibold transition-all ${
+                      draft.coins >= 0
+                        ? 'bg-amber-500 text-white shadow-sm'
+                        : 'text-ink-soft hover:text-ink'
+                    }`}
+                  >
+                    + Reward
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const mag = Math.max(1, Math.min(100, Math.abs(draft.coins || 10)))
+                      setDraft({ ...draft, coins: -mag })
+                    }}
+                    className={`rounded-lg px-4 py-2 text-sm font-semibold transition-all ${
+                      draft.coins < 0
+                        ? 'bg-rose-500 text-white shadow-sm'
+                        : 'text-ink-soft hover:text-ink'
+                    }`}
+                  >
+                    − Penalty
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className={`text-2xl font-black ${draft.coins < 0 ? 'text-rose-500' : 'text-amber-500'}`}>
+                    {draft.coins < 0 ? '−' : '+'}
+                  </span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={Math.abs(draft.coins)}
+                    onChange={(e) => {
+                      const val = Math.max(1, Math.min(100, Math.abs(Number(e.target.value) || 1)))
+                      setDraft({ ...draft, coins: draft.coins < 0 ? -val : val })
+                    }}
+                    className="w-24 input-glass px-3 py-2 text-xl font-bold text-center"
+                  />
+                  <div className="flex items-center gap-1.5">
+                    <CoinIcon className="h-6 w-6 text-amber-500" />
+                    <span className={`text-sm font-medium ${draft.coins < 0 ? 'text-rose-500 dark:text-rose-400 font-semibold' : 'text-ink-soft'}`}>
+                      {draft.coins < 0 ? 'coins deducted (sad storm animation)' : 'coins earned'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
             {/* Recurrence */}
             <label className="flex flex-col gap-2 text-lg font-medium text-ink-soft">
               Repeat

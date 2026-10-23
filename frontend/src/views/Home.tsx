@@ -158,7 +158,7 @@ export default function Home() {
     '/api/setup/config',
     ['setup'],
   )
-  const { celebrate, stop: stopCelebration } = useCelebration()
+  const { celebrate, celebrateSad, stop: stopCelebration } = useCelebration()
 
 
   // Reset completing/removed tracking when data reloads
@@ -335,7 +335,9 @@ export default function Home() {
       setRemovedIds((prev) => [...prev, itemId])
     }, 450)
 
-    // Check if this chore moves assignee into the lead
+    const isPenalty = c.coins < 0
+
+    // Check if this chore moves assignee into the lead (only for positive rewards)
     const assignee = (c.assigned_to || '').trim().toLowerCase()
     const b = balances?.find((sb) => sb.person_name.toLowerCase() === assignee)
     const uniqueBalances = Array.from(new Set((balances || []).map((sb) => sb.balance))).sort((x, y) => y - x)
@@ -343,14 +345,19 @@ export default function Home() {
     const currentBalance = b?.balance ?? 0
     const leaders = (balances || []).filter((sb) => sb.balance === maxBalance)
     const isSoleLeader = leaders.length === 1 && leaders[0].person_name.toLowerCase() === assignee
-    const willTakeLead = !isSoleLeader && (currentBalance + c.coins >= maxBalance)
+    const willTakeLead = !isPenalty && !isSoleLeader && (currentBalance + c.coins >= maxBalance)
 
     if (willTakeLead) {
       stopCelebration(8000)
     }
 
     await api.patch(`/api/chores/${c.id}`, { completed: true })
-    if (!willTakeLead) {
+    if (isPenalty) {
+      celebrateSad({
+        title: c.title,
+        coinsLost: Math.abs(c.coins),
+      })
+    } else if (!willTakeLead) {
       celebrate()
     }
     reloadChores()

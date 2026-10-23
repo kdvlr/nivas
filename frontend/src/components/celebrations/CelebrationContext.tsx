@@ -8,22 +8,26 @@ import {
   type ReactNode,
 } from 'react'
 import { CELEBRATIONS, type Celebration, type CelebrationName } from './animations'
+import { runSadStormAnimation, type SadAnimationOptions } from './sad-animations'
 
 const DURATION_MS = 3800
 
 interface Ctx {
   /** Play a random (or specific) fullscreen celebration. */
   celebrate: (name?: CelebrationName) => void
+  /** Play a fullscreen sad/penalty animation for negative chores. */
+  celebrateSad: (options?: SadAnimationOptions) => void
   /** Immediately halt any ongoing fullscreen celebration and optionally suppress new ones. */
   stop: (suppressDurationMs?: number) => void
 }
 
-const CelebrationContext = createContext<Ctx>({ celebrate: () => {}, stop: () => {} })
+const CelebrationContext = createContext<Ctx>({ celebrate: () => {}, celebrateSad: () => {}, stop: () => {} })
 
 export const useCelebration = () => useContext(CelebrationContext)
 
 export function CelebrationProvider({ children }: { children: ReactNode }) {
   const [active, setActive] = useState<Celebration | null>(null)
+  const [sadOptions, setSadOptions] = useState<SadAnimationOptions | null>(null)
   const [praise, setPraise] = useState('')
   const [fading, setFading] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -41,6 +45,7 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
     cleanupRef.current?.()
     cleanupRef.current = null
     setActive(null)
+    setSadOptions(null)
     setFading(false)
   }, [])
 
@@ -61,6 +66,17 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
       lastRef.current = chosen.name
       setPraise(chosen.praise[Math.floor(Math.random() * chosen.praise.length)])
       setActive(chosen)
+    },
+    [stop],
+  )
+
+  const celebrateSad = useCallback(
+    (options?: SadAnimationOptions) => {
+      if (Date.now() < suppressedUntilRef.current) {
+        return
+      }
+      stop()
+      setSadOptions(options || {})
     },
     [stop],
   )
@@ -91,16 +107,37 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
     }
   }, [active, stop])
 
+  useEffect(() => {
+    if (!sadOptions) return
+    if (canvasRef.current) {
+      cleanupRef.current = runSadStormAnimation(canvasRef.current, sadOptions)
+    }
+    const duration = 4200
+    timersRef.current = [
+      setTimeout(() => setFading(true), Math.max(duration - 600, 0)),
+      setTimeout(() => stop(), duration),
+    ]
+    return () => {
+      timersRef.current.forEach(clearTimeout)
+      cleanupRef.current?.()
+      cleanupRef.current = null
+    }
+  }, [sadOptions, stop])
+
   return (
-    <CelebrationContext.Provider value={{ celebrate, stop }}>
+    <CelebrationContext.Provider value={{ celebrate, celebrateSad, stop }}>
       {children}
-      {active && (
+      {(active || sadOptions) && (
         <div
           className={`fixed inset-0 z-50 transition-opacity duration-500 ${fading ? 'opacity-0' : 'opacity-100'}`}
-          style={{ background: active.backdrop }}
+          style={{
+            background: sadOptions
+              ? 'radial-gradient(circle at 50% 30%, #334155 0%, #1e293b 60%, #0f172a 100%)'
+              : active?.backdrop,
+          }}
           onClick={() => stop()}
         >
-          {active.iframeSrc ? (
+          {active?.iframeSrc ? (
             <iframe
               key={active.name}
               src={`${active.iframeSrc}${active.iframeSrc.includes('?') ? '&' : '?'}sound=${
@@ -112,7 +149,7 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
           ) : (
             <canvas ref={canvasRef} className="h-full w-full" />
           )}
-          {!active.durationMs && !active.hideHtmlPraise && (
+          {active && !active.durationMs && !active.hideHtmlPraise && (
             <div className="pointer-events-none absolute inset-x-0 top-[12%] text-center">
               <span
                 className="inline-block animate-bounce text-7xl font-black tracking-tight text-white"

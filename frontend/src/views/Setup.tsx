@@ -244,7 +244,7 @@ function SetupInner() {
   const { data: status, reload } = useData<SetupStatus>('/api/setup/status', ['setup'], 30000)
   const { data: cal, reload: reloadCal } = useData<CalendarStatus>('/api/calendar/status', ['calendar'])
   const { data: people, reload: reloadPeople } = useData<Person[]>('/api/setup/people', [])
-  const { celebrate } = useCelebration()
+  const { celebrate, celebrateSad } = useCelebration()
   const { celebrateReward } = useRewardCelebration()
   const choreAnimationGroups = [
     { label: 'Celebration animations', animations: CELEBRATIONS },
@@ -1022,9 +1022,17 @@ function SetupInner() {
                 </div>
               </section>
             ))}
-            <button onClick={() => celebrate()} className="btn-primary px-5 py-2 text-sm">
-              Surprise me!
-            </button>
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <button onClick={() => celebrate()} className="btn-primary px-5 py-2 text-sm">
+                Surprise me!
+              </button>
+              <button
+                onClick={() => celebrateSad({ title: 'Room Not Clean', coinsLost: 10 })}
+                className="btn-glass px-4 py-2 text-sm border-rose-500/30 text-rose-500 hover:bg-rose-500/10 active:scale-95 transition-all"
+              >
+                🌧️ Sad Storm: Room Not Clean (-10)
+              </button>
+            </div>
           </div>
         </Card>
         )}

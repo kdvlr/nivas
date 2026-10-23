@@ -66,10 +66,29 @@ def _get_balance_breakdown(db: Session, person_name: str) -> dict:
     row = (
         db.query(
             func.coalesce(
-                func.sum(case((CoinTransaction.reason == "chore_completed", CoinTransaction.amount), else_=0)), 0
+                func.sum(
+                    case(
+                        (
+                            (CoinTransaction.reason == "chore_completed") & (CoinTransaction.amount > 0),
+                            CoinTransaction.amount,
+                        ),
+                        else_=0,
+                    )
+                ),
+                0,
             ).label("earned"),
             func.coalesce(
-                func.sum(case((CoinTransaction.reason == "chore_missed", CoinTransaction.amount), else_=0)), 0
+                func.sum(
+                    case(
+                        (CoinTransaction.reason == "chore_missed", CoinTransaction.amount),
+                        (
+                            (CoinTransaction.reason == "chore_completed") & (CoinTransaction.amount < 0),
+                            CoinTransaction.amount,
+                        ),
+                        else_=0,
+                    )
+                ),
+                0,
             ).label("lost"),
             func.coalesce(
                 func.sum(case((CoinTransaction.reason == "reward_redeemed", CoinTransaction.amount), else_=0)), 0
