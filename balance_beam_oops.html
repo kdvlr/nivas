@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Balance Beam Oops · Chore Penalty Animation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(15, 23, 42, 0.94);
+      --primary: #f43f5e;
+      --border-glow: rgba(244, 63, 94, 0.6);
+      --text: #f8fafc;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .stage-wrapper {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      max-width: 100%;
+      max-height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    svg#stageSvg {
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="stage-wrapper">
+    <svg id="stageSvg" viewBox="0 0 800 500" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <!-- Stage Spotlight Gradient -->
+        <linearGradient id="spotlightGrad" x1="0.5" y1="0" x2="0.5" y2="1">
+          <stop offset="0%" stop-color="#fef08a" stop-opacity="0.32" />
+          <stop offset="65%" stop-color="#fef08a" stop-opacity="0.08" />
+          <stop offset="100%" stop-color="#fef08a" stop-opacity="0" />
+        </linearGradient>
+
+        <!-- Wood Beam Gradient -->
+        <linearGradient id="beamWood" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#f59e0b" />
+          <stop offset="30%" stop-color="#d97706" />
+          <stop offset="100%" stop-color="#92400e" />
+        </linearGradient>
+
+        <!-- Metal Legs Gradient -->
+        <linearGradient id="metalLeg" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#64748b" />
+          <stop offset="50%" stop-color="#cbd5e1" />
+          <stop offset="100%" stop-color="#475569" />
+        </linearGradient>
+
+        <!-- Plush Crash Mat Gradient -->
+        <linearGradient id="crashMatGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#38bdf8" />
+          <stop offset="40%" stop-color="#0284c7" />
+          <stop offset="100%" stop-color="#0369a1" />
+        </linearGradient>
+
+        <!-- Judges Desk Gradient -->
+        <linearGradient id="deskGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#1e1b4b" />
+          <stop offset="100%" stop-color="#0f172a" />
+        </linearGradient>
+
+        <!-- Leotard Gradient -->
+        <linearGradient id="leotardGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#f43f5e" />
+          <stop offset="55%" stop-color="#ec4899" />
+          <stop offset="100%" stop-color="#a855f7" />
+        </linearGradient>
+
+        <!-- Soft Drop Shadow -->
+        <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.35" />
+        </filter>
+
+        <!-- Penalty Glow -->
+        <filter id="penaltyGlow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#f43f5e" flood-opacity="0.45" />
+        </filter>
+      </defs>
+
+      <!-- Stage Background -->
+      <rect x="0" y="0" width="800" height="500" fill="#090d16" />
+
+      <!-- ================= BACKGROUND ARENA ================= -->
+      <!-- Arena Bunting / Pennants -->
+      <g opacity="0.75">
+        <path d="M 0,45 Q 200,85 400,45 Q 600,85 800,45" fill="none" stroke="#475569" stroke-width="2" />
+        <polygon points="40,52 55,80 70,56" fill="#f43f5e" />
+        <polygon points="95,60 110,88 125,63" fill="#fbbf24" />
+        <polygon points="150,65 165,93 180,66" fill="#38bdf8" />
+        <polygon points="205,66 220,94 235,65" fill="#a855f7" />
+        <polygon points="260,63 275,90 290,59" fill="#34d399" />
+        <polygon points="315,57 330,84 345,52" fill="#f43f5e" />
+        <polygon points="455,54 470,82 485,59" fill="#fbbf24" />
+        <polygon points="510,61 525,89 540,64" fill="#38bdf8" />
+        <polygon points="565,65 580,93 595,66" fill="#a855f7" />
+        <polygon points="620,65 635,93 650,62" fill="#34d399" />
+        <polygon points="675,60 690,87 705,56" fill="#f43f5e" />
+        <polygon points="730,54 745,80 760,49" fill="#fbbf24" />
+      </g>
+
+      <!-- Distant Crowd Silhouettes -->
+      <g fill="#1e293b" opacity="0.65">
+        <circle cx="70" cy="215" r="18" />
+        <rect x="48" y="232" width="44" height="40" rx="14" />
+        <circle cx="125" cy="222" r="16" />
+        <rect x="105" y="237" width="40" height="35" rx="12" />
+        <circle cx="675" cy="220" r="17" />
+        <rect x="655" y="236" width="40" height="35" rx="12" />
+        <circle cx="730" cy="212" r="19" />
+        <rect x="708" y="230" width="44" height="40" rx="14" />
+      </g>
+
+      <!-- Dynamic Spotlight Polygon -->
+      <polygon id="spotlight" points="350,0 450,0 600,460 200,460" fill="url(#spotlightGrad)" />
+
+      <!-- ================= THREE JUDGES PANEL (BACKGROUND CENTER) ================= -->
+      <g id="judgesPanel" transform="translate(220, 118)">
+        <!-- Judge 1 (Left - Stern Glasses Judge) -->
+        <g id="judge1" transform="translate(55, 50)">
+          <rect x="-26" y="18" width="52" height="50" rx="16" fill="#334155" />
+          <polygon points="-10,18 0,36 10,18" fill="#f8fafc" />
+          <polygon points="-3,22 0,36 3,22" fill="#ef4444" />
+          <circle cx="0" cy="0" r="20" fill="#fdba74" />
+          <path d="M -20,-4 Q -18,-24 0,-22 Q 18,-24 20,-4 Q 10,-14 -20,-4 Z" fill="#475569" />
+          <rect x="-15" y="-6" width="12" height="9" rx="2" fill="#e2e8f0" stroke="#0f172a" stroke-width="2" />
+          <rect x="3" y="-6" width="12" height="9" rx="2" fill="#e2e8f0" stroke="#0f172a" stroke-width="2" />
+          <line x1="-3" y1="-2" x2="3" y2="-2" stroke="#0f172a" stroke-width="2" />
+          <circle id="j1EyeL" cx="-9" cy="-1.5" r="2" fill="#0f172a" />
+          <circle id="j1EyeR" cx="9" cy="-1.5" r="2" fill="#0f172a" />
+          <path id="j1Mouth" d="M -6,10 Q 0,8 6,10" fill="none" stroke="#0f172a" stroke-width="2" stroke-linecap="round" />
+
+          <!-- Scorecard 1: Classic 0 -->
+          <g id="card1" transform="translate(0, 35) scale(0, 0)">
+            <rect x="-28" y="-75" width="56" height="68" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="3" filter="url(#dropShadow)" />
+            <rect x="-23" y="-70" width="46" height="58" rx="5" fill="#fef2f2" />
+            <text id="card1Text" x="0" y="-26" text-anchor="middle" font-family="'Outfit', system-ui, sans-serif" font-weight="900" font-size="40" fill="#ef4444">0</text>
+            <circle cx="0" cy="-7" r="6" fill="#fdba74" stroke="#d97706" stroke-width="1.5" />
+          </g>
+        </g>
+
+        <!-- Judge 2 (Center - Mustache Head Judge) -->
+        <g id="judge2" transform="translate(180, 46)">
+          <rect x="-28" y="18" width="56" height="54" rx="16" fill="#1e293b" />
+          <polygon points="-10,18 0,36 10,18" fill="#f8fafc" />
+          <polygon points="-3,22 0,36 3,22" fill="#f59e0b" />
+          <circle cx="0" cy="0" r="21" fill="#f1bb87" />
+          <circle cx="-19" cy="-8" r="6" fill="#94a3b8" />
+          <circle cx="19" cy="-8" r="6" fill="#94a3b8" />
+          <circle id="j2EyeL" cx="-7" cy="-3" r="2.5" fill="#0f172a" />
+          <circle id="j2EyeR" cx="7" cy="-3" r="2.5" fill="#0f172a" />
+          <line id="j2BrowL" x1="-13" y1="-9" x2="-3" y2="-8" stroke="#64748b" stroke-width="3" stroke-linecap="round" />
+          <line id="j2BrowR" x1="3" y1="-8" x2="13" y2="-9" stroke="#64748b" stroke-width="3" stroke-linecap="round" />
+          <path d="M 0,5 Q -10,2 -16,9 Q -8,13 0,8 Q 8,13 16,9 Q 10,2 0,5 Z" fill="#64748b" />
+
+          <!-- Scorecard 2: Classic 0 -->
+          <g id="card2" transform="translate(0, 35) scale(0, 0)">
+            <rect x="-28" y="-75" width="56" height="68" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="3" filter="url(#dropShadow)" />
+            <rect x="-23" y="-70" width="46" height="58" rx="5" fill="#fef2f2" />
+            <text id="card2Text" x="0" y="-26" text-anchor="middle" font-family="'Outfit', system-ui, sans-serif" font-weight="900" font-size="40" fill="#ef4444">0</text>
+            <circle cx="0" cy="-7" r="6" fill="#f1bb87" stroke="#b45309" stroke-width="1.5" />
+          </g>
+        </g>
+
+        <!-- Judge 3 (Right - Classic 0, no .1 silly mode) -->
+        <g id="judge3" transform="translate(305, 50)">
+          <rect x="-26" y="18" width="52" height="50" rx="16" fill="#312e81" />
+          <path d="M -10,20 Q 0,30 10,20" fill="none" stroke="#fbbf24" stroke-width="3" stroke-dasharray="2 3" stroke-linecap="round" />
+          <circle cx="0" cy="0" r="20" fill="#d99b66" />
+          <circle cx="0" cy="-24" r="10" fill="#1e1b4b" />
+          <path d="M -20,-2 Q -20,-22 0,-21 Q 20,-22 20,-2 Q 0,-14 -20,-2 Z" fill="#1e1b4b" />
+          <circle id="j3EyeL" cx="-7" cy="-2" r="2.3" fill="#0f172a" />
+          <circle id="j3EyeR" cx="7" cy="-2" r="2.3" fill="#0f172a" />
+          <path id="j3Mouth" d="M -5,9 Q 0,12 5,9" fill="none" stroke="#0f172a" stroke-width="2" stroke-linecap="round" />
+
+          <!-- Scorecard 3: Strictly Classic 0 -->
+          <g id="card3" transform="translate(0, 35) scale(0, 0)">
+            <rect id="card3Outer" x="-28" y="-75" width="56" height="68" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="3" filter="url(#dropShadow)" />
+            <rect id="card3Inner" x="-23" y="-70" width="46" height="58" rx="5" fill="#fef2f2" />
+            <text id="card3Text" x="0" y="-26" text-anchor="middle" font-family="'Outfit', system-ui, sans-serif" font-weight="900" font-size="40" fill="#ef4444">0</text>
+            <circle cx="0" cy="-7" r="6" fill="#d99b66" stroke="#78350f" stroke-width="1.5" />
+          </g>
+        </g>
+
+        <!-- Judges Desk -->
+        <rect x="0" y="92" width="360" height="62" rx="8" fill="url(#deskGrad)" stroke="#4f46e5" stroke-width="2" filter="url(#dropShadow)" />
+        <rect x="12" y="102" width="336" height="6" rx="3" fill="#6366f1" opacity="0.5" />
+        <text x="55" y="136" text-anchor="middle" font-size="16" fill="#fbbf24" opacity="0.8">★</text>
+        <text x="180" y="136" text-anchor="middle" font-size="16" fill="#fbbf24" opacity="0.8">JUDGES</text>
+        <text x="305" y="136" text-anchor="middle" font-size="16" fill="#fbbf24" opacity="0.8">★</text>
+      </g>
+
+      <!-- ================= ARENA FLOOR & MATS ================= -->
+      <rect x="0" y="425" width="800" height="75" fill="#0b1120" />
+      <line x1="0" y1="425" x2="800" y2="425" stroke="#334155" stroke-width="3" />
+
+      <!-- Plush Blue Crash Mat (under the beam) -->
+      <g id="crashMatGroup" transform="translate(400, 428)">
+        <rect id="crashMat" x="-240" y="-22" width="480" height="32" rx="12" fill="url(#crashMatGrad)" stroke="#7dd3fc" stroke-width="2" filter="url(#dropShadow)" />
+        <line x1="-120" y1="-20" x2="-120" y2="8" stroke="#0284c7" stroke-width="2" stroke-dasharray="4 4" />
+        <line x1="0" y1="-20" x2="0" y2="8" stroke="#0284c7" stroke-width="2" stroke-dasharray="4 4" />
+        <line x1="120" y1="-20" x2="120" y2="8" stroke="#0284c7" stroke-width="2" stroke-dasharray="4 4" />
+        <rect x="-225" y="-10" width="22" height="6" rx="3" fill="#0c4a6e" />
+        <rect x="203" y="-10" width="22" height="6" rx="3" fill="#0c4a6e" />
+      </g>
+
+      <!-- ================= THE BALANCE BEAM ================= -->
+      <g id="beamGroup">
+        <!-- Left Support Leg -->
+        <polygon points="195,308 210,308 228,415 177,415" fill="url(#metalLeg)" />
+        <rect x="165" y="410" width="75" height="10" rx="4" fill="#475569" />
+        <!-- Right Support Leg -->
+        <polygon points="590,308 605,308 623,415 572,415" fill="url(#metalLeg)" />
+        <rect x="560" y="410" width="75" height="10" rx="4" fill="#475569" />
+
+        <!-- Beam Bar -->
+        <g id="beamBar" transform="translate(400, 300)">
+          <rect x="-260" y="-10" width="520" height="22" rx="4" fill="url(#beamWood)" stroke="#fbbf24" stroke-width="1.5" filter="url(#dropShadow)" />
+          <rect x="-260" y="-10" width="12" height="22" rx="3" fill="#78350f" />
+          <rect x="248" y="-10" width="12" height="22" rx="3" fill="#78350f" />
+          <line x1="-245" y1="-5" x2="245" y2="-5" stroke="#fde68a" stroke-width="1.5" opacity="0.45" />
+        </g>
+      </g>
+
+      <!-- ================= GYMNAST CHARACTER (ARTICULATED RIG) ================= -->
+      <g id="gymnastRoot" transform="translate(245, 232) rotate(0)">
+        <g id="torsoGroup">
+          <!-- Back Arm (Left Arm) -->
+          <g id="armL" transform="translate(-12, -24) rotate(35)">
+            <rect x="-5" y="0" width="10" height="36" rx="5" fill="#fdba74" />
+            <rect x="-5.5" y="25" width="11" height="6" rx="2" fill="#f43f5e" />
+            <circle cx="0" cy="36" r="5.5" fill="#fdba74" />
+          </g>
+
+          <!-- Back Leg (Left Leg) -->
+          <g id="legL" transform="translate(-5, 10) rotate(8)">
+            <rect x="-6" y="0" width="12" height="46" rx="6" fill="#fdba74" />
+            <path d="M -6,38 L 6,38 L 10,48 L -6,48 Z" fill="#f8fafc" />
+          </g>
+
+          <!-- Leotard Body -->
+          <path d="M -13,-28 L 13,-28 L 11,12 Q 0,20 -11,12 Z" fill="url(#leotardGrad)" stroke="#fda4af" stroke-width="1" />
+          <polygon points="0,-16 2,-11 7,-11 3,-8 4,-3 0,-6 -4,-3 -3,-8 -7,-11 -2,-11" fill="#fef08a" />
+
+          <!-- Front Leg (Right Leg) -->
+          <g id="legR" transform="translate(5, 10) rotate(-8)">
+            <rect x="-6" y="0" width="12" height="46" rx="6" fill="#fed7aa" />
+            <path d="M -6,38 L 6,38 L 10,48 L -6,48 Z" fill="#ffffff" />
+          </g>
+
+          <!-- Front Arm (Right Arm) -->
+          <g id="armR" transform="translate(12, -24) rotate(-35)">
+            <rect x="-5" y="0" width="10" height="36" rx="5" fill="#fed7aa" />
+            <rect x="-5.5" y="25" width="11" height="6" rx="2" fill="#f43f5e" />
+            <circle cx="0" cy="36" r="5.5" fill="#fed7aa" />
+          </g>
+
+          <!-- Head & Hair Group -->
+          <g id="headGroup" transform="translate(0, -46) rotate(0)">
+            <!-- Bouncy Ponytail -->
+            <g id="ponytail" transform="translate(-14, -10) rotate(15)">
+              <path d="M 0,0 Q -22,-14 -28,6 Q -18,16 -4,4 Z" fill="#92400e" />
+              <circle cx="0" cy="0" r="5" fill="#fbbf24" />
+            </g>
+
+            <!-- Neck -->
+            <rect x="-4" y="12" width="8" height="10" rx="3" fill="#fed7aa" />
+            <!-- Head Circle -->
+            <circle cx="0" cy="0" r="17" fill="#fed7aa" stroke="#f59e0b" stroke-width="0.8" />
+
+            <!-- Rosy Cheeks -->
+            <ellipse cx="-9" cy="4" rx="3.5" ry="2" fill="#fb7185" opacity="0.6" />
+            <ellipse cx="9" cy="4" rx="3.5" ry="2" fill="#fb7185" opacity="0.6" />
+
+            <!-- Front Hair Bangs -->
+            <path d="M -17,-3 Q -15,-19 0,-18 Q 16,-19 17,-2 Q 9,-11 0,-8 Q -9,-11 -17,-3 Z" fill="#92400e" />
+
+            <!-- FACE 1: Happy -->
+            <g id="faceHappy">
+              <circle cx="-6" cy="-1" r="2.2" fill="#0f172a" />
+              <circle cx="6" cy="-1" r="2.2" fill="#0f172a" />
+              <circle cx="-5.2" cy="-1.8" r="0.8" fill="#ffffff" />
+              <circle cx="6.8" cy="-1.8" r="0.8" fill="#ffffff" />
+              <path d="M -5,6 Q 0,11 5,6" fill="none" stroke="#0f172a" stroke-width="2" stroke-linecap="round" />
+            </g>
+
+            <!-- FACE 2: Shock -->
+            <g id="faceShock" opacity="0">
+              <circle cx="-6" cy="-1" r="3.2" fill="#ffffff" stroke="#0f172a" stroke-width="1.5" />
+              <circle cx="6" cy="-1" r="3.2" fill="#ffffff" stroke="#0f172a" stroke-width="1.5" />
+              <circle cx="-6" cy="-1" r="1.3" fill="#0f172a" />
+              <circle cx="6" cy="-1" r="1.3" fill="#0f172a" />
+              <ellipse cx="0" cy="7" rx="3.5" ry="4.5" fill="#0f172a" />
+              <path d="M 16,-12 Q 21,-4 16,0 Q 11,-4 16,-12 Z" fill="#38bdf8" />
+            </g>
+
+            <!-- FACE 3: Dizzy -->
+            <g id="faceDizzy" opacity="0">
+              <path d="M -9,-4 L -4,-1 L -9,2" fill="none" stroke="#0f172a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M 9,-4 L 4,-1 L 9,2" fill="none" stroke="#0f172a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M -5,7 Q -2,4 0,7 Q 2,10 5,7" fill="none" stroke="#0f172a" stroke-width="1.8" stroke-linecap="round" />
+            </g>
+
+            <!-- FACE 4: Cry -->
+            <g id="faceCry" opacity="0">
+              <path d="M -10,-1 Q -6,-5 -2,-1" fill="none" stroke="#0f172a" stroke-width="2.2" stroke-linecap="round" />
+              <path d="M 2,-1 Q 6,-5 10,-1" fill="none" stroke="#0f172a" stroke-width="2.2" stroke-linecap="round" />
+              <path d="M -7,5 Q 0,2 7,5 Q 9,13 0,13 Q -9,13 -7,5 Z" fill="#be123c" stroke="#0f172a" stroke-width="1.5" />
+              <path d="M -4,11 Q 0,8 4,11" fill="#fb7185" />
+
+              <g id="tearStreams">
+                <path id="tearStreamL" d="M -7,0 Q -24,-8 -36,18" fill="none" stroke="#38bdf8" stroke-width="5" stroke-linecap="round" stroke-dasharray="6 4" />
+                <path id="tearStreamR" d="M 7,0 Q 24,-8 36,18" fill="none" stroke="#38bdf8" stroke-width="5" stroke-linecap="round" stroke-dasharray="6 4" />
+                <circle cx="-38" cy="22" r="3" fill="#7dd3fc" />
+                <circle cx="38" cy="22" r="3" fill="#7dd3fc" />
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+
+      <!-- ================= FOREGROUND FX ================= -->
+      <!-- Salute Sparkles -->
+      <g id="saluteSparkles" opacity="0" transform="translate(245, 175)">
+        <text x="-45" y="-10" font-size="20" fill="#fef08a">✨</text>
+        <text x="30" y="-15" font-size="18" fill="#fde047">✨</text>
+        <text x="0" y="-38" font-size="14" font-family="'Outfit', system-ui, sans-serif" font-weight="800" fill="#fef08a" text-anchor="middle">TA-DA!</text>
+      </g>
+
+      <!-- Wobble Alert -->
+      <g id="wobbleAlert" opacity="0" transform="translate(455, 165)">
+        <rect x="-42" y="-22" width="84" height="28" rx="14" fill="#ef4444" />
+        <polygon points="-6,6 6,6 0,15" fill="#ef4444" />
+        <text x="0" y="-4" text-anchor="middle" font-family="'Outfit', system-ui, sans-serif" font-weight="800" font-size="13" fill="#ffffff">WHOA!!</text>
+      </g>
+
+      <!-- Crash Cloud -->
+      <g id="crashCloud" opacity="0" transform="translate(465, 395)">
+        <path d="M -55,12 C -68,12 -72,-6 -56,-12 C -52,-28 -28,-32 -16,-20 C -4,-36 24,-34 32,-18 C 48,-24 66,-10 58,6 C 68,14 58,24 44,22 L -48,22 C -60,22 -64,14 -55,12 Z" fill="#f8fafc" opacity="0.92" stroke="#cbd5e1" stroke-width="2" />
+        <text x="0" y="-22" text-anchor="middle" font-family="'Outfit', system-ui, sans-serif" font-weight="900" font-size="22" fill="#f59e0b" stroke="#0f172a" stroke-width="1">POOF!</text>
+      </g>
+
+      <!-- Orbiting Dizzy Stars -->
+      <g id="dizzyStars" opacity="0" transform="translate(465, 345)">
+        <text id="star1" x="-35" y="0" font-size="18" fill="#fbbf24">★</text>
+        <text id="star2" x="0" y="-10" font-size="22" fill="#fef08a">★</text>
+        <text id="star3" x="35" y="0" font-size="18" fill="#fbbf24">★</text>
+      </g>
+
+      <!-- Run Dust Clouds -->
+      <g id="runDust" opacity="0">
+        <g id="dustCloud1" transform="translate(475, 408) scale(1)">
+          <path d="M -22,6 C -28,5 -30,-4 -21,-7 C -19,-16 -7,-19 -1,-12 C 6,-19 18,-15 20,-6 C 28,-5 29,5 21,7 C 16,10 -15,10 -22,6 Z" fill="#e2e8f0" opacity="0.88" stroke="#94a3b8" stroke-width="1.2" />
+          <path d="M -10,-3 Q -3,-9 4,-3" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" opacity="0.6" />
+        </g>
+        <g id="dustCloud2" transform="translate(545, 405) scale(1)">
+          <path d="M -26,8 C -34,6 -35,-5 -24,-9 C -21,-20 -6,-23 2,-14 C 10,-22 25,-17 26,-6 C 35,-4 35,7 25,9 C 18,12 -18,12 -26,8 Z" fill="#f1f5f9" opacity="0.82" stroke="#cbd5e1" stroke-width="1.2" />
+          <path d="M -12,-4 Q -2,-12 8,-3" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" opacity="0.55" />
+        </g>
+        <g id="dustCloud3" transform="translate(625, 406) scale(1)">
+          <path d="M -24,7 C -31,5 -32,-5 -22,-8 C -19,-18 -5,-20 1,-13 C 8,-20 21,-16 23,-6 C 31,-4 31,6 22,8 C 15,11 -16,11 -24,7 Z" fill="#e2e8f0" opacity="0.75" stroke="#94a3b8" stroke-width="1.2" />
+          <path d="M -8,-2 Q 0,-9 7,-2" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" opacity="0.5" />
+        </g>
+        <g id="dustCloud4" transform="translate(705, 409) scale(1)">
+          <path d="M -18,5 C -24,4 -25,-3 -17,-6 C -15,-14 -4,-15 1,-10 C 6,-15 16,-12 17,-4 C 23,-3 23,5 16,6 C 11,8 -12,8 -18,5 Z" fill="#cbd5e1" opacity="0.68" stroke="#94a3b8" stroke-width="1.2" />
+        </g>
+      </g>
+
+      <!-- ================= PENALTY BANNER OVERLAY ================= -->
+      <!-- Displays: "Removed x points from your account" -->
+      <g id="penaltyBanner" transform="translate(400, -80)">
+        <rect x="-260" y="-30" width="520" height="60" rx="30" fill="var(--card-bg)" stroke="#f43f5e" stroke-width="3" filter="url(#penaltyGlow)" />
+        <rect x="-258" y="-28" width="516" height="56" rx="28" fill="none" stroke="rgba(255, 255, 255, 0.22)" stroke-width="1.5" />
+        <text id="bannerText" x="0" y="8" text-anchor="middle" font-family="'Outfit', system-ui, sans-serif" font-weight="900" font-size="22" fill="#ffffff" letter-spacing="-0.3">
+          Removed 10 points from your account
+        </text>
+      </g>
+    </svg>
+  </div>
+
+  <script>
+    'use strict';
+
+    // -------------------------------------------------------------------------
+    // PARAMS & POINTS CONFIGURATION
+    // -------------------------------------------------------------------------
+    const urlParams = new URLSearchParams(window.location.search);
+    const pointsLost = Math.abs(parseInt(urlParams.get('points'), 10) || 10);
+    const soundEnabled = urlParams.get('sound') !== '0' && localStorage.getItem('nivas_celebration_sound') !== 'false';
+
+    const bannerText = document.getElementById('bannerText');
+    if (bannerText) {
+      bannerText.textContent = `Removed ${pointsLost} points from your account`;
+    }
+
+    // =========================================================================
+    // PROCEDURAL WEB AUDIO SYNTHESIZER
+    // =========================================================================
+    class CartoonSFX {
+      constructor() {
+        this.ctx = null;
+        this.enabled = soundEnabled;
+        this.triggered = new Set();
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume().catch(() => {});
+        }
+      }
+
+      resetTriggers() {
+        this.triggered.clear();
+      }
+
+      triggerOnce(id, fn) {
+        if (this.triggered.has(id)) return;
+        this.triggered.add(id);
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        try { fn(this.ctx); } catch (e) {}
+      }
+
+      // 1. Sparkle chime on salute
+      playSalute(ctx) {
+        const now = ctx.currentTime;
+        [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now + i * 0.06);
+          gain.gain.setValueAtTime(0.08, now + i * 0.06);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.06 + 0.25);
+          osc.connect(gain).connect(ctx.destination);
+          osc.start(now + i * 0.06);
+          osc.stop(now + i * 0.06 + 0.26);
+        });
+      }
+
+      // 2. Whoosh for cartwheel spin
+      playCartwheel(ctx) {
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.exponentialRampToValueAtTime(520, now + 0.35);
+        osc.frequency.exponentialRampToValueAtTime(260, now + 0.75);
+        gain.gain.setValueAtTime(0.06, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.82);
+      }
+
+      // 3. Slide Whistle Down on Fall
+      playFallSlide(ctx) {
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.exponentialRampToValueAtTime(150, now + 0.55);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.58);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.6);
+      }
+
+      // 4. Soft Plush Crash Mat Thud
+      playMatPoof(ctx) {
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(140, now);
+        osc.frequency.exponentialRampToValueAtTime(42, now + 0.28);
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.32);
+      }
+
+      // 5. Judge Scorecard Buzzer ("Bomp!") - Classic Low Disappointment
+      playJudgeScore(ctx, pitch = 196) {
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(pitch, now);
+        osc.frequency.setValueAtTime(pitch * 0.94, now + 0.08);
+        gain.gain.setValueAtTime(0.07, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      }
+
+      // 6. Tear Warble & Dash Footsteps
+      playCryAndRun(ctx) {
+        const now = ctx.currentTime;
+        [620, 540, 480, 420].forEach((f, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(f, now + idx * 0.09);
+          gain.gain.setValueAtTime(0.07, now + idx * 0.09);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.09 + 0.08);
+          osc.connect(gain).connect(ctx.destination);
+          osc.start(now + idx * 0.09);
+          osc.stop(now + idx * 0.09 + 0.09);
+        });
+        for (let i = 0; i < 8; i++) {
+          const t = now + 0.4 + i * 0.085;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(300 + (i % 2) * 120, t);
+          gain.gain.setValueAtTime(0.05, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+          osc.connect(gain).connect(ctx.destination);
+          osc.start(t);
+          osc.stop(t + 0.06);
+        }
+      }
+    }
+
+    const sfx = new CartoonSFX();
+
+    // =========================================================================
+    // MATH & EASING HELPERS
+    // =========================================================================
+    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+    const lerp = (a, b, t) => a + (b - a) * clamp(t, 0, 1);
+    const invLerp = (a, b, v) => clamp((v - a) / (b - a), 0, 1);
+    const easeOutBack = (t) => {
+      const c1 = 1.70158;
+      const c3 = c1 + 1;
+      return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+    };
+    const easeInOutQuad = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+
+    // =========================================================================
+    // DOM REFERENCES
+    // =========================================================================
+    const el = {
+      gymnastRoot: document.getElementById('gymnastRoot'),
+      headGroup: document.getElementById('headGroup'),
+      ponytail: document.getElementById('ponytail'),
+      armL: document.getElementById('armL'),
+      armR: document.getElementById('armR'),
+      legL: document.getElementById('legL'),
+      legR: document.getElementById('legR'),
+      faceHappy: document.getElementById('faceHappy'),
+      faceShock: document.getElementById('faceShock'),
+      faceDizzy: document.getElementById('faceDizzy'),
+      faceCry: document.getElementById('faceCry'),
+      tearStreamL: document.getElementById('tearStreamL'),
+      tearStreamR: document.getElementById('tearStreamR'),
+      beamBar: document.getElementById('beamBar'),
+      crashMat: document.getElementById('crashMat'),
+      saluteSparkles: document.getElementById('saluteSparkles'),
+      wobbleAlert: document.getElementById('wobbleAlert'),
+      crashCloud: document.getElementById('crashCloud'),
+      dizzyStars: document.getElementById('dizzyStars'),
+      star1: document.getElementById('star1'),
+      star2: document.getElementById('star2'),
+      star3: document.getElementById('star3'),
+      runDust: document.getElementById('runDust'),
+      dustCloud1: document.getElementById('dustCloud1'),
+      dustCloud2: document.getElementById('dustCloud2'),
+      dustCloud3: document.getElementById('dustCloud3'),
+      dustCloud4: document.getElementById('dustCloud4'),
+      card1: document.getElementById('card1'),
+      card2: document.getElementById('card2'),
+      card3: document.getElementById('card3'),
+      penaltyBanner: document.getElementById('penaltyBanner')
+    };
+
+    function setFace(activeFace) {
+      el.faceHappy.setAttribute('opacity', activeFace === 'happy' ? '1' : '0');
+      el.faceShock.setAttribute('opacity', activeFace === 'shock' ? '1' : '0');
+      el.faceDizzy.setAttribute('opacity', activeFace === 'dizzy' ? '1' : '0');
+      el.faceCry.setAttribute('opacity', activeFace === 'cry' ? '1' : '0');
+    }
+
+    // =========================================================================
+    // MASTER TIMELINE RENDERER (Duration: 8.8 seconds)
+    // =========================================================================
+    const TOTAL_DURATION = 8.8;
+
+    function renderAtTime(t) {
+      t = clamp(t, 0, TOTAL_DURATION);
+
+      let x = 245;
+      let y = 232;
+      let bodyRot = 0;
+      let armLRot = 35;
+      let armRRot = -35;
+      let legLRot = 6;
+      let legRRot = -6;
+      let headRot = 0;
+      let ponyRot = 15;
+      let beamOffsetY = 300;
+      let matScaleY = 1;
+
+      // Reset transient FX
+      el.saluteSparkles.setAttribute('opacity', '0');
+      el.wobbleAlert.setAttribute('opacity', '0');
+      el.crashCloud.setAttribute('opacity', '0');
+      el.dizzyStars.setAttribute('opacity', '0');
+      el.runDust.setAttribute('opacity', '0');
+
+      // -----------------------------------------------------------------------
+      // BEAT 1 (0.0s - 1.6s): Confident Gymnast Salute ("\o/") on the Beam
+      // -----------------------------------------------------------------------
+      if (t < 1.6) {
+        setFace('happy');
+        if (t < 0.45) {
+          const p = invLerp(0, 0.45, t);
+          y = lerp(232, 238, Math.sin(p * Math.PI));
+          armLRot = lerp(35, 145, p);
+          armRRot = lerp(-35, -145, p);
+        } else {
+          sfx.triggerOnce('salute', (ctx) => sfx.playSalute(ctx));
+          const p = invLerp(0.45, 1.6, t);
+          armLRot = 145 + Math.sin(p * Math.PI * 2) * 6;
+          armRRot = -145 - Math.sin(p * Math.PI * 2) * 6;
+          ponyRot = 15 + Math.sin(p * Math.PI * 3) * 10;
+          el.saluteSparkles.setAttribute('opacity', String(Math.sin(p * Math.PI)));
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // BEAT 2 (1.6s - 3.3s): The Cartwheel Attempt Across the Beam
+      // -----------------------------------------------------------------------
+      else if (t < 3.3) {
+        sfx.triggerOnce('cartwheel', (ctx) => sfx.playCartwheel(ctx));
+
+        const p = easeInOutQuad(invLerp(1.6, 3.3, t));
+        x = lerp(245, 455, p);
+        const arc = Math.sin(p * Math.PI * 2);
+        y = 232 - Math.sin(p * Math.PI) * 16 + arc * 6;
+        bodyRot = lerp(0, 378, p);
+
+        armLRot = 148;
+        armRRot = -148;
+        legLRot = 32;
+        legRRot = -32;
+        ponyRot = -35;
+
+        setFace(p < 0.78 ? 'happy' : 'shock');
+      }
+
+      // -----------------------------------------------------------------------
+      // BEAT 3A (3.3s - 4.15s): The Trip & Comedic Wobble
+      // -----------------------------------------------------------------------
+      else if (t < 4.15) {
+        setFace('shock');
+        const p = invLerp(3.3, 4.15, t);
+        x = 455 + Math.sin(p * Math.PI * 5) * 8;
+        y = 235;
+        bodyRot = 18 + Math.sin(p * Math.PI * 6) * 26;
+        armLRot = 95 + Math.sin(p * Math.PI * 10) * 40;
+        armRRot = -95 + Math.cos(p * Math.PI * 10) * 40;
+        legLRot = -45 + Math.sin(p * Math.PI * 6) * 20;
+        legRRot = 12;
+        beamOffsetY = 300 + Math.sin(p * Math.PI * 8) * 3.5;
+
+        el.wobbleAlert.setAttribute('opacity', '1');
+      }
+
+      // -----------------------------------------------------------------------
+      // BEAT 3B (4.15s - 4.85s): Falling onto the Plush Crash Mat
+      // -----------------------------------------------------------------------
+      else if (t < 4.85) {
+        sfx.triggerOnce('fallSlide', (ctx) => sfx.playFallSlide(ctx));
+        setFace('shock');
+
+        const p = invLerp(4.15, 4.65, t);
+        x = lerp(455, 465, p);
+        y = lerp(235, 378, p * p);
+        bodyRot = lerp(28, 95, p);
+        armLRot = 125;
+        armRRot = -125;
+        legLRot = -35;
+        legRRot = 40;
+
+        beamOffsetY = 300 + Math.sin((t - 4.15) * 35) * Math.exp(-(t - 4.15) * 5) * 6;
+
+        if (t >= 4.62) {
+          sfx.triggerOnce('matPoof', (ctx) => sfx.playMatPoof(ctx));
+          setFace('dizzy');
+          const imp = invLerp(4.62, 4.85, t);
+          matScaleY = 1 - Math.sin(imp * Math.PI) * 0.25;
+          el.crashCloud.setAttribute('opacity', String(1 - imp * 0.3));
+          el.crashCloud.setAttribute('transform', `translate(465, 395) scale(${lerp(0.5, 1.15, imp)})`);
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // BEAT 4 (4.85s - 6.6s): Sitting Dizzily on Mat while Judges Show 0-0-0
+      // -----------------------------------------------------------------------
+      else if (t < 6.6) {
+        const p = invLerp(4.85, 6.6, t);
+        x = 465;
+        y = 374;
+        bodyRot = lerp(95, 0, clamp(p * 3.5, 0, 1));
+        armLRot = 28;
+        armRRot = -28;
+        legLRot = 75;
+        legRRot = -75;
+        headRot = -8;
+
+        if (t < 6.0) {
+          setFace('dizzy');
+          el.dizzyStars.setAttribute('opacity', '1');
+          const angle = t * 6;
+          el.star1.setAttribute('x', String(Math.cos(angle) * 34));
+          el.star1.setAttribute('y', String(Math.sin(angle) * 8 - 8));
+          el.star2.setAttribute('x', String(Math.cos(angle + 2.1) * 34));
+          el.star2.setAttribute('y', String(Math.sin(angle + 2.1) * 8 - 8));
+          el.star3.setAttribute('x', String(Math.cos(angle + 4.2) * 34));
+          el.star3.setAttribute('y', String(Math.sin(angle + 4.2) * 8 - 8));
+        } else {
+          setFace('cry');
+          armLRot = 55;
+          armRRot = -55;
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // BEAT 5 (6.6s - 8.8s): Fountain Tears & Running Off-Screen
+      // -----------------------------------------------------------------------
+      else {
+        sfx.triggerOnce('cryRun', (ctx) => sfx.playCryAndRun(ctx));
+        setFace('cry');
+
+        if (t < 7.1) {
+          const p = invLerp(6.6, 7.1, t);
+          x = 465;
+          y = lerp(374, 355, easeOutBack(p));
+          bodyRot = Math.sin(p * Math.PI * 4) * 6;
+          armLRot = 70 + Math.sin(p * 25) * 18;
+          armRRot = -70 - Math.sin(p * 25) * 18;
+          legLRot = 18;
+          legRRot = -18;
+        } else {
+          const runP = invLerp(7.1, 8.5, t);
+          x = lerp(465, 880, easeInOutQuad(runP));
+          const stride = (t - 7.1) * 28;
+          y = 355 - Math.abs(Math.sin(stride)) * 14;
+          bodyRot = 12;
+          armLRot = 45 + Math.sin(stride) * 45;
+          armRRot = -45 - Math.sin(stride) * 45;
+          legLRot = Math.sin(stride) * 55;
+          legRRot = -Math.sin(stride) * 55;
+          ponyRot = -45 + Math.sin(stride) * 18;
+
+          el.runDust.setAttribute('opacity', String(clamp(1 - (t - 8.1) * 1.3, 0, 1)));
+          const puff1 = clamp((t - 7.1) * 4, 0, 1.25);
+          const puff2 = clamp((t - 7.32) * 4, 0, 1.3);
+          const puff3 = clamp((t - 7.55) * 4, 0, 1.35);
+          const puff4 = clamp((t - 7.78) * 4, 0, 1.3);
+          el.dustCloud1.setAttribute('transform', `translate(${475 - puff1 * 10}, ${408 - puff1 * 6}) scale(${puff1.toFixed(2)})`);
+          el.dustCloud2.setAttribute('transform', `translate(${545 - puff2 * 10}, ${405 - puff2 * 7}) scale(${puff2.toFixed(2)})`);
+          el.dustCloud3.setAttribute('transform', `translate(${625 - puff3 * 10}, ${406 - puff3 * 6}) scale(${puff3.toFixed(2)})`);
+          el.dustCloud4.setAttribute('transform', `translate(${705 - puff4 * 8}, ${409 - puff4 * 5}) scale(${puff4.toFixed(2)})`);
+        }
+
+        const tearOffset = -(t * 45) % 20;
+        el.tearStreamL.setAttribute('stroke-dashoffset', String(tearOffset));
+        el.tearStreamR.setAttribute('stroke-dashoffset', String(tearOffset));
+      }
+
+      // -----------------------------------------------------------------------
+      // SEQUENTIAL JUDGES SCORECARD POPUPS (Classic: 0 - 0 - 0)
+      // -----------------------------------------------------------------------
+      // Judge 1 Card
+      if (t >= 4.95) {
+        sfx.triggerOnce('judge1', (ctx) => sfx.playJudgeScore(ctx, 220));
+        const s1 = easeOutBack(invLerp(4.95, 5.25, t));
+        el.card1.setAttribute('transform', `translate(0, 35) scale(${s1}, ${s1})`);
+      } else {
+        el.card1.setAttribute('transform', 'translate(0, 35) scale(0, 0)');
+      }
+
+      // Judge 2 Card
+      if (t >= 5.35) {
+        sfx.triggerOnce('judge2', (ctx) => sfx.playJudgeScore(ctx, 196));
+        const s2 = easeOutBack(invLerp(5.35, 5.65, t));
+        el.card2.setAttribute('transform', `translate(0, 35) scale(${s2}, ${s2})`);
+      } else {
+        el.card2.setAttribute('transform', 'translate(0, 35) scale(0, 0)');
+      }
+
+      // Judge 3 Card (Classic 0 with lowest disappointed tone: 164.81Hz)
+      if (t >= 5.75) {
+        sfx.triggerOnce('judge3', (ctx) => sfx.playJudgeScore(ctx, 164.81));
+        const s3 = easeOutBack(invLerp(5.75, 6.05, t));
+        el.card3.setAttribute('transform', `translate(0, 35) scale(${s3}, ${s3})`);
+      } else {
+        el.card3.setAttribute('transform', 'translate(0, 35) scale(0, 0)');
+      }
+
+      // Penalty Top Banner Slide-In (t >= 5.8s)
+      if (t >= 5.8) {
+        const bp = easeOutBack(invLerp(5.8, 6.2, t));
+        const bannerY = lerp(-80, 50, bp);
+        el.penaltyBanner.setAttribute('transform', `translate(400, ${bannerY})`);
+      } else {
+        el.penaltyBanner.setAttribute('transform', 'translate(400, -80)');
+      }
+
+      // Apply transforms
+      el.gymnastRoot.setAttribute('transform', `translate(${x.toFixed(1)}, ${y.toFixed(1)}) rotate(${bodyRot.toFixed(1)})`);
+      el.headGroup.setAttribute('transform', `translate(0, -46) rotate(${headRot.toFixed(1)})`);
+      el.ponytail.setAttribute('transform', `translate(-14, -10) rotate(${ponyRot.toFixed(1)})`);
+      el.armL.setAttribute('transform', `translate(-12, -24) rotate(${armLRot.toFixed(1)})`);
+      el.armR.setAttribute('transform', `translate(12, -24) rotate(${armRRot.toFixed(1)})`);
+      el.legL.setAttribute('transform', `translate(-5, 10) rotate(${legLRot.toFixed(1)})`);
+      el.legR.setAttribute('transform', `translate(5, 10) rotate(${legRRot.toFixed(1)})`);
+      el.beamBar.setAttribute('transform', `translate(400, ${beamOffsetY.toFixed(1)})`);
+      el.crashMat.setAttribute('transform', `scale(1, ${matScaleY.toFixed(2)})`);
+    }
+
+    // =========================================================================
+    // ANIMATION LOOP & REPLAY
+    // =========================================================================
+    let animStartTime = null;
+    let currentTime = 0;
+    let isPlaying = true;
+    let rafId = null;
+
+    function tick(now) {
+      if (!animStartTime) animStartTime = now - currentTime * 1000;
+      if (isPlaying) {
+        currentTime = (now - animStartTime) / 1000;
+        if (currentTime >= TOTAL_DURATION) {
+          currentTime = TOTAL_DURATION;
+          isPlaying = false;
+        }
+        renderAtTime(currentTime);
+      }
+      if (isPlaying) {
+        rafId = requestAnimationFrame(tick);
+      }
+    }
+
+    function replay() {
+      cancelAnimationFrame(rafId);
+      sfx.resetTriggers();
+      sfx.init();
+      currentTime = 0;
+      animStartTime = null;
+      isPlaying = true;
+      renderAtTime(0);
+      rafId = requestAnimationFrame(tick);
+    }
+
+    // Clicking anywhere on the screen restarts the animation cleanly
+    document.body.addEventListener('click', () => {
+      replay();
+    });
+
+    // Keyboard support: Space, Enter, or R to replay
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' || e.code === 'Enter' || e.code === 'KeyR') {
+        e.preventDefault();
+        replay();
+      }
+    });
+
+    // Start on load
+    renderAtTime(0);
+    rafId = requestAnimationFrame(tick);
+  </script>
+</body>
+</html>

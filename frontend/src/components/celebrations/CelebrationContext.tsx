@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from 'react'
 import { CELEBRATIONS, type Celebration, type CelebrationName } from './animations'
-import { runSadAnimation, type SadAnimationOptions } from './sad-animations'
+import { runSadAnimation, type SadAnimationOptions, type SadAnimationName } from './sad-animations'
 
 const DURATION_MS = 3800
 
@@ -76,7 +76,13 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
         return
       }
       stop()
-      setSadOptions(options || {})
+      const penaltyPool: SadAnimationName[] = ['icecream', 'balance-beam']
+      const chosenAnim =
+        options?.animation || penaltyPool[Math.floor(Math.random() * penaltyPool.length)]
+      setSadOptions({
+        ...options,
+        animation: chosenAnim,
+      })
     },
     [stop],
   )
@@ -110,7 +116,8 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!sadOptions) return
     const isStorm = sadOptions.animation === 'storm'
-    const duration = isStorm ? 4400 : 9800
+    const isBeam = sadOptions.animation === 'balance-beam'
+    const duration = isStorm ? 4400 : isBeam ? 9400 : 9800
 
     if (isStorm && canvasRef.current) {
       const runner = runSadAnimation(canvasRef.current, sadOptions)
@@ -148,6 +155,17 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
                 typeof window !== 'undefined' && localStorage.getItem('nivas_celebration_sound') === 'true' ? '1' : '0'
               }`}
               title={active.label}
+              className="pointer-events-none h-full w-full border-0"
+            />
+          ) : sadOptions && sadOptions.animation === 'balance-beam' ? (
+            <iframe
+              key={`sad-beam-${Date.now()}`}
+              src={`/celebrations/balance_beam_oops.html?embed=1&title=${encodeURIComponent(
+                sadOptions.title || 'Room Not Clean',
+              )}&points=${Math.abs(sadOptions.coinsLost ?? 10)}&sound=${
+                typeof window !== 'undefined' && localStorage.getItem('nivas_celebration_sound') === 'true' ? '1' : '0'
+              }`}
+              title="Balance Beam Oops"
               className="pointer-events-none h-full w-full border-0"
             />
           ) : sadOptions && sadOptions.animation !== 'storm' ? (
