@@ -34,7 +34,12 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
   const cleanupRef = useRef<(() => void) | null>(null)
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
   const lastRef = useRef<CelebrationName | null>(null)
+  const historyRef = useRef<Map<CelebrationName, number>>(new Map())
+  const lastSadRef = useRef<SadAnimationName | null>(null)
+  const sadHistoryRef = useRef<Map<SadAnimationName, number>>(new Map())
   const suppressedUntilRef = useRef<number>(0)
+
+  const COOLDOWN_MS = 2 * 60 * 1000 // 2-minute non-repeat cooldown
 
   const stop = useCallback((suppressDurationMs = 0) => {
     if (suppressDurationMs > 0) {
@@ -55,15 +60,26 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
         return
       }
       stop()
+      const now = Date.now()
       let pool = CELEBRATIONS
       if (name) {
         pool = CELEBRATIONS.filter((c) => c.name === name)
-      } else if (CELEBRATIONS.length > 1 && lastRef.current) {
-        // random, but never the same one twice in a row
-        pool = CELEBRATIONS.filter((c) => c.name !== lastRef.current)
+      } else {
+        // Exclude animations played within the last 2 minutes
+        let eligible = CELEBRATIONS.filter(
+          (c) => now - (historyRef.current.get(c.name) || 0) >= COOLDOWN_MS,
+        )
+        // If all or most animations were played recently, fallback to avoiding consecutive repeats
+        if (eligible.length === 0 && lastRef.current && CELEBRATIONS.length > 1) {
+          eligible = CELEBRATIONS.filter((c) => c.name !== lastRef.current)
+        }
+        if (eligible.length > 0) {
+          pool = eligible
+        }
       }
       const chosen = pool[Math.floor(Math.random() * pool.length)]
       lastRef.current = chosen.name
+      historyRef.current.set(chosen.name, now)
       setPraise(chosen.praise[Math.floor(Math.random() * chosen.praise.length)])
       setActive(chosen)
     },
@@ -76,9 +92,28 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
         return
       }
       stop()
+      const now = Date.now()
       const penaltyPool: SadAnimationName[] = ['icecream', 'balance-beam']
-      const chosenAnim =
-        options?.animation || penaltyPool[Math.floor(Math.random() * penaltyPool.length)]
+      let chosenAnim = options?.animation
+
+      if (!chosenAnim) {
+        // Exclude penalties played within the 2-minute cooldown window
+        let eligible = penaltyPool.filter(
+          (p) => now - (sadHistoryRef.current.get(p) || 0) >= COOLDOWN_MS,
+        )
+        // With only 2 animations, if both have been played in 2 mins, alternate (no back-to-back repeats)
+        if (eligible.length === 0 && lastSadRef.current && penaltyPool.length > 1) {
+          eligible = penaltyPool.filter((p) => p !== lastSadRef.current)
+        }
+        if (eligible.length === 0) {
+          eligible = penaltyPool
+        }
+        chosenAnim = eligible[Math.floor(Math.random() * eligible.length)]
+      }
+
+      lastSadRef.current = chosenAnim
+      sadHistoryRef.current.set(chosenAnim, now)
+
       setSadOptions({
         ...options,
         animation: chosenAnim,

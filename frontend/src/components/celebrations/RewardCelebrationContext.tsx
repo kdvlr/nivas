@@ -30,7 +30,10 @@ export function RewardCelebrationProvider({ children }: { children: ReactNode })
   const cleanupRef = useRef<(() => void) | null>(null)
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
   const lastRef = useRef<RewardAnimationName | null>(null)
+  const historyRef = useRef<Map<RewardAnimationName, number>>(new Map())
   const suppressedUntilRef = useRef<number>(0)
+
+  const COOLDOWN_MS = 2 * 60 * 1000 // 2-minute non-repeat cooldown
 
   const stop = useCallback((suppressDurationMs = 0) => {
     if (suppressDurationMs > 0) {
@@ -50,14 +53,26 @@ export function RewardCelebrationProvider({ children }: { children: ReactNode })
         return
       }
       stop()
+      const now = Date.now()
       let pool = REWARD_ANIMATIONS
       if (name) {
         pool = REWARD_ANIMATIONS.filter((a) => a.name === name)
-      } else if (REWARD_ANIMATIONS.length > 1 && lastRef.current) {
-        pool = REWARD_ANIMATIONS.filter((a) => a.name !== lastRef.current)
+      } else {
+        // Exclude reward animations played within the last 2 minutes
+        let eligible = REWARD_ANIMATIONS.filter(
+          (a) => now - (historyRef.current.get(a.name) || 0) >= COOLDOWN_MS,
+        )
+        // Fallback if all were played within 2 minutes: avoid consecutive duplicate
+        if (eligible.length === 0 && lastRef.current && REWARD_ANIMATIONS.length > 1) {
+          eligible = REWARD_ANIMATIONS.filter((a) => a.name !== lastRef.current)
+        }
+        if (eligible.length > 0) {
+          pool = eligible
+        }
       }
       const chosen = pool[Math.floor(Math.random() * pool.length)]
       lastRef.current = chosen.name
+      historyRef.current.set(chosen.name, now)
       setPraise(chosen.praise[Math.floor(Math.random() * chosen.praise.length)])
       setActive(chosen)
     },
