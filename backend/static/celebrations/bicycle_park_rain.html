@@ -315,15 +315,15 @@
       <rect x="0" y="342" width="800" height="8" fill="#64748b" />
       <rect x="0" y="350" width="800" height="150" fill="url(#roadGrad)" />
 
-      <g stroke="#ffffff" stroke-width="4.5" stroke-dasharray="32 24" opacity="0.4">
-        <line x1="0" y1="430" x2="800" y2="430" />
+      <g stroke="#ffffff" stroke-width="4.5" opacity="0.4">
+        <line id="roadDashes" x1="-100" y1="430" x2="900" y2="430" stroke="#ffffff" stroke-width="4.5" stroke-dasharray="32 24" />
       </g>
 
-      <!-- The Sharp Tack Hazard on the Trail (x: 340, y: 462) -->
-      <g id="roadHazard" transform="translate(340, 464)">
-        <polygon points="-6,2 0,-11 6,2" fill="#e2e8f0" stroke="#475569" stroke-width="1.2" />
-        <ellipse cx="0" cy="2" rx="7" ry="3" fill="#94a3b8" />
-        <g id="hazardGlint" transform="translate(0, -11)">
+      <!-- The Sharp Tack Hazard on the Trail (rolls over at x: 418) -->
+      <g id="roadHazard" transform="translate(418, 470)">
+        <polygon points="-5,2 0,-9 5,2" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1" />
+        <rect x="-6" y="2" width="12" height="3" rx="1.5" fill="#f59e0b" stroke="#b45309" stroke-width="0.8" />
+        <g id="hazardGlint" transform="translate(0, -9)">
           <line x1="-7" y1="0" x2="7" y2="0" stroke="#fef08a" stroke-width="2" stroke-linecap="round" />
           <line x1="0" y1="-7" x2="0" y2="7" stroke="#fef08a" stroke-width="2" stroke-linecap="round" />
         </g>
@@ -342,11 +342,25 @@
         <ellipse id="ripple3a" cx="650" cy="460" rx="24" ry="6" fill="none" stroke="#bae6fd" stroke-width="1.8" opacity="0" />
       </g>
 
-      <!-- ================= 5. THE BICYCLE ================= -->
+      <!-- ================= 5. THE BICYCLE & STRADDLING RIDER ================= -->
       <g id="bikeRoot" transform="translate(200, 428)">
         <ellipse id="bikeShadow" cx="0" cy="42" rx="100" ry="11" fill="#000000" opacity="0.32" />
 
-        <!-- REAR WHEEL (Center: -78, 12) -->
+        <!-- 5A. FAR RIDER LEG (BEHIND THE BIKE FRAME) -->
+        <g id="mountFarLeg">
+          <line id="mThighL" x1="-28" y1="-44" x2="-2" y2="-16" stroke="#1e3a8a" stroke-width="12" stroke-linecap="round" />
+          <circle id="mKneeL" cx="-2" cy="-16" r="6" fill="#1e3a8a" />
+          <line id="mShinL" x1="-2" y1="-16" x2="-8" y2="26" stroke="url(#skinGrad)" stroke-width="9" stroke-linecap="round" />
+          <g id="mShoeL" transform="translate(-8, 26)">
+            <path d="M -7,-2 L 12,-2 L 14,7 L -7,7 Z" fill="#b91c1c" />
+            <rect x="-8" y="5" width="23" height="3" rx="1.5" fill="#ffffff" />
+          </g>
+          <!-- Far crank & pedal -->
+          <line id="mCrankL" x1="-8" y1="12" x2="-8" y2="26" stroke="url(#chromeGrad)" stroke-width="4" stroke-linecap="round" opacity="0.6" />
+          <rect id="mPedalL" x="-14" y="23" width="12" height="5.5" rx="1.5" fill="#1e293b" opacity="0.6" />
+        </g>
+
+        <!-- 5B. REAR WHEEL (Center: -78, 12) -->
         <g id="rearWheel" transform="translate(-78, 12)">
           <circle cx="0" cy="0" r="34" fill="none" stroke="#0f172a" stroke-width="10" />
           <circle cx="0" cy="0" r="36" fill="none" stroke="#1e293b" stroke-width="2" stroke-dasharray="5 7" />
@@ -360,8 +374,9 @@
           <circle cx="0" cy="0" r="6" fill="#475569" stroke="#cbd5e1" stroke-width="2" />
         </g>
 
-        <!-- FRONT WHEEL (Center: 78, 12) -->
+        <!-- 5C. FRONT WHEEL (Center: 78, 12) -->
         <g id="frontWheelGroup" transform="translate(78, 12)">
+          <!-- Normal Round Inflated Tire -->
           <g id="frontWheelInflated">
             <circle cx="0" cy="0" r="34" fill="none" stroke="#0f172a" stroke-width="10" />
             <circle cx="0" cy="0" r="36" fill="none" stroke="#1e293b" stroke-width="2" stroke-dasharray="5 7" />
@@ -375,25 +390,38 @@
             <line x1="20" y1="-20" x2="27" y2="-27" stroke="#d97706" stroke-width="3" stroke-linecap="round" />
           </g>
 
+          <!-- Authentic Deflated Bicycle Tire (Rim & spokes intact, soft bottom squish against road, embedded tack & air hiss) -->
           <g id="frontWheelDeflated" opacity="0">
-            <!-- Floppy squished rubber tire hugging pavement -->
-            <path id="flatTirePath" d="M -32,-12 C -32,-28 0,-30 32,-12 C 38,6 48,24 50,32 C 26,38 -26,38 -50,32 C -48,24 -38,6 -32,-12 Z" fill="#0f172a" stroke="#0f172a" stroke-width="6" stroke-linejoin="round" />
-            <circle cx="0" cy="-2" r="24" fill="none" stroke="#cbd5e1" stroke-width="2.5" />
-            <line x1="-24" y1="-2" x2="24" y2="-2" stroke="#94a3b8" stroke-width="1.4" />
-            <line x1="0" y1="-26" x2="0" y2="22" stroke="#94a3b8" stroke-width="1.4" />
-            <line x1="16" y1="-18" x2="23" y2="-23" stroke="#d97706" stroke-width="3" stroke-linecap="round" />
-
-            <g id="hissPuff" opacity="0" transform="translate(0, 32)">
-              <path d="M 0,0 Q 12,14 24,8" fill="none" stroke="#e2e8f0" stroke-width="3" stroke-linecap="round" />
-              <path d="M 0,0 Q -12,14 -24,8" fill="none" stroke="#e2e8f0" stroke-width="3" stroke-linecap="round" />
-              <text x="30" y="8" fill="#f8fafc" font-family="'Outfit', sans-serif" font-weight="900" font-size="14" font-style="italic">PSSSH!</text>
+            <circle cx="0" cy="2" r="28" fill="none" stroke="#cbd5e1" stroke-width="2.5" />
+            <g id="frontSpokesDeflated" transform="translate(0, 2)">
+              <line x1="-28" y1="0" x2="28" y2="0" stroke="#94a3b8" stroke-width="1.4" />
+              <line x1="0" y1="-28" x2="0" y2="28" stroke="#94a3b8" stroke-width="1.4" />
+              <line x1="-19.8" y1="-19.8" x2="19.8" y2="19.8" stroke="#94a3b8" stroke-width="1.4" />
+              <line x1="-19.8" y1="19.8" x2="19.8" y2="-19.8" stroke="#94a3b8" stroke-width="1.4" />
+            </g>
+            <!-- Deflated rubber ring: wraps around rim and softly spreads out on pavement -->
+            <path d="M -29,6 C -31,-16 0,-28 29,6 C 34,20 35,31 29,33 C 18,34 -18,34 -29,33 C -35,31 -34,20 -29,6 Z" fill="none" stroke="#0f172a" stroke-width="6.5" stroke-linejoin="round" />
+            <!-- Flattened bottom contact patch -->
+            <ellipse cx="0" cy="32" rx="27" ry="3.5" fill="#0f172a" />
+            <path d="M -20,33 L 20,33" stroke="#334155" stroke-width="1.5" stroke-linecap="round" />
+            <!-- Golden sharp thumb tack puncturing the tire -->
+            <g id="flatTack" transform="translate(22, 23) rotate(-32)">
+              <polygon points="-2.5,0 2.5,0 0,-10" fill="#e2e8f0" stroke="#94a3b8" stroke-width="0.8" />
+              <rect x="-6" y="0" width="12" height="3.5" rx="1.5" fill="#f59e0b" stroke="#b45309" stroke-width="0.8" />
+              <circle cx="0" cy="1.8" r="1.5" fill="#fef08a" />
+            </g>
+            <!-- Animated Air Hiss Spurt -->
+            <g id="hissPuff" opacity="0" transform="translate(32, 16)">
+              <path d="M 0,0 Q 10,-8 18,-4" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" />
+              <path d="M 2,5 Q 12,-2 20,2" fill="none" stroke="#bae6fd" stroke-width="2" stroke-linecap="round" />
+              <text x="24" y="2" fill="#38bdf8" font-family="'Outfit', sans-serif" font-weight="900" font-size="13" font-style="italic">PSSSH!</text>
             </g>
           </g>
 
           <circle cx="0" cy="0" r="6" fill="#475569" stroke="#cbd5e1" stroke-width="2" />
         </g>
 
-        <!-- BICYCLE FRAME -->
+        <!-- 5D. BICYCLE FRAME -->
         <g id="bikeFrame">
           <line x1="-78" y1="12" x2="-8" y2="12" stroke="url(#bikeFrameGrad)" stroke-width="6.5" stroke-linecap="round" />
           <line x1="-78" y1="12" x2="-26" y2="-34" stroke="url(#bikeFrameGrad)" stroke-width="6" stroke-linecap="round" />
@@ -408,21 +436,17 @@
           <line x1="-8" y1="2" x2="-78" y2="5" stroke="#475569" stroke-width="3" />
           <line x1="-8" y1="22" x2="-78" y2="19" stroke="#475569" stroke-width="3" />
 
-          <g id="crankGroup" transform="translate(-8, 12)">
-            <line id="crankR" x1="0" y1="0" x2="15" y2="12" stroke="url(#chromeGrad)" stroke-width="5" stroke-linecap="round" />
-            <rect id="pedalR" x="11" y="9" width="12" height="6.5" rx="2" fill="#1e293b" />
-            <line id="crankL" x1="0" y1="0" x2="-15" y2="-12" stroke="url(#chromeGrad)" stroke-width="4" stroke-linecap="round" opacity="0.6" />
-            <rect id="pedalL" x="-19" y="-15" width="11" height="5.5" rx="2" fill="#1e293b" opacity="0.6" />
-          </g>
-
+          <!-- Saddle -->
           <g transform="translate(-30, -45)">
             <path d="M -18,-4 C -18,-10 8,-10 18,-5 C 22,-3 22,2 18,2 C 8,2 -16,2 -18,-4 Z" fill="#0f172a" stroke="#334155" stroke-width="1.5" />
           </g>
 
+          <!-- Handlebars & Grips -->
           <g transform="translate(56, -48)">
             <line x1="0" y1="0" x2="4" y2="-16" stroke="url(#chromeGrad)" stroke-width="5.5" stroke-linecap="round" />
             <path d="M -8,-16 Q 5,-22 15,-14" fill="none" stroke="url(#chromeGrad)" stroke-width="5.5" stroke-linecap="round" />
-            <rect x="10" y="-18" width="10" height="7" rx="2.5" fill="#0f172a" />
+            <rect id="gripFar" x="-9" y="-20" width="10" height="7" rx="2.5" fill="#0f172a" />
+            <rect id="gripNear" x="10" y="-18" width="10" height="7" rx="2.5" fill="#0f172a" />
             <circle id="bikeBell" cx="-5" cy="-20" r="5.5" fill="#fbbf24" stroke="#b45309" stroke-width="1.2" />
             <g id="bellRings" opacity="0" transform="translate(-5, -20)">
               <circle cx="0" cy="0" r="10" fill="none" stroke="#fef08a" stroke-width="2" />
@@ -431,6 +455,87 @@
           </g>
 
           <line id="kickstand" x1="-8" y1="12" x2="-8" y2="34" stroke="#64748b" stroke-width="3.5" stroke-linecap="round" transform="rotate(-65 -8 12)" />
+        </g>
+
+        <!-- 5E. NEAR RIDER BODY & LIMBS (IN FRONT OF FRAME) -->
+        <g id="mountNearGroup">
+          <!-- Pelvis firmly on saddle -->
+          <path d="M -34,-48 L -18,-48 L -16,-34 L -36,-34 Z" fill="#2563eb" rx="3" />
+
+          <!-- Torso leaning forward naturally at 30° racing angle -->
+          <path d="M -34,-46 L -16,-46 L 8,-74 L -6,-78 Z" fill="url(#shirtGrad)" />
+          <polygon points="-1,-64 3,-64 0,-58 4,-58 -2,-50 -1,-56 -5,-56" fill="#ef4444" />
+          <path d="M -6,-78 Q 1,-74 8,-74" stroke="#ffffff" stroke-width="2.2" fill="none" />
+
+          <!-- Far Arm (Left Arm reaching forward to far grip) -->
+          <line id="mArmL" x1="-2" y1="-76" x2="24" y2="-68" stroke="url(#shirtGrad)" stroke-width="10" stroke-linecap="round" />
+          <line id="mForeL" x1="24" y1="-68" x2="50" y2="-64" stroke="url(#skinGrad)" stroke-width="8" stroke-linecap="round" />
+          <circle cx="50" cy="-64" r="5" fill="url(#skinGrad)" />
+
+          <!-- Head, Face & Helmet (sitting high and proud on crown of head) -->
+          <g id="mHeadGroup" transform="translate(2, -76)">
+            <!-- Neck -->
+            <rect x="-4" y="-4" width="8" height="12" fill="url(#skinGrad)" rx="2" />
+            <!-- Round Head -->
+            <circle cx="0" cy="-20" r="22" fill="url(#skinGrad)" />
+            <!-- Rosy Cheeks -->
+            <circle cx="-11" cy="-14" r="5.5" fill="#fb7185" opacity="0.65" />
+            <circle cx="11" cy="-14" r="5.5" fill="#fb7185" opacity="0.65" />
+            <!-- Cute Button Nose -->
+            <path d="M 0,-17 Q 3,-15 0,-13" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" />
+
+            <!-- Happy face features -->
+            <g id="mFaceHappy">
+              <ellipse cx="-7" cy="-22" rx="4.5" ry="6" fill="#ffffff" />
+              <circle cx="-6.5" cy="-22" r="3" fill="#1e293b" />
+              <circle cx="-5" cy="-24" r="1.2" fill="#ffffff" />
+              <ellipse cx="7" cy="-22" rx="4.5" ry="6" fill="#ffffff" />
+              <circle cx="7.5" cy="-22" r="3" fill="#1e293b" />
+              <circle cx="9" cy="-24" r="1.2" fill="#ffffff" />
+              <path d="M -11,-30 Q -7,-33 -3,-30" fill="none" stroke="#78350f" stroke-width="2.5" stroke-linecap="round" />
+              <path d="M 3,-30 Q 7,-33 11,-30" fill="none" stroke="#78350f" stroke-width="2.5" stroke-linecap="round" />
+              <path d="M -7,-10 Q 0,-2 7,-10" fill="#ef4444" stroke="#991b1b" stroke-width="1.5" />
+              <path d="M -6,-10 L 6,-10" stroke="#ffffff" stroke-width="2.2" />
+            </g>
+
+            <!-- Shocked face overlay -->
+            <g id="mFaceShock" opacity="0">
+              <ellipse cx="-7" cy="-22" rx="6" ry="7.5" fill="#ffffff" stroke="#1e293b" stroke-width="1.8" />
+              <circle cx="-7" cy="-21" r="1.8" fill="#1e293b" />
+              <ellipse cx="7" cy="-22" rx="6" ry="7.5" fill="#ffffff" stroke="#1e293b" stroke-width="1.8" />
+              <circle cx="7" cy="-21" r="1.8" fill="#1e293b" />
+              <path d="M -12,-33 Q -7,-38 -2,-33" fill="none" stroke="#78350f" stroke-width="2.6" stroke-linecap="round" />
+              <path d="M 2,-33 Q 7,-38 12,-33" fill="none" stroke="#78350f" stroke-width="2.6" stroke-linecap="round" />
+              <ellipse cx="0" cy="-8" rx="5" ry="7.5" fill="#1e293b" />
+            </g>
+
+            <!-- Messy hair bangs -->
+            <path d="M -14,-26 Q -10,-20 -6,-24" fill="none" stroke="#78350f" stroke-width="3" stroke-linecap="round" />
+            <path d="M 6,-24 Q 10,-20 14,-26" fill="none" stroke="#78350f" stroke-width="3" stroke-linecap="round" />
+
+            <!-- Helmet: sits naturally high on crown of head -->
+            <path d="M -24,-24 C -26,-46 -14,-56 6,-56 C 28,-56 34,-44 34,-24 C 34,-19 26,-16 22,-16 C 12,-16 2,-24 -6,-24 C -14,-24 -18,-19 -24,-24 Z" fill="url(#helmetGrad)" stroke="#1d4ed8" stroke-width="2.2" filter="url(#dropShadow)" />
+            <path d="M -18,-32 C -6,-54 12,-54 26,-30" fill="none" stroke="#ffffff" stroke-width="3.8" stroke-linecap="round" />
+            <polygon points="22,-22 40,-18 26,-14" fill="#1d4ed8" />
+            <path d="M -15,-16 Q -12,3 0,4 Q 12,3 15,-16" fill="none" stroke="#64748b" stroke-width="1.6" stroke-linecap="round" />
+          </g>
+
+          <!-- Near Leg (Right Leg) with true pedaling IK -->
+          <line id="mThighR" x1="-22" y1="-44" x2="6" y2="-18" stroke="#2563eb" stroke-width="13" stroke-linecap="round" />
+          <circle id="mKneeR" cx="6" cy="-18" r="6.5" fill="#2563eb" />
+          <line id="mShinR" x1="6" y1="-18" x2="-8" y2="-2" stroke="url(#skinGrad)" stroke-width="10" stroke-linecap="round" />
+          <g id="mShoeR" transform="translate(-8, -2)">
+            <path d="M -7,-2 L 12,-2 L 14,7 L -7,7 Z" fill="#ef4444" />
+            <rect x="-8" y="5" width="23" height="3" rx="1.5" fill="#ffffff" />
+          </g>
+          <!-- Near Crank & Pedal -->
+          <line id="mCrankR" x1="-8" y1="12" x2="-8" y2="-2" stroke="url(#chromeGrad)" stroke-width="5" stroke-linecap="round" />
+          <rect id="mPedalR" x="-14" y="-5" width="13" height="6" rx="2" fill="#1e293b" />
+
+          <!-- Near Arm (Right Arm reaching forward to near grip) -->
+          <line id="mArmR" x1="4" y1="-74" x2="36" y2="-62" stroke="url(#shirtGrad)" stroke-width="11" stroke-linecap="round" />
+          <line id="mForeR" x1="36" y1="-62" x2="71" y2="-62" stroke="url(#skinGrad)" stroke-width="9" stroke-linecap="round" />
+          <circle cx="71" cy="-62" r="5.5" fill="url(#skinGrad)" />
         </g>
       </g>
 
@@ -1041,9 +1146,35 @@
       frontWheelDeflated: document.getElementById('frontWheelDeflated'),
       frontSpokes: document.getElementById('frontSpokes'),
       hissPuff: document.getElementById('hissPuff'),
-      crankGroup: document.getElementById('crankGroup'),
       bellRings: document.getElementById('bellRings'),
       kickstand: document.getElementById('kickstand'),
+      roadDashes: document.getElementById('roadDashes'),
+      roadHazard: document.getElementById('roadHazard'),
+
+      // Mounted Rider Rig Elements (anatomically straddling bike)
+      mountFarLeg: document.getElementById('mountFarLeg'),
+      mThighL: document.getElementById('mThighL'),
+      mKneeL: document.getElementById('mKneeL'),
+      mShinL: document.getElementById('mShinL'),
+      mShoeL: document.getElementById('mShoeL'),
+      mCrankL: document.getElementById('mCrankL'),
+      mPedalL: document.getElementById('mPedalL'),
+      mountNearGroup: document.getElementById('mountNearGroup'),
+      mThighR: document.getElementById('mThighR'),
+      mKneeR: document.getElementById('mKneeR'),
+      mShinR: document.getElementById('mShinR'),
+      mShoeR: document.getElementById('mShoeR'),
+      mCrankR: document.getElementById('mCrankR'),
+      mPedalR: document.getElementById('mPedalR'),
+      mArmR: document.getElementById('mArmR'),
+      mForeR: document.getElementById('mForeR'),
+      mArmL: document.getElementById('mArmL'),
+      mForeL: document.getElementById('mForeL'),
+      mHeadGroup: document.getElementById('mHeadGroup'),
+      mFaceHappy: document.getElementById('mFaceHappy'),
+      mFaceShock: document.getElementById('mFaceShock'),
+
+      // Dismounted Kid Elements (standing, pumping, crying sprint)
       kidRoot: document.getElementById('kidRoot'),
       kidTorso: document.getElementById('kidTorso'),
       kidHeadGroup: document.getElementById('kidHeadGroup'),
@@ -1071,6 +1202,110 @@
     };
 
     // =========================================================================
+    // INVERSE KINEMATICS SOLVER FOR REALISTIC BICYCLE PEDALING & GRIP
+    // =========================================================================
+    function solve2Link(x1, y1, x2, y2, l1, l2, bendForward = true) {
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      let d = Math.hypot(dx, dy);
+      d = Math.max(8, Math.min(d, l1 + l2 - 1.5));
+      const baseAngle = Math.atan2(dy, dx);
+      const cosBeta = Math.max(-1, Math.min(1, (l1 * l1 + d * d - l2 * l2) / (2 * l1 * d)));
+      const beta = Math.acos(cosBeta);
+      const angle1 = bendForward ? baseAngle - beta : baseAngle + beta;
+      const jx = x1 + l1 * Math.cos(angle1);
+      const jy = y1 + l1 * Math.sin(angle1);
+      return { jx, jy };
+    }
+
+    function updateMountedRider(crankAngle, isShocked = false) {
+      const CRANK_X = -8;
+      const CRANK_Y = 12;
+      const CRANK_R = 14;
+
+      const HIP_R = { x: -22, y: -44 };
+      const HIP_L = { x: -28, y: -44 };
+      const THIGH_LEN = 38;
+      const SHIN_LEN = 38;
+
+      const SHOULDER_R = { x: 4, y: -74 };
+      const SHOULDER_L = { x: -2, y: -76 };
+      const GRIP_R = { x: 71, y: -62 };
+      const GRIP_L = { x: 50, y: -64 };
+      const UPPER_ARM = 36;
+      const FORE_ARM = 34;
+
+      // Subtle dynamic head & body bob with pedaling cadence
+      const cadenceBob = Math.sin(crankAngle) * 1.5;
+      el.mHeadGroup.setAttribute('transform', `translate(2, ${(-76 + cadenceBob).toFixed(1)})`);
+
+      // Near Leg (Right Leg)
+      const prx = CRANK_X + CRANK_R * Math.cos(crankAngle);
+      const pry = CRANK_Y + CRANK_R * Math.sin(crankAngle);
+      const kneeR = solve2Link(HIP_R.x, HIP_R.y, prx, pry, THIGH_LEN, SHIN_LEN, true);
+      el.mThighR.setAttribute('x1', HIP_R.x);
+      el.mThighR.setAttribute('y1', HIP_R.y);
+      el.mThighR.setAttribute('x2', kneeR.jx.toFixed(1));
+      el.mThighR.setAttribute('y2', kneeR.jy.toFixed(1));
+      el.mKneeR.setAttribute('cx', kneeR.jx.toFixed(1));
+      el.mKneeR.setAttribute('cy', kneeR.jy.toFixed(1));
+      el.mShinR.setAttribute('x1', kneeR.jx.toFixed(1));
+      el.mShinR.setAttribute('y1', kneeR.jy.toFixed(1));
+      el.mShinR.setAttribute('x2', prx.toFixed(1));
+      el.mShinR.setAttribute('y2', pry.toFixed(1));
+      el.mShoeR.setAttribute('transform', `translate(${prx.toFixed(1)}, ${pry.toFixed(1)})`);
+      el.mCrankR.setAttribute('x2', prx.toFixed(1));
+      el.mCrankR.setAttribute('y2', pry.toFixed(1));
+      el.mPedalR.setAttribute('x', (prx - 6.5).toFixed(1));
+      el.mPedalR.setAttribute('y', (pry - 3).toFixed(1));
+
+      // Far Leg (Left Leg)
+      const plx = CRANK_X - CRANK_R * Math.cos(crankAngle);
+      const ply = CRANK_Y - CRANK_R * Math.sin(crankAngle);
+      const kneeL = solve2Link(HIP_L.x, HIP_L.y, plx, ply, THIGH_LEN, SHIN_LEN, true);
+      el.mThighL.setAttribute('x1', HIP_L.x);
+      el.mThighL.setAttribute('y1', HIP_L.y);
+      el.mThighL.setAttribute('x2', kneeL.jx.toFixed(1));
+      el.mThighL.setAttribute('y2', kneeL.jy.toFixed(1));
+      el.mKneeL.setAttribute('cx', kneeL.jx.toFixed(1));
+      el.mKneeL.setAttribute('cy', kneeL.jy.toFixed(1));
+      el.mShinL.setAttribute('x1', kneeL.jx.toFixed(1));
+      el.mShinL.setAttribute('y1', kneeL.jy.toFixed(1));
+      el.mShinL.setAttribute('x2', plx.toFixed(1));
+      el.mShinL.setAttribute('y2', ply.toFixed(1));
+      el.mShoeL.setAttribute('transform', `translate(${plx.toFixed(1)}, ${ply.toFixed(1)})`);
+      el.mCrankL.setAttribute('x2', plx.toFixed(1));
+      el.mCrankL.setAttribute('y2', ply.toFixed(1));
+      el.mPedalL.setAttribute('x', (plx - 6).toFixed(1));
+      el.mPedalL.setAttribute('y', (ply - 2.5).toFixed(1));
+
+      // Arms to grips
+      const elbowR = solve2Link(SHOULDER_R.x, SHOULDER_R.y, GRIP_R.x, GRIP_R.y, UPPER_ARM, FORE_ARM, false);
+      el.mArmR.setAttribute('x1', SHOULDER_R.x);
+      el.mArmR.setAttribute('y1', SHOULDER_R.y);
+      el.mArmR.setAttribute('x2', elbowR.jx.toFixed(1));
+      el.mArmR.setAttribute('y2', elbowR.jy.toFixed(1));
+      el.mForeR.setAttribute('x1', elbowR.jx.toFixed(1));
+      el.mForeR.setAttribute('y1', elbowR.jy.toFixed(1));
+      el.mForeR.setAttribute('x2', GRIP_R.x);
+      el.mForeR.setAttribute('y2', GRIP_R.y);
+
+      const elbowL = solve2Link(SHOULDER_L.x, SHOULDER_L.y, GRIP_L.x, GRIP_L.y, UPPER_ARM, FORE_ARM, false);
+      el.mArmL.setAttribute('x1', SHOULDER_L.x);
+      el.mArmL.setAttribute('y1', SHOULDER_L.y);
+      el.mArmL.setAttribute('x2', elbowL.jx.toFixed(1));
+      el.mArmL.setAttribute('y2', elbowL.jy.toFixed(1));
+      el.mForeL.setAttribute('x1', elbowL.jx.toFixed(1));
+      el.mForeL.setAttribute('y1', elbowL.jy.toFixed(1));
+      el.mForeL.setAttribute('x2', GRIP_L.x);
+      el.mForeL.setAttribute('y2', GRIP_L.y);
+
+      // Face expressions
+      el.mFaceHappy.setAttribute('opacity', isShocked ? '0' : '1');
+      el.mFaceShock.setAttribute('opacity', isShocked ? '1' : '0');
+    }
+
+    // =========================================================================
     // MASTER TIMELINE RENDERER (TOTAL DURATION: 12.5 SECONDS)
     // =========================================================================
     const TOTAL_DURATION = 12.5;
@@ -1096,11 +1331,13 @@
         el.parkTree2.setAttribute('transform', `translate(615, 230) scale(0.8) rotate(${(-gentleSway).toFixed(1)})`);
       }
 
-      // Hazard glint
-      if (t < 2.9) {
+      // Hazard glint & visibility
+      if (t < 2.8) {
+        el.roadHazard.setAttribute('opacity', '1');
         const glintScale = 0.8 + 0.4 * Math.sin(t * 12);
-        el.hazardGlint.setAttribute('transform', `translate(0, -11) scale(${glintScale.toFixed(2)})`);
+        el.hazardGlint.setAttribute('transform', `translate(0, -9) scale(${glintScale.toFixed(2)})`);
       } else {
+        el.roadHazard.setAttribute('opacity', '0');
         el.hazardGlint.setAttribute('transform', 'scale(0)');
       }
 
@@ -1112,52 +1349,34 @@
       // ACT 1: JOYFUL RIDING TO THE PARK (0.0s – 2.8s)
       // -----------------------------------------------------------------------
       if (t < 2.8) {
-        el.kidRoot.setAttribute('opacity', '1');
+        // Mounted rider is active and pedaling!
+        el.mountFarLeg.setAttribute('opacity', '1');
+        el.mountNearGroup.setAttribute('opacity', '1');
+        el.mountNearGroup.removeAttribute('transform');
+        el.mountFarLeg.removeAttribute('transform');
+        el.kidRoot.setAttribute('opacity', '0');
+
         el.pumpGroup.setAttribute('opacity', '0');
         el.kickstand.setAttribute('transform', 'rotate(-65 -8 12)');
         el.frontWheelInflated.setAttribute('opacity', '1');
         el.frontWheelDeflated.setAttribute('opacity', '0');
 
-        el.faceHappy.setAttribute('opacity', '1');
-        el.faceShock.setAttribute('opacity', '0');
-        el.faceDetermined.setAttribute('opacity', '0');
-        el.faceCry.setAttribute('opacity', '0');
-
         const pRide = t / 2.8;
-        const bikeX = lerp(100, 340, pRide);
+        const bikeX = lerp(80, 340, pRide);
         const bikeY = 428 + Math.sin(t * 16) * 1.5;
         el.bikeRoot.setAttribute('transform', `translate(${bikeX.toFixed(1)}, ${bikeY.toFixed(1)})`);
 
-        // Kid seated on the bike
-        el.kidRoot.setAttribute('transform', `translate(${(bikeX - 25).toFixed(1)}, ${(bikeY - 50).toFixed(1)}) rotate(4)`);
+        // Road dashed line scrolls smoothly
+        el.roadDashes.setAttribute('stroke-dashoffset', (-t * 220).toFixed(1));
 
         // Wheels spin
         const wheelRot = (t * 420) % 360;
         el.rearSpokes.setAttribute('transform', `rotate(${wheelRot.toFixed(1)})`);
         el.frontSpokes.setAttribute('transform', `rotate(${wheelRot.toFixed(1)})`);
 
-        // Pedaling motion
-        const crankRot = (t * 360) % 360;
-        el.crankGroup.setAttribute('transform', `translate(-8, 12) rotate(${crankRot.toFixed(1)})`);
-
-        // Leg angles tracking pedaling cadence
-        const radR = (crankRot * Math.PI) / 180;
-        const legR_Thigh = 20 + 25 * Math.sin(radR);
-        const legR_Shin = -30 + 35 * Math.cos(radR);
-        el.kidLegR.setAttribute('transform', `translate(8, 18) rotate(${legR_Thigh.toFixed(1)})`);
-        el.kidShinR.setAttribute('transform', `translate(0, 24) rotate(${legR_Shin.toFixed(1)})`);
-
-        const radL = radR + Math.PI;
-        const legL_Thigh = 20 + 25 * Math.sin(radL);
-        const legL_Shin = -30 + 35 * Math.cos(radL);
-        el.kidLegL.setAttribute('transform', `translate(-8, 18) rotate(${legL_Thigh.toFixed(1)})`);
-        el.kidShinL.setAttribute('transform', `translate(0, 24) rotate(${legL_Shin.toFixed(1)})`);
-
-        // Arms holding handlebars
-        el.kidArmR.setAttribute('transform', 'translate(10, -32) rotate(48)');
-        el.kidForeR.setAttribute('transform', 'translate(0, 24) rotate(18)');
-        el.kidArmL.setAttribute('transform', 'translate(-10, -32) rotate(52)');
-        el.kidForeL.setAttribute('transform', 'translate(0, 24) rotate(22)');
+        // Pedaling motion with true 2-link IK & hands on grips
+        const crankAngle = t * 8.5;
+        updateMountedRider(crankAngle, false);
 
         // Bell ding at 0.8s
         if (t >= 0.8 && t < 1.3) {
@@ -1172,9 +1391,6 @@
         } else {
           el.bellRings.setAttribute('opacity', '0');
         }
-
-        const headBob = Math.sin(t * 14) * 4;
-        el.kidHeadGroup.setAttribute('transform', `translate(0, -36) rotate(${headBob.toFixed(1)})`);
       }
 
       // -----------------------------------------------------------------------
@@ -1183,7 +1399,7 @@
       else if (t >= 2.8 && t < 4.2) {
         el.bellRings.setAttribute('opacity', '0');
         const pSkid = invLerp(2.8, 3.4, t);
-        const bikeX = lerp(340, 365, easeOutCubic(pSkid));
+        const bikeX = lerp(340, 370, easeOutCubic(pSkid));
 
         el.frontWheelInflated.setAttribute('opacity', '0');
         el.frontWheelDeflated.setAttribute('opacity', '1');
@@ -1197,8 +1413,11 @@
           sfx.triggers.skid = true;
         }
 
-        const tilt = lerp(0, -6, clamp((t - 2.8) * 4, 0, 1));
-        el.bikeRoot.setAttribute('transform', `translate(${bikeX.toFixed(1)}, 436) rotate(${tilt.toFixed(1)})`);
+        const tilt = lerp(0, -5, clamp((t - 2.8) * 4, 0, 1));
+        el.bikeRoot.setAttribute('transform', `translate(${bikeX.toFixed(1)}, 434) rotate(${tilt.toFixed(1)})`);
+
+        // Road dashes stop
+        el.roadDashes.setAttribute('stroke-dashoffset', (-2.8 * 220).toFixed(1));
 
         if (t >= 2.8 && t < 3.8) {
           const puffOp = clamp(1 - (t - 2.8) / 1.0, 0, 1);
@@ -1207,21 +1426,28 @@
           el.hissPuff.setAttribute('opacity', '0');
         }
 
-        el.faceHappy.setAttribute('opacity', '0');
-        el.faceShock.setAttribute('opacity', '1');
-        el.faceDetermined.setAttribute('opacity', '0');
-        el.faceCry.setAttribute('opacity', '0');
-
         if (t < 3.6) {
-          // Mounted, jolted forward in shock
-          el.kidRoot.setAttribute('transform', `translate(${(bikeX - 25).toFixed(1)}, 386) rotate(-8)`);
-          el.kidHeadGroup.setAttribute('transform', 'translate(0, -36) rotate(-15)');
-          el.kidArmR.setAttribute('transform', 'translate(10, -32) rotate(65)');
-          el.kidArmL.setAttribute('transform', 'translate(-10, -32) rotate(65)');
+          // Mounted, jolted forward in sudden shock
+          el.mountFarLeg.setAttribute('opacity', '1');
+          el.mountNearGroup.setAttribute('opacity', '1');
+          el.mountNearGroup.removeAttribute('transform');
+          el.mountFarLeg.removeAttribute('transform');
+          el.kidRoot.setAttribute('opacity', '0');
+
+          updateMountedRider(2.8 * 8.5, true);
         } else {
-          // Dismounted standing beside front wheel at x: 300, scratching head
+          // Dismounted beside front wheel at x: 310, scratching head in confusion
+          el.mountFarLeg.setAttribute('opacity', '0');
+          el.mountNearGroup.setAttribute('opacity', '0');
+          el.kidRoot.setAttribute('opacity', '1');
+
           el.kickstand.setAttribute('transform', 'rotate(0 -8 12)');
-          el.kidRoot.setAttribute('transform', 'translate(305, 415) rotate(0)');
+          el.kidRoot.setAttribute('transform', 'translate(310, 418) rotate(0)');
+
+          el.faceHappy.setAttribute('opacity', '0');
+          el.faceShock.setAttribute('opacity', '1');
+          el.faceDetermined.setAttribute('opacity', '0');
+          el.faceCry.setAttribute('opacity', '0');
 
           el.kidLegR.setAttribute('transform', 'translate(8, 18) rotate(2)');
           el.kidShinR.setAttribute('transform', 'translate(0, 24) rotate(0)');
@@ -1242,7 +1468,11 @@
       // ACT 3: TIRE PUMP TO THE RESCUE (4.2s – 6.6s)
       // -----------------------------------------------------------------------
       else if (t >= 4.2 && t < 6.6) {
-        // Pump is placed clearly at x: 475 (beside front wheel at x: 443)
+        el.mountFarLeg.setAttribute('opacity', '0');
+        el.mountNearGroup.setAttribute('opacity', '0');
+        el.kidRoot.setAttribute('opacity', '1');
+
+        // Pump placed clearly beside front wheel at x: 485
         el.pumpGroup.setAttribute('opacity', '1');
         el.bellRings.setAttribute('opacity', '0');
 
@@ -1251,8 +1481,7 @@
         el.faceDetermined.setAttribute('opacity', '1');
         el.faceCry.setAttribute('opacity', '0');
 
-        // Kid stands right behind the pump at x: 508 facing left towards pump!
-        const pumpCycleTime = 0.5;
+        const pumpCycleTime = 0.45;
         const pumpStart = 4.4;
         let strokePhase = 0;
         let strokeIndex = 0;
@@ -1286,12 +1515,11 @@
         const handleY = lerp(-68, -34, strokePhase);
         el.pumpHandleGroup.setAttribute('transform', `translate(0, ${handleY.toFixed(1)})`);
 
-        // Kid stands at x: 522, facing left towards pump at x: 490 (scale -1, 1 around 0,0)
-        // Leans forward into downstroke
+        // Kid stands at x: 522, facing left towards pump at x: 485
         const torsoDip = 6 + strokePhase * 12;
         el.kidRoot.setAttribute('transform', `translate(522, ${(415 + strokePhase * 8).toFixed(1)}) scale(-1, 1) rotate(${torsoDip.toFixed(1)})`);
 
-        // Hands reach forward onto pump handle (negative angle in mirrored scale(-1,1) reaches forward)
+        // Hands reach onto pump handle
         const armAngle = lerp(-65, -38, strokePhase);
         const foreAngle = lerp(-30, -15, strokePhase);
         el.kidArmR.setAttribute('transform', `translate(10, -32) rotate(${armAngle.toFixed(1)})`);
@@ -1306,7 +1534,7 @@
         el.kidShinL.setAttribute('transform', `translate(0, 24) rotate(${(strokePhase * 25).toFixed(1)})`);
 
         // Inflation ratio
-        const inflationRatio = clamp((t - 4.4) / 1.8, 0, 1);
+        const inflationRatio = clamp((t - 4.4) / 1.7, 0, 1);
         if (inflationRatio < 0.9) {
           el.frontWheelInflated.setAttribute('opacity', inflationRatio.toFixed(2));
           el.frontWheelDeflated.setAttribute('opacity', (1 - inflationRatio).toFixed(2));
@@ -1317,6 +1545,11 @@
 
         const gaugeAngle = lerp(0, 60, inflationRatio);
         el.pumpGaugeNeedle.setAttribute('transform', `rotate(${gaugeAngle.toFixed(1)} 0 -44)`);
+
+        // As tire inflates, bike lifts back to horizontal
+        const bikeY = lerp(434, 428, inflationRatio);
+        const bikeTilt = lerp(-5, 0, inflationRatio);
+        el.bikeRoot.setAttribute('transform', `translate(370, ${bikeY.toFixed(1)}) rotate(${bikeTilt.toFixed(1)})`);
 
         // Tire tap at t = 6.25s: steps back and taps tire to test firmness
         if (t >= 6.25 && t < 6.55) {
@@ -1334,53 +1567,40 @@
           el.faceHappy.setAttribute('opacity', '1');
           el.faceDetermined.setAttribute('opacity', '0');
         }
-
-        el.bikeRoot.setAttribute('transform', 'translate(365, 428)');
       }
 
       // -----------------------------------------------------------------------
       // ACT 4: TRYING TO RIDE AGAIN (6.6s – 7.8s)
       // -----------------------------------------------------------------------
       else if (t >= 6.6 && t < 7.8) {
+        // Mounted rider is back on bike!
+        el.mountFarLeg.setAttribute('opacity', '1');
+        el.mountNearGroup.setAttribute('opacity', '1');
+        el.mountNearGroup.removeAttribute('transform');
+        el.mountFarLeg.removeAttribute('transform');
+        el.kidRoot.setAttribute('opacity', '0');
+
         el.pumpGroup.setAttribute('opacity', '0');
         el.kickstand.setAttribute('transform', 'rotate(-65 -8 12)');
         el.frontWheelInflated.setAttribute('opacity', '1');
         el.frontWheelDeflated.setAttribute('opacity', '0');
 
-        el.faceHappy.setAttribute('opacity', '1');
-        el.faceShock.setAttribute('opacity', '0');
-        el.faceDetermined.setAttribute('opacity', '0');
-        el.faceCry.setAttribute('opacity', '0');
-
-        // Rolls forward towards park gate (x: 365 -> 475)
+        // Rolls forward towards park gate (x: 370 -> 480)
         const pRoll = invLerp(6.6, 7.8, t);
-        const bikeX = lerp(365, 475, easeInOutCubic(pRoll));
+        const bikeX = lerp(370, 480, easeInOutCubic(pRoll));
         el.bikeRoot.setAttribute('transform', `translate(${bikeX.toFixed(1)}, 428)`);
-        el.kidRoot.setAttribute('transform', `translate(${(bikeX - 25).toFixed(1)}, 378) rotate(4)`);
 
+        // Road dashes scroll
+        el.roadDashes.setAttribute('stroke-dashoffset', (-t * 160).toFixed(1));
+
+        // Wheels spin
         const wRot = (t * 280) % 360;
         el.rearSpokes.setAttribute('transform', `rotate(${wRot.toFixed(1)})`);
         el.frontSpokes.setAttribute('transform', `rotate(${wRot.toFixed(1)})`);
 
-        const crankRot = (t * 260) % 360;
-        el.crankGroup.setAttribute('transform', `translate(-8, 12) rotate(${crankRot.toFixed(1)})`);
-
-        const radR = (crankRot * Math.PI) / 180;
-        const legR_Thigh = 20 + 25 * Math.sin(radR);
-        const legR_Shin = -30 + 35 * Math.cos(radR);
-        el.kidLegR.setAttribute('transform', `translate(8, 18) rotate(${legR_Thigh.toFixed(1)})`);
-        el.kidShinR.setAttribute('transform', `translate(0, 24) rotate(${legR_Shin.toFixed(1)})`);
-
-        const radL = radR + Math.PI;
-        const legL_Thigh = 20 + 25 * Math.sin(radL);
-        const legL_Shin = -30 + 35 * Math.cos(radL);
-        el.kidLegL.setAttribute('transform', `translate(-8, 18) rotate(${legL_Thigh.toFixed(1)})`);
-        el.kidShinL.setAttribute('transform', `translate(0, 24) rotate(${legL_Shin.toFixed(1)})`);
-
-        el.kidArmR.setAttribute('transform', 'translate(10, -32) rotate(48)');
-        el.kidForeR.setAttribute('transform', 'translate(0, 24) rotate(18)');
-        el.kidArmL.setAttribute('transform', 'translate(-10, -32) rotate(52)');
-        el.kidForeL.setAttribute('transform', 'translate(0, 24) rotate(22)');
+        // Pedaling motion with true 2-link IK & hands on grips
+        const crankAngle = t * 6.5;
+        updateMountedRider(crankAngle, false);
 
         if (t >= 7.0 && t < 7.5) {
           if (!sfx.triggers.bell2) {
@@ -1393,23 +1613,25 @@
         } else {
           el.bellRings.setAttribute('opacity', '0');
         }
-
-        const headBob = Math.sin(t * 12) * 3;
-        el.kidHeadGroup.setAttribute('transform', `translate(0, -36) rotate(${headBob.toFixed(1)})`);
       }
 
       // -----------------------------------------------------------------------
       // ACT 5: THE SUDDEN DOWNPOUR & STORM (7.8s – 9.8s)
       // -----------------------------------------------------------------------
       else if (t >= 7.8 && t < 9.8) {
-        el.bikeRoot.setAttribute('transform', 'translate(475, 428)');
+        // Stopped right by park gate at x: 480
+        el.bikeRoot.setAttribute('transform', 'translate(480, 428)');
         el.bellRings.setAttribute('opacity', '0');
 
-        el.kidRoot.setAttribute('transform', 'translate(450, 378) rotate(4)');
-        el.faceHappy.setAttribute('opacity', '0');
-        el.faceShock.setAttribute('opacity', '1');
-        el.faceDetermined.setAttribute('opacity', '0');
-        el.faceCry.setAttribute('opacity', '0');
+        el.mountFarLeg.setAttribute('opacity', '1');
+        el.mountNearGroup.setAttribute('opacity', '1');
+        el.kidRoot.setAttribute('opacity', '0');
+
+        // Shivering in terror/shock!
+        const shiver = Math.sin(t * 35) * 2.8;
+        el.mountNearGroup.setAttribute('transform', `translate(${shiver.toFixed(1)}, 0)`);
+        el.mountFarLeg.setAttribute('transform', `translate(${shiver.toFixed(1)}, 0)`);
+        updateMountedRider(7.8 * 6.5, true);
 
         const stormAlpha = clamp(invLerp(7.8, 8.4, t), 0, 1);
         el.skyStorm.setAttribute('opacity', stormAlpha.toFixed(2));
@@ -1450,15 +1672,17 @@
           el.ripple3a.setAttribute('transform', `scale(${ripScale.toFixed(2)})`);
           el.ripple3a.setAttribute('opacity', ripOp.toFixed(2));
         }
-
-        const shiver = Math.sin(t * 35) * 2.5;
-        el.kidHeadGroup.setAttribute('transform', `translate(${shiver.toFixed(1)}, -36) rotate(-18)`);
       }
 
       // -----------------------------------------------------------------------
       // ACT 6: RUNNING BACK CRYING & PENALTY BANNER (9.8s – 12.5s)
       // -----------------------------------------------------------------------
       else if (t >= 9.8) {
+        el.mountFarLeg.setAttribute('opacity', '0');
+        el.mountNearGroup.setAttribute('opacity', '0');
+        el.mountNearGroup.removeAttribute('transform');
+        el.mountFarLeg.removeAttribute('transform');
+
         el.skyStorm.setAttribute('opacity', '1');
         el.cloudsStorm.setAttribute('opacity', '1');
         el.rainLayer.setAttribute('opacity', '0.95');
@@ -1466,7 +1690,8 @@
         el.stormDarkOverlay.setAttribute('opacity', '0.42');
         el.bellRings.setAttribute('opacity', '0');
 
-        el.bikeRoot.setAttribute('transform', 'translate(475, 428)');
+        // Bike left parked in the rain on kickstand
+        el.bikeRoot.setAttribute('transform', 'translate(480, 428)');
         el.kickstand.setAttribute('transform', 'rotate(0 -8 12)');
 
         if (!sfx.triggers.cry) {
