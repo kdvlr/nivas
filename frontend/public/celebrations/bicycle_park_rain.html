@@ -273,8 +273,8 @@
             <line x1="65" y1="-8" x2="65" y2="5" stroke="#94a3b8" stroke-width="2" />
             <rect x="-96" y="-12" width="192" height="30" rx="9" fill="#78350f" stroke="#b45309" stroke-width="2.5" filter="url(#dropShadow)" />
             <rect x="-93" y="-9" width="186" height="24" rx="7" fill="none" stroke="#fde047" stroke-width="1" opacity="0.6" />
-            <text x="0" y="7" text-anchor="middle" fill="#fef08a" font-family="'Outfit', sans-serif" font-weight="900" font-size="14.5" letter-spacing="1.5">
-              ★ SUNNY OAKS PARK ★
+            <text x="0" y="7" text-anchor="middle" fill="#fef08a" font-family="'Outfit', sans-serif" font-weight="900" font-size="15" letter-spacing="1.5">
+              ★ FRISCO PARK ★
             </text>
           </g>
         </g>
@@ -421,7 +421,20 @@
           <circle cx="0" cy="0" r="6" fill="#475569" stroke="#cbd5e1" stroke-width="2" />
         </g>
 
-        <!-- 5D. BICYCLE FRAME -->
+        <!-- 5D. FAR RIDER ARM (BEHIND THE FRAME & HANDLEBARS) -->
+        <g id="mountFarArm" opacity="0.9">
+          <!-- Far Upper Arm (Yellow T-Shirt Sleeve) -->
+          <line id="mArmL" x1="2" y1="-75" x2="19" y2="-72" stroke="url(#shirtGrad)" stroke-width="11" stroke-linecap="round" />
+          <!-- Far Bare Forearm (Flesh tone) -->
+          <line id="mForeL" x1="17" y1="-72" x2="49" y2="-62" stroke="url(#skinGrad)" stroke-width="8.5" stroke-linecap="round" />
+          <!-- Far Hand wrapped firmly around Far Grip -->
+          <g id="mHandL" transform="translate(52, -62)">
+            <circle cx="0" cy="0" r="5.2" fill="url(#skinGrad)" />
+            <path d="M -2.5,-2 Q 0,-4.5 2.5,-2" fill="none" stroke="#b45309" stroke-width="1.5" stroke-linecap="round" />
+          </g>
+        </g>
+
+        <!-- 5E. BICYCLE FRAME -->
         <g id="bikeFrame">
           <line x1="-78" y1="12" x2="-8" y2="12" stroke="url(#bikeFrameGrad)" stroke-width="6.5" stroke-linecap="round" />
           <line x1="-78" y1="12" x2="-26" y2="-34" stroke="url(#bikeFrameGrad)" stroke-width="6" stroke-linecap="round" />
@@ -441,14 +454,23 @@
             <path d="M -18,-4 C -18,-10 8,-10 18,-5 C 22,-3 22,2 18,2 C 8,2 -16,2 -18,-4 Z" fill="#0f172a" stroke="#334155" stroke-width="1.5" />
           </g>
 
-          <!-- Handlebars & Grips -->
+          <!-- Handlebars & Grips (Classic kid-friendly curved riser bar) -->
           <g transform="translate(56, -48)">
-            <line x1="0" y1="0" x2="4" y2="-16" stroke="url(#chromeGrad)" stroke-width="5.5" stroke-linecap="round" />
-            <path d="M -8,-16 Q 5,-22 15,-14" fill="none" stroke="url(#chromeGrad)" stroke-width="5.5" stroke-linecap="round" />
-            <rect id="gripFar" x="-9" y="-20" width="10" height="7" rx="2.5" fill="#0f172a" />
-            <rect id="gripNear" x="10" y="-18" width="10" height="7" rx="2.5" fill="#0f172a" />
-            <circle id="bikeBell" cx="-5" cy="-20" r="5.5" fill="#fbbf24" stroke="#b45309" stroke-width="1.2" />
-            <g id="bellRings" opacity="0" transform="translate(-5, -20)">
+            <!-- Stem -->
+            <line x1="0" y1="0" x2="0" y2="-12" stroke="url(#chromeGrad)" stroke-width="5" stroke-linecap="round" />
+            <!-- Curved Handlebar crossbar -->
+            <path d="M -5,-14 Q 0,-13 0,-10" fill="none" stroke="url(#chromeGrad)" stroke-width="5" stroke-linecap="round" />
+            <!-- Far Rubber Grip (world x: 52, y: -62) -->
+            <rect id="gripFar" x="-9" y="-17" width="10" height="7" rx="3" fill="#0f172a" />
+            <rect x="-9" y="-16" width="2" height="5" rx="1" fill="#475569" />
+            <!-- Near Rubber Grip (world x: 56, y: -58) -->
+            <rect id="gripNear" x="-5" y="-14" width="11" height="8" rx="3.5" fill="#0f172a" />
+            <rect x="4" y="-13" width="2" height="6" rx="1" fill="#475569" />
+            <!-- Chrome Bicycle Bell on front stem (away from hands) -->
+            <circle id="bikeBell" cx="5" cy="-8" r="4.5" fill="#e2e8f0" stroke="#64748b" stroke-width="1.2" />
+            <circle cx="4" cy="-9" r="1.5" fill="#ffffff" />
+            <rect x="7.5" y="-9" width="3" height="1.8" rx="0.8" fill="#38bdf8" />
+            <g id="bellRings" opacity="0" transform="translate(5, -8)">
               <circle cx="0" cy="0" r="10" fill="none" stroke="#fef08a" stroke-width="2" />
               <circle cx="0" cy="0" r="18" fill="none" stroke="#fef08a" stroke-width="1.5" opacity="0.6" />
             </g>
@@ -457,7 +479,7 @@
           <line id="kickstand" x1="-8" y1="12" x2="-8" y2="34" stroke="#64748b" stroke-width="3.5" stroke-linecap="round" transform="rotate(-65 -8 12)" />
         </g>
 
-        <!-- 5E. NEAR RIDER BODY & LIMBS (IN FRONT OF FRAME) -->
+        <!-- 5F. NEAR RIDER BODY & LIMBS (IN FRONT OF FRAME) -->
         <g id="mountNearGroup">
           <!-- Pelvis firmly on saddle -->
           <path d="M -34,-48 L -18,-48 L -16,-34 L -36,-34 Z" fill="#2563eb" rx="3" />
@@ -467,10 +489,7 @@
           <polygon points="-1,-64 3,-64 0,-58 4,-58 -2,-50 -1,-56 -5,-56" fill="#ef4444" />
           <path d="M -6,-78 Q 1,-74 8,-74" stroke="#ffffff" stroke-width="2.2" fill="none" />
 
-          <!-- Far Arm (Left Arm reaching forward to far grip) -->
-          <line id="mArmL" x1="-2" y1="-76" x2="24" y2="-68" stroke="url(#shirtGrad)" stroke-width="10" stroke-linecap="round" />
-          <line id="mForeL" x1="24" y1="-68" x2="50" y2="-64" stroke="url(#skinGrad)" stroke-width="8" stroke-linecap="round" />
-          <circle cx="50" cy="-64" r="5" fill="url(#skinGrad)" />
+
 
           <!-- Head, Face & Helmet (sitting high and proud on crown of head) -->
           <g id="mHeadGroup" transform="translate(2, -76)">
@@ -532,10 +551,20 @@
           <line id="mCrankR" x1="-8" y1="12" x2="-8" y2="-2" stroke="url(#chromeGrad)" stroke-width="5" stroke-linecap="round" />
           <rect id="mPedalR" x="-14" y="-5" width="13" height="6" rx="2" fill="#1e293b" />
 
-          <!-- Near Arm (Right Arm reaching forward to near grip) -->
-          <line id="mArmR" x1="4" y1="-74" x2="36" y2="-62" stroke="url(#shirtGrad)" stroke-width="11" stroke-linecap="round" />
-          <line id="mForeR" x1="36" y1="-62" x2="71" y2="-62" stroke="url(#skinGrad)" stroke-width="9" stroke-linecap="round" />
-          <circle cx="71" cy="-62" r="5.5" fill="url(#skinGrad)" />
+          <!-- Near Arm (Right Arm reaching forward naturally to near grip) -->
+          <!-- Near Upper Arm (Yellow T-Shirt Sleeve) -->
+          <line id="mArmR" x1="8" y1="-74" x2="24" y2="-70" stroke="url(#shirtGrad)" stroke-width="12" stroke-linecap="round" />
+          <!-- Near Bare Forearm (Flesh tone) -->
+          <line id="mForeR" x1="22" y1="-69" x2="53" y2="-58" stroke="url(#skinGrad)" stroke-width="9" stroke-linecap="round" />
+          <!-- Near Hand: Expressive cartoon fist gripping handlebar firmly -->
+          <g id="mHandR" transform="translate(56, -58)">
+            <!-- Clean cartoon fist clutching grip -->
+            <circle cx="0" cy="0" r="6" fill="url(#skinGrad)" />
+            <!-- Thumb wrapped over top of grip -->
+            <path d="M -3,-2.5 Q 0,-5.5 3,-2.5" fill="none" stroke="#d97706" stroke-width="1.8" stroke-linecap="round" />
+            <!-- Knuckle crease -->
+            <path d="M 2.5,-1 Q 4,0.5 2.5,2" fill="none" stroke="#d97706" stroke-width="1.3" stroke-linecap="round" />
+          </g>
         </g>
       </g>
 
@@ -1153,6 +1182,7 @@
 
       // Mounted Rider Rig Elements (anatomically straddling bike)
       mountFarLeg: document.getElementById('mountFarLeg'),
+      mountFarArm: document.getElementById('mountFarArm'),
       mThighL: document.getElementById('mThighL'),
       mKneeL: document.getElementById('mKneeL'),
       mShinL: document.getElementById('mShinL'),
@@ -1168,8 +1198,10 @@
       mPedalR: document.getElementById('mPedalR'),
       mArmR: document.getElementById('mArmR'),
       mForeR: document.getElementById('mForeR'),
+      mHandR: document.getElementById('mHandR'),
       mArmL: document.getElementById('mArmL'),
       mForeL: document.getElementById('mForeL'),
+      mHandL: document.getElementById('mHandL'),
       mHeadGroup: document.getElementById('mHeadGroup'),
       mFaceHappy: document.getElementById('mFaceHappy'),
       mFaceShock: document.getElementById('mFaceShock'),
@@ -1228,16 +1260,14 @@
       const THIGH_LEN = 38;
       const SHIN_LEN = 38;
 
-      const SHOULDER_R = { x: 4, y: -74 };
-      const SHOULDER_L = { x: -2, y: -76 };
-      const GRIP_R = { x: 71, y: -62 };
-      const GRIP_L = { x: 50, y: -64 };
-      const UPPER_ARM = 36;
-      const FORE_ARM = 34;
-
       // Subtle dynamic head & body bob with pedaling cadence
       const cadenceBob = Math.sin(crankAngle) * 1.5;
       el.mHeadGroup.setAttribute('transform', `translate(2, ${(-76 + cadenceBob).toFixed(1)})`);
+
+      const SHOULDER_R = { x: 8, y: -74 + cadenceBob };
+      const SHOULDER_L = { x: 2, y: -75 + cadenceBob };
+      const GRIP_R = { x: 56, y: -58 };
+      const GRIP_L = { x: 52, y: -62 };
 
       // Near Leg (Right Leg)
       const prx = CRANK_X + CRANK_R * Math.cos(crankAngle);
@@ -1279,26 +1309,39 @@
       el.mPedalL.setAttribute('x', (plx - 6).toFixed(1));
       el.mPedalL.setAttribute('y', (ply - 2.5).toFixed(1));
 
-      // Arms to grips
-      const elbowR = solve2Link(SHOULDER_R.x, SHOULDER_R.y, GRIP_R.x, GRIP_R.y, UPPER_ARM, FORE_ARM, false);
-      el.mArmR.setAttribute('x1', SHOULDER_R.x);
-      el.mArmR.setAttribute('y1', SHOULDER_R.y);
-      el.mArmR.setAttribute('x2', elbowR.jx.toFixed(1));
-      el.mArmR.setAttribute('y2', elbowR.jy.toFixed(1));
-      el.mForeR.setAttribute('x1', elbowR.jx.toFixed(1));
-      el.mForeR.setAttribute('y1', elbowR.jy.toFixed(1));
-      el.mForeR.setAttribute('x2', GRIP_R.x);
-      el.mForeR.setAttribute('y2', GRIP_R.y);
+      // Near Arm (Right): Yellow short sleeve + bare skin forearm + hand on grip
+      const elbowR_x = 30;
+      const elbowR_y = -68 + cadenceBob * 0.6;
+      const sleeveR_x = SHOULDER_R.x + (elbowR_x - SHOULDER_R.x) * 0.70;
+      const sleeveR_y = SHOULDER_R.y + (elbowR_y - SHOULDER_R.y) * 0.70;
 
-      const elbowL = solve2Link(SHOULDER_L.x, SHOULDER_L.y, GRIP_L.x, GRIP_L.y, UPPER_ARM, FORE_ARM, false);
+      el.mArmR.setAttribute('x1', SHOULDER_R.x);
+      el.mArmR.setAttribute('y1', SHOULDER_R.y.toFixed(1));
+      el.mArmR.setAttribute('x2', sleeveR_x.toFixed(1));
+      el.mArmR.setAttribute('y2', sleeveR_y.toFixed(1));
+
+      el.mForeR.setAttribute('x1', (sleeveR_x - 2).toFixed(1));
+      el.mForeR.setAttribute('y1', (sleeveR_y - 1).toFixed(1));
+      el.mForeR.setAttribute('x2', (GRIP_R.x - 3).toFixed(1));
+      el.mForeR.setAttribute('y2', GRIP_R.y.toFixed(1));
+      el.mHandR.setAttribute('transform', `translate(${GRIP_R.x}, ${GRIP_R.y})`);
+
+      // Far Arm (Left): Yellow short sleeve + bare skin forearm + hand on grip
+      const elbowL_x = 24;
+      const elbowL_y = -70 + cadenceBob * 0.6;
+      const sleeveL_x = SHOULDER_L.x + (elbowL_x - SHOULDER_L.x) * 0.70;
+      const sleeveL_y = SHOULDER_L.y + (elbowL_y - SHOULDER_L.y) * 0.70;
+
       el.mArmL.setAttribute('x1', SHOULDER_L.x);
-      el.mArmL.setAttribute('y1', SHOULDER_L.y);
-      el.mArmL.setAttribute('x2', elbowL.jx.toFixed(1));
-      el.mArmL.setAttribute('y2', elbowL.jy.toFixed(1));
-      el.mForeL.setAttribute('x1', elbowL.jx.toFixed(1));
-      el.mForeL.setAttribute('y1', elbowL.jy.toFixed(1));
-      el.mForeL.setAttribute('x2', GRIP_L.x);
-      el.mForeL.setAttribute('y2', GRIP_L.y);
+      el.mArmL.setAttribute('y1', SHOULDER_L.y.toFixed(1));
+      el.mArmL.setAttribute('x2', sleeveL_x.toFixed(1));
+      el.mArmL.setAttribute('y2', sleeveL_y.toFixed(1));
+
+      el.mForeL.setAttribute('x1', (sleeveL_x - 2).toFixed(1));
+      el.mForeL.setAttribute('y1', (sleeveL_y - 1).toFixed(1));
+      el.mForeL.setAttribute('x2', (GRIP_L.x - 3).toFixed(1));
+      el.mForeL.setAttribute('y2', GRIP_L.y.toFixed(1));
+      el.mHandL.setAttribute('transform', `translate(${GRIP_L.x}, ${GRIP_L.y})`);
 
       // Face expressions
       el.mFaceHappy.setAttribute('opacity', isShocked ? '0' : '1');
@@ -1351,9 +1394,11 @@
       if (t < 2.8) {
         // Mounted rider is active and pedaling!
         el.mountFarLeg.setAttribute('opacity', '1');
+        el.mountFarArm.setAttribute('opacity', '1');
         el.mountNearGroup.setAttribute('opacity', '1');
         el.mountNearGroup.removeAttribute('transform');
         el.mountFarLeg.removeAttribute('transform');
+        el.mountFarArm.removeAttribute('transform');
         el.kidRoot.setAttribute('opacity', '0');
 
         el.pumpGroup.setAttribute('opacity', '0');
@@ -1387,7 +1432,7 @@
           const ringScale = 1 + (t - 0.8) * 3;
           const ringOp = clamp(1 - (t - 0.8) * 2, 0, 1);
           el.bellRings.setAttribute('opacity', ringOp.toFixed(2));
-          el.bellRings.setAttribute('transform', `translate(-5, -20) scale(${ringScale.toFixed(2)})`);
+          el.bellRings.setAttribute('transform', `translate(0, -14) scale(${ringScale.toFixed(2)})`);
         } else {
           el.bellRings.setAttribute('opacity', '0');
         }
@@ -1429,15 +1474,18 @@
         if (t < 3.6) {
           // Mounted, jolted forward in sudden shock
           el.mountFarLeg.setAttribute('opacity', '1');
+          el.mountFarArm.setAttribute('opacity', '1');
           el.mountNearGroup.setAttribute('opacity', '1');
           el.mountNearGroup.removeAttribute('transform');
           el.mountFarLeg.removeAttribute('transform');
+          el.mountFarArm.removeAttribute('transform');
           el.kidRoot.setAttribute('opacity', '0');
 
           updateMountedRider(2.8 * 8.5, true);
         } else {
           // Dismounted beside front wheel at x: 310, scratching head in confusion
           el.mountFarLeg.setAttribute('opacity', '0');
+          el.mountFarArm.setAttribute('opacity', '0');
           el.mountNearGroup.setAttribute('opacity', '0');
           el.kidRoot.setAttribute('opacity', '1');
 
@@ -1469,6 +1517,7 @@
       // -----------------------------------------------------------------------
       else if (t >= 4.2 && t < 6.6) {
         el.mountFarLeg.setAttribute('opacity', '0');
+        el.mountFarArm.setAttribute('opacity', '0');
         el.mountNearGroup.setAttribute('opacity', '0');
         el.kidRoot.setAttribute('opacity', '1');
 
@@ -1575,9 +1624,11 @@
       else if (t >= 6.6 && t < 7.8) {
         // Mounted rider is back on bike!
         el.mountFarLeg.setAttribute('opacity', '1');
+        el.mountFarArm.setAttribute('opacity', '1');
         el.mountNearGroup.setAttribute('opacity', '1');
         el.mountNearGroup.removeAttribute('transform');
         el.mountFarLeg.removeAttribute('transform');
+        el.mountFarArm.removeAttribute('transform');
         el.kidRoot.setAttribute('opacity', '0');
 
         el.pumpGroup.setAttribute('opacity', '0');
@@ -1609,7 +1660,7 @@
           }
           const ringScale = 1 + (t - 7.0) * 3;
           el.bellRings.setAttribute('opacity', (1 - (t - 7.0) * 2).toFixed(2));
-          el.bellRings.setAttribute('transform', `translate(-5, -20) scale(${ringScale.toFixed(2)})`);
+          el.bellRings.setAttribute('transform', `translate(0, -14) scale(${ringScale.toFixed(2)})`);
         } else {
           el.bellRings.setAttribute('opacity', '0');
         }
@@ -1624,6 +1675,7 @@
         el.bellRings.setAttribute('opacity', '0');
 
         el.mountFarLeg.setAttribute('opacity', '1');
+        el.mountFarArm.setAttribute('opacity', '1');
         el.mountNearGroup.setAttribute('opacity', '1');
         el.kidRoot.setAttribute('opacity', '0');
 
@@ -1631,6 +1683,7 @@
         const shiver = Math.sin(t * 35) * 2.8;
         el.mountNearGroup.setAttribute('transform', `translate(${shiver.toFixed(1)}, 0)`);
         el.mountFarLeg.setAttribute('transform', `translate(${shiver.toFixed(1)}, 0)`);
+        el.mountFarArm.setAttribute('transform', `translate(${shiver.toFixed(1)}, 0)`);
         updateMountedRider(7.8 * 6.5, true);
 
         const stormAlpha = clamp(invLerp(7.8, 8.4, t), 0, 1);
@@ -1679,9 +1732,11 @@
       // -----------------------------------------------------------------------
       else if (t >= 9.8) {
         el.mountFarLeg.setAttribute('opacity', '0');
+        el.mountFarArm.setAttribute('opacity', '0');
         el.mountNearGroup.setAttribute('opacity', '0');
         el.mountNearGroup.removeAttribute('transform');
         el.mountFarLeg.removeAttribute('transform');
+        el.mountFarArm.removeAttribute('transform');
 
         el.skyStorm.setAttribute('opacity', '1');
         el.cloudsStorm.setAttribute('opacity', '1');
