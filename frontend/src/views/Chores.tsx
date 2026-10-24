@@ -1037,7 +1037,7 @@ export default function Chores() {
                   <div className="flex items-center gap-1.5">
                     <CoinIcon className="h-6 w-6 text-amber-500" />
                     <span className={`text-sm font-medium ${draft.coins < 0 ? 'text-rose-500 dark:text-rose-400 font-semibold' : 'text-ink-soft'}`}>
-                      {draft.coins < 0 ? 'coins deducted (sad storm animation)' : 'coins earned'}
+                      {draft.coins < 0 ? 'coins deducted' : 'coins earned'}
                     </span>
                   </div>
                 </div>
