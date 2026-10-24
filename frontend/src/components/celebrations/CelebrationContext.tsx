@@ -93,7 +93,7 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
       }
       stop()
       const now = Date.now()
-      const penaltyPool: SadAnimationName[] = ['icecream', 'balance-beam']
+      const penaltyPool: SadAnimationName[] = ['icecream', 'balance-beam', 'bicycle-rain']
       let chosenAnim = options?.animation
 
       if (!chosenAnim) {
@@ -152,7 +152,8 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
     if (!sadOptions) return
     const isStorm = sadOptions.animation === 'storm'
     const isBeam = sadOptions.animation === 'balance-beam'
-    const duration = isStorm ? 4400 : isBeam ? 9400 : 9800
+    const isBike = sadOptions.animation === 'bicycle-rain'
+    const duration = isStorm ? 4400 : isBeam ? 9400 : isBike ? 13000 : 9800
 
     if (isStorm && canvasRef.current) {
       const runner = runSadAnimation(canvasRef.current, sadOptions)
@@ -201,6 +202,17 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
                 typeof window !== 'undefined' && localStorage.getItem('nivas_celebration_sound') === 'true' ? '1' : '0'
               }`}
               title="Balance Beam Oops"
+              className="pointer-events-none h-full w-full border-0"
+            />
+          ) : sadOptions && sadOptions.animation === 'bicycle-rain' ? (
+            <iframe
+              key={`sad-bike-${Date.now()}`}
+              src={`/celebrations/bicycle_park_rain.html?embed=1&title=${encodeURIComponent(
+                sadOptions.title || 'Room Not Clean',
+              )}&points=${Math.abs(sadOptions.coinsLost ?? 10)}&sound=${
+                typeof window !== 'undefined' && localStorage.getItem('nivas_celebration_sound') === 'true' ? '1' : '0'
+              }`}
+              title="Bicycle Rain Tragedy"
               className="pointer-events-none h-full w-full border-0"
             />
           ) : sadOptions && sadOptions.animation !== 'storm' ? (

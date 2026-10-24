@@ -1039,6 +1039,12 @@ function SetupInner() {
                 🤸‍♀️ Balance Beam Oops: Room Not Clean (-10)
               </button>
               <button
+                onClick={() => celebrateSad({ title: 'Room Not Clean', coinsLost: 10, animation: 'bicycle-rain' })}
+                className="btn-glass px-4 py-2 text-sm border-rose-500/30 text-rose-500 hover:bg-rose-500/10 active:scale-95 transition-all"
+              >
+                🚲 Bicycle Park Rain: Room Not Clean (-10)
+              </button>
+              <button
                 onClick={() => celebrateSad({ title: 'Room Not Clean', coinsLost: 10, animation: 'storm' })}
                 className="btn-glass px-4 py-2 text-sm border-rose-500/30 text-rose-500 hover:bg-rose-500/10 active:scale-95 transition-all"
               >

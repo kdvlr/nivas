@@ -1,0 +1,1595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Bicycle Flat Tire & Rain · Chore Penalty Animation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(15, 23, 42, 0.94);
+      --primary: #f43f5e;
+      --border-glow: rgba(244, 63, 94, 0.6);
+      --text: #f8fafc;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .stage-wrapper {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      max-width: 100%;
+      max-height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    svg#stageSvg {
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="stage-wrapper">
+    <svg id="stageSvg" viewBox="0 0 800 500" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <!-- Sunny Sky Gradient -->
+        <linearGradient id="skySunnyGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#38bdf8" />
+          <stop offset="55%" stop-color="#7dd3fc" />
+          <stop offset="100%" stop-color="#bae6fd" />
+        </linearGradient>
+
+        <!-- Stormy Dark Sky Gradient -->
+        <linearGradient id="skyStormGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#0a0a1a" />
+          <stop offset="45%" stop-color="#1e1b4b" />
+          <stop offset="100%" stop-color="#334155" />
+        </linearGradient>
+
+        <!-- Sun Radial Gradient -->
+        <radialGradient id="sunGrad" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#fef08a" />
+          <stop offset="60%" stop-color="#fde047" />
+          <stop offset="100%" stop-color="#f59e0b" />
+        </radialGradient>
+
+        <!-- White Fluffy Cloud -->
+        <linearGradient id="cloudWhiteGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#ffffff" />
+          <stop offset="100%" stop-color="#e2e8f0" />
+        </linearGradient>
+
+        <!-- Dark Storm Cloud -->
+        <linearGradient id="cloudStormGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#64748b" />
+          <stop offset="50%" stop-color="#334155" />
+          <stop offset="100%" stop-color="#1e293b" />
+        </linearGradient>
+
+        <!-- Green Hills -->
+        <linearGradient id="hillGrad1" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#86efac" />
+          <stop offset="100%" stop-color="#4ade80" />
+        </linearGradient>
+        <linearGradient id="hillGrad2" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#4ade80" />
+          <stop offset="100%" stop-color="#16a34a" />
+        </linearGradient>
+
+        <!-- Road Asphalt -->
+        <linearGradient id="roadGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#334155" />
+          <stop offset="100%" stop-color="#1e293b" />
+        </linearGradient>
+
+        <!-- Cherry Red Bicycle Frame -->
+        <linearGradient id="bikeFrameGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#f87171" />
+          <stop offset="40%" stop-color="#ef4444" />
+          <stop offset="100%" stop-color="#b91c1c" />
+        </linearGradient>
+
+        <!-- Chrome Metal -->
+        <linearGradient id="chromeGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#94a3b8" />
+          <stop offset="45%" stop-color="#f8fafc" />
+          <stop offset="100%" stop-color="#64748b" />
+        </linearGradient>
+
+        <!-- Kid Skin Tone -->
+        <linearGradient id="skinGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#fed7aa" />
+          <stop offset="100%" stop-color="#fdba74" />
+        </linearGradient>
+
+        <!-- Kid Shirt (Sunny Yellow) -->
+        <linearGradient id="shirtGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#fde047" />
+          <stop offset="100%" stop-color="#eab308" />
+        </linearGradient>
+
+        <!-- Blue Sports Helmet -->
+        <linearGradient id="helmetGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#60a5fa" />
+          <stop offset="45%" stop-color="#3b82f6" />
+          <stop offset="100%" stop-color="#1d4ed8" />
+        </linearGradient>
+
+        <!-- Orange Floor Pump -->
+        <linearGradient id="pumpGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#fb923c" />
+          <stop offset="50%" stop-color="#f97316" />
+          <stop offset="100%" stop-color="#c2410c" />
+        </linearGradient>
+
+        <!-- Water Puddle Reflective -->
+        <linearGradient id="puddleGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.5" />
+          <stop offset="100%" stop-color="#0284c7" stop-opacity="0.8" />
+        </linearGradient>
+
+        <!-- Drop Shadow Filter -->
+        <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.35" />
+        </filter>
+
+        <!-- Glow Filter -->
+        <filter id="glowFilter" x="-30%" y="-30%" width="160%" height="160%">
+          <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#f43f5e" flood-opacity="0.85" />
+        </filter>
+      </defs>
+
+      <!-- ================= 1. SKY & SUN ================= -->
+      <rect id="skySunny" x="0" y="0" width="800" height="340" fill="url(#skySunnyGrad)" />
+      <rect id="skyStorm" x="0" y="0" width="800" height="340" fill="url(#skyStormGrad)" opacity="0" />
+
+      <!-- Smiling Sun with Rotating Golden Petal Rays -->
+      <g id="sunGroup" transform="translate(690, 75)">
+        <g id="sunRays">
+          <line x1="0" y1="-44" x2="0" y2="-55" stroke="#fbbf24" stroke-width="4.5" stroke-linecap="round" />
+          <line x1="31" y1="-31" x2="39" y2="-39" stroke="#fbbf24" stroke-width="4.5" stroke-linecap="round" />
+          <line x1="44" y1="0" x2="55" y2="0" stroke="#fbbf24" stroke-width="4.5" stroke-linecap="round" />
+          <line x1="31" y1="31" x2="39" y2="39" stroke="#fbbf24" stroke-width="4.5" stroke-linecap="round" />
+          <line x1="0" y1="44" x2="0" y2="55" stroke="#fbbf24" stroke-width="4.5" stroke-linecap="round" />
+          <line x1="-31" y1="31" x2="-39" y2="39" stroke="#fbbf24" stroke-width="4.5" stroke-linecap="round" />
+          <line x1="-44" y1="0" x2="-55" y2="0" stroke="#fbbf24" stroke-width="4.5" stroke-linecap="round" />
+          <line x1="-31" y1="-31" x2="-39" y2="-39" stroke="#fbbf24" stroke-width="4.5" stroke-linecap="round" />
+        </g>
+        <circle cx="0" cy="0" r="32" fill="url(#sunGrad)" filter="url(#dropShadow)" />
+        <circle cx="-10" cy="-4" r="3" fill="#92400e" />
+        <circle cx="10" cy="-4" r="3" fill="#92400e" />
+        <path d="M -9,6 Q 0,14 9,6" fill="none" stroke="#92400e" stroke-width="2.5" stroke-linecap="round" />
+        <circle cx="-14" cy="2" r="3.5" fill="#f43f5e" opacity="0.4" />
+        <circle cx="14" cy="2" r="3.5" fill="#f43f5e" opacity="0.4" />
+      </g>
+
+      <!-- Gentle Drifting White Clouds -->
+      <g id="cloudsSunny">
+        <g transform="translate(100, 55)">
+          <path d="M -40,15 C -40,2 -25,-8 -10,-8 C 0,-20 22,-20 32,-6 C 45,-6 55,4 55,16 C 55,26 44,32 30,32 L -30,32 C -40,32 -40,24 -40,15 Z" fill="url(#cloudWhiteGrad)" opacity="0.92" />
+        </g>
+        <g transform="translate(380, 40) scale(0.85)">
+          <path d="M -40,15 C -40,2 -25,-8 -10,-8 C 0,-20 22,-20 32,-6 C 45,-6 55,4 55,16 C 55,26 44,32 30,32 L -30,32 C -40,32 -40,24 -40,15 Z" fill="url(#cloudWhiteGrad)" opacity="0.85" />
+        </g>
+      </g>
+
+      <!-- Dark Threatening Storm Clouds -->
+      <g id="cloudsStorm" opacity="0" transform="translate(0, -60)">
+        <path d="M -50,60 C -40,-10 60,-20 120,20 C 180,-30 300,-10 350,40 C 420,-10 540,0 580,50 C 660,10 760,20 840,70 L 840,170 L -50,170 Z" fill="url(#cloudStormGrad)" />
+        <path d="M 150,90 C 220,30 320,40 370,85 C 440,35 560,50 620,100 C 700,60 800,80 850,130 L 850,210 L 150,210 Z" fill="#1e293b" opacity="0.88" />
+      </g>
+
+      <!-- ================= 2. BACKGROUND HILLS & PARK ================= -->
+      <path d="M 0,245 Q 180,205 380,240 Q 580,205 800,235 L 800,340 L 0,340 Z" fill="url(#hillGrad1)" opacity="0.65" />
+      <path d="M 0,265 Q 160,235 340,260 Q 560,225 800,255 L 800,340 L 0,340 Z" fill="url(#hillGrad2)" />
+
+      <!-- City Park Entrance & Scenery (Right side: x: 550 - 790) -->
+      <g id="parkEntrance">
+        <g id="parkTree1" transform="translate(685, 215)">
+          <rect x="-8" y="15" width="16" height="55" fill="#78350f" rx="3" />
+          <circle cx="0" cy="-10" r="38" fill="#15803d" />
+          <circle cx="-18" cy="0" r="26" fill="#16a34a" />
+          <circle cx="20" cy="-2" r="28" fill="#22c55e" />
+        </g>
+        <g id="parkTree2" transform="translate(615, 230) scale(0.8)">
+          <rect x="-6" y="15" width="12" height="48" fill="#78350f" rx="3" />
+          <circle cx="0" cy="-10" r="32" fill="#166534" />
+          <circle cx="16" cy="2" r="24" fill="#15803d" />
+        </g>
+
+        <!-- Red Playground Slide -->
+        <g transform="translate(740, 255)">
+          <line x1="-18" y1="28" x2="-18" y2="-15" stroke="#64748b" stroke-width="3" />
+          <line x1="-18" y1="16" x2="-10" y2="16" stroke="#64748b" stroke-width="2" />
+          <line x1="-18" y1="6" x2="-10" y2="6" stroke="#64748b" stroke-width="2" />
+          <line x1="-18" y1="-4" x2="-10" y2="-4" stroke="#64748b" stroke-width="2" />
+          <path d="M -18,-15 C -5,-15 5,0 18,28" fill="none" stroke="#ef4444" stroke-width="6" stroke-linecap="round" />
+        </g>
+
+        <!-- Park Bench -->
+        <g transform="translate(565, 288)">
+          <rect x="0" y="8" width="36" height="4.5" fill="#a16207" rx="1.5" />
+          <rect x="0" y="2" width="36" height="4.5" fill="#a16207" rx="1.5" />
+          <line x1="5" y1="12" x2="5" y2="24" stroke="#334155" stroke-width="2.5" />
+          <line x1="31" y1="12" x2="31" y2="24" stroke="#334155" stroke-width="2.5" />
+        </g>
+
+        <!-- Red-Brick Gateposts -->
+        <g id="gateLeftPillar" transform="translate(530, 235)">
+          <rect x="-12" y="0" width="24" height="82" fill="#991b1b" rx="2" />
+          <line x1="-12" y1="20" x2="12" y2="20" stroke="#7f1d1d" stroke-width="1.5" />
+          <line x1="-12" y1="40" x2="12" y2="40" stroke="#7f1d1d" stroke-width="1.5" />
+          <line x1="-12" y1="60" x2="12" y2="60" stroke="#7f1d1d" stroke-width="1.5" />
+          <rect x="-15" y="-6" width="30" height="9" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1" rx="2" />
+          <circle cx="0" cy="-11" r="5" fill="#fbbf24" stroke="#b45309" stroke-width="1" />
+        </g>
+        <g id="gateRightPillar" transform="translate(775, 235)">
+          <rect x="-12" y="0" width="24" height="82" fill="#991b1b" rx="2" />
+          <line x1="-12" y1="20" x2="12" y2="20" stroke="#7f1d1d" stroke-width="1.5" />
+          <line x1="-12" y1="40" x2="12" y2="40" stroke="#7f1d1d" stroke-width="1.5" />
+          <line x1="-12" y1="60" x2="12" y2="60" stroke="#7f1d1d" stroke-width="1.5" />
+          <rect x="-15" y="-6" width="30" height="9" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1" rx="2" />
+          <circle cx="0" cy="-11" r="5" fill="#fbbf24" stroke="#b45309" stroke-width="1" />
+        </g>
+
+        <!-- Wooden Archway Banner -->
+        <g id="gateArch" transform="translate(652, 230)">
+          <path d="M -122,8 Q 0,-36 122,8" fill="none" stroke="#1e293b" stroke-width="7" stroke-linecap="round" />
+          <path d="M -122,8 Q 0,-36 122,8" fill="none" stroke="#64748b" stroke-width="2.5" stroke-linecap="round" />
+          <g transform="translate(0, -18)">
+            <line x1="-65" y1="-8" x2="-65" y2="5" stroke="#94a3b8" stroke-width="2" />
+            <line x1="65" y1="-8" x2="65" y2="5" stroke="#94a3b8" stroke-width="2" />
+            <rect x="-96" y="-12" width="192" height="30" rx="9" fill="#78350f" stroke="#b45309" stroke-width="2.5" filter="url(#dropShadow)" />
+            <rect x="-93" y="-9" width="186" height="24" rx="7" fill="none" stroke="#fde047" stroke-width="1" opacity="0.6" />
+            <text x="0" y="7" text-anchor="middle" fill="#fef08a" font-family="'Outfit', sans-serif" font-weight="900" font-size="14.5" letter-spacing="1.5">
+              ★ SUNNY OAKS PARK ★
+            </text>
+          </g>
+        </g>
+      </g>
+
+      <!-- ================= 3. FOREGROUND TRAIL & ROAD ================= -->
+      <g stroke="#ffffff" stroke-width="3" opacity="0.9">
+        <line x1="30" y1="315" x2="30" y2="335" />
+        <line x1="60" y1="315" x2="60" y2="335" />
+        <line x1="90" y1="315" x2="90" y2="335" />
+        <line x1="120" y1="315" x2="120" y2="335" />
+        <line x1="150" y1="315" x2="150" y2="335" />
+        <line x1="180" y1="315" x2="180" y2="335" />
+        <line x1="210" y1="315" x2="210" y2="335" />
+        <line x1="240" y1="315" x2="240" y2="335" />
+        <line x1="270" y1="315" x2="270" y2="335" />
+        <line x1="300" y1="315" x2="300" y2="335" />
+        <line x1="330" y1="315" x2="330" y2="335" />
+        <line x1="360" y1="315" x2="360" y2="335" />
+        <line x1="390" y1="315" x2="390" y2="335" />
+        <line x1="420" y1="315" x2="420" y2="335" />
+        <line x1="450" y1="315" x2="450" y2="335" />
+        <line x1="480" y1="315" x2="480" y2="335" />
+        <line x1="510" y1="315" x2="510" y2="335" />
+        <line x1="20" y1="322" x2="520" y2="322" stroke-width="2" />
+        <line x1="20" y1="330" x2="520" y2="330" stroke-width="2" />
+      </g>
+
+      <rect x="0" y="325" width="800" height="20" fill="#22c55e" />
+      <g fill="#fde047">
+        <circle cx="80" cy="334" r="3" />
+        <circle cx="150" cy="331" r="2.5" />
+        <circle cx="270" cy="335" r="3.2" />
+        <circle cx="390" cy="332" r="2.5" />
+        <circle cx="490" cy="334" r="3" />
+      </g>
+
+      <rect x="0" y="342" width="800" height="8" fill="#64748b" />
+      <rect x="0" y="350" width="800" height="150" fill="url(#roadGrad)" />
+
+      <g stroke="#ffffff" stroke-width="4.5" stroke-dasharray="32 24" opacity="0.4">
+        <line x1="0" y1="430" x2="800" y2="430" />
+      </g>
+
+      <!-- The Sharp Tack Hazard on the Trail (x: 340, y: 462) -->
+      <g id="roadHazard" transform="translate(340, 464)">
+        <polygon points="-6,2 0,-11 6,2" fill="#e2e8f0" stroke="#475569" stroke-width="1.2" />
+        <ellipse cx="0" cy="2" rx="7" ry="3" fill="#94a3b8" />
+        <g id="hazardGlint" transform="translate(0, -11)">
+          <line x1="-7" y1="0" x2="7" y2="0" stroke="#fef08a" stroke-width="2" stroke-linecap="round" />
+          <line x1="0" y1="-7" x2="0" y2="7" stroke="#fef08a" stroke-width="2" stroke-linecap="round" />
+        </g>
+      </g>
+
+      <!-- Water Puddles (Appear & ripple when rain starts) -->
+      <g id="puddlesGroup" opacity="0">
+        <ellipse id="puddle1" cx="420" cy="465" rx="75" ry="16" fill="url(#puddleGrad)" />
+        <ellipse id="ripple1a" cx="420" cy="465" rx="25" ry="6" fill="none" stroke="#bae6fd" stroke-width="1.8" opacity="0" />
+        <ellipse id="ripple1b" cx="445" cy="468" rx="18" ry="4.5" fill="none" stroke="#bae6fd" stroke-width="1.5" opacity="0" />
+
+        <ellipse id="puddle2" cx="210" cy="470" rx="55" ry="13" fill="url(#puddleGrad)" />
+        <ellipse id="ripple2a" cx="210" cy="470" rx="22" ry="5.5" fill="none" stroke="#bae6fd" stroke-width="1.8" opacity="0" />
+
+        <ellipse id="puddle3" cx="650" cy="460" rx="60" ry="14" fill="url(#puddleGrad)" />
+        <ellipse id="ripple3a" cx="650" cy="460" rx="24" ry="6" fill="none" stroke="#bae6fd" stroke-width="1.8" opacity="0" />
+      </g>
+
+      <!-- ================= 5. THE BICYCLE ================= -->
+      <g id="bikeRoot" transform="translate(200, 428)">
+        <ellipse id="bikeShadow" cx="0" cy="42" rx="100" ry="11" fill="#000000" opacity="0.32" />
+
+        <!-- REAR WHEEL (Center: -78, 12) -->
+        <g id="rearWheel" transform="translate(-78, 12)">
+          <circle cx="0" cy="0" r="34" fill="none" stroke="#0f172a" stroke-width="10" />
+          <circle cx="0" cy="0" r="36" fill="none" stroke="#1e293b" stroke-width="2" stroke-dasharray="5 7" />
+          <circle cx="0" cy="0" r="29" fill="none" stroke="#cbd5e1" stroke-width="2.5" />
+          <g id="rearSpokes">
+            <line x1="-29" y1="0" x2="29" y2="0" stroke="#94a3b8" stroke-width="1.4" />
+            <line x1="0" y1="-29" x2="0" y2="29" stroke="#94a3b8" stroke-width="1.4" />
+            <line x1="-20.5" y1="-20.5" x2="20.5" y2="20.5" stroke="#94a3b8" stroke-width="1.4" />
+            <line x1="-20.5" y1="20.5" x2="20.5" y2="-20.5" stroke="#94a3b8" stroke-width="1.4" />
+          </g>
+          <circle cx="0" cy="0" r="6" fill="#475569" stroke="#cbd5e1" stroke-width="2" />
+        </g>
+
+        <!-- FRONT WHEEL (Center: 78, 12) -->
+        <g id="frontWheelGroup" transform="translate(78, 12)">
+          <g id="frontWheelInflated">
+            <circle cx="0" cy="0" r="34" fill="none" stroke="#0f172a" stroke-width="10" />
+            <circle cx="0" cy="0" r="36" fill="none" stroke="#1e293b" stroke-width="2" stroke-dasharray="5 7" />
+            <circle cx="0" cy="0" r="29" fill="none" stroke="#cbd5e1" stroke-width="2.5" />
+            <g id="frontSpokes">
+              <line x1="-29" y1="0" x2="29" y2="0" stroke="#94a3b8" stroke-width="1.4" />
+              <line x1="0" y1="-29" x2="0" y2="29" stroke="#94a3b8" stroke-width="1.4" />
+              <line x1="-20.5" y1="-20.5" x2="20.5" y2="20.5" stroke="#94a3b8" stroke-width="1.4" />
+              <line x1="-20.5" y1="20.5" x2="20.5" y2="-20.5" stroke="#94a3b8" stroke-width="1.4" />
+            </g>
+            <line x1="20" y1="-20" x2="27" y2="-27" stroke="#d97706" stroke-width="3" stroke-linecap="round" />
+          </g>
+
+          <g id="frontWheelDeflated" opacity="0">
+            <!-- Floppy squished rubber tire hugging pavement -->
+            <path id="flatTirePath" d="M -32,-12 C -32,-28 0,-30 32,-12 C 38,6 48,24 50,32 C 26,38 -26,38 -50,32 C -48,24 -38,6 -32,-12 Z" fill="#0f172a" stroke="#0f172a" stroke-width="6" stroke-linejoin="round" />
+            <circle cx="0" cy="-2" r="24" fill="none" stroke="#cbd5e1" stroke-width="2.5" />
+            <line x1="-24" y1="-2" x2="24" y2="-2" stroke="#94a3b8" stroke-width="1.4" />
+            <line x1="0" y1="-26" x2="0" y2="22" stroke="#94a3b8" stroke-width="1.4" />
+            <line x1="16" y1="-18" x2="23" y2="-23" stroke="#d97706" stroke-width="3" stroke-linecap="round" />
+
+            <g id="hissPuff" opacity="0" transform="translate(0, 32)">
+              <path d="M 0,0 Q 12,14 24,8" fill="none" stroke="#e2e8f0" stroke-width="3" stroke-linecap="round" />
+              <path d="M 0,0 Q -12,14 -24,8" fill="none" stroke="#e2e8f0" stroke-width="3" stroke-linecap="round" />
+              <text x="30" y="8" fill="#f8fafc" font-family="'Outfit', sans-serif" font-weight="900" font-size="14" font-style="italic">PSSSH!</text>
+            </g>
+          </g>
+
+          <circle cx="0" cy="0" r="6" fill="#475569" stroke="#cbd5e1" stroke-width="2" />
+        </g>
+
+        <!-- BICYCLE FRAME -->
+        <g id="bikeFrame">
+          <line x1="-78" y1="12" x2="-8" y2="12" stroke="url(#bikeFrameGrad)" stroke-width="6.5" stroke-linecap="round" />
+          <line x1="-78" y1="12" x2="-26" y2="-34" stroke="url(#bikeFrameGrad)" stroke-width="6" stroke-linecap="round" />
+          <line x1="-8" y1="12" x2="-26" y2="-34" stroke="url(#bikeFrameGrad)" stroke-width="6.5" stroke-linecap="round" />
+          <line x1="-26" y1="-34" x2="-30" y2="-44" stroke="url(#chromeGrad)" stroke-width="5" stroke-linecap="round" />
+          <line x1="-8" y1="12" x2="52" y2="-36" stroke="url(#bikeFrameGrad)" stroke-width="7.5" stroke-linecap="round" />
+          <line x1="-26" y1="-34" x2="52" y2="-36" stroke="url(#bikeFrameGrad)" stroke-width="7" stroke-linecap="round" />
+          <line x1="52" y1="-36" x2="56" y2="-48" stroke="url(#bikeFrameGrad)" stroke-width="8" stroke-linecap="round" />
+          <line id="frontFork" x1="52" y1="-36" x2="78" y2="12" stroke="url(#bikeFrameGrad)" stroke-width="6.5" stroke-linecap="round" />
+
+          <circle cx="-8" cy="12" r="12" fill="#334155" stroke="#64748b" stroke-width="2" />
+          <line x1="-8" y1="2" x2="-78" y2="5" stroke="#475569" stroke-width="3" />
+          <line x1="-8" y1="22" x2="-78" y2="19" stroke="#475569" stroke-width="3" />
+
+          <g id="crankGroup" transform="translate(-8, 12)">
+            <line id="crankR" x1="0" y1="0" x2="15" y2="12" stroke="url(#chromeGrad)" stroke-width="5" stroke-linecap="round" />
+            <rect id="pedalR" x="11" y="9" width="12" height="6.5" rx="2" fill="#1e293b" />
+            <line id="crankL" x1="0" y1="0" x2="-15" y2="-12" stroke="url(#chromeGrad)" stroke-width="4" stroke-linecap="round" opacity="0.6" />
+            <rect id="pedalL" x="-19" y="-15" width="11" height="5.5" rx="2" fill="#1e293b" opacity="0.6" />
+          </g>
+
+          <g transform="translate(-30, -45)">
+            <path d="M -18,-4 C -18,-10 8,-10 18,-5 C 22,-3 22,2 18,2 C 8,2 -16,2 -18,-4 Z" fill="#0f172a" stroke="#334155" stroke-width="1.5" />
+          </g>
+
+          <g transform="translate(56, -48)">
+            <line x1="0" y1="0" x2="4" y2="-16" stroke="url(#chromeGrad)" stroke-width="5.5" stroke-linecap="round" />
+            <path d="M -8,-16 Q 5,-22 15,-14" fill="none" stroke="url(#chromeGrad)" stroke-width="5.5" stroke-linecap="round" />
+            <rect x="10" y="-18" width="10" height="7" rx="2.5" fill="#0f172a" />
+            <circle id="bikeBell" cx="-5" cy="-20" r="5.5" fill="#fbbf24" stroke="#b45309" stroke-width="1.2" />
+            <g id="bellRings" opacity="0" transform="translate(-5, -20)">
+              <circle cx="0" cy="0" r="10" fill="none" stroke="#fef08a" stroke-width="2" />
+              <circle cx="0" cy="0" r="18" fill="none" stroke="#fef08a" stroke-width="1.5" opacity="0.6" />
+            </g>
+          </g>
+
+          <line id="kickstand" x1="-8" y1="12" x2="-8" y2="34" stroke="#64748b" stroke-width="3.5" stroke-linecap="round" transform="rotate(-65 -8 12)" />
+        </g>
+      </g>
+
+      <!-- ================= FLOOR TIRE PUMP RIG (In Front of Bike) ================= -->
+      <!-- Placed clearly beside front wheel at x: 490, y: 462 -->
+      <g id="pumpGroup" opacity="0" transform="translate(490, 462)">
+        <path d="M -22,0 L 22,0 L 16,-5 L -16,-5 Z" fill="#334155" />
+        <circle cx="-14" cy="-2.5" r="3.5" fill="#64748b" />
+        <circle cx="14" cy="-2.5" r="3.5" fill="#64748b" />
+
+        <rect x="-7" y="-68" width="14" height="64" rx="4" fill="url(#pumpGrad)" stroke="#c2410c" stroke-width="1.2" filter="url(#dropShadow)" />
+
+        <circle cx="0" cy="-44" r="8" fill="#f8fafc" stroke="#334155" stroke-width="1.8" />
+        <line id="pumpGaugeNeedle" x1="0" y1="-44" x2="0" y2="-50" stroke="#ef4444" stroke-width="2" stroke-linecap="round" />
+
+        <g id="pumpHandleGroup" transform="translate(0, -68)">
+          <line x1="0" y1="0" x2="0" y2="-34" stroke="url(#chromeGrad)" stroke-width="5" stroke-linecap="round" />
+          <rect x="-22" y="-42" width="44" height="10" rx="5" fill="#1e293b" stroke="#475569" stroke-width="1.5" filter="url(#dropShadow)" />
+          <circle cx="0" cy="-37" r="3" fill="#cbd5e1" />
+        </g>
+
+        <!-- Air hose extending to front wheel valve at (-40, -20) -->
+        <path id="pumpHose" d="M -6,-10 Q -22,-2 -42,-20" fill="none" stroke="#1e293b" stroke-width="3.5" stroke-linecap="round" />
+        <rect x="-46" y="-24" width="7" height="9" rx="2" fill="#d97706" />
+      </g>
+
+      <!-- ================= 6. UNIFIED ARTICULATED KID CHARACTER ================= -->
+      <!-- Pivot at pelvis (0, 0). Clean hierarchical rotations! -->
+      <g id="kidRoot" transform="translate(175, 380)">
+        <!-- Back Arm (Left Arm) -->
+        <g id="kidArmL" transform="translate(-10, -32) rotate(45)">
+          <rect x="-5" y="0" width="10" height="26" rx="5" fill="url(#shirtGrad)" />
+          <g id="kidForeL" transform="translate(0, 24) rotate(20)">
+            <rect x="-4.5" y="0" width="9" height="24" rx="4.5" fill="url(#skinGrad)" />
+            <circle cx="0" cy="24" r="5" fill="url(#skinGrad)" />
+          </g>
+        </g>
+
+        <!-- Back Leg (Left Leg) -->
+        <g id="kidLegL" transform="translate(-8, 18) rotate(15)">
+          <rect x="-6" y="0" width="12" height="26" rx="6" fill="#1e3a8a" />
+          <g id="kidShinL" transform="translate(0, 24) rotate(10)">
+            <rect x="-5" y="0" width="10" height="24" rx="5" fill="url(#skinGrad)" />
+            <path d="M -7,20 L 10,20 L 12,30 L -7,30 Z" fill="#ef4444" rx="2" />
+            <rect x="-8" y="28" width="22" height="4" rx="2" fill="#ffffff" />
+          </g>
+        </g>
+
+        <!-- Torso & Clothes -->
+        <g id="kidTorso">
+          <path d="M -12,4 L 12,4 L 14,20 L -14,20 Z" fill="#1e3a8a" />
+          <path d="M -14,-36 L 14,-36 L 12,4 L -12,4 Z" fill="url(#shirtGrad)" />
+          <polygon points="0,-22 4,-22 1,-16 5,-16 -1,-8 0,-14 -4,-14" fill="#ef4444" />
+          <path d="M -6,-36 Q 0,-30 6,-36" fill="none" stroke="#ffffff" stroke-width="2.5" />
+        </g>
+
+        <!-- Front Leg (Right Leg) -->
+        <g id="kidLegR" transform="translate(8, 18) rotate(-15)">
+          <rect x="-6.5" y="0" width="13" height="26" rx="6.5" fill="#2563eb" />
+          <g id="kidShinR" transform="translate(0, 24) rotate(-10)">
+            <rect x="-5.5" y="0" width="11" height="24" rx="5.5" fill="url(#skinGrad)" />
+            <path d="M -7,20 L 11,20 L 14,30 L -7,30 Z" fill="#ef4444" rx="2" />
+            <rect x="-8" y="28" width="23" height="4" rx="2" fill="#ffffff" />
+          </g>
+        </g>
+
+        <!-- Front Arm (Right Arm) -->
+        <g id="kidArmR" transform="translate(10, -32) rotate(40)">
+          <rect x="-5.5" y="0" width="11" height="26" rx="5.5" fill="url(#shirtGrad)" />
+          <g id="kidForeR" transform="translate(0, 24) rotate(15)">
+            <rect x="-5" y="0" width="10" height="24" rx="5" fill="url(#skinGrad)" />
+            <circle cx="0" cy="24" r="5.5" fill="url(#skinGrad)" />
+          </g>
+        </g>
+
+        <!-- Head, Face & Helmet -->
+        <!-- Pivot at neck (0, -36). Head center is at (0, -18) relative to neck group. -->
+        <g id="kidHeadGroup" transform="translate(0, -36) rotate(0)">
+          <!-- Neck -->
+          <rect x="-5" y="-6" width="10" height="10" fill="url(#skinGrad)" rx="2.5" />
+          <!-- Cute Round Head -->
+          <circle cx="0" cy="-20" r="22" fill="url(#skinGrad)" />
+          <!-- Rosy Cheeks -->
+          <circle cx="-11" cy="-14" r="5.5" fill="#fb7185" opacity="0.65" />
+          <circle cx="11" cy="-14" r="5.5" fill="#fb7185" opacity="0.65" />
+
+          <!-- Cute Button Nose -->
+          <path d="M 0,-17 Q 3,-15 0,-13" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" />
+
+          <!-- Face Features: State 1 (Happy Smile) -->
+          <g id="faceHappy">
+            <ellipse cx="-7" cy="-22" rx="4.5" ry="6" fill="#ffffff" />
+            <circle cx="-6.5" cy="-22" r="3" fill="#1e293b" />
+            <circle cx="-5" cy="-24" r="1.2" fill="#ffffff" />
+
+            <ellipse cx="7" cy="-22" rx="4.5" ry="6" fill="#ffffff" />
+            <circle cx="7.5" cy="-22" r="3" fill="#1e293b" />
+            <circle cx="9" cy="-24" r="1.2" fill="#ffffff" />
+
+            <path d="M -11,-30 Q -7,-33 -3,-30" fill="none" stroke="#78350f" stroke-width="2.5" stroke-linecap="round" />
+            <path d="M 3,-30 Q 7,-33 11,-30" fill="none" stroke="#78350f" stroke-width="2.5" stroke-linecap="round" />
+
+            <path d="M -7,-10 Q 0,-2 7,-10" fill="#ef4444" stroke="#991b1b" stroke-width="1.5" />
+            <path d="M -6,-10 L 6,-10" stroke="#ffffff" stroke-width="2.2" />
+          </g>
+
+          <!-- Face Features: State 2 (Shocked / Dismay) -->
+          <g id="faceShock" opacity="0">
+            <ellipse cx="-7" cy="-22" rx="6" ry="7.5" fill="#ffffff" stroke="#1e293b" stroke-width="1.8" />
+            <circle cx="-7" cy="-21" r="1.8" fill="#1e293b" />
+
+            <ellipse cx="7" cy="-22" rx="6" ry="7.5" fill="#ffffff" stroke="#1e293b" stroke-width="1.8" />
+            <circle cx="7" cy="-21" r="1.8" fill="#1e293b" />
+
+            <path d="M -12,-33 Q -7,-38 -2,-33" fill="none" stroke="#78350f" stroke-width="2.6" stroke-linecap="round" />
+            <path d="M 2,-33 Q 7,-38 12,-33" fill="none" stroke="#78350f" stroke-width="2.6" stroke-linecap="round" />
+
+            <ellipse cx="0" cy="-8" rx="5" ry="7.5" fill="#1e293b" />
+          </g>
+
+          <!-- Face Features: State 3 (Determined / Pumping) -->
+          <g id="faceDetermined" opacity="0">
+            <line x1="-12" y1="-22" x2="-4" y2="-22" stroke="#1e293b" stroke-width="3" stroke-linecap="round" />
+            <line x1="4" y1="-22" x2="12" y2="-22" stroke="#1e293b" stroke-width="3" stroke-linecap="round" />
+            <path d="M -13,-28 L -3,-25" stroke="#78350f" stroke-width="2.8" stroke-linecap="round" />
+            <path d="M 13,-28 L 3,-25" stroke="#78350f" stroke-width="2.8" stroke-linecap="round" />
+            <path d="M -7,-10 L 7,-10" stroke="#991b1b" stroke-width="3.2" stroke-linecap="round" />
+            <ellipse id="sweatBead" cx="24" cy="-30" rx="3.5" ry="4.5" fill="#38bdf8" opacity="0" />
+          </g>
+
+          <!-- Face Features: State 4 (Full Tragedy Crying Face) -->
+          <g id="faceCry" opacity="0">
+            <path d="M -14,-24 L -6,-19 L -14,-14" fill="none" stroke="#1e293b" stroke-width="3.8" stroke-linecap="round" />
+            <path d="M 14,-24 L 6,-19 L 14,-14" fill="none" stroke="#1e293b" stroke-width="3.8" stroke-linecap="round" />
+            <path d="M -11,-7 Q 0,-11 11,-7 Q 13,13 0,13 Q -13,13 -11,-7 Z" fill="#991b1b" stroke="#450a0a" stroke-width="2" />
+            <ellipse cx="0" cy="7" rx="5.5" ry="3.5" fill="#f43f5e" />
+          </g>
+
+          <!-- Messy hair bangs -->
+          <path d="M -14,-26 Q -10,-20 -6,-24" fill="none" stroke="#78350f" stroke-width="3" stroke-linecap="round" />
+          <path d="M 6,-24 Q 10,-20 14,-26" fill="none" stroke="#78350f" stroke-width="3" stroke-linecap="round" />
+
+          <!-- Aerodynamic Blue Sports Helmet sitting comfortably on top of head -->
+          <path d="M -24,-24 C -26,-46 -14,-56 6,-56 C 28,-56 34,-44 34,-24 C 34,-19 26,-16 22,-16 C 12,-16 2,-24 -6,-24 C -14,-24 -18,-19 -24,-24 Z" fill="url(#helmetGrad)" stroke="#1d4ed8" stroke-width="2.2" filter="url(#dropShadow)" />
+          <path d="M -18,-32 C -6,-54 12,-54 26,-30" fill="none" stroke="#ffffff" stroke-width="3.8" stroke-linecap="round" />
+          <polygon points="22,-22 40,-18 26,-14" fill="#1d4ed8" />
+          <!-- Chin Strap (clean jawline curve under mouth) -->
+          <path d="M -15,-16 Q -12,3 0,4 Q 12,3 15,-16" fill="none" stroke="#64748b" stroke-width="1.6" stroke-linecap="round" />
+        </g>
+
+        <!-- DRAMATIC WATER CANNON TEAR FOUNTAINS -->
+        <g id="tearFountains" opacity="0" transform="translate(0, -56)">
+          <path id="tearArcL" d="M -10,-12 Q -60,-65 -135,-20" fill="none" stroke="#38bdf8" stroke-width="6" stroke-linecap="round" filter="url(#dropShadow)" />
+          <path id="tearArcR" d="M 10,-12 Q -35,-58 -120,-14" fill="none" stroke="#7dd3fc" stroke-width="6" stroke-linecap="round" filter="url(#dropShadow)" />
+          <circle cx="-95" cy="-34" r="5.5" fill="#38bdf8" />
+          <circle cx="-135" cy="-18" r="6" fill="#38bdf8" />
+          <circle cx="-68" cy="-48" r="5" fill="#bae6fd" />
+          <circle cx="-118" cy="8" r="5.5" fill="#0284c7" />
+        </g>
+      </g>
+
+      <!-- ================= 7. WEATHER: LIGHTNING & TORRENTIAL RAIN ================= -->
+      <rect id="lightningFlash" x="0" y="0" width="800" height="500" fill="#ffffff" opacity="0" pointer-events="none" />
+
+      <g id="lightningBolt" opacity="0">
+        <path d="M 460,20 L 425,105 L 470,120 L 395,225 L 420,230 L 340,335" fill="none" stroke="#fef08a" stroke-width="5" stroke-linejoin="bevel" filter="url(#glowFilter)" />
+        <path d="M 425,105 L 380,155" fill="none" stroke="#e0f2fe" stroke-width="3" />
+      </g>
+
+      <g id="rainLayer" opacity="0" stroke="#bae6fd" stroke-width="2.4" stroke-linecap="round">
+      </g>
+
+      <rect id="stormDarkOverlay" x="0" y="0" width="800" height="500" fill="#0f172a" opacity="0" pointer-events="none" />
+
+      <!-- ================= 8. PENALTY BANNER ================= -->
+      <g id="penaltyBanner" opacity="0" transform="translate(400, -90)">
+        <rect x="-310" y="-40" width="620" height="80" rx="24" fill="rgba(15, 23, 42, 0.95)" stroke="#f43f5e" stroke-width="3.5" filter="url(#glowFilter)" />
+        <rect x="-308" y="-38" width="616" height="76" rx="22" fill="none" stroke="rgba(255, 255, 255, 0.18)" stroke-width="1.5" />
+        <circle cx="-280" cy="0" r="8" fill="#f43f5e" filter="url(#glowFilter)" />
+        <circle cx="-280" cy="0" r="4" fill="#ffffff" />
+
+        <text id="bannerText" x="10" y="9" text-anchor="middle" fill="#ffffff" font-family="'Outfit', sans-serif" font-weight="900" font-size="28" letter-spacing="-0.5">
+          Removed 10 points from your account
+        </text>
+      </g>
+    </svg>
+  </div>
+
+  <script>
+    // =========================================================================
+    // CONFIGURATION & PARAMS
+    // =========================================================================
+    const urlParams = new URLSearchParams(window.location.search);
+    const pointsLost = Math.abs(parseInt(urlParams.get('points'), 10)) || 10;
+    const isEmbed = urlParams.get('embed') === '1';
+    const soundEnabled = urlParams.get('sound') !== '0';
+
+    const bannerTextEl = document.getElementById('bannerText');
+    if (bannerTextEl) {
+      bannerTextEl.textContent = `Removed ${pointsLost} points from your account`;
+    }
+
+    // =========================================================================
+    // MATH & EASING HELPERS
+    // =========================================================================
+    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const invLerp = (a, b, v) => clamp((v - a) / (b - a), 0, 1);
+
+    function easeOutBack(x) {
+      const c1 = 1.70158;
+      const c3 = c1 + 1;
+      return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
+    }
+
+    function easeOutCubic(x) {
+      return 1 - Math.pow(1 - x, 3);
+    }
+
+    function easeInOutCubic(x) {
+      return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+    }
+
+    // =========================================================================
+    // WEB AUDIO SOUND SYNTHESIZER
+    // =========================================================================
+    class SoundFX {
+      constructor() {
+        this.ctx = null;
+        this.enabled = soundEnabled;
+        this.rainGain = null;
+        this.triggers = {
+          bell1: false,
+          puncture: false,
+          skid: false,
+          pump1: false,
+          pump2: false,
+          pump3: false,
+          pump4: false,
+          tireTap: false,
+          bell2: false,
+          thunder: false,
+          cry: false,
+          banner: false,
+        };
+      }
+
+      init() {
+        if (!this.enabled || this.ctx) return;
+        try {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContextClass) return;
+          this.ctx = new AudioContextClass();
+          if (this.ctx.state === 'suspended') {
+            this.ctx.resume().catch(() => {});
+          }
+        } catch (e) {
+          console.warn('Web Audio not available', e);
+        }
+      }
+
+      resetTriggers() {
+        Object.keys(this.triggers).forEach((k) => (this.triggers[k] = false));
+        if (this.rainGain) {
+          try {
+            this.rainGain.gain.setValueAtTime(0, this.ctx?.currentTime || 0);
+          } catch (e) {}
+        }
+      }
+
+      dingBell(timeOffset = 0) {
+        if (!this.enabled || !this.ctx) return;
+        const now = this.ctx.currentTime + timeOffset;
+
+        const playTone = (freq, t) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, t);
+
+          const osc2 = this.ctx.createOscillator();
+          osc2.type = 'triangle';
+          osc2.frequency.setValueAtTime(freq * 2.76, t);
+
+          gain.gain.setValueAtTime(0.24, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
+
+          osc.connect(gain);
+          osc2.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(t);
+          osc2.start(t);
+          osc.stop(t + 0.4);
+          osc2.stop(t + 0.4);
+        };
+
+        playTone(1864, now);
+        playTone(2349, now + 0.14);
+      }
+
+      tirePuncture() {
+        if (!this.enabled || !this.ctx) return;
+        const now = this.ctx.currentTime;
+
+        const popOsc = this.ctx.createOscillator();
+        const popGain = this.ctx.createGain();
+        popOsc.type = 'triangle';
+        popOsc.frequency.setValueAtTime(650, now);
+        popOsc.frequency.exponentialRampToValueAtTime(100, now + 0.12);
+        popGain.gain.setValueAtTime(0.32, now);
+        popGain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+        popOsc.connect(popGain);
+        popGain.connect(this.ctx.destination);
+        popOsc.start(now);
+        popOsc.stop(now + 0.14);
+
+        const bufferSize = this.ctx.sampleRate * 1.5;
+        const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+
+        const whiteNoise = this.ctx.createBufferSource();
+        whiteNoise.buffer = noiseBuffer;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(2600, now);
+        filter.Q.setValueAtTime(3.0, now);
+
+        const hissGain = this.ctx.createGain();
+        hissGain.gain.setValueAtTime(0.28, now);
+        hissGain.gain.exponentialRampToValueAtTime(0.005, now + 1.4);
+
+        whiteNoise.connect(filter);
+        filter.connect(hissGain);
+        hissGain.connect(this.ctx.destination);
+
+        whiteNoise.start(now);
+        whiteNoise.stop(now + 1.45);
+      }
+
+      skidSqueal() {
+        if (!this.enabled || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const filter = this.ctx.createBiquadFilter();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(850, now);
+        osc.frequency.exponentialRampToValueAtTime(320, now + 0.45);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(1400, now);
+
+        gain.gain.setValueAtTime(0.22, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.48);
+      }
+
+      pumpStroke(strokeNum) {
+        if (!this.enabled || !this.ctx) return;
+        const now = this.ctx.currentTime;
+
+        const bufferSize = this.ctx.sampleRate * 0.35;
+        const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = noiseBuffer;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(620, now);
+        filter.frequency.exponentialRampToValueAtTime(190, now + 0.28);
+        filter.Q.setValueAtTime(2.0, now);
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.26, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        noise.start(now);
+        noise.stop(now + 0.32);
+
+        const clickOsc = this.ctx.createOscillator();
+        const clickGain = this.ctx.createGain();
+        clickOsc.type = 'triangle';
+        clickOsc.frequency.setValueAtTime(160 + strokeNum * 30, now + 0.22);
+        clickGain.gain.setValueAtTime(0.18, now + 0.22);
+        clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+
+        clickOsc.connect(clickGain);
+        clickGain.connect(this.ctx.destination);
+        clickOsc.start(now + 0.22);
+        clickOsc.stop(now + 0.3);
+      }
+
+      tireTap() {
+        if (!this.enabled || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(170, now);
+        osc.frequency.exponentialRampToValueAtTime(95, now + 0.12);
+
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.15);
+      }
+
+      thunderClap() {
+        if (!this.enabled || !this.ctx) return;
+        const now = this.ctx.currentTime;
+
+        const zapOsc = this.ctx.createOscillator();
+        const zapGain = this.ctx.createGain();
+        zapOsc.type = 'sawtooth';
+        zapOsc.frequency.setValueAtTime(1200, now);
+        zapOsc.frequency.exponentialRampToValueAtTime(120, now + 0.08);
+        zapGain.gain.setValueAtTime(0.35, now);
+        zapGain.gain.exponentialRampToValueAtTime(0.01, now + 0.09);
+        zapOsc.connect(zapGain);
+        zapGain.connect(this.ctx.destination);
+        zapOsc.start(now);
+        zapOsc.stop(now + 0.1);
+
+        const bufferSize = this.ctx.sampleRate * 2.5;
+        const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = noiseBuffer;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(160, now + 0.05);
+        filter.frequency.exponentialRampToValueAtTime(45, now + 2.2);
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.42, now + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 2.3);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        noise.start(now + 0.05);
+        noise.stop(now + 2.4);
+
+        this.startRainAmbience();
+      }
+
+      startRainAmbience() {
+        if (!this.enabled || !this.ctx || this.rainGain) return;
+        try {
+          const bufferSize = this.ctx.sampleRate * 2.0;
+          const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+          const data = noiseBuffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+          const rainSource = this.ctx.createBufferSource();
+          rainSource.buffer = noiseBuffer;
+          rainSource.loop = true;
+
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(900, this.ctx.currentTime);
+
+          this.rainGain = this.ctx.createGain();
+          this.rainGain.gain.setValueAtTime(0, this.ctx.currentTime);
+          this.rainGain.gain.linearRampToValueAtTime(0.2, this.ctx.currentTime + 0.8);
+
+          rainSource.connect(filter);
+          filter.connect(this.rainGain);
+          this.rainGain.connect(this.ctx.destination);
+
+          rainSource.start();
+        } catch (e) {}
+      }
+
+      sadCryingTrombone() {
+        if (!this.enabled || !this.ctx) return;
+        const now = this.ctx.currentTime;
+
+        const notes = [
+          { freq: 440, time: 0.0, dur: 0.28 },
+          { freq: 415.3, time: 0.32, dur: 0.28 },
+          { freq: 392, time: 0.65, dur: 0.32 },
+          { freq: 349.2, time: 1.05, dur: 1.15, bendTo: 220 },
+        ];
+
+        notes.forEach((n) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          const filter = this.ctx.createBiquadFilter();
+
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(900, now + n.time);
+
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(n.freq, now + n.time);
+
+          if (n.bendTo) {
+            osc.frequency.setValueAtTime(n.freq, now + n.time + 0.2);
+            osc.frequency.exponentialRampToValueAtTime(n.bendTo, now + n.time + n.dur);
+          }
+
+          gain.gain.setValueAtTime(0.18, now + n.time);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + n.time + n.dur);
+
+          osc.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(now + n.time);
+          osc.stop(now + n.time + n.dur + 0.05);
+        });
+      }
+
+      bannerGong() {
+        if (!this.enabled || !this.ctx) return;
+        const now = this.ctx.currentTime;
+
+        const subOsc = this.ctx.createOscillator();
+        const subGain = this.ctx.createGain();
+        subOsc.type = 'sine';
+        subOsc.frequency.setValueAtTime(95, now);
+        subOsc.frequency.exponentialRampToValueAtTime(38, now + 0.45);
+        subGain.gain.setValueAtTime(0.35, now);
+        subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+        subOsc.connect(subGain);
+        subGain.connect(this.ctx.destination);
+        subOsc.start(now);
+        subOsc.stop(now + 0.52);
+      }
+    }
+
+    const sfx = new SoundFX();
+
+    // =========================================================================
+    // DYNAMIC RAIN STREAKS
+    // =========================================================================
+    const rainLayer = document.getElementById('rainLayer');
+    const rainStreaks = [];
+    const NUM_RAIN_STREAKS = 50;
+
+    for (let i = 0; i < NUM_RAIN_STREAKS; i++) {
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      const startX = Math.random() * 950 - 50;
+      const startY = Math.random() * 500;
+      const len = 25 + Math.random() * 20;
+      const angle = 0.35;
+      line.setAttribute('x1', startX);
+      line.setAttribute('y1', startY);
+      line.setAttribute('x2', startX - len * Math.sin(angle));
+      line.setAttribute('y2', startY + len * Math.cos(angle));
+      line.setAttribute('opacity', (0.4 + Math.random() * 0.5).toFixed(2));
+      rainLayer.appendChild(line);
+      rainStreaks.push({ el: line, x: startX, y: startY, len: len });
+    }
+
+    // =========================================================================
+    // DOM CACHING
+    // =========================================================================
+    const el = {
+      skySunny: document.getElementById('skySunny'),
+      skyStorm: document.getElementById('skyStorm'),
+      sunGroup: document.getElementById('sunGroup'),
+      sunRays: document.getElementById('sunRays'),
+      cloudsSunny: document.getElementById('cloudsSunny'),
+      cloudsStorm: document.getElementById('cloudsStorm'),
+      hazardGlint: document.getElementById('hazardGlint'),
+      parkTree1: document.getElementById('parkTree1'),
+      parkTree2: document.getElementById('parkTree2'),
+      puddlesGroup: document.getElementById('puddlesGroup'),
+      ripple1a: document.getElementById('ripple1a'),
+      ripple1b: document.getElementById('ripple1b'),
+      ripple2a: document.getElementById('ripple2a'),
+      ripple3a: document.getElementById('ripple3a'),
+      pumpGroup: document.getElementById('pumpGroup'),
+      pumpHandleGroup: document.getElementById('pumpHandleGroup'),
+      pumpGaugeNeedle: document.getElementById('pumpGaugeNeedle'),
+      pumpHose: document.getElementById('pumpHose'),
+      bikeRoot: document.getElementById('bikeRoot'),
+      bikeShadow: document.getElementById('bikeShadow'),
+      rearSpokes: document.getElementById('rearSpokes'),
+      frontWheelGroup: document.getElementById('frontWheelGroup'),
+      frontWheelInflated: document.getElementById('frontWheelInflated'),
+      frontWheelDeflated: document.getElementById('frontWheelDeflated'),
+      frontSpokes: document.getElementById('frontSpokes'),
+      hissPuff: document.getElementById('hissPuff'),
+      crankGroup: document.getElementById('crankGroup'),
+      bellRings: document.getElementById('bellRings'),
+      kickstand: document.getElementById('kickstand'),
+      kidRoot: document.getElementById('kidRoot'),
+      kidTorso: document.getElementById('kidTorso'),
+      kidHeadGroup: document.getElementById('kidHeadGroup'),
+      faceHappy: document.getElementById('faceHappy'),
+      faceShock: document.getElementById('faceShock'),
+      faceDetermined: document.getElementById('faceDetermined'),
+      faceCry: document.getElementById('faceCry'),
+      sweatBead: document.getElementById('sweatBead'),
+      kidArmL: document.getElementById('kidArmL'),
+      kidForeL: document.getElementById('kidForeL'),
+      kidArmR: document.getElementById('kidArmR'),
+      kidForeR: document.getElementById('kidForeR'),
+      kidLegL: document.getElementById('kidLegL'),
+      kidShinL: document.getElementById('kidShinL'),
+      kidLegR: document.getElementById('kidLegR'),
+      kidShinR: document.getElementById('kidShinR'),
+      tearFountains: document.getElementById('tearFountains'),
+      tearArcL: document.getElementById('tearArcL'),
+      tearArcR: document.getElementById('tearArcR'),
+      lightningFlash: document.getElementById('lightningFlash'),
+      lightningBolt: document.getElementById('lightningBolt'),
+      rainLayer: document.getElementById('rainLayer'),
+      stormDarkOverlay: document.getElementById('stormDarkOverlay'),
+      penaltyBanner: document.getElementById('penaltyBanner'),
+    };
+
+    // =========================================================================
+    // MASTER TIMELINE RENDERER (TOTAL DURATION: 12.5 SECONDS)
+    // =========================================================================
+    const TOTAL_DURATION = 12.5;
+
+    function renderAtTime(t) {
+      t = clamp(t, 0, TOTAL_DURATION);
+
+      // 1. Sun & Celestial
+      const sunRot = (t * 22) % 360;
+      el.sunRays.setAttribute('transform', `rotate(${sunRot.toFixed(1)})`);
+
+      const cloudSunnyX = (t * 8) % 180;
+      el.cloudsSunny.setAttribute('transform', `translate(${cloudSunnyX.toFixed(1)}, 0)`);
+
+      // Tree sway
+      if (t >= 7.8) {
+        const windSway = Math.sin(t * 12) * 8 - 6;
+        el.parkTree1.setAttribute('transform', `translate(685, 215) rotate(${windSway.toFixed(1)})`);
+        el.parkTree2.setAttribute('transform', `translate(615, 230) scale(0.8) rotate(${(windSway * 1.2).toFixed(1)})`);
+      } else {
+        const gentleSway = Math.sin(t * 2) * 1.5;
+        el.parkTree1.setAttribute('transform', `translate(685, 215) rotate(${gentleSway.toFixed(1)})`);
+        el.parkTree2.setAttribute('transform', `translate(615, 230) scale(0.8) rotate(${(-gentleSway).toFixed(1)})`);
+      }
+
+      // Hazard glint
+      if (t < 2.9) {
+        const glintScale = 0.8 + 0.4 * Math.sin(t * 12);
+        el.hazardGlint.setAttribute('transform', `translate(0, -11) scale(${glintScale.toFixed(2)})`);
+      } else {
+        el.hazardGlint.setAttribute('transform', 'scale(0)');
+      }
+
+      // Common reset
+      el.tearFountains.setAttribute('opacity', '0');
+      el.sweatBead.setAttribute('opacity', '0');
+
+      // -----------------------------------------------------------------------
+      // ACT 1: JOYFUL RIDING TO THE PARK (0.0s – 2.8s)
+      // -----------------------------------------------------------------------
+      if (t < 2.8) {
+        el.kidRoot.setAttribute('opacity', '1');
+        el.pumpGroup.setAttribute('opacity', '0');
+        el.kickstand.setAttribute('transform', 'rotate(-65 -8 12)');
+        el.frontWheelInflated.setAttribute('opacity', '1');
+        el.frontWheelDeflated.setAttribute('opacity', '0');
+
+        el.faceHappy.setAttribute('opacity', '1');
+        el.faceShock.setAttribute('opacity', '0');
+        el.faceDetermined.setAttribute('opacity', '0');
+        el.faceCry.setAttribute('opacity', '0');
+
+        const pRide = t / 2.8;
+        const bikeX = lerp(100, 340, pRide);
+        const bikeY = 428 + Math.sin(t * 16) * 1.5;
+        el.bikeRoot.setAttribute('transform', `translate(${bikeX.toFixed(1)}, ${bikeY.toFixed(1)})`);
+
+        // Kid seated on the bike
+        el.kidRoot.setAttribute('transform', `translate(${(bikeX - 25).toFixed(1)}, ${(bikeY - 50).toFixed(1)}) rotate(4)`);
+
+        // Wheels spin
+        const wheelRot = (t * 420) % 360;
+        el.rearSpokes.setAttribute('transform', `rotate(${wheelRot.toFixed(1)})`);
+        el.frontSpokes.setAttribute('transform', `rotate(${wheelRot.toFixed(1)})`);
+
+        // Pedaling motion
+        const crankRot = (t * 360) % 360;
+        el.crankGroup.setAttribute('transform', `translate(-8, 12) rotate(${crankRot.toFixed(1)})`);
+
+        // Leg angles tracking pedaling cadence
+        const radR = (crankRot * Math.PI) / 180;
+        const legR_Thigh = 20 + 25 * Math.sin(radR);
+        const legR_Shin = -30 + 35 * Math.cos(radR);
+        el.kidLegR.setAttribute('transform', `translate(8, 18) rotate(${legR_Thigh.toFixed(1)})`);
+        el.kidShinR.setAttribute('transform', `translate(0, 24) rotate(${legR_Shin.toFixed(1)})`);
+
+        const radL = radR + Math.PI;
+        const legL_Thigh = 20 + 25 * Math.sin(radL);
+        const legL_Shin = -30 + 35 * Math.cos(radL);
+        el.kidLegL.setAttribute('transform', `translate(-8, 18) rotate(${legL_Thigh.toFixed(1)})`);
+        el.kidShinL.setAttribute('transform', `translate(0, 24) rotate(${legL_Shin.toFixed(1)})`);
+
+        // Arms holding handlebars
+        el.kidArmR.setAttribute('transform', 'translate(10, -32) rotate(48)');
+        el.kidForeR.setAttribute('transform', 'translate(0, 24) rotate(18)');
+        el.kidArmL.setAttribute('transform', 'translate(-10, -32) rotate(52)');
+        el.kidForeL.setAttribute('transform', 'translate(0, 24) rotate(22)');
+
+        // Bell ding at 0.8s
+        if (t >= 0.8 && t < 1.3) {
+          if (!sfx.triggers.bell1) {
+            sfx.dingBell(0);
+            sfx.triggers.bell1 = true;
+          }
+          const ringScale = 1 + (t - 0.8) * 3;
+          const ringOp = clamp(1 - (t - 0.8) * 2, 0, 1);
+          el.bellRings.setAttribute('opacity', ringOp.toFixed(2));
+          el.bellRings.setAttribute('transform', `translate(-5, -20) scale(${ringScale.toFixed(2)})`);
+        } else {
+          el.bellRings.setAttribute('opacity', '0');
+        }
+
+        const headBob = Math.sin(t * 14) * 4;
+        el.kidHeadGroup.setAttribute('transform', `translate(0, -36) rotate(${headBob.toFixed(1)})`);
+      }
+
+      // -----------------------------------------------------------------------
+      // ACT 2: FLAT TIRE INCIDENT & STOP (2.8s – 4.2s)
+      // -----------------------------------------------------------------------
+      else if (t >= 2.8 && t < 4.2) {
+        el.bellRings.setAttribute('opacity', '0');
+        const pSkid = invLerp(2.8, 3.4, t);
+        const bikeX = lerp(340, 365, easeOutCubic(pSkid));
+
+        el.frontWheelInflated.setAttribute('opacity', '0');
+        el.frontWheelDeflated.setAttribute('opacity', '1');
+
+        if (!sfx.triggers.puncture) {
+          sfx.tirePuncture();
+          sfx.triggers.puncture = true;
+        }
+        if (t >= 2.85 && !sfx.triggers.skid) {
+          sfx.skidSqueal();
+          sfx.triggers.skid = true;
+        }
+
+        const tilt = lerp(0, -6, clamp((t - 2.8) * 4, 0, 1));
+        el.bikeRoot.setAttribute('transform', `translate(${bikeX.toFixed(1)}, 436) rotate(${tilt.toFixed(1)})`);
+
+        if (t >= 2.8 && t < 3.8) {
+          const puffOp = clamp(1 - (t - 2.8) / 1.0, 0, 1);
+          el.hissPuff.setAttribute('opacity', puffOp.toFixed(2));
+        } else {
+          el.hissPuff.setAttribute('opacity', '0');
+        }
+
+        el.faceHappy.setAttribute('opacity', '0');
+        el.faceShock.setAttribute('opacity', '1');
+        el.faceDetermined.setAttribute('opacity', '0');
+        el.faceCry.setAttribute('opacity', '0');
+
+        if (t < 3.6) {
+          // Mounted, jolted forward in shock
+          el.kidRoot.setAttribute('transform', `translate(${(bikeX - 25).toFixed(1)}, 386) rotate(-8)`);
+          el.kidHeadGroup.setAttribute('transform', 'translate(0, -36) rotate(-15)');
+          el.kidArmR.setAttribute('transform', 'translate(10, -32) rotate(65)');
+          el.kidArmL.setAttribute('transform', 'translate(-10, -32) rotate(65)');
+        } else {
+          // Dismounted standing beside front wheel at x: 300, scratching head
+          el.kickstand.setAttribute('transform', 'rotate(0 -8 12)');
+          el.kidRoot.setAttribute('transform', 'translate(305, 415) rotate(0)');
+
+          el.kidLegR.setAttribute('transform', 'translate(8, 18) rotate(2)');
+          el.kidShinR.setAttribute('transform', 'translate(0, 24) rotate(0)');
+          el.kidLegL.setAttribute('transform', 'translate(-8, 18) rotate(-4)');
+          el.kidShinL.setAttribute('transform', 'translate(0, 24) rotate(0)');
+
+          // Right arm scratching helmet in confusion
+          el.kidArmR.setAttribute('transform', 'translate(10, -32) rotate(-135)');
+          el.kidForeR.setAttribute('transform', 'translate(0, 24) rotate(-80)');
+          el.kidArmL.setAttribute('transform', 'translate(-10, -32) rotate(15)');
+          el.kidForeL.setAttribute('transform', 'translate(0, 24) rotate(10)');
+
+          el.kidHeadGroup.setAttribute('transform', 'translate(0, -36) rotate(18)');
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // ACT 3: TIRE PUMP TO THE RESCUE (4.2s – 6.6s)
+      // -----------------------------------------------------------------------
+      else if (t >= 4.2 && t < 6.6) {
+        // Pump is placed clearly at x: 475 (beside front wheel at x: 443)
+        el.pumpGroup.setAttribute('opacity', '1');
+        el.bellRings.setAttribute('opacity', '0');
+
+        el.faceHappy.setAttribute('opacity', '0');
+        el.faceShock.setAttribute('opacity', '0');
+        el.faceDetermined.setAttribute('opacity', '1');
+        el.faceCry.setAttribute('opacity', '0');
+
+        // Kid stands right behind the pump at x: 508 facing left towards pump!
+        const pumpCycleTime = 0.5;
+        const pumpStart = 4.4;
+        let strokePhase = 0;
+        let strokeIndex = 0;
+
+        if (t >= pumpStart && t < pumpStart + 4 * pumpCycleTime) {
+          const elapsed = t - pumpStart;
+          strokeIndex = Math.floor(elapsed / pumpCycleTime);
+          const localT = (elapsed % pumpCycleTime) / pumpCycleTime;
+
+          if (strokeIndex === 0 && !sfx.triggers.pump1) {
+            sfx.pumpStroke(1);
+            sfx.triggers.pump1 = true;
+          } else if (strokeIndex === 1 && !sfx.triggers.pump2) {
+            sfx.pumpStroke(2);
+            sfx.triggers.pump2 = true;
+          } else if (strokeIndex === 2 && !sfx.triggers.pump3) {
+            sfx.pumpStroke(3);
+            sfx.triggers.pump3 = true;
+          } else if (strokeIndex === 3 && !sfx.triggers.pump4) {
+            sfx.pumpStroke(4);
+            sfx.triggers.pump4 = true;
+          }
+
+          strokePhase = Math.sin(localT * Math.PI); // 0 -> 1 -> 0
+          el.sweatBead.setAttribute('opacity', (strokePhase * 0.95).toFixed(2));
+        } else {
+          el.sweatBead.setAttribute('opacity', '0');
+        }
+
+        // Handle moves down
+        const handleY = lerp(-68, -34, strokePhase);
+        el.pumpHandleGroup.setAttribute('transform', `translate(0, ${handleY.toFixed(1)})`);
+
+        // Kid stands at x: 522, facing left towards pump at x: 490 (scale -1, 1 around 0,0)
+        // Leans forward into downstroke
+        const torsoDip = 6 + strokePhase * 12;
+        el.kidRoot.setAttribute('transform', `translate(522, ${(415 + strokePhase * 8).toFixed(1)}) scale(-1, 1) rotate(${torsoDip.toFixed(1)})`);
+
+        // Hands reach forward onto pump handle (negative angle in mirrored scale(-1,1) reaches forward)
+        const armAngle = lerp(-65, -38, strokePhase);
+        const foreAngle = lerp(-30, -15, strokePhase);
+        el.kidArmR.setAttribute('transform', `translate(10, -32) rotate(${armAngle.toFixed(1)})`);
+        el.kidForeR.setAttribute('transform', `translate(0, 24) rotate(${foreAngle.toFixed(1)})`);
+        el.kidArmL.setAttribute('transform', `translate(-10, -32) rotate(${armAngle.toFixed(1)})`);
+        el.kidForeL.setAttribute('transform', `translate(0, 24) rotate(${foreAngle.toFixed(1)})`);
+
+        // Knees bend slightly on downstroke
+        el.kidLegR.setAttribute('transform', `translate(8, 18) rotate(${(-strokePhase * 15).toFixed(1)})`);
+        el.kidShinR.setAttribute('transform', `translate(0, 24) rotate(${(strokePhase * 25).toFixed(1)})`);
+        el.kidLegL.setAttribute('transform', `translate(-8, 18) rotate(${(-strokePhase * 15).toFixed(1)})`);
+        el.kidShinL.setAttribute('transform', `translate(0, 24) rotate(${(strokePhase * 25).toFixed(1)})`);
+
+        // Inflation ratio
+        const inflationRatio = clamp((t - 4.4) / 1.8, 0, 1);
+        if (inflationRatio < 0.9) {
+          el.frontWheelInflated.setAttribute('opacity', inflationRatio.toFixed(2));
+          el.frontWheelDeflated.setAttribute('opacity', (1 - inflationRatio).toFixed(2));
+        } else {
+          el.frontWheelInflated.setAttribute('opacity', '1');
+          el.frontWheelDeflated.setAttribute('opacity', '0');
+        }
+
+        const gaugeAngle = lerp(0, 60, inflationRatio);
+        el.pumpGaugeNeedle.setAttribute('transform', `rotate(${gaugeAngle.toFixed(1)} 0 -44)`);
+
+        // Tire tap at t = 6.25s: steps back and taps tire to test firmness
+        if (t >= 6.25 && t < 6.55) {
+          if (!sfx.triggers.tireTap) {
+            sfx.tireTap();
+            sfx.triggers.tireTap = true;
+          }
+          el.kidRoot.setAttribute('transform', 'translate(522, 415) scale(-1, 1) rotate(0)');
+          el.kidArmR.setAttribute('transform', 'translate(10, -32) rotate(-20)');
+          el.kidForeR.setAttribute('transform', 'translate(0, 24) rotate(15)');
+          el.kidArmL.setAttribute('transform', 'translate(-10, -32) rotate(20)');
+          el.kidForeL.setAttribute('transform', 'translate(0, 24) rotate(15)');
+          el.kidLegR.setAttribute('transform', 'translate(8, 18) rotate(-40)');
+          el.kidShinR.setAttribute('transform', 'translate(0, 24) rotate(25)');
+          el.faceHappy.setAttribute('opacity', '1');
+          el.faceDetermined.setAttribute('opacity', '0');
+        }
+
+        el.bikeRoot.setAttribute('transform', 'translate(365, 428)');
+      }
+
+      // -----------------------------------------------------------------------
+      // ACT 4: TRYING TO RIDE AGAIN (6.6s – 7.8s)
+      // -----------------------------------------------------------------------
+      else if (t >= 6.6 && t < 7.8) {
+        el.pumpGroup.setAttribute('opacity', '0');
+        el.kickstand.setAttribute('transform', 'rotate(-65 -8 12)');
+        el.frontWheelInflated.setAttribute('opacity', '1');
+        el.frontWheelDeflated.setAttribute('opacity', '0');
+
+        el.faceHappy.setAttribute('opacity', '1');
+        el.faceShock.setAttribute('opacity', '0');
+        el.faceDetermined.setAttribute('opacity', '0');
+        el.faceCry.setAttribute('opacity', '0');
+
+        // Rolls forward towards park gate (x: 365 -> 475)
+        const pRoll = invLerp(6.6, 7.8, t);
+        const bikeX = lerp(365, 475, easeInOutCubic(pRoll));
+        el.bikeRoot.setAttribute('transform', `translate(${bikeX.toFixed(1)}, 428)`);
+        el.kidRoot.setAttribute('transform', `translate(${(bikeX - 25).toFixed(1)}, 378) rotate(4)`);
+
+        const wRot = (t * 280) % 360;
+        el.rearSpokes.setAttribute('transform', `rotate(${wRot.toFixed(1)})`);
+        el.frontSpokes.setAttribute('transform', `rotate(${wRot.toFixed(1)})`);
+
+        const crankRot = (t * 260) % 360;
+        el.crankGroup.setAttribute('transform', `translate(-8, 12) rotate(${crankRot.toFixed(1)})`);
+
+        const radR = (crankRot * Math.PI) / 180;
+        const legR_Thigh = 20 + 25 * Math.sin(radR);
+        const legR_Shin = -30 + 35 * Math.cos(radR);
+        el.kidLegR.setAttribute('transform', `translate(8, 18) rotate(${legR_Thigh.toFixed(1)})`);
+        el.kidShinR.setAttribute('transform', `translate(0, 24) rotate(${legR_Shin.toFixed(1)})`);
+
+        const radL = radR + Math.PI;
+        const legL_Thigh = 20 + 25 * Math.sin(radL);
+        const legL_Shin = -30 + 35 * Math.cos(radL);
+        el.kidLegL.setAttribute('transform', `translate(-8, 18) rotate(${legL_Thigh.toFixed(1)})`);
+        el.kidShinL.setAttribute('transform', `translate(0, 24) rotate(${legL_Shin.toFixed(1)})`);
+
+        el.kidArmR.setAttribute('transform', 'translate(10, -32) rotate(48)');
+        el.kidForeR.setAttribute('transform', 'translate(0, 24) rotate(18)');
+        el.kidArmL.setAttribute('transform', 'translate(-10, -32) rotate(52)');
+        el.kidForeL.setAttribute('transform', 'translate(0, 24) rotate(22)');
+
+        if (t >= 7.0 && t < 7.5) {
+          if (!sfx.triggers.bell2) {
+            sfx.dingBell(0);
+            sfx.triggers.bell2 = true;
+          }
+          const ringScale = 1 + (t - 7.0) * 3;
+          el.bellRings.setAttribute('opacity', (1 - (t - 7.0) * 2).toFixed(2));
+          el.bellRings.setAttribute('transform', `translate(-5, -20) scale(${ringScale.toFixed(2)})`);
+        } else {
+          el.bellRings.setAttribute('opacity', '0');
+        }
+
+        const headBob = Math.sin(t * 12) * 3;
+        el.kidHeadGroup.setAttribute('transform', `translate(0, -36) rotate(${headBob.toFixed(1)})`);
+      }
+
+      // -----------------------------------------------------------------------
+      // ACT 5: THE SUDDEN DOWNPOUR & STORM (7.8s – 9.8s)
+      // -----------------------------------------------------------------------
+      else if (t >= 7.8 && t < 9.8) {
+        el.bikeRoot.setAttribute('transform', 'translate(475, 428)');
+        el.bellRings.setAttribute('opacity', '0');
+
+        el.kidRoot.setAttribute('transform', 'translate(450, 378) rotate(4)');
+        el.faceHappy.setAttribute('opacity', '0');
+        el.faceShock.setAttribute('opacity', '1');
+        el.faceDetermined.setAttribute('opacity', '0');
+        el.faceCry.setAttribute('opacity', '0');
+
+        const stormAlpha = clamp(invLerp(7.8, 8.4, t), 0, 1);
+        el.skyStorm.setAttribute('opacity', stormAlpha.toFixed(2));
+        el.cloudsStorm.setAttribute('opacity', stormAlpha.toFixed(2));
+        el.cloudsStorm.setAttribute('transform', `translate(0, ${(-60 + stormAlpha * 40).toFixed(1)})`);
+        el.stormDarkOverlay.setAttribute('opacity', (stormAlpha * 0.38).toFixed(2));
+
+        if (t >= 8.2 && t < 8.65) {
+          if (!sfx.triggers.thunder) {
+            sfx.thunderClap();
+            sfx.triggers.thunder = true;
+          }
+          const flashT = (t - 8.2) / 0.45;
+          let flashOp = 0;
+          if (flashT < 0.2) flashOp = 0.85;
+          else if (flashT < 0.35) flashOp = 0.15;
+          else if (flashT < 0.55) flashOp = 0.8;
+          else flashOp = clamp(1 - (flashT - 0.55) * 2.5, 0, 1);
+
+          el.lightningFlash.setAttribute('opacity', (flashOp * 0.7).toFixed(2));
+          el.lightningBolt.setAttribute('opacity', flashOp.toFixed(2));
+        } else {
+          el.lightningFlash.setAttribute('opacity', '0');
+          el.lightningBolt.setAttribute('opacity', '0');
+        }
+
+        if (t >= 8.4) {
+          const rainOp = clamp(invLerp(8.4, 9.0, t), 0, 0.95);
+          el.rainLayer.setAttribute('opacity', rainOp.toFixed(2));
+          el.puddlesGroup.setAttribute('opacity', rainOp.toFixed(2));
+
+          const ripScale = 1 + ((t * 4) % 1) * 1.6;
+          const ripOp = 1 - ((t * 4) % 1);
+          el.ripple1a.setAttribute('transform', `scale(${ripScale.toFixed(2)})`);
+          el.ripple1a.setAttribute('opacity', ripOp.toFixed(2));
+          el.ripple2a.setAttribute('transform', `scale(${ripScale.toFixed(2)})`);
+          el.ripple2a.setAttribute('opacity', ripOp.toFixed(2));
+          el.ripple3a.setAttribute('transform', `scale(${ripScale.toFixed(2)})`);
+          el.ripple3a.setAttribute('opacity', ripOp.toFixed(2));
+        }
+
+        const shiver = Math.sin(t * 35) * 2.5;
+        el.kidHeadGroup.setAttribute('transform', `translate(${shiver.toFixed(1)}, -36) rotate(-18)`);
+      }
+
+      // -----------------------------------------------------------------------
+      // ACT 6: RUNNING BACK CRYING & PENALTY BANNER (9.8s – 12.5s)
+      // -----------------------------------------------------------------------
+      else if (t >= 9.8) {
+        el.skyStorm.setAttribute('opacity', '1');
+        el.cloudsStorm.setAttribute('opacity', '1');
+        el.rainLayer.setAttribute('opacity', '0.95');
+        el.puddlesGroup.setAttribute('opacity', '0.9');
+        el.stormDarkOverlay.setAttribute('opacity', '0.42');
+        el.bellRings.setAttribute('opacity', '0');
+
+        el.bikeRoot.setAttribute('transform', 'translate(475, 428)');
+        el.kickstand.setAttribute('transform', 'rotate(0 -8 12)');
+
+        if (!sfx.triggers.cry) {
+          sfx.sadCryingTrombone();
+          sfx.triggers.cry = true;
+        }
+
+        const pRun = invLerp(9.8, 11.6, t);
+        const kidRunX = lerp(440, -140, pRun);
+
+        el.kidRoot.setAttribute('opacity', pRun >= 1.0 ? '0' : '1');
+        // Facing left cleanly with scale(-1, 1) and bobbing Y
+        const runBob = Math.sin(t * 26) * 5;
+        el.kidRoot.setAttribute('transform', `translate(${kidRunX.toFixed(1)}, ${(410 + runBob).toFixed(1)}) scale(-1, 1) rotate(-8)`);
+
+        el.faceHappy.setAttribute('opacity', '0');
+        el.faceShock.setAttribute('opacity', '0');
+        el.faceDetermined.setAttribute('opacity', '0');
+        el.faceCry.setAttribute('opacity', '1');
+        el.tearFountains.setAttribute('opacity', '1');
+
+        const tearWave = Math.sin(t * 22) * 12;
+        el.tearArcL.setAttribute('d', `M -10,-12 Q -60,${(-65 + tearWave).toFixed(1)} -135,-20`);
+        el.tearArcR.setAttribute('d', `M 10,-12 Q -35,${(-58 - tearWave).toFixed(1)} -120,-14`);
+
+        const runCycle = (t * 26) % (2 * Math.PI);
+        const legR_Thigh = Math.sin(runCycle) * 55;
+        const legR_Shin = Math.cos(runCycle) * 45 - 20;
+        el.kidLegR.setAttribute('transform', `translate(8, 18) rotate(${legR_Thigh.toFixed(1)})`);
+        el.kidShinR.setAttribute('transform', `translate(0, 24) rotate(${legR_Shin.toFixed(1)})`);
+
+        const legL_Thigh = -legR_Thigh;
+        const legL_Shin = -Math.cos(runCycle) * 45 - 20;
+        el.kidLegL.setAttribute('transform', `translate(-8, 18) rotate(${legL_Thigh.toFixed(1)})`);
+        el.kidShinL.setAttribute('transform', `translate(0, 24) rotate(${legL_Shin.toFixed(1)})`);
+
+        const armWave = Math.sin(runCycle) * 45;
+        el.kidArmR.setAttribute('transform', `translate(10, -32) rotate(${(-15 + armWave).toFixed(1)})`);
+        el.kidForeR.setAttribute('transform', 'translate(0, 24) rotate(-20)');
+        el.kidArmL.setAttribute('transform', `translate(-10, -32) rotate(${(-15 - armWave).toFixed(1)})`);
+        el.kidForeL.setAttribute('transform', 'translate(0, 24) rotate(-20)');
+
+        el.kidHeadGroup.setAttribute('transform', `translate(0, -36) rotate(${(-14 + Math.sin(t * 18) * 5).toFixed(1)})`);
+
+        // Banner drops to y: 70
+        if (t >= 10.4) {
+          if (!sfx.triggers.banner) {
+            sfx.bannerGong();
+            sfx.triggers.banner = true;
+          }
+          const pBanner = invLerp(10.4, 11.0, t);
+          const bannerY = lerp(-90, 70, easeOutBack(pBanner));
+          el.penaltyBanner.setAttribute('opacity', '1');
+          el.penaltyBanner.setAttribute('transform', `translate(400, ${bannerY.toFixed(1)})`);
+        } else {
+          el.penaltyBanner.setAttribute('opacity', '0');
+          el.penaltyBanner.setAttribute('transform', 'translate(400, -90)');
+        }
+      }
+
+      // Rain droplets motion
+      if (t >= 8.4) {
+        rainStreaks.forEach((streak) => {
+          streak.y = (streak.y + 20) % 520;
+          streak.x = streak.x - 7;
+          if (streak.x < -60) streak.x = 860;
+          streak.el.setAttribute('x1', streak.x.toFixed(1));
+          streak.el.setAttribute('y1', streak.y.toFixed(1));
+          streak.el.setAttribute('x2', (streak.x - 8).toFixed(1));
+          streak.el.setAttribute('y2', (streak.y + streak.len).toFixed(1));
+        });
+      }
+    }
+
+    // =========================================================================
+    // ANIMATION LOOP & REPLAY
+    // =========================================================================
+    let animStartTime = null;
+    let currentTime = 0;
+    let isPlaying = true;
+    let rafId = null;
+
+    function tick(now) {
+      if (!animStartTime) animStartTime = now - currentTime * 1000;
+      if (isPlaying) {
+        currentTime = (now - animStartTime) / 1000;
+        if (currentTime >= TOTAL_DURATION) {
+          currentTime = TOTAL_DURATION;
+          isPlaying = false;
+        }
+        renderAtTime(currentTime);
+      }
+      if (isPlaying) {
+        rafId = requestAnimationFrame(tick);
+      }
+    }
+
+    function replay() {
+      cancelAnimationFrame(rafId);
+      sfx.resetTriggers();
+      sfx.init();
+      currentTime = 0;
+      animStartTime = null;
+      isPlaying = true;
+      renderAtTime(0);
+      rafId = requestAnimationFrame(tick);
+    }
+
+    document.body.addEventListener('click', () => {
+      sfx.init();
+      replay();
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' || e.code === 'Enter' || e.code === 'KeyR') {
+        e.preventDefault();
+        sfx.init();
+        replay();
+      }
+    });
+
+    renderAtTime(0);
+    rafId = requestAnimationFrame(tick);
+  </script>
+</body>
+</html>
