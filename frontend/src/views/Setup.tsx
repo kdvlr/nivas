@@ -1050,6 +1050,12 @@ function SetupInner() {
               >
                 🌧️ Sad Storm: Room Not Clean (-10)
               </button>
+              <button
+                onClick={() => celebrateSad({ title: 'Room Not Clean', coinsLost: 25, animation: 'trick-or-treat' })}
+                className="btn-glass px-4 py-2 text-sm border-rose-500/30 text-rose-500 hover:bg-rose-500/10 active:scale-95 transition-all"
+              >
+                🎃 Trick-or-Treat Fright: Room Not Clean (-25)
+              </button>
             </div>
           </div>
         </Card>

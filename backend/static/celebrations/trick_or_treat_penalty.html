@@ -1,0 +1,2231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Trick or Treat Fright · Penalty Animation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Outfit:wght@500;600;700;800;900&family=Fredoka:wght@600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #080512;
+      --card-bg: rgba(18, 11, 34, 0.92);
+      --card-border: rgba(249, 115, 22, 0.45);
+      --primary-orange: #f97316;
+      --accent-purple: #a855f7;
+      --glow-orange: rgba(249, 115, 22, 0.55);
+      --glow-red: rgba(239, 68, 68, 0.6);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* Screen Shake Container */
+    .viewport-shake {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      transition: transform 0.05s ease-out;
+    }
+
+    .viewport-shake.shake-heavy {
+      animation: screenShake 0.45s cubic-bezier(.36,.07,.19,.97) both;
+    }
+
+    @keyframes screenShake {
+      10%, 90% { transform: translate3d(-3px, 2px, 0) rotate(-0.5deg); }
+      20%, 80% { transform: translate3d(5px, -4px, 0) rotate(1deg); }
+      30%, 50%, 70% { transform: translate3d(-6px, 4px, 0) rotate(-1.2deg); }
+      40%, 60% { transform: translate3d(6px, -3px, 0) rotate(0.8deg); }
+    }
+
+    .stage-wrapper {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      max-width: 100%;
+      max-height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    svg#stageSvg {
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
+      display: block;
+      filter: drop-shadow(0 0 35px rgba(0, 0, 0, 0.8));
+    }
+  </style>
+</head>
+<body>
+  <div class="viewport-shake" id="shakeWrap">
+    <div class="stage-wrapper">
+      <svg id="stageSvg" viewBox="0 0 960 540" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <!-- Spooky Night Sky Gradient -->
+          <linearGradient id="skyGrad" x1="0.5" y1="0" x2="0.5" y2="1">
+            <stop offset="0%" stop-color="#05030d" />
+            <stop offset="35%" stop-color="#140827" />
+            <stop offset="70%" stop-color="#240c3d" />
+            <stop offset="100%" stop-color="#3d1448" />
+          </linearGradient>
+
+          <!-- Harvest Moon Gradient -->
+          <radialGradient id="moonGrad" cx="45%" cy="40%" r="55%">
+            <stop offset="0%" stop-color="#fffee0" />
+            <stop offset="60%" stop-color="#fef08a" />
+            <stop offset="85%" stop-color="#facc15" />
+            <stop offset="100%" stop-color="#eab308" />
+          </radialGradient>
+
+          <!-- Moon Outer Atmosphere Glow -->
+          <radialGradient id="moonGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#fde047" stop-opacity="0.35" />
+            <stop offset="45%" stop-color="#ca8a04" stop-opacity="0.12" />
+            <stop offset="100%" stop-color="#ca8a04" stop-opacity="0" />
+          </radialGradient>
+
+          <!-- Cobblestone Ground Gradient -->
+          <linearGradient id="groundGrad" x1="0.5" y1="0" x2="0.5" y2="1">
+            <stop offset="0%" stop-color="#161026" />
+            <stop offset="30%" stop-color="#0f0a1c" />
+            <stop offset="100%" stop-color="#07040d" />
+          </linearGradient>
+
+          <!-- Porch Wood Gradient -->
+          <linearGradient id="woodStepGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#4a3028" />
+            <stop offset="50%" stop-color="#2c1a16" />
+            <stop offset="100%" stop-color="#1a0e0c" />
+          </linearGradient>
+
+          <!-- Pumpkin Lantern Warm Radial -->
+          <radialGradient id="jackLanternGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#fef08a" stop-opacity="0.9" />
+            <stop offset="40%" stop-color="#ea580c" stop-opacity="0.5" />
+            <stop offset="80%" stop-color="#b45309" stop-opacity="0.15" />
+            <stop offset="100%" stop-color="#7c2d12" stop-opacity="0" />
+          </radialGradient>
+
+          <!-- Creature Eyes Glow Radial -->
+          <radialGradient id="evilGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#ffff55" />
+            <stop offset="50%" stop-color="#ff0033" stop-opacity="0.8" />
+            <stop offset="100%" stop-color="#ff0000" stop-opacity="0" />
+          </radialGradient>
+
+          <!-- Penalty Glow Filter -->
+          <filter id="penaltyGlow" x="-30%" y="-30%" width="160%" height="160%">
+            <feDropShadow dx="0" dy="8" stdDeviation="14" flood-color="#f97316" flood-opacity="0.55" />
+            <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#a855f7" flood-opacity="0.35" />
+          </filter>
+
+          <!-- Boo Text Glow Filter -->
+          <filter id="booBurstGlow" x="-30%" y="-30%" width="160%" height="160%">
+            <feDropShadow dx="0" dy="0" stdDeviation="12" flood-color="#f59e0b" flood-opacity="0.9" />
+            <feDropShadow dx="0" dy="0" stdDeviation="24" flood-color="#ef4444" flood-opacity="0.75" />
+          </filter>
+
+          <!-- Witch Dress Gradient -->
+          <linearGradient id="witchDressGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#4c1d95" />
+            <stop offset="60%" stop-color="#2e1065" />
+            <stop offset="100%" stop-color="#1e0c40" />
+          </linearGradient>
+
+          <!-- Witch Hat Ribbon -->
+          <linearGradient id="witchRibbonGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#f97316" />
+            <stop offset="50%" stop-color="#ea580c" />
+            <stop offset="100%" stop-color="#c2410c" />
+          </linearGradient>
+
+          <!-- Gold Buckle Gradient -->
+          <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#fef08a" />
+            <stop offset="50%" stop-color="#eab308" />
+            <stop offset="100%" stop-color="#a16207" />
+          </linearGradient>
+
+          <!-- Banner Badge & Coin Gradients -->
+          <linearGradient id="bannerBadgeGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#ea580c" />
+            <stop offset="100%" stop-color="#991b1b" />
+          </linearGradient>
+          <linearGradient id="coinFaceGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#fffbeb" />
+            <stop offset="40%" stop-color="#fef08a" />
+            <stop offset="75%" stop-color="#facc15" />
+            <stop offset="100%" stop-color="#b45309" />
+          </linearGradient>
+
+          <!-- Pumpkin Bucket Gradient -->
+          <radialGradient id="pumpkinBucketGrad" cx="35%" cy="30%" r="70%">
+            <stop offset="0%" stop-color="#fb923c" />
+            <stop offset="55%" stop-color="#f97316" />
+            <stop offset="90%" stop-color="#ea580c" />
+            <stop offset="100%" stop-color="#9a3412" />
+          </radialGradient>
+
+          <!-- Creature Skin / Burlap Gradient -->
+          <linearGradient id="creatureBurlap" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#4d443a" />
+            <stop offset="50%" stop-color="#2e2720" />
+            <stop offset="100%" stop-color="#17130f" />
+          </linearGradient>
+
+          <!-- Creature Underbelly / Gaping Jaws -->
+          <radialGradient id="jawGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#450a0a" />
+            <stop offset="70%" stop-color="#1f0303" />
+            <stop offset="100%" stop-color="#050000" />
+          </radialGradient>
+        </defs>
+
+        <!-- ================= 1. SCENERY & BACKGROUND ================= -->
+        <!-- Night Sky Base -->
+        <rect x="0" y="0" width="960" height="540" fill="url(#skyGrad)" />
+
+        <!-- Twinkling Distant Stars -->
+        <g id="stars" opacity="0.65">
+          <circle cx="55" cy="45" r="1.5" fill="#fff" />
+          <circle cx="120" cy="80" r="1.2" fill="#fed7aa" />
+          <circle cx="190" cy="35" r="2" fill="#fff" />
+          <circle cx="260" cy="95" r="1" fill="#fef08a" />
+          <circle cx="340" cy="40" r="1.6" fill="#fff" />
+          <circle cx="410" cy="75" r="1.2" fill="#fff" />
+          <circle cx="490" cy="30" r="1.8" fill="#fde047" />
+          <circle cx="580" cy="65" r="1.4" fill="#fff" />
+          <circle cx="680" cy="25" r="2" fill="#fed7aa" />
+          <circle cx="790" cy="55" r="1.2" fill="#fff" />
+          <circle cx="890" cy="40" r="1.5" fill="#fff" />
+          <circle cx="70" cy="140" r="1" fill="#fff" />
+          <circle cx="220" cy="160" r="1.4" fill="#fef08a" />
+          <circle cx="380" cy="130" r="1.8" fill="#fff" />
+        </g>
+
+        <!-- The Harvest Moon -->
+        <g id="moonGroup" transform="translate(160, 110)">
+          <circle cx="0" cy="0" r="110" fill="url(#moonGlow)" />
+          <circle cx="0" cy="0" r="62" fill="url(#moonGrad)" />
+          <!-- Moon Craters (subtle) -->
+          <ellipse cx="-18" cy="-15" rx="11" ry="8" fill="#eab308" opacity="0.25" />
+          <ellipse cx="22" cy="12" rx="14" ry="10" fill="#eab308" opacity="0.22" />
+          <ellipse cx="-5" cy="28" rx="8" ry="6" fill="#eab308" opacity="0.28" />
+          <ellipse cx="26" cy="-24" rx="9" ry="7" fill="#eab308" opacity="0.2" />
+        </g>
+
+        <!-- Distant Fog / Mist Clouds -->
+        <g id="clouds" opacity="0.35">
+          <path d="M 0,160 Q 120,135 240,155 T 480,145 T 720,165 T 960,140 L 960,250 L 0,250 Z" fill="#2d154d" />
+          <path d="M 0,195 Q 160,180 320,190 T 640,185 T 960,195 L 960,300 L 0,300 Z" fill="#1b0b30" opacity="0.6" />
+        </g>
+
+        <!-- Distant Bats Flying across the Moon -->
+        <g id="bats">
+          <g id="bat1" transform="translate(180, 85) scale(0.65)">
+            <path d="M 0,0 Q -12,-14 -24,-4 Q -16,4 0,8 Q 16,4 24,-4 Q 12,-14 0,0 Z" fill="#090514" />
+          </g>
+          <g id="bat2" transform="translate(120, 125) scale(0.45)">
+            <path d="M 0,0 Q -12,-14 -24,-4 Q -16,4 0,8 Q 16,4 24,-4 Q 12,-14 0,0 Z" fill="#090514" />
+          </g>
+          <g id="bat3" transform="translate(235, 60) scale(0.5)">
+            <path d="M 0,0 Q -12,-14 -24,-4 Q -16,4 0,8 Q 16,4 24,-4 Q 12,-14 0,0 Z" fill="#090514" />
+          </g>
+        </g>
+
+        <!-- Gnarly Bare Spooky Trees (Silhouettes on the Left) -->
+        <g id="trees" fill="#090514">
+          <!-- Tree 1 (Leftmost large) -->
+          <path d="M -20,440 L 25,440 C 22,360 20,300 38,240 C 44,220 56,195 48,175 C 38,150 15,140 -5,130 C 5,145 10,160 5,180 C -8,195 -30,205 -45,210 L -45,215 C -30,215 -12,210 2,230 C -10,260 -25,290 -35,340 C -40,380 -30,420 -20,440 Z" />
+          <!-- Branching twisting twigs -->
+          <path d="M 38,240 Q 75,200 110,215 M 80,205 Q 95,175 125,180 M 48,175 Q 70,140 60,110 M 62,130 Q 90,115 105,125 M -5,130 Q -15,100 5,75 M -10,95 Q -35,80 -50,90" fill="none" stroke="#090514" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" />
+        </g>
+
+        <!-- ================= 2. THE HAUNTED PORCH & HOUSE ================= -->
+        <!-- Front yard grass silhouette -->
+        <path d="M 0,400 Q 240,385 520,395 L 960,395 L 960,540 L 0,540 Z" fill="url(#groundGrad)" />
+
+        <!-- Cobblestone Walkway from Left to Porch -->
+        <g id="walkway">
+          <ellipse cx="60" cy="445" rx="36" ry="14" fill="#231a38" opacity="0.6" />
+          <ellipse cx="140" cy="440" rx="38" ry="15" fill="#281e3f" opacity="0.65" />
+          <ellipse cx="225" cy="438" rx="42" ry="16" fill="#24193b" opacity="0.7" />
+          <ellipse cx="315" cy="436" rx="44" ry="16" fill="#2d2047" opacity="0.75" />
+          <ellipse cx="410" cy="434" rx="46" ry="17" fill="#281c3e" opacity="0.8" />
+          <ellipse cx="505" cy="432" rx="48" ry="18" fill="#31224d" opacity="0.85" />
+          <ellipse cx="600" cy="430" rx="52" ry="19" fill="#281b40" opacity="0.9" />
+        </g>
+
+        <!-- House Porch Structure (x: 580 to 960) -->
+        <g id="hauntedHouse">
+          <!-- House Side Wall (Deep purple/black siding) -->
+          <polygon points="630,110 960,70 960,420 630,420" fill="#120c24" />
+          <!-- Attic Gable Spooky Window -->
+          <polygon points="760,140 850,128 850,210 760,218" fill="#090514" stroke="#2e1a4d" stroke-width="3" />
+          <path d="M 760,175 L 850,165 M 805,134 L 805,214" stroke="#2e1a4d" stroke-width="2.5" />
+          <!-- Faint Yellow Light inside attic -->
+          <polygon points="764,144 846,132 846,206 764,214" fill="#f59e0b" opacity="0.18" />
+
+          <!-- Victorian Porch Roof Overhang -->
+          <polygon points="560,225 960,190 960,245 560,265" fill="#1b1230" stroke="#090514" stroke-width="2" />
+          <polygon points="550,260 960,235 960,270 550,285" fill="#261a42" />
+
+          <!-- Hanging Eerie Cobwebs under roof -->
+          <path d="M 570,275 Q 615,310 660,270 Q 700,320 740,265 Q 770,300 800,260" fill="none" stroke="#64748b" stroke-width="1.5" opacity="0.5" stroke-dasharray="3 2" />
+          <path d="M 615,272 L 615,308 M 700,268 L 700,318" stroke="#64748b" stroke-width="1.2" opacity="0.4" />
+          <!-- Dangling Little Spider -->
+          <g transform="translate(615, 310)">
+            <ellipse cx="0" cy="4" rx="4" ry="3" fill="#0f0a1c" />
+            <circle cx="0" cy="1" r="2.5" fill="#0f0a1c" />
+            <path d="M -3,2 Q -7,1 -9,4 M -3,4 Q -8,5 -9,8 M 3,2 Q 7,1 9,4 M 3,4 Q 8,5 9,8" stroke="#0f0a1c" stroke-width="1" fill="none" />
+          </g>
+
+          <!-- Hanging Porch Lantern with Warm Flickering Candle -->
+          <g id="porchLantern" transform="translate(685, 260)">
+            <line x1="0" y1="0" x2="0" y2="28" stroke="#475569" stroke-width="2" />
+            <!-- Lantern Ambient Glow -->
+            <circle id="lanternGlow" cx="0" cy="44" r="70" fill="url(#jackLanternGlow)" opacity="0.8" />
+            <!-- Lantern Metal Frame -->
+            <polygon points="-12,28 12,28 16,36 -16,36" fill="#1e172e" />
+            <polygon points="-14,36 14,36 10,56 -10,56" fill="#fbbf24" fill-opacity="0.3" stroke="#1e172e" stroke-width="2" />
+            <polygon points="-12,56 12,56 0,64" fill="#1e172e" />
+            <!-- Candle Wick & Base -->
+            <line x1="0" y1="52" x2="0" y2="48" stroke="#1c1917" stroke-width="1.2" />
+            <!-- Candle Flame inside (anchored at base 48) -->
+            <g id="lanternFlame" transform="translate(0, 48)">
+              <ellipse cx="0" cy="-4" rx="3.5" ry="6" fill="#fef08a" />
+              <ellipse cx="0" cy="-3" rx="1.8" ry="3.5" fill="#ffffff" opacity="0.9" />
+              <ellipse cx="0" cy="-0.5" rx="1.2" ry="1" fill="#38bdf8" opacity="0.6" />
+            </g>
+          </g>
+
+          <!-- Front Porch Wooden Columns / Posts -->
+          <rect x="580" y="270" width="16" height="150" fill="#2d1c30" stroke="#160c1c" stroke-width="2" />
+          <rect x="765" y="250" width="18" height="170" fill="#261729" stroke="#160c1c" stroke-width="2" />
+
+          <!-- Front Door (Carved Wood with Wreath) -->
+          <g transform="translate(795, 260)">
+            <rect x="0" y="0" width="75" height="155" rx="6" fill="#1f1124" stroke="#3b1f47" stroke-width="3" />
+            <!-- Door Panels -->
+            <rect x="10" y="15" width="55" height="45" rx="3" fill="#140a17" stroke="#2c1736" stroke-width="2" />
+            <rect x="10" y="75" width="55" height="65" rx="3" fill="#140a17" stroke="#2c1736" stroke-width="2" />
+            <!-- Spooky Door Wreath (Twig & Skull) -->
+            <circle cx="37" cy="38" r="16" fill="none" stroke="#362313" stroke-width="4.5" stroke-dasharray="4 2" />
+            <circle cx="37" cy="38" r="4.5" fill="#e2e8f0" />
+            <circle cx="35" cy="37" r="1" fill="#000" />
+            <circle cx="39" cy="37" r="1" fill="#000" />
+            <!-- Brass Door Knob -->
+            <circle cx="14" cy="95" r="3.5" fill="#facc15" />
+          </g>
+
+          <!-- Porch Wooden Deck & Steps -->
+          <!-- Upper Deck Floor -->
+          <polygon points="560,405 960,390 960,412 560,422" fill="#3d231b" stroke="#1b0e0a" stroke-width="1.5" />
+          <!-- Step 1 -->
+          <polygon points="545,420 960,408 960,425 545,435" fill="#4d2c22" stroke="#22120d" stroke-width="1.5" />
+          <!-- Step 2 (Ground contact) -->
+          <polygon points="530,432 960,420 960,438 530,448" fill="#3a1e16" stroke="#180b07" stroke-width="1.5" />
+
+          <!-- Decorative Jack-o'-Lantern on Top Porch Step -->
+          <g id="stepPumpkin" transform="translate(565, 388)">
+            <!-- Glow -->
+            <circle cx="0" cy="5" r="40" fill="url(#jackLanternGlow)" />
+            <!-- Pumpkin Body -->
+            <ellipse cx="-12" cy="6" rx="14" ry="18" fill="#ea580c" />
+            <ellipse cx="12" cy="6" rx="14" ry="18" fill="#ea580c" />
+            <ellipse cx="0" cy="6" rx="18" ry="19" fill="#f97316" />
+            <!-- Green Stem -->
+            <path d="M 0,-12 Q 4,-20 10,-22 L 7,-16 Q 2,-15 -2,-11 Z" fill="#4ade80" />
+            <!-- Glowing Carved Face -->
+            <!-- Eyes -->
+            <polygon points="-10,-1 -3,-1 -6,-6" fill="#fef08a" />
+            <polygon points="10,-1 3,-1 6,-6" fill="#fef08a" />
+            <!-- Nose -->
+            <polygon points="-2,3 2,3 0,0" fill="#fef08a" />
+            <!-- Jagged Grin -->
+            <path d="M -11,8 Q -6,16 0,16 Q 6,16 11,8 Q 7,12 3,9 L 3,12 L -2,9 L -2,12 Q -7,11 -11,8 Z" fill="#fef08a" />
+          </g>
+
+          <!-- Spooky Yard Tombstone (Left side of yard) -->
+          <g id="tombstone" transform="translate(195, 395)">
+            <path d="M 0,35 L 0,0 C 0,-18 36,-18 36,0 L 36,35 Z" fill="#334155" stroke="#1e293b" stroke-width="2" />
+            <text x="18" y="8" font-family="'Outfit', sans-serif" font-weight="900" font-size="9" fill="#94a3b8" text-anchor="middle">R.I.P.</text>
+            <!-- Crack in stone -->
+            <path d="M 12,14 L 16,22 L 20,20 L 24,28" stroke="#1e293b" stroke-width="1.2" fill="none" />
+            <!-- Little patch of eerie grass -->
+            <path d="M -6,35 L -2,26 L 4,35 M 32,35 L 36,25 L 42,35" stroke="#16a34a" stroke-width="2" fill="none" opacity="0.6" />
+          </g>
+
+          <!-- Smaller Decorative Pumpkin on Grass -->
+          <g transform="translate(245, 420) scale(0.68)">
+            <circle cx="0" cy="4" r="30" fill="url(#jackLanternGlow)" opacity="0.7" />
+            <ellipse cx="-8" cy="4" rx="10" ry="12" fill="#c2410c" />
+            <ellipse cx="8" cy="4" rx="10" ry="12" fill="#c2410c" />
+            <ellipse cx="0" cy="4" rx="12" ry="13" fill="#ea580c" />
+            <polygon points="-6,2 -1,2 -3,-2" fill="#fef08a" />
+            <polygon points="6,2 1,2 3,-2" fill="#fef08a" />
+            <path d="M -7,8 Q 0,14 7,8 Z" fill="#fef08a" />
+          </g>
+        </g>
+
+        <!-- ================= 3. THE "DECORATION" / THE CREATURE ================= -->
+        <!--
+          Dormant state: Looks like a creepy scarecrow/pumpkin-fiend porch prop sitting on an autumn haybale next to the steps.
+          Pop-up state: Springs forward/upright with terrifying glowing eyes, giant jaws, branches/claws, screaming "BOO!!".
+          Eating state: Extends neck/torso down to the path, slurps up candies with chomp/crunch effects, retracts smoothly back to perch.
+        -->
+        <!-- Hay Bale Pedestal where creature sits -->
+        <g id="hayBale" transform="translate(640, 395)">
+          <rect x="-35" y="-15" width="70" height="38" rx="8" fill="#a16207" stroke="#78350f" stroke-width="2" />
+          <!-- Straw lines -->
+          <line x1="-30" y1="-5" x2="30" y2="-5" stroke="#fef08a" stroke-width="1.5" stroke-dasharray="6 8" opacity="0.6" />
+          <line x1="-28" y1="8" x2="28" y2="8" stroke="#ca8a04" stroke-width="1.5" stroke-dasharray="5 7" opacity="0.7" />
+          <path d="M -34,10 L -42,12 M -32,2 L -40,-1 M 33,5 L 42,8 M 32,15 L 40,16" stroke="#eab308" stroke-width="2" />
+        </g>
+
+        <!-- The Creature Group -->
+        <g id="creatureRoot" transform="translate(640, 365)">
+          <!-- Dynamic Shadows under creature -->
+          <ellipse id="creatureShadow" cx="0" cy="38" rx="26" ry="7" fill="#000000" opacity="0.5" />
+
+          <!-- Creature Legs (Spindly Scarecrow / Stick Legs that gallop during chase) -->
+          <g id="creatureLegs" opacity="0">
+            <!-- Left Leg -->
+            <g id="creatureLegL" transform="translate(-10, 36)">
+              <path d="M 0,0 L -3,14 L 5,24" stroke="#2c1a16" stroke-width="4.5" stroke-linecap="round" fill="none" />
+              <polygon points="-4,20 4,20 1,24 -2,24" fill="#eab308" />
+              <path d="M 4,24 L 11,26 L 13,24" stroke="#17130f" stroke-width="3.5" stroke-linecap="round" fill="none" />
+            </g>
+            <!-- Right Leg -->
+            <g id="creatureLegR" transform="translate(10, 36)">
+              <path d="M 0,0 L 3,14 L -5,24" stroke="#2c1a16" stroke-width="4.5" stroke-linecap="round" fill="none" />
+              <polygon points="-4,20 4,20 1,24 -2,24" fill="#eab308" />
+              <path d="M -4,24 L 6,26 L 8,24" stroke="#17130f" stroke-width="3.5" stroke-linecap="round" fill="none" />
+            </g>
+          </g>
+
+          <!-- Creature Torso & Neck (Scalable/Extendable during eat) -->
+          <g id="creatureBodyGroup">
+            <!-- Tattered Scarecrow / Ghoul Coat -->
+            <path id="creatureCoat" d="M -22,12 C -26,30 -24,42 -14,44 C 0,46 14,46 22,44 C 28,42 26,28 22,12 C 16,6 -16,6 -22,12 Z" fill="url(#creatureBurlap)" stroke="#17130f" stroke-width="2" />
+            <!-- Patches & Stitches -->
+            <rect x="-8" y="24" width="9" height="9" fill="#78350f" opacity="0.8" rx="1" />
+            <line x1="-10" y1="28" x2="3" y2="28" stroke="#facc15" stroke-width="1" />
+            <line x1="-3.5" y1="22" x2="-3.5" y2="35" stroke="#facc15" stroke-width="1" />
+
+            <!-- Creature Left Arm (Twig / Claws) -->
+            <g id="creatureArmL" transform="translate(-18, 14)">
+              <path d="M 0,0 Q -18,12 -28,8 Q -34,4 -42,0 M -28,8 Q -34,14 -40,16 M -28,8 Q -32,22 -36,25" fill="none" stroke="#2c1a16" stroke-width="4.5" stroke-linecap="round" />
+              <!-- Sharp twig claw tips -->
+              <circle cx="-42" cy="0" r="2" fill="#eab308" />
+              <circle cx="-40" cy="16" r="2" fill="#eab308" />
+              <circle cx="-36" cy="25" r="2" fill="#eab308" />
+            </g>
+
+            <!-- Creature Right Arm (Twig / Claws) -->
+            <g id="creatureArmR" transform="translate(18, 14)">
+              <path d="M 0,0 Q 18,10 26,6 Q 34,2 40,-2 M 26,6 Q 34,12 38,14 M 26,6 Q 32,20 35,22" fill="none" stroke="#2c1a16" stroke-width="4.5" stroke-linecap="round" />
+              <circle cx="40" cy="-2" r="2" fill="#eab308" />
+              <circle cx="38" cy="14" r="2" fill="#eab308" />
+              <circle cx="35" cy="22" r="2" fill="#eab308" />
+            </g>
+
+            <!-- Creature Head Group (Pops up & tilts) -->
+            <g id="creatureHead" transform="translate(0, 0)">
+              <!-- Fiendish Jack-o'-Scarecrow Head (Gourd shape) -->
+              <ellipse cx="-14" cy="-14" rx="15" ry="18" fill="#b45309" />
+              <ellipse cx="14" cy="-14" rx="15" ry="18" fill="#b45309" />
+              <ellipse cx="0" cy="-14" rx="19" ry="20" fill="#d97706" />
+
+              <!-- Head Stitches & Wrinkles -->
+              <path d="M -12,-26 Q 0,-20 12,-26" fill="none" stroke="#78350f" stroke-width="2" />
+
+              <!-- Eerie Witch/Scarecrow Floppy Burlap Hat -->
+              <path d="M -26,-22 Q 0,-30 26,-22 L 28,-18 Q 0,-24 -28,-18 Z" fill="#1c1917" />
+              <path d="M -18,-24 Q -4,-56 16,-48 Q 28,-42 22,-36 L 14,-24 Z" fill="#292524" stroke="#1c1917" stroke-width="2" />
+              <polygon points="4,-24 16,-24 14,-32 2,-32" fill="#ea580c" />
+
+              <!-- Eyes Mode 1: Dormant / Inanimate Eyes (Buttons / Carved slits) -->
+              <g id="creatureEyesDormant">
+                <circle cx="-8" cy="-15" r="4.5" fill="#1c1917" stroke="#44403c" stroke-width="1.5" />
+                <line x1="-10" y1="-17" x2="-6" y2="-13" stroke="#eab308" stroke-width="1.2" />
+                <line x1="-6" y1="-17" x2="-10" y2="-13" stroke="#eab308" stroke-width="1.2" />
+
+                <circle cx="8" cy="-15" r="4.5" fill="#1c1917" stroke="#44403c" stroke-width="1.5" />
+                <line x1="6" y1="-17" x2="10" y2="-13" stroke="#eab308" stroke-width="1.2" />
+                <line x1="10" y1="-17" x2="6" y2="-13" stroke="#eab308" stroke-width="1.2" />
+              </g>
+
+              <!-- Eyes Mode 2: AWAKENED / FIERCE GLOWING EYES (Pop up "BOO!") -->
+              <g id="creatureEyesActive" opacity="0">
+                <!-- Eye Aura Glow -->
+                <circle cx="-8" cy="-15" r="14" fill="url(#evilGlow)" />
+                <circle cx="8" cy="-15" r="14" fill="url(#evilGlow)" />
+                <!-- Slanted menacing eye shapes -->
+                <polygon points="-14,-19 -4,-13 -7,-9 -15,-15" fill="#fef08a" stroke="#ef4444" stroke-width="1.5" />
+                <polygon points="14,-19 4,-13 7,-9 15,-15" fill="#fef08a" stroke="#ef4444" stroke-width="1.5" />
+                <circle cx="-8" cy="-14" r="2.5" fill="#b91c1c" />
+                <circle cx="8" cy="-14" r="2.5" fill="#b91c1c" />
+              </g>
+
+              <!-- Eyes Mode 3: GREEDY / EXCITED CANDY EYES (When spotting the candy!) -->
+              <g id="creatureEyesGreedy" opacity="0">
+                <circle cx="-8" cy="-15" r="8" fill="#fef08a" stroke="#ea580c" stroke-width="1.5" />
+                <circle cx="8" cy="-15" r="8" fill="#fef08a" stroke="#ea580c" stroke-width="1.5" />
+                <text x="-8" y="-12" font-size="8.5" text-anchor="middle" fill="#dc2626">★</text>
+                <text x="8" y="-12" font-size="8.5" text-anchor="middle" fill="#dc2626">★</text>
+              </g>
+
+              <!-- Mouth Mode 1: Inanimate Carved Stitch Grin -->
+              <g id="creatureMouthDormant">
+                <path d="M -12,-3 Q 0,4 12,-3" fill="none" stroke="#1c1917" stroke-width="3" stroke-linecap="round" />
+                <line x1="-8" y1="-6" x2="-8" y2="0" stroke="#1c1917" stroke-width="2" />
+                <line x1="-3" y1="-4" x2="-3" y2="2" stroke="#1c1917" stroke-width="2" />
+                <line x1="3" y1="-4" x2="3" y2="2" stroke="#1c1917" stroke-width="2" />
+                <line x1="8" y1="-6" x2="8" y2="0" stroke="#1c1917" stroke-width="2" />
+              </g>
+
+              <!-- Mouth Mode 2: GIGANTIC GAPING JAWS (Awakened & Chomping) -->
+              <g id="creatureMouthActive" opacity="0">
+                <!-- Dark maw cave -->
+                <ellipse cx="0" cy="2" rx="17" ry="15" fill="url(#jawGlow)" stroke="#5c1d09" stroke-width="2" />
+
+                <!-- Wiggling Monster Tongue inside throat -->
+                <ellipse id="creatureTongue" cx="0" cy="9" rx="6" ry="4" fill="#dc2626" stroke="#991b1b" stroke-width="0.8" />
+
+                <!-- Razor Sharp Top Teeth (Non-overlapping, rooted in upper lip rim) -->
+                <!-- Upper Outer Left Canine -->
+                <polygon points="-15,-3 -10,-9 -12.5,0" fill="#fef08a" stroke="#451a03" stroke-width="0.8" stroke-linejoin="round" />
+                <!-- Upper Inner Left Canine -->
+                <polygon points="-10,-9 -6,-12 -7.5,1" fill="#fffbeb" stroke="#451a03" stroke-width="0.8" stroke-linejoin="round" />
+                <!-- Upper Left Incisor -->
+                <polygon points="-6,-12 -2.5,-14 -3.5,-3" fill="#fef08a" stroke="#451a03" stroke-width="0.8" stroke-linejoin="round" />
+                <!-- Upper Center Left Incisor -->
+                <polygon points="-2.5,-14 0,-14.5 -1,-4.5" fill="#fffbeb" stroke="#451a03" stroke-width="0.8" stroke-linejoin="round" />
+                <!-- Upper Center Right Incisor -->
+                <polygon points="0,-14.5 2.5,-14 1,-4.5" fill="#fffbeb" stroke="#451a03" stroke-width="0.8" stroke-linejoin="round" />
+                <!-- Upper Right Incisor -->
+                <polygon points="2.5,-14 6,-12 3.5,-3" fill="#fef08a" stroke="#451a03" stroke-width="0.8" stroke-linejoin="round" />
+                <!-- Upper Inner Right Canine -->
+                <polygon points="6,-12 10,-9 7.5,1" fill="#fffbeb" stroke="#451a03" stroke-width="0.8" stroke-linejoin="round" />
+                <!-- Upper Outer Right Canine -->
+                <polygon points="10,-9 15,-3 12.5,0" fill="#fef08a" stroke="#451a03" stroke-width="0.8" stroke-linejoin="round" />
+
+                <!-- Razor Sharp Bottom Teeth (Non-overlapping, rooted in lower lip rim) -->
+                <!-- Lower Outer Left Canine -->
+                <polygon points="-14,5 -9,10 -11,4" fill="#fef08a" stroke="#451a03" stroke-width="0.8" stroke-linejoin="round" />
+                <!-- Lower Inner Left Tooth -->
+                <polygon points="-9,10 -4,13.5 -6.5,6" fill="#fffbeb" stroke="#451a03" stroke-width="0.8" stroke-linejoin="round" />
+                <!-- Lower Center Left Tooth -->
+                <polygon points="-4,13.5 0,14.5 -1.5,8" fill="#fef08a" stroke="#451a03" stroke-width="0.8" stroke-linejoin="round" />
+                <!-- Lower Center Right Tooth -->
+                <polygon points="0,14.5 4,13.5 1.5,8" fill="#fef08a" stroke="#451a03" stroke-width="0.8" stroke-linejoin="round" />
+                <!-- Lower Inner Right Tooth -->
+                <polygon points="4,13.5 9,10 6.5,6" fill="#fffbeb" stroke="#451a03" stroke-width="0.8" stroke-linejoin="round" />
+                <!-- Lower Outer Right Canine -->
+                <polygon points="9,10 14,5 11,4" fill="#fef08a" stroke="#451a03" stroke-width="0.8" stroke-linejoin="round" />
+              </g>
+
+              <!-- Satisfied Smug Smile (After eating) -->
+              <g id="creatureMouthChew" opacity="0">
+                <path d="M -10,-2 Q 0,8 10,-2 Q 14,4 12,8 Q 0,14 -12,8 Z" fill="#450a0a" stroke="#78350f" stroke-width="2" />
+                <!-- Bulging cheeks -->
+                <circle cx="-14" cy="-4" r="6" fill="#ea580c" opacity="0.9" />
+                <circle cx="14" cy="-4" r="6" fill="#ea580c" opacity="0.9" />
+              </g>
+            </g>
+          </g>
+        </g>
+
+        <!-- ================= 4. CANDIES & BASKET ================= -->
+        <!-- Candies (Initial state: inside basket, then scattered on ground during fright, then eaten) -->
+        <g id="candyCluster">
+          <!-- Candy 1: Yellow/Orange Candy Corn -->
+          <g id="candy1" transform="translate(0, 0)">
+            <polygon points="0,-7 -6,5 6,5" fill="#f97316" stroke="#c2410c" stroke-width="0.8" />
+            <polygon points="0,-7 -2.5,-2 2.5,-2" fill="#ffffff" />
+            <polygon points="-4.5,2 4.5,2 6,5 -6,5" fill="#facc15" />
+          </g>
+          <!-- Candy 2: Purple Wrapped Bonbon -->
+          <g id="candy2" transform="translate(0, 0)">
+            <ellipse cx="0" cy="0" rx="7" ry="5" fill="#a855f7" stroke="#7e22ce" stroke-width="0.8" />
+            <polygon points="-6,-1 -11,-4 -10,4" fill="#c084fc" />
+            <polygon points="6,-1 11,-4 10,4" fill="#c084fc" />
+            <line x1="-2" y1="-4" x2="-2" y2="4" stroke="#ffffff" stroke-width="1.2" opacity="0.7" />
+          </g>
+          <!-- Candy 3: Red & White Swirl Lollipop -->
+          <g id="candy3" transform="translate(0, 0)">
+            <line x1="0" y1="0" x2="0" y2="15" stroke="#ffffff" stroke-width="2" stroke-linecap="round" />
+            <circle cx="0" cy="0" r="7" fill="#ef4444" stroke="#b91c1c" stroke-width="0.8" />
+            <path d="M 0,-5 A 5,5 0 0,1 5,0 A 3,3 0 0,1 0,3 A 1.5,1.5 0 0,1 -1.5,0" fill="none" stroke="#ffffff" stroke-width="1.5" />
+          </g>
+          <!-- Candy 4: Second Candy Corn -->
+          <g id="candy4" transform="translate(0, 0)">
+            <polygon points="0,-7 -6,5 6,5" fill="#f97316" stroke="#c2410c" stroke-width="0.8" />
+            <polygon points="0,-7 -2.5,-2 2.5,-2" fill="#ffffff" />
+            <polygon points="-4.5,2 4.5,2 6,5 -6,5" fill="#facc15" />
+          </g>
+          <!-- Candy 5: Shiny Green Wrapped Toffee -->
+          <g id="candy5" transform="translate(0, 0)">
+            <rect x="-6" y="-4" width="12" height="8" rx="2" fill="#22c55e" stroke="#15803d" stroke-width="0.8" />
+            <polygon points="-6,0 -10,-3 -10,3" fill="#4ade80" />
+            <polygon points="6,0 10,-3 10,3" fill="#4ade80" />
+            <circle cx="0" cy="0" r="2" fill="#fef08a" />
+          </g>
+          <!-- Candy 6: Gold Mini Chocolate Bar -->
+          <g id="candy6" transform="translate(0, 0)">
+            <rect x="-8" y="-5" width="16" height="10" rx="1.5" fill="#eab308" stroke="#a16207" stroke-width="0.8" />
+            <rect x="-5" y="-3" width="10" height="6" fill="#451a03" />
+            <line x1="0" y1="-3" x2="0" y2="3" stroke="#eab308" stroke-width="0.8" />
+          </g>
+          <!-- Candy 7: Pink Round Bubblegum -->
+          <g id="candy7" transform="translate(0, 0)">
+            <circle cx="0" cy="0" r="5.5" fill="#ec4899" stroke="#be185d" stroke-width="0.8" />
+            <ellipse cx="-2" cy="-2" rx="2" ry="1" fill="#fbcfe8" />
+          </g>
+          <!-- Candy 8: Third Candy Corn -->
+          <g id="candy8" transform="translate(0, 0)">
+            <polygon points="0,-7 -6,5 6,5" fill="#f97316" stroke="#c2410c" stroke-width="0.8" />
+            <polygon points="0,-7 -2.5,-2 2.5,-2" fill="#ffffff" />
+            <polygon points="-4.5,2 4.5,2 6,5 -6,5" fill="#facc15" />
+          </g>
+        </g>
+
+        <!-- Pumpkin Trick-or-Treat Basket -->
+        <g id="pumpkinBasket" transform="translate(0, 0)">
+          <!-- Black Wire Handle -->
+          <path id="basketHandle" d="M -13,0 C -13,-18 13,-18 13,0" fill="none" stroke="#1c1917" stroke-width="2.2" stroke-linecap="round" />
+          <!-- Pumpkin Pail Body -->
+          <ellipse cx="0" cy="8" rx="15" ry="12" fill="url(#pumpkinBucketGrad)" stroke="#c2410c" stroke-width="1.2" />
+          <!-- Rim Opening -->
+          <ellipse cx="0" cy="0" rx="13" ry="4.5" fill="#7c2d12" stroke="#ea580c" stroke-width="1" />
+          <!-- Pile of sweets overflowing rim when full -->
+          <g id="basketCandiesInside">
+            <polygon points="-7,-1 -4,-6 -1,-1" fill="#facc15" />
+            <ellipse cx="2" cy="-2" rx="4" ry="2.5" fill="#a855f7" />
+            <circle cx="6" cy="-3" r="3.5" fill="#ef4444" />
+            <circle cx="-2" cy="-3" r="2.5" fill="#22c55e" />
+          </g>
+          <!-- Carved Happy Pumpkin Face on Bucket -->
+          <polygon points="-6,6 -2,6 -4,3" fill="#1c1917" />
+          <polygon points="6,6 2,6 4,3" fill="#1c1917" />
+          <polygon points="-1,9 1,9 0,7" fill="#1c1917" />
+          <path d="M -7,11 Q 0,16 7,11 Q 4,13 0,13 Q -4,13 -7,11 Z" fill="#1c1917" />
+        </g>
+
+        <!-- ================= 5. THE GIRL (WITCH COSTUME) ================= -->
+        <g id="girlRoot" transform="translate(180, 420)">
+          <!-- Dynamic Cast Shadow -->
+          <ellipse id="girlShadow" cx="0" cy="22" rx="20" ry="6" fill="#000000" opacity="0.45" />
+
+          <!-- Back Witch Cape (Flutters behind her) -->
+          <path id="witchCape" d="M -10,-24 Q -22,-6 -18,12 Q -8,18 2,14 Q 4,-6 -2,-24 Z" fill="#1e1035" stroke="#090514" stroke-width="1.2" />
+
+          <!-- Left Leg (Back leg) -->
+          <g id="girlLegL" transform="translate(-6, 2)">
+            <!-- Striped Tights (Orange & Black bands) -->
+            <path d="M 0,0 L 0,16" stroke="#f97316" stroke-width="6" stroke-linecap="round" />
+            <line x1="-3" y1="4" x2="3" y2="4" stroke="#1c1917" stroke-width="2.5" />
+            <line x1="-3" y1="10" x2="3" y2="10" stroke="#1c1917" stroke-width="2.5" />
+            <!-- Witch Boot (Curly pointed toe) -->
+            <path d="M -2,15 L 2,15 L 7,18 Q 9,18 10,15 L 8,19 L -2,19 Z" fill="#1c1917" />
+            <polygon points="3,15 5,15 4,17" fill="#facc15" />
+          </g>
+
+          <!-- Right Leg (Front leg) -->
+          <g id="girlLegR" transform="translate(6, 2)">
+            <!-- Striped Tights -->
+            <path d="M 0,0 L 0,16" stroke="#f97316" stroke-width="6" stroke-linecap="round" />
+            <line x1="-3" y1="4" x2="3" y2="4" stroke="#1c1917" stroke-width="2.5" />
+            <line x1="-3" y1="10" x2="3" y2="10" stroke="#1c1917" stroke-width="2.5" />
+            <!-- Witch Boot -->
+            <path d="M -2,15 L 2,15 L 7,18 Q 9,18 10,15 L 8,19 L -2,19 Z" fill="#1c1917" />
+            <polygon points="3,15 5,15 4,17" fill="#facc15" />
+          </g>
+
+          <!-- Torso & Witch Dress -->
+          <g id="girlTorso" transform="translate(0, -10)">
+            <!-- Dress Skirt (Flared bell with jagged scalloped hem) -->
+            <path d="M -8,0 L -16,14 Q -12,16 -8,13 Q -4,16 0,13 Q 4,16 8,13 Q 12,16 16,14 L 8,0 Z" fill="url(#witchDressGrad)" stroke="#1e0c40" stroke-width="1.2" />
+            <!-- Dress Bodice -->
+            <polygon points="-8,0 8,0 6,-16 -6,-16" fill="url(#witchDressGrad)" />
+            <!-- Orange Ribbon Waist Corset Lacing -->
+            <line x1="-4" y1="-12" x2="4" y2="-6" stroke="#f97316" stroke-width="1.2" />
+            <line x1="4" y1="-12" x2="-4" y2="-6" stroke="#f97316" stroke-width="1.2" />
+            <line x1="-5" y1="0" x2="5" y2="0" stroke="#facc15" stroke-width="2" />
+          </g>
+
+          <!-- Left Arm (Back Arm / Sways) -->
+          <g id="girlArmL" transform="translate(-7, -22)">
+            <path d="M 0,0 Q -8,8 -10,16" fill="none" stroke="#2e1065" stroke-width="4.5" stroke-linecap="round" />
+            <!-- Hand / mitten -->
+            <circle cx="-10" cy="16" r="3.5" fill="#fed7aa" />
+          </g>
+
+          <!-- Right Arm (Front Arm / Holds Basket) -->
+          <g id="girlArmR" transform="translate(7, -22)">
+            <path id="armRPath" d="M 0,0 Q 10,8 14,16" fill="none" stroke="#2e1065" stroke-width="4.5" stroke-linecap="round" />
+            <circle id="handR" cx="14" cy="16" r="3.5" fill="#fed7aa" />
+          </g>
+
+          <!-- Head Group -->
+          <g id="girlHead" transform="translate(0, -32)">
+            <!-- Pigtails / Braids sticking out under hat -->
+            <g id="girlHairPigtails">
+              <!-- Left Pigtail -->
+              <path id="pigtailL" d="M -12,2 Q -22,8 -20,18" fill="none" stroke="#78350f" stroke-width="4" stroke-linecap="round" />
+              <circle cx="-20" cy="18" r="2.5" fill="#f97316" />
+              <!-- Right Pigtail -->
+              <path id="pigtailR" d="M 12,2 Q 22,8 20,18" fill="none" stroke="#78350f" stroke-width="4" stroke-linecap="round" />
+              <circle cx="20" cy="18" r="2.5" fill="#f97316" />
+            </g>
+
+            <!-- Face Oval -->
+            <ellipse cx="0" cy="0" rx="14" ry="13" fill="#ffedd5" />
+            <!-- Soft Rosy Cheeks -->
+            <circle cx="-8" cy="4" r="3.2" fill="#fda4af" opacity="0.65" />
+            <circle cx="8" cy="4" r="3.2" fill="#fda4af" opacity="0.65" />
+
+            <!-- Front Hair Fringe / Bangs -->
+            <path d="M -13,-4 Q -8,-1 0,-3 Q 8,-1 13,-4 Q 10,-10 0,-10 Q -10,-10 -13,-4 Z" fill="#92400e" />
+
+            <!-- Face Expressions (Switchable) -->
+            <!-- 1. Happy Strolling Face -->
+            <g id="faceHappy" opacity="1">
+              <!-- Smiling Curved Eyes -->
+              <path d="M -9,0 Q -6,-4 -3,0" fill="none" stroke="#451a03" stroke-width="2" stroke-linecap="round" />
+              <path d="M 3,0 Q 6,-4 9,0" fill="none" stroke="#451a03" stroke-width="2" stroke-linecap="round" />
+              <!-- Sweet Smile -->
+              <path d="M -4,5 Q 0,9 4,5" fill="none" stroke="#b91c1c" stroke-width="1.8" stroke-linecap="round" />
+            </g>
+
+            <!-- 2A. PUZZLED / DOUBLE-TAKE DELAYED FACE (When Creature First Shouts Boo) -->
+            <g id="facePuzzled" opacity="0">
+              <!-- Wide staring eyes looking right towards the monster -->
+              <ellipse cx="-6" cy="0" rx="4.5" ry="5.2" fill="#ffffff" stroke="#451a03" stroke-width="1.2" />
+              <ellipse cx="6" cy="0" rx="4.5" ry="5.2" fill="#ffffff" stroke="#451a03" stroke-width="1.2" />
+              <!-- Pupils shifted right towards creature -->
+              <circle cx="-4" cy="0" r="2" fill="#000000" />
+              <circle cx="8" cy="0" r="2" fill="#000000" />
+              <!-- One raised curious eyebrow, one flat -->
+              <path d="M -10,-6 L -4,-6" stroke="#451a03" stroke-width="1.8" stroke-linecap="round" />
+              <path d="M 4,-9 L 10,-6" stroke="#451a03" stroke-width="2" stroke-linecap="round" />
+              <!-- Small nervous straight mouth -->
+              <line x1="-3" y1="6" x2="3" y2="6" stroke="#451a03" stroke-width="1.8" stroke-linecap="round" />
+              <!-- Nervous Sweat Drop on temple -->
+              <path id="sweatDrop" d="M -12,-6 Q -15,-9 -12,-12 Q -9,-9 -12,-6 Z" fill="#38bdf8" />
+            </g>
+
+            <!-- 2B. SHOCKED / TERRIFIED FACE (When delayed realization hits) -->
+            <g id="faceShock" opacity="0">
+              <!-- Giant Bugged-out Eyes -->
+              <ellipse cx="-6" cy="-1" rx="5" ry="6" fill="#ffffff" stroke="#451a03" stroke-width="1.2" />
+              <ellipse cx="6" cy="-1" rx="5" ry="6" fill="#ffffff" stroke="#451a03" stroke-width="1.2" />
+              <!-- Tiny Pinprick Pupils in Shock -->
+              <circle cx="-6" cy="-1" r="1.5" fill="#000000" />
+              <circle cx="6" cy="-1" r="1.5" fill="#000000" />
+              <!-- Raised Jagged Eyebrows -->
+              <path d="M -10,-9 L -4,-6" stroke="#451a03" stroke-width="1.8" stroke-linecap="round" />
+              <path d="M 10,-9 L 4,-6" stroke="#451a03" stroke-width="1.8" stroke-linecap="round" />
+              <!-- Open Screaming 'O' Mouth -->
+              <ellipse cx="0" cy="6" rx="4.5" ry="6" fill="#881337" stroke="#451a03" stroke-width="1.2" />
+            </g>
+
+            <!-- 3. RUNNING PANIC & CRYING FACE -->
+            <g id="faceCry" opacity="0">
+              <!-- Tightly Squeezed Shut Eyes "> <" -->
+              <path d="M -9,-3 L -5,0 L -9,3" fill="none" stroke="#451a03" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M 9,-3 L 5,0 L 9,3" fill="none" stroke="#451a03" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <!-- Screaming mouth -->
+              <path d="M -5,4 Q 0,10 5,4 Z" fill="#881337" stroke="#451a03" stroke-width="1.2" />
+              <!-- Streaming Tears flying backwards in the wind -->
+              <path id="tearL" d="M -6,0 Q -18,-5 -30,2" fill="none" stroke="#38bdf8" stroke-width="3.2" stroke-linecap="round" stroke-dasharray="6 3" />
+              <path id="tearR" d="M 6,0 Q -6,-8 -24,-3" fill="none" stroke="#38bdf8" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="5 3" />
+              <circle cx="-33" cy="3" r="2.5" fill="#7dd3fc" />
+              <circle cx="-25" cy="-4" r="2" fill="#38bdf8" />
+            </g>
+
+            <!-- Witch Hat (Pointy with wide brim & buckle) -->
+            <g id="witchHat" transform="translate(0, -6)">
+              <!-- Hat Brim -->
+              <ellipse cx="0" cy="0" rx="26" ry="6.5" fill="#1e1035" stroke="#090514" stroke-width="1.5" />
+              <!-- Tall Pointy Cone with crooked tip -->
+              <path d="M -15,-1 Q -8,-24 0,-40 Q 6,-46 16,-44 Q 10,-32 14,-1 Z" fill="#2e1065" stroke="#090514" stroke-width="1.5" />
+              <!-- Orange Hat Ribbon -->
+              <path d="M -14,-2 Q 0,-4 14,-2 L 13,-8 Q 0,-10 -13,-8 Z" fill="url(#witchRibbonGrad)" />
+              <!-- Golden Buckle -->
+              <rect x="-4" y="-8" width="8" height="6" rx="1.5" fill="none" stroke="url(#goldGrad)" stroke-width="1.8" />
+              <!-- Little Dangling Spider from Tip -->
+              <line x1="16" y1="-44" x2="20" y2="-36" stroke="#64748b" stroke-width="0.8" />
+              <circle cx="20" cy="-35" r="1.8" fill="#1c1917" />
+            </g>
+          </g>
+        </g>
+
+        <!-- ================= 6. COMIC & FX OVERLAYS ================= -->
+        <!-- Shock Sparks & Exclamation ("!!") over Girl's head -->
+        <g id="shockAlert" opacity="0" transform="translate(0, 0)">
+          <!-- Comic Exclamation Bubble -->
+          <polygon points="0,0 8,-12 18,-12 28,-36 12,-30 4,-46 -8,-32 -22,-38 -16,-20 -28,-14 0,0" fill="#facc15" stroke="#ef4444" stroke-width="2.5" />
+          <text x="0" y="-20" font-family="'Fredoka', sans-serif" font-weight="900" font-size="20" fill="#dc2626" text-anchor="middle">!!</text>
+        </g>
+
+        <!-- THE "BOO!!" COMIC BURST -->
+        <g id="booBurst" opacity="0" transform="translate(600, 270)">
+          <!-- Outer Jagged Blast Star -->
+          <polygon points="0,-75 22,-45 65,-68 45,-25 90,-20 58,15 95,48 50,45 65,85 20,62 -10,95 -25,58 -70,80 -52,38 -95,28 -60,-8 -90,-45 -45,-38 -55,-78 -15,-52" fill="#ef4444" stroke="#fbbf24" stroke-width="4" filter="url(#booBurstGlow)" />
+          <!-- Inner Yellow Burst -->
+          <polygon points="0,-58 17,-35 50,-52 35,-19 70,-15 45,12 74,37 39,35 50,66 15,48 -8,74 -19,45 -54,62 -40,30 -74,22 -46,-6 -70,-35 -35,-30 -42,-60 -12,-40" fill="#fef08a" />
+          <!-- Comic Text: BOO! -->
+          <text x="0" y="20" font-family="'Creepster', 'Fredoka', cursive" font-size="74" fill="#7f1d1d" text-anchor="middle" letter-spacing="3" stroke="#fef08a" stroke-width="2" style="text-shadow: 3px 3px 0 #000;">
+            BOO!
+          </text>
+        </g>
+
+        <!-- Panic Running Dust Puffs behind Girl -->
+        <g id="runDust" opacity="0">
+          <g id="dustPuff1" transform="translate(420, 440) scale(1)">
+            <ellipse cx="0" cy="0" rx="14" ry="8" fill="#e2e8f0" opacity="0.8" />
+            <ellipse cx="-8" cy="-3" rx="10" ry="6" fill="#cbd5e1" opacity="0.6" />
+          </g>
+          <g id="dustPuff2" transform="translate(340, 440) scale(1)">
+            <ellipse cx="0" cy="0" rx="16" ry="9" fill="#e2e8f0" opacity="0.8" />
+            <ellipse cx="-10" cy="-4" rx="12" ry="7" fill="#cbd5e1" opacity="0.6" />
+          </g>
+          <g id="dustPuff3" transform="translate(240, 440) scale(1)">
+            <ellipse cx="0" cy="0" rx="18" ry="10" fill="#e2e8f0" opacity="0.8" />
+          </g>
+        </g>
+
+        <!-- Eating Comic FX: "NOM!", "CHOMP!", Crumbs & Burp -->
+        <g id="eatFxGroup" opacity="0" transform="translate(520, 400)">
+          <!-- Comic Chomping Word Bubble -->
+          <g id="chompWord" transform="translate(0, -35)">
+            <rect x="-35" y="-16" width="70" height="28" rx="8" fill="#facc15" stroke="#ea580c" stroke-width="2" />
+            <text x="0" y="4" font-family="'Fredoka', sans-serif" font-weight="900" font-size="14" fill="#7c2d12" text-anchor="middle">NOM NOM!</text>
+          </g>
+          <!-- Flying Candy Crumbs -->
+          <circle id="crumb1" cx="-12" cy="0" r="2.5" fill="#f97316" />
+          <circle id="crumb2" cx="8" cy="-8" r="2" fill="#a855f7" />
+          <circle id="crumb3" cx="14" cy="4" r="2.2" fill="#ef4444" />
+          <circle id="crumb4" cx="-6" cy="-12" r="1.8" fill="#facc15" />
+        </g>
+
+        <!-- Burp Smoke Ring & Cartoon Bubble Cloud -->
+        <g id="burpRing" opacity="0" transform="translate(445, 360)">
+          <!-- Concentric expanding smoke rings -->
+          <ellipse cx="0" cy="0" rx="16" ry="9" fill="none" stroke="#a7f3d0" stroke-width="2.5" opacity="0.85" />
+          <ellipse cx="-4" cy="-8" rx="22" ry="12" fill="none" stroke="#6ee7b7" stroke-width="2" opacity="0.65" />
+          <ellipse cx="2" cy="-18" rx="28" ry="15" fill="none" stroke="#cbd5e1" stroke-width="1.8" opacity="0.45" stroke-dasharray="6 4" />
+          <!-- Little cartoon bubbles -->
+          <circle cx="-18" cy="-6" r="3" fill="#86efac" opacity="0.8" />
+          <circle cx="22" cy="-12" r="2.5" fill="#a7f3d0" opacity="0.8" />
+          <circle cx="-10" cy="-22" r="4" fill="#6ee7b7" opacity="0.6" />
+          <circle cx="16" cy="-26" r="3" fill="#cbd5e1" opacity="0.5" />
+          <!-- Comic Sound text with shadow -->
+          <text x="0" y="5" font-family="'Fredoka', sans-serif" font-weight="900" font-size="16" fill="#064e3b" text-anchor="middle" letter-spacing="1">*BUUUURP!!* 🫧</text>
+          <text x="-1" y="4" font-family="'Fredoka', sans-serif" font-weight="900" font-size="16" fill="#86efac" text-anchor="middle" letter-spacing="1">*BUUUURP!!* 🫧</text>
+        </g>
+
+        <!-- Creature Candy Discovery Comic Alert -->
+        <g id="candyAlert" opacity="0" transform="translate(0, 0)">
+          <rect x="-42" y="-16" width="84" height="28" rx="10" fill="#fef08a" stroke="#ea580c" stroke-width="2.2" />
+          <polygon points="-5,12 5,12 0,18" fill="#fef08a" />
+          <text x="0" y="3" font-family="'Fredoka', sans-serif" font-weight="900" font-size="13" fill="#7c2d12" text-anchor="middle">CANDY!! 🍭</text>
+        </g>
+
+        <!-- ================= 7. THE PENALTY BANNER ================= -->
+        <!-- Descends from above with smooth spring bounce: "Removed X coins" -->
+        <g id="penaltyBanner" transform="translate(480, -90)">
+          <!-- Banner Card Shadow / Glow -->
+          <rect x="-240" y="-36" width="480" height="72" rx="36" fill="var(--card-bg)" stroke="#f97316" stroke-width="3" filter="url(#penaltyGlow)" />
+          <!-- Inner Glass Border -->
+          <rect x="-237" y="-33" width="474" height="66" rx="33" fill="none" stroke="rgba(255, 255, 255, 0.2)" stroke-width="1.5" />
+
+          <!-- Left Icon: Shiny Embossed Gold Coin with Penalty Minus -->
+          <g transform="translate(-188, 0)">
+            <circle cx="0" cy="0" r="22" fill="url(#bannerBadgeGrad)" stroke="#f97316" stroke-width="2" />
+            <!-- Outer coin rim -->
+            <circle cx="0" cy="0" r="17" fill="url(#coinFaceGrad)" stroke="#b45309" stroke-width="1.5" />
+            <!-- Inner coin bevel -->
+            <circle cx="0" cy="0" r="14" fill="none" stroke="#fef08a" stroke-width="1" stroke-dasharray="2 1.5" opacity="0.8" />
+            <!-- Stamped Coin Symbol (Spooky Skull / Coin) -->
+            <path d="M -6,-5 C -6,-10 6,-10 6,-5 C 6,-2 4,1 3,3 L -3,3 C -4,1 -6,-2 -6,-5 Z" fill="#78350f" />
+            <circle cx="-3" cy="-4" r="1.3" fill="#fef08a" />
+            <circle cx="3" cy="-4" r="1.3" fill="#fef08a" />
+            <line x1="-2" y1="2" x2="2" y2="2" stroke="#fef08a" stroke-width="0.8" />
+            <!-- Floating Shiny Glint -->
+            <circle cx="-6" cy="-6" r="1.5" fill="#ffffff" opacity="0.9" />
+            <!-- Penalty Minus Sign Badge -->
+            <circle cx="13" cy="11" r="7.5" fill="#ef4444" stroke="#ffffff" stroke-width="1.8" />
+            <line x1="9" y1="11" x2="17" y2="11" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" />
+          </g>
+
+          <!-- Banner Main Text: "Removed X coins" -->
+          <text id="bannerMainText" x="14" y="9" text-anchor="middle" font-family="'Outfit', system-ui, sans-serif" font-weight="900" font-size="28" fill="#ffffff" letter-spacing="-0.3">
+            Removed 25 coins
+          </text>
+        </g>
+      </svg>
+    </div>
+  </div>
+
+  <script>
+    'use strict';
+
+    // =========================================================================
+    // URL PARAMS & CONFIGURATION
+    // =========================================================================
+    const urlParams = new URLSearchParams(window.location.search);
+    let coinsRemoved = Math.abs(parseInt(urlParams.get('coins') || urlParams.get('points'), 10)) || 25;
+    let soundEnabled = urlParams.get('sound') !== '0';
+
+    const bannerMainText = document.getElementById('bannerMainText');
+    const shakeWrap = document.getElementById('shakeWrap');
+
+    function updateBannerText(val) {
+      coinsRemoved = val;
+      if (bannerMainText) {
+        bannerMainText.textContent = `Removed ${val} coins`;
+      }
+    }
+    updateBannerText(coinsRemoved);
+
+    // =========================================================================
+    // PROCEDURAL WEB AUDIO SYNTHESIZER (No external audio files needed!)
+    // =========================================================================
+    class HalloweenSFX {
+      constructor() {
+        this.ctx = null;
+        this.enabled = soundEnabled;
+        this.triggered = new Set();
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) this.ctx = new AudioContextClass();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume().catch(() => {});
+        }
+      }
+
+      reset() {
+        this.triggered.clear();
+      }
+
+      triggerOnce(id, fn) {
+        if (this.triggered.has(id)) return;
+        this.triggered.add(id);
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        try { fn(this.ctx); } catch (e) { console.warn('SFX Error:', e); }
+      }
+
+      // 1. Witch Girl Stroll Footsteps (Light playful tiptoes)
+      playFootstep(ctx, pitch = 440) {
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(pitch, now);
+        osc.frequency.exponentialRampToValueAtTime(pitch * 0.7, now + 0.06);
+        gain.gain.setValueAtTime(0.04, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.075);
+      }
+
+      // 2A. Creepy Creature Awaken Riser (Stirring on porch)
+      playCreatureAwaken(ctx) {
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(70, now);
+        osc.frequency.linearRampToValueAtTime(145, now + 0.38);
+        gain.gain.setValueAtTime(0.045, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.42);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.44);
+      }
+
+      // 2B. Sustained Dramatic Monster Roar ("BOOOOOOO!!")
+      playBooSting(ctx) {
+        const now = ctx.currentTime;
+        // Low ominous bass chord + harsh brass saw chord held for 1.4s
+        const freqs = [82.4, 123.5, 164.8, 246.9]; // E2 chord
+        freqs.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = idx % 2 === 0 ? 'sawtooth' : 'square';
+          osc.frequency.setValueAtTime(freq, now);
+          osc.frequency.linearRampToValueAtTime(freq * 1.04, now + 0.4);
+          osc.frequency.linearRampToValueAtTime(freq * 0.96, now + 0.9);
+          osc.frequency.exponentialRampToValueAtTime(freq * 0.75, now + 1.4);
+
+          const filter = ctx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(1600, now);
+          filter.frequency.linearRampToValueAtTime(1200, now + 0.8);
+          filter.frequency.exponentialRampToValueAtTime(240, now + 1.45);
+
+          gain.gain.setValueAtTime(0.13, now);
+          gain.gain.setValueAtTime(0.12, now + 0.9);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 1.48);
+
+          osc.connect(filter).connect(gain).connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 1.5);
+        });
+
+        // Comic spring "Boing!" accent
+        const spring = ctx.createOscillator();
+        const springGain = ctx.createGain();
+        spring.type = 'sine';
+        spring.frequency.setValueAtTime(320, now);
+        spring.frequency.exponentialRampToValueAtTime(680, now + 0.22);
+        spring.frequency.exponentialRampToValueAtTime(180, now + 0.55);
+        springGain.gain.setValueAtTime(0.08, now);
+        springGain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+        spring.connect(springGain).connect(ctx.destination);
+        spring.start(now);
+        spring.stop(now + 0.62);
+      }
+
+      // 2C. Teeth Chattering & Knees Knocking (Delayed Shock Shiver)
+      playTeethChatter(ctx) {
+        const now = ctx.currentTime;
+        for (let i = 0; i < 9; i++) {
+          const t = now + i * 0.065;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(620 + (i % 2) * 80, t);
+          gain.gain.setValueAtTime(0.045, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.045);
+          osc.connect(gain).connect(ctx.destination);
+          osc.start(t);
+          osc.stop(t + 0.05);
+        }
+      }
+
+      // 3. Delayed Terror Screaming Leap ("AIEEEEE!")
+      playDelayedScream(ctx) {
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(540, now);
+        osc.frequency.exponentialRampToValueAtTime(1450, now + 0.22);
+        osc.frequency.exponentialRampToValueAtTime(680, now + 0.55);
+        gain.gain.setValueAtTime(0.11, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.58);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.6);
+      }
+
+      // 4. Candy Spill & Plastic Basket Clatter
+      playCandySpill(ctx) {
+        const now = ctx.currentTime;
+        // Plastic bucket thud
+        const thud = ctx.createOscillator();
+        const thudGain = ctx.createGain();
+        thud.type = 'triangle';
+        thud.frequency.setValueAtTime(160, now);
+        thud.frequency.exponentialRampToValueAtTime(50, now + 0.2);
+        thudGain.gain.setValueAtTime(0.12, now);
+        thudGain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+        thud.connect(thudGain).connect(ctx.destination);
+        thud.start(now);
+        thud.stop(now + 0.24);
+
+        // Candy pieces rattling & bouncing (rapid high pings)
+        [880, 1100, 750, 1320, 960, 1200, 680, 1050].forEach((f, i) => {
+          const t = now + 0.05 + i * 0.045;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(f, t);
+          gain.gain.setValueAtTime(0.05, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+          osc.connect(gain).connect(ctx.destination);
+          osc.start(t);
+          osc.stop(t + 0.075);
+        });
+      }
+
+      // 5. Frantic Panic Dash & Wind Whoosh
+      playPanicRun(ctx) {
+        const now = ctx.currentTime;
+        // Rapid cartoon bongo scrambles
+        for (let i = 0; i < 10; i++) {
+          const t = now + i * 0.075;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(320 + (i % 3) * 60, t);
+          osc.frequency.exponentialRampToValueAtTime(180, t + 0.05);
+          gain.gain.setValueAtTime(0.06, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.055);
+          osc.connect(gain).connect(ctx.destination);
+          osc.start(t);
+          osc.stop(t + 0.06);
+        }
+      }
+
+      // 5B. Heavy Monster Galloping Stomp Chase
+      playMonsterChase(ctx) {
+        const now = ctx.currentTime;
+        for (let i = 0; i < 10; i++) {
+          const t = now + i * 0.13;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(140 + (i % 2) * 40, t);
+          osc.frequency.exponentialRampToValueAtTime(45, t + 0.1);
+          gain.gain.setValueAtTime(0.1, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.11);
+          osc.connect(gain).connect(ctx.destination);
+          osc.start(t);
+          osc.stop(t + 0.12);
+        }
+      }
+
+      // 5C. Cartoon Skid / Brake Sound
+      playSkidBrake(ctx) {
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(850, now);
+        osc.frequency.linearRampToValueAtTime(420, now + 0.28);
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(880, now);
+        filter.Q.setValueAtTime(4, now);
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        osc.connect(filter).connect(gain).connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.32);
+      }
+
+      // 5D. Greedy Candy Discovery "A-HA!" Chime
+      playCandyDiscover(ctx) {
+        const now = ctx.currentTime;
+        [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+          const t = now + i * 0.075;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(f, t);
+          gain.gain.setValueAtTime(0.07, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+          osc.connect(gain).connect(ctx.destination);
+          osc.start(t);
+          osc.stop(t + 0.17);
+        });
+      }
+
+      // 5E. Playful Trot Back to Candy
+      playTrotBack(ctx) {
+        const now = ctx.currentTime;
+        for (let i = 0; i < 7; i++) {
+          const t = now + i * 0.11;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(360 + (i % 3) * 65, t);
+          gain.gain.setValueAtTime(0.05, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+          osc.connect(gain).connect(ctx.destination);
+          osc.start(t);
+          osc.stop(t + 0.09);
+        }
+      }
+
+      // 6. Creature Chomping & Vacuuming Candies ("Nom Nom Nom!")
+      playChomp(ctx, pitch = 220) {
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(pitch, now);
+        osc.frequency.exponentialRampToValueAtTime(pitch * 0.45, now + 0.1);
+
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(pitch * 2.2, now);
+        filter.frequency.exponentialRampToValueAtTime(260, now + 0.11);
+        filter.Q.setValueAtTime(2.2, now);
+
+        gain.gain.setValueAtTime(0.14, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        osc.connect(filter).connect(gain).connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.13);
+
+        // Candy crunch snap noise burst
+        const buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.05), ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) {
+          data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.012));
+        }
+        const noise = ctx.createBufferSource();
+        noise.buffer = buffer;
+        const noiseFilter = ctx.createBiquadFilter();
+        noiseFilter.type = 'highpass';
+        noiseFilter.frequency.setValueAtTime(1600, now);
+        const noiseGain = ctx.createGain();
+        noiseGain.gain.setValueAtTime(0.07, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+        noise.connect(noiseFilter).connect(noiseGain).connect(ctx.destination);
+        noise.start(now);
+        noise.stop(now + 0.055);
+      }
+
+      // 6B. Big Satisfied Gulp / Swallow
+      playGulp(ctx) {
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(170, now);
+        osc.frequency.exponentialRampToValueAtTime(360, now + 0.14);
+        osc.frequency.exponentialRampToValueAtTime(110, now + 0.32);
+
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.34);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.35);
+      }
+
+      // 7. Epic Comic Low Belch / Burp (longer, multi-layer rumbling)
+      playBurp(ctx) {
+        const now = ctx.currentTime;
+
+        // Layer 1: Throat vocal resonance with squelchy modulation
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'sawtooth';
+        osc1.frequency.setValueAtTime(125, now);
+        osc1.frequency.linearRampToValueAtTime(142, now + 0.12);
+        osc1.frequency.linearRampToValueAtTime(108, now + 0.35);
+        osc1.frequency.linearRampToValueAtTime(118, now + 0.55);
+        osc1.frequency.exponentialRampToValueAtTime(60, now + 0.95);
+
+        const filter1 = ctx.createBiquadFilter();
+        filter1.type = 'lowpass';
+        filter1.frequency.setValueAtTime(650, now);
+        filter1.frequency.linearRampToValueAtTime(800, now + 0.15);
+        filter1.frequency.exponentialRampToValueAtTime(220, now + 0.95);
+        filter1.Q.setValueAtTime(2.5, now);
+
+        gain1.gain.setValueAtTime(0.02, now);
+        gain1.gain.linearRampToValueAtTime(0.18, now + 0.08);
+        gain1.gain.setValueAtTime(0.17, now + 0.6);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.98);
+
+        osc1.connect(filter1).connect(gain1).connect(ctx.destination);
+        osc1.start(now);
+        osc1.stop(now + 1.0);
+
+        // Layer 2: Deep sub-bass belly rumble
+        const sub = ctx.createOscillator();
+        const subGain = ctx.createGain();
+        sub.type = 'triangle';
+        sub.frequency.setValueAtTime(68, now);
+        sub.frequency.exponentialRampToValueAtTime(46, now + 0.9);
+        subGain.gain.setValueAtTime(0.02, now);
+        subGain.gain.linearRampToValueAtTime(0.15, now + 0.1);
+        subGain.gain.setValueAtTime(0.13, now + 0.55);
+        subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.95);
+
+        sub.connect(subGain).connect(ctx.destination);
+        sub.start(now);
+        sub.stop(now + 0.98);
+
+        // Layer 3: Little comic release pop / bubble at the end
+        setTimeout(() => {
+          if (!this.enabled || !this.ctx || this.ctx.state !== 'running') return;
+          const popTime = this.ctx.currentTime;
+          const pop = this.ctx.createOscillator();
+          const popGain = this.ctx.createGain();
+          pop.type = 'sine';
+          pop.frequency.setValueAtTime(380, popTime);
+          pop.frequency.exponentialRampToValueAtTime(720, popTime + 0.08);
+          popGain.gain.setValueAtTime(0.06, popTime);
+          popGain.gain.exponentialRampToValueAtTime(0.001, popTime + 0.09);
+          pop.connect(popGain).connect(this.ctx.destination);
+          pop.start(popTime);
+          pop.stop(popTime + 0.1);
+        }, 750);
+      }
+
+      // 8. Creature Sneaky Retreat (Cartoon marimba/tiptoe)
+      playSlinkBack(ctx) {
+        const now = ctx.currentTime;
+        [440, 415, 392, 370, 349, 330].forEach((f, i) => {
+          const t = now + i * 0.12;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(f, t);
+          gain.gain.setValueAtTime(0.05, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+          osc.connect(gain).connect(ctx.destination);
+          osc.start(t);
+          osc.stop(t + 0.11);
+        });
+      }
+
+      // 9. Penalty Banner Drop & Coin Deduct Dong
+      playBannerPenalty(ctx) {
+        const now = ctx.currentTime;
+        // Spooky bell strike
+        [523.25, 415.3, 329.63].forEach((f, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(f, now + idx * 0.08);
+          gain.gain.setValueAtTime(0.08, now + idx * 0.08);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.6);
+          osc.connect(gain).connect(ctx.destination);
+          osc.start(now + idx * 0.08);
+          osc.stop(now + idx * 0.08 + 0.65);
+        });
+        // Low sad trombone "wah-wah" finish
+        const sad = ctx.createOscillator();
+        const sadGain = ctx.createGain();
+        sad.type = 'sawtooth';
+        sad.frequency.setValueAtTime(220, now + 0.35);
+        sad.frequency.exponentialRampToValueAtTime(140, now + 0.85);
+
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(500, now + 0.35);
+
+        sadGain.gain.setValueAtTime(0.06, now + 0.35);
+        sadGain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+        sad.connect(filter).connect(sadGain).connect(ctx.destination);
+        sad.start(now + 0.35);
+        sad.stop(now + 0.92);
+      }
+    }
+
+    const sfx = new HalloweenSFX();
+
+    // =========================================================================
+    // MATH & EASING UTILITIES
+    // =========================================================================
+    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+    const lerp = (a, b, t) => a + (b - a) * clamp(t, 0, 1);
+    const invLerp = (a, b, v) => clamp((v - a) / (b - a), 0, 1);
+    const easeOutBack = (t) => {
+      const c1 = 1.70158;
+      const c3 = c1 + 1;
+      return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+    };
+    const easeInOutQuad = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+    const easeOutQuad = (t) => 1 - (1 - t) * (1 - t);
+    const easeInQuad = (t) => t * t;
+
+    // =========================================================================
+    // DOM CACHING
+    // =========================================================================
+    const el = {
+      // Girl parts
+      girlRoot: document.getElementById('girlRoot'),
+      girlShadow: document.getElementById('girlShadow'),
+      girlTorso: document.getElementById('girlTorso'),
+      girlHead: document.getElementById('girlHead'),
+      girlArmL: document.getElementById('girlArmL'),
+      girlArmR: document.getElementById('girlArmR'),
+      armRPath: document.getElementById('armRPath'),
+      handR: document.getElementById('handR'),
+      girlLegL: document.getElementById('girlLegL'),
+      girlLegR: document.getElementById('girlLegR'),
+      witchCape: document.getElementById('witchCape'),
+      pigtailL: document.getElementById('pigtailL'),
+      pigtailR: document.getElementById('pigtailR'),
+      faceHappy: document.getElementById('faceHappy'),
+      facePuzzled: document.getElementById('facePuzzled'),
+      faceShock: document.getElementById('faceShock'),
+      faceCry: document.getElementById('faceCry'),
+      shockAlert: document.getElementById('shockAlert'),
+
+      // Basket & Candies
+      pumpkinBasket: document.getElementById('pumpkinBasket'),
+      basketCandiesInside: document.getElementById('basketCandiesInside'),
+      candies: [
+        document.getElementById('candy1'),
+        document.getElementById('candy2'),
+        document.getElementById('candy3'),
+        document.getElementById('candy4'),
+        document.getElementById('candy5'),
+        document.getElementById('candy6'),
+        document.getElementById('candy7'),
+        document.getElementById('candy8'),
+      ],
+
+      // Creature parts
+      creatureRoot: document.getElementById('creatureRoot'),
+      creatureBodyGroup: document.getElementById('creatureBodyGroup'),
+      creatureHead: document.getElementById('creatureHead'),
+      creatureArmL: document.getElementById('creatureArmL'),
+      creatureArmR: document.getElementById('creatureArmR'),
+      creatureLegs: document.getElementById('creatureLegs'),
+      creatureLegL: document.getElementById('creatureLegL'),
+      creatureLegR: document.getElementById('creatureLegR'),
+      creatureEyesDormant: document.getElementById('creatureEyesDormant'),
+      creatureEyesActive: document.getElementById('creatureEyesActive'),
+      creatureEyesGreedy: document.getElementById('creatureEyesGreedy'),
+      creatureMouthDormant: document.getElementById('creatureMouthDormant'),
+      creatureMouthActive: document.getElementById('creatureMouthActive'),
+      creatureMouthChew: document.getElementById('creatureMouthChew'),
+      creatureShadow: document.getElementById('creatureShadow'),
+
+      // Effects
+      booBurst: document.getElementById('booBurst'),
+      candyAlert: document.getElementById('candyAlert'),
+      runDust: document.getElementById('runDust'),
+      dustPuff1: document.getElementById('dustPuff1'),
+      dustPuff2: document.getElementById('dustPuff2'),
+      dustPuff3: document.getElementById('dustPuff3'),
+      eatFxGroup: document.getElementById('eatFxGroup'),
+      burpRing: document.getElementById('burpRing'),
+      penaltyBanner: document.getElementById('penaltyBanner'),
+      lanternFlame: document.getElementById('lanternFlame'),
+      lanternGlow: document.getElementById('lanternGlow'),
+      bat1: document.getElementById('bat1'),
+      bat2: document.getElementById('bat2'),
+      bat3: document.getElementById('bat3')
+    };
+
+    function setGirlFace(face) {
+      el.faceHappy.setAttribute('opacity', face === 'happy' ? '1' : '0');
+      el.facePuzzled.setAttribute('opacity', face === 'puzzled' ? '1' : '0');
+      el.faceShock.setAttribute('opacity', face === 'shock' ? '1' : '0');
+      el.faceCry.setAttribute('opacity', face === 'cry' ? '1' : '0');
+    }
+
+    function setCreatureState(state) {
+      // state: 'dormant' | 'boo' | 'eat' | 'chew' | 'greedy'
+      if (state === 'dormant') {
+        el.creatureEyesDormant.setAttribute('opacity', '1');
+        el.creatureEyesActive.setAttribute('opacity', '0');
+        el.creatureEyesGreedy.setAttribute('opacity', '0');
+        el.creatureMouthDormant.setAttribute('opacity', '1');
+        el.creatureMouthActive.setAttribute('opacity', '0');
+        el.creatureMouthChew.setAttribute('opacity', '0');
+      } else if (state === 'boo' || state === 'eat') {
+        el.creatureEyesDormant.setAttribute('opacity', '0');
+        el.creatureEyesActive.setAttribute('opacity', '1');
+        el.creatureEyesGreedy.setAttribute('opacity', '0');
+        el.creatureMouthDormant.setAttribute('opacity', '0');
+        el.creatureMouthActive.setAttribute('opacity', '1');
+        el.creatureMouthChew.setAttribute('opacity', '0');
+      } else if (state === 'greedy') {
+        el.creatureEyesDormant.setAttribute('opacity', '0');
+        el.creatureEyesActive.setAttribute('opacity', '0');
+        el.creatureEyesGreedy.setAttribute('opacity', '1');
+        el.creatureMouthDormant.setAttribute('opacity', '0');
+        el.creatureMouthActive.setAttribute('opacity', '0');
+        el.creatureMouthChew.setAttribute('opacity', '1');
+      } else if (state === 'chew') {
+        el.creatureEyesDormant.setAttribute('opacity', '1');
+        el.creatureEyesActive.setAttribute('opacity', '0');
+        el.creatureEyesGreedy.setAttribute('opacity', '0');
+        el.creatureMouthDormant.setAttribute('opacity', '0');
+        el.creatureMouthActive.setAttribute('opacity', '0');
+        el.creatureMouthChew.setAttribute('opacity', '1');
+      }
+    }
+
+    // Positions for the 8 dropped candies on the ground (target resting spots)
+    const CANDY_REST_POSITIONS = [
+      { x: 370, y: 442, rot: 35 },
+      { x: 390, y: 446, rot: -45 },
+      { x: 412, y: 440, rot: 80 },
+      { x: 432, y: 445, rot: 15 },
+      { x: 452, y: 438, rot: -70 },
+      { x: 472, y: 446, rot: 40 },
+      { x: 492, y: 441, rot: -20 },
+      { x: 510, y: 438, rot: 60 }
+    ];
+
+    // =========================================================================
+    // TIMELINE ANIMATION ENGINE (Duration: 18.5 seconds)
+    // Slower Boo roar, comedic delayed double-take, full chase across screen,
+    // double-take skid stop, extended candy feast & epic burp, disguise & banner.
+    // =========================================================================
+    const TOTAL_DURATION = 18.5;
+
+    function renderAtTime(t) {
+      t = clamp(t, 0, TOTAL_DURATION);
+
+      // Atmospheric candlelight flicker (natural organic brightness & glow flutter without displacement)
+      if (el.lanternFlame) {
+        const candleNoise = Math.sin(t * 11.3) * 0.45 + Math.sin(t * 23.7) * 0.35 + Math.sin(t * 41.2) * 0.2;
+        const flameScaleX = 1 + candleNoise * 0.08;
+        const flameScaleY = 1 + candleNoise * 0.14;
+        el.lanternFlame.setAttribute('transform', `translate(0, 48) scale(${flameScaleX}, ${flameScaleY})`);
+        el.lanternFlame.setAttribute('opacity', String(0.85 + candleNoise * 0.15));
+
+        if (el.lanternGlow) {
+          el.lanternGlow.setAttribute('opacity', String(clamp(0.75 + candleNoise * 0.2, 0.45, 0.98)));
+        }
+      }
+      if (el.bat1) {
+        el.bat1.setAttribute('transform', `translate(${180 + Math.sin(t * 2) * 20}, ${85 + Math.cos(t * 3) * 6}) scale(0.65)`);
+      }
+      if (el.bat2) {
+        el.bat2.setAttribute('transform', `translate(${120 - Math.sin(t * 2.5) * 15}, ${125 + Math.sin(t * 4) * 8}) scale(0.45)`);
+      }
+
+      // Default transforms
+      let girlX = -60;
+      let girlY = 420;
+      let girlScaleX = 1;
+      let legLRot = 0;
+      let legRRot = 0;
+      let armLRot = 0;
+      let armRRot = 0;
+      let headRot = 0;
+      let capeFlutter = 0;
+
+      // Basket positioning
+      let basketX = 0;
+      let basketY = 0;
+      let basketRot = 0;
+      let basketAttached = true;
+
+      // Creature transforms
+      let creatureX = 640;
+      let creatureY = 365;
+      let creatureScaleX = 1;
+      let creatureScaleY = 1;
+      let creatureRot = 0;
+      let creatureArmLRot = 0;
+      let creatureArmRRot = 0;
+      let creatureHeadY = 0;
+      let creatureLegsOpacity = 0;
+      let creatureLegLRot = 0;
+      let creatureLegRRot = 0;
+
+      // UI / Overlays defaults
+      el.booBurst.setAttribute('opacity', '0');
+      el.shockAlert.setAttribute('opacity', '0');
+      el.candyAlert.setAttribute('opacity', '0');
+      el.runDust.setAttribute('opacity', '0');
+      el.eatFxGroup.setAttribute('opacity', '0');
+      el.burpRing.setAttribute('opacity', '0');
+
+      // -----------------------------------------------------------------------
+      // PHASE 1: STROLLING TRICK-OR-TREATER (0.0s - 2.5s)
+      // Girl strolls happily from left towards the decorated porch, swinging basket.
+      // -----------------------------------------------------------------------
+      if (t < 2.5) {
+        setGirlFace('happy');
+        setCreatureState('dormant');
+
+        const p = invLerp(0, 2.5, t);
+        girlX = lerp(-60, 420, p);
+        const bob = Math.abs(Math.sin(p * Math.PI * 7));
+        girlY = 420 - bob * 7;
+
+        // Walking leg stride
+        legLRot = Math.sin(p * Math.PI * 7) * 28;
+        legRRot = -Math.sin(p * Math.PI * 7) * 28;
+
+        // Arms & Basket swing
+        armLRot = -Math.sin(p * Math.PI * 7) * 20;
+        armRRot = Math.sin(p * Math.PI * 7) * 25;
+        headRot = Math.sin(p * Math.PI * 3.5) * 3;
+        capeFlutter = Math.sin(p * Math.PI * 8) * 8;
+
+        // Periodic footstep audio
+        const stepNum = Math.floor(p * 6);
+        sfx.triggerOnce(`step_${stepNum}`, (ctx) => sfx.playFootstep(ctx, 420 + (stepNum % 2) * 50));
+
+        // Dormant creature breathes slightly on haybale
+        creatureScaleY = 1 + Math.sin(t * 3) * 0.03;
+        creatureArmLRot = 5;
+        creatureArmRRot = -5;
+      }
+
+      // -----------------------------------------------------------------------
+      // PHASE 2: CREATURE AWAKENS & BOO! LUNGE + GIRL'S QUICK TERROR REACTION & DROP (2.5s - 3.85s)
+      // The creature erupts and aggressively lunges towards her off the porch.
+      // She double-takes, shrieks in terror, and drops her basket as candies erupt!
+      // -----------------------------------------------------------------------
+      else if (t < 3.85) {
+        // --- 2A. CREATURE BEHAVIOR (Awaken, BOO! Roar & Lunge) ---
+        if (t < 2.8) {
+          // Creature begins stirring on haybale
+          sfx.triggerOnce('creatureAwaken', (ctx) => sfx.playCreatureAwaken(ctx));
+          setCreatureState('dormant');
+          const stirP = invLerp(2.5, 2.8, t);
+          creatureY = lerp(365, 350, stirP);
+          creatureHeadY = lerp(0, -6, stirP);
+          creatureArmLRot = lerp(5, -20, stirP);
+          creatureArmRRot = lerp(-5, 20, stirP);
+        } else if (t < 3.55) {
+          // Sustained terrifying "BOOOOOO!!" roar & aggressive lunge forward towards her!
+          sfx.triggerOnce('booSting', (ctx) => sfx.playBooSting(ctx));
+          setCreatureState('boo');
+
+          const roarP = easeOutBack(clamp(invLerp(2.8, 3.2, t), 0, 1));
+          creatureScaleY = lerp(1, 1.35, roarP);
+          creatureScaleX = lerp(1, 1.05, roarP);
+          // Aggressively lunging forward from the porch towards the girl!
+          creatureX = lerp(640, 590, roarP);
+          creatureY = lerp(350, 330, roarP);
+          creatureRot = lerp(0, -22, roarP); // Lurching over steps reaching right at her
+          creatureArmLRot = -82 + Math.sin(t * 30) * 8;
+          creatureArmRRot = 78 - Math.sin(t * 30) * 8;
+          creatureHeadY = -8;
+
+          // "BOO!!" comic burst
+          const burstScale = easeOutBack(clamp(invLerp(2.8, 3.1, t), 0, 1));
+          const burstThrob = 1 + Math.sin((t - 2.8) * 14) * 0.06;
+          const burstOpacity = t < 3.4 ? 1 : 1 - invLerp(3.4, 3.55, t);
+          el.booBurst.setAttribute('opacity', String(burstOpacity));
+          el.booBurst.setAttribute('transform', `translate(545, 180) scale(${burstScale * burstThrob})`);
+
+          // Screen vibration during roar
+          if (t >= 2.8 && t < 3.4) {
+            shakeWrap.classList.add('shake-heavy');
+          } else {
+            shakeWrap.classList.remove('shake-heavy');
+          }
+        } else {
+          // Monster bounds forward off the porch steps directly after her!
+          const leapP = invLerp(3.55, 3.85, t);
+          creatureScaleX = -1; // Turns to face her direction
+          creatureX = lerp(590, 510, easeOutQuad(leapP));
+          creatureY = lerp(330, 395, leapP) - Math.sin(leapP * Math.PI) * 15;
+          creatureRot = lerp(-22, 16, leapP);
+          creatureLegsOpacity = leapP;
+          creatureArmLRot = lerp(-82, -55, leapP);
+          creatureArmRRot = lerp(78, 55, leapP);
+          setCreatureState('boo');
+        }
+
+        // --- 2B. GIRL'S SNAPPY REACTION (Startled double-take -> instant terror -> screams & drops basket) ---
+        if (t < 2.85) {
+          // Stopped at porch, still sweet & smiling
+          girlX = 420;
+          girlY = 420;
+          setGirlFace('happy');
+          legLRot = 0;
+          legRRot = 0;
+          headRot = 0;
+          armRRot = 8;
+          armLRot = -8;
+          basketAttached = true;
+        } else if (t < 3.15) {
+          // Snappy double-take! Head snaps right to look at the monster
+          girlX = 420;
+          girlY = 420;
+          setGirlFace('puzzled');
+          const dtP = invLerp(2.85, 3.15, t);
+          headRot = lerp(0, 18, dtP);
+          legLRot = 0;
+          legRRot = 0;
+          armRRot = lerp(8, -5, dtP);
+          armLRot = lerp(-8, 5, dtP);
+          basketAttached = true;
+        } else if (t < 3.45) {
+          // Instant terror shock! Knees knock, teeth chatter as monster lunges right at her
+          sfx.triggerOnce('teethChatter', (ctx) => sfx.playTeethChatter(ctx));
+          setGirlFace('shock');
+          const shiver = Math.sin(t * 52) * 3;
+          girlX = 420 + shiver;
+          girlY = 420;
+          headRot = 18 + Math.sin(t * 36) * 3;
+          legLRot = Math.sin(t * 54) * 12;
+          legRRot = -Math.sin(t * 54) * 12;
+          armRRot = -16 + Math.sin(t * 40) * 12;
+          armLRot = 16 - Math.sin(t * 40) * 12;
+          basketAttached = true;
+
+          // Shock "!!" alert pops up
+          const alertP = easeOutBack(clamp(invLerp(3.15, 3.35, t), 0, 1));
+          el.shockAlert.setAttribute('opacity', '1');
+          el.shockAlert.setAttribute('transform', `translate(${girlX}, ${girlY - 78}) scale(${alertP * (1 + Math.sin(t * 30) * 0.1)})`);
+        } else {
+          // Screaming terror leap backwards away from monster! Drops basket & candies erupt
+          sfx.triggerOnce('delayedScream', (ctx) => sfx.playDelayedScream(ctx));
+          setGirlFace('shock');
+
+          // Jump arc backwards (recoils away from creature from 420 to 400)
+          const jumpP = invLerp(3.45, 3.65, t);
+          const landP = invLerp(3.65, 3.85, t);
+          girlX = lerp(420, 400, invLerp(3.45, 3.85, t));
+          if (t < 3.65) {
+            girlY = 420 - Math.sin(jumpP * Math.PI * 0.5) * 45;
+          } else {
+            girlY = 375 + Math.sin(landP * Math.PI * 0.5) * 45;
+          }
+          armLRot = -125;
+          armRRot = -120; // Arms flying straight up in fright!
+          legLRot = 18;
+          legRRot = -18;
+          headRot = -6;
+
+          el.shockAlert.setAttribute('opacity', '1');
+          el.shockAlert.setAttribute('transform', `translate(${girlX}, ${girlY - 78}) scale(1.1)`);
+
+          // Basket detaches and flips upside down!
+          basketAttached = false;
+          const dropP = invLerp(3.5, 3.85, t);
+          basketX = lerp(435, 475, dropP);
+          basketY = lerp(375, 442, easeInQuad(dropP));
+          basketRot = lerp(0, 115, dropP);
+
+          if (t >= 3.7) {
+            sfx.triggerOnce('candySpill', (ctx) => sfx.playCandySpill(ctx));
+          }
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // PHASE 3: THE CHASE! (3.85s - 6.6s)
+      // Because the creature lunged right at her, the girl bolts in panic!
+      // The creature lands on the path right behind her and gallops in hot pursuit!
+      // -----------------------------------------------------------------------
+      else if (t < 6.6) {
+        shakeWrap.classList.remove('shake-heavy');
+        setGirlFace('cry');
+        setCreatureState('boo');
+
+        sfx.triggerOnce('panicRun', (ctx) => sfx.playPanicRun(ctx));
+
+        // Basket rests on side on the ground
+        basketAttached = false;
+        basketX = 475;
+        basketY = 442;
+        basketRot = 115;
+
+        // 3A. GIRL: Panicked dash sprinting away from the creature
+        girlScaleX = -1;
+        const girlP = invLerp(3.85, 5.4, t);
+        if (t < 5.4) {
+          girlX = lerp(400, -180, girlP * girlP);
+          girlY = 420 - Math.abs(Math.sin(girlP * Math.PI * 14)) * 10;
+          legLRot = Math.sin(girlP * Math.PI * 18) * 45;
+          legRRot = -Math.sin(girlP * Math.PI * 18) * 45;
+          armLRot = Math.sin(girlP * Math.PI * 18) * 40;
+          armRRot = -Math.sin(girlP * Math.PI * 18) * 40;
+          capeFlutter = -30 - Math.sin(girlP * Math.PI * 18) * 15;
+
+          // Dust clouds trailing behind girl
+          el.runDust.setAttribute('opacity', String(clamp((1 - girlP) * 1.5, 0, 1)));
+          el.dustPuff1.setAttribute('transform', `translate(${girlX + 35}, 440) scale(${1 + girlP * 0.5})`);
+          el.dustPuff2.setAttribute('transform', `translate(${girlX + 75}, 438) scale(${0.8 + girlP * 0.6})`);
+          el.dustPuff3.setAttribute('transform', `translate(${girlX + 115}, 442) scale(${0.6 + girlP * 0.7})`);
+        } else {
+          girlX = -300;
+        }
+
+        // 3B. CREATURE: Immediately in full pursuit right behind her!
+        creatureScaleX = -1;
+        if (t < 4.15) {
+          // Landing on cobblestones and launching into gallop
+          const landP = invLerp(3.85, 4.15, t);
+          creatureX = lerp(510, 480, landP);
+          creatureY = lerp(395, 405, landP);
+          creatureRot = 16;
+          creatureLegsOpacity = 1;
+          creatureLegLRot = lerp(20, -10, landP);
+          creatureLegRRot = lerp(-20, 10, landP);
+          creatureArmLRot = -55;
+          creatureArmRRot = 55;
+        } else {
+          // Full gallop chase across screen (x: 480 -> 50)
+          sfx.triggerOnce('monsterChase', (ctx) => sfx.playMonsterChase(ctx));
+          const chaseP = invLerp(4.15, 6.6, t);
+          creatureX = lerp(480, 50, easeInOutQuad(chaseP));
+          const strideBounce = Math.abs(Math.sin(chaseP * Math.PI * 10));
+          creatureY = 405 - strideBounce * 12;
+          creatureRot = 16 + Math.sin(chaseP * Math.PI * 10) * 4; // Aggressive forward lean
+          creatureLegsOpacity = 1;
+
+          // Galloping legs
+          creatureLegLRot = Math.sin(chaseP * Math.PI * 10) * 44;
+          creatureLegRRot = -Math.sin(chaseP * Math.PI * 10) * 44;
+
+          // Claws flailing forward reaching for girl
+          creatureArmLRot = -55 + Math.sin(chaseP * Math.PI * 10) * 35;
+          creatureArmRRot = 55 - Math.sin(chaseP * Math.PI * 10) * 35;
+
+          // Monster chase dust puffs
+          if (t >= 5.2) {
+            el.runDust.setAttribute('opacity', '0.75');
+            el.dustPuff1.setAttribute('transform', `translate(${creatureX + 35}, 440) scale(1)`);
+            el.dustPuff2.setAttribute('transform', `translate(${creatureX + 70}, 438) scale(0.8)`);
+            el.dustPuff3.setAttribute('transform', `translate(${creatureX + 105}, 442) scale(0.6)`);
+          }
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // PHASE 4: SKID STOP & SPOT THE CANDY! (6.6s - 8.0s)
+      // Creature loses the girl, skids to halt, turns around & spots the candy pile!
+      // -----------------------------------------------------------------------
+      else if (t < 8.0) {
+        girlX = -300;
+        basketAttached = false;
+        basketX = 475;
+        basketY = 442;
+        basketRot = 115;
+
+        if (t < 7.1) {
+          // Cartoon brake skid!
+          sfx.triggerOnce('skidBrake', (ctx) => sfx.playSkidBrake(ctx));
+          const skidP = invLerp(6.6, 7.1, t);
+          creatureScaleX = -1;
+          creatureX = lerp(50, 42, easeOutQuad(skidP));
+          creatureY = 405;
+          // Leaning back hard against momentum
+          creatureRot = lerp(16, -24, easeOutQuad(skidP));
+          creatureLegsOpacity = 1;
+          creatureLegLRot = -32;
+          creatureLegRRot = -28;
+          creatureArmLRot = -80;
+          creatureArmRRot = 70;
+          setCreatureState('boo');
+
+          // Skid dust kicking forward
+          el.runDust.setAttribute('opacity', String(1 - skidP));
+          el.dustPuff1.setAttribute('transform', `translate(${creatureX - 25}, 442) scale(${1 + skidP})`);
+        } else if (t < 7.4) {
+          // Puzzled pause facing left where the girl disappeared
+          const pauseP = invLerp(7.1, 7.4, t);
+          creatureScaleX = -1;
+          creatureX = 42;
+          creatureY = 405;
+          creatureRot = lerp(-24, 0, pauseP);
+          creatureLegsOpacity = 1;
+          creatureLegLRot = 0;
+          creatureLegRRot = 0;
+          creatureArmLRot = -20;
+          creatureArmRRot = 15;
+          setCreatureState('dormant');
+        } else {
+          // Turn around facing right, spot the candy pile & greedily pop star eyes!
+          sfx.triggerOnce('candyDiscover', (ctx) => sfx.playCandyDiscover(ctx));
+          creatureScaleX = 1;
+          creatureX = 42;
+          const hopP = invLerp(7.4, 8.0, t);
+          creatureY = 405 - Math.abs(Math.sin(hopP * Math.PI * 2)) * 14;
+          creatureRot = 0;
+          creatureLegsOpacity = 1;
+          creatureLegLRot = Math.sin(t * 25) * 12;
+          creatureLegRRot = -Math.sin(t * 25) * 12;
+          creatureArmLRot = -55 + Math.sin(t * 25) * 15;
+          creatureArmRRot = 55 - Math.sin(t * 25) * 15;
+          setCreatureState('greedy');
+
+          // Comic "CANDY!! 🍭" alert bubble pops above monster
+          const alertP = easeOutBack(clamp(invLerp(7.45, 7.75, t), 0, 1));
+          el.candyAlert.setAttribute('opacity', '1');
+          el.candyAlert.setAttribute('transform', `translate(${creatureX}, ${creatureY - 72}) scale(${alertP * (1 + Math.sin(t * 18) * 0.08)})`);
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // PHASE 5: TROT BACK, EXTENDED FEAST & EPIC BURP (8.0s - 14.4s)
+      // Creature trots back, enthusiastically gobbles candies one by one,
+      // expands into a giant round belly, unleashes a rumbling burp, & pats its tummy!
+      // -----------------------------------------------------------------------
+      else if (t < 14.4) {
+        girlX = -300;
+        basketAttached = false;
+        basketX = 475;
+        basketY = 442;
+        basketRot = 115;
+
+        if (t < 9.0) {
+          // Cheerful trot back from x: 42 to x: 440
+          sfx.triggerOnce('trotBack', (ctx) => sfx.playTrotBack(ctx));
+          const trotP = invLerp(8.0, 9.0, t);
+          creatureX = lerp(42, 440, easeInOutQuad(trotP));
+          const trotBounce = Math.abs(Math.sin(trotP * Math.PI * 6));
+          creatureY = 405 - trotBounce * 9;
+          creatureRot = 4 + Math.sin(trotP * Math.PI * 6) * 3;
+          creatureLegsOpacity = 1;
+          creatureLegLRot = Math.sin(trotP * Math.PI * 6) * 32;
+          creatureLegRRot = -Math.sin(trotP * Math.PI * 6) * 32;
+          creatureArmLRot = -25 + Math.sin(trotP * Math.PI * 6) * 20;
+          creatureArmRRot = 25 - Math.sin(trotP * Math.PI * 6) * 20;
+          setCreatureState('greedy');
+
+          // Fade candy alert
+          if (t < 8.35) {
+            el.candyAlert.setAttribute('opacity', String(1 - invLerp(8.0, 8.35, t)));
+            el.candyAlert.setAttribute('transform', `translate(${creatureX}, ${creatureY - 72}) scale(1)`);
+          }
+        } else if (t < 12.2) {
+          // Actively chomping & feasting over all 8 candies! (3.2 seconds long)
+          const eatP = invLerp(9.0, 12.2, t);
+          creatureX = lerp(440, 448, eatP);
+          const eatCycle = (t - 9.0) * 2.8;
+          creatureY = 408 + Math.sin(eatCycle * Math.PI * 2) * 5;
+          creatureRot = -12 + Math.sin(eatCycle * Math.PI * 2) * 4;
+          creatureLegsOpacity = 1;
+          creatureLegLRot = -6;
+          creatureLegRRot = 6;
+
+          // Progressive belly swelling as each candy is devoured
+          const swellP = easeOutQuad(invLerp(9.0, 12.0, t));
+          creatureScaleX = lerp(1.0, 1.32, swellP);
+          creatureScaleY = lerp(1.0, 0.90, swellP);
+
+          // Arms sweeping candies inwards
+          creatureArmLRot = -48 + Math.sin(eatCycle * Math.PI * 2) * 24;
+          creatureArmRRot = 38 - Math.sin(eatCycle * Math.PI * 2) * 24;
+
+          // Head snapping bites
+          const biteSnap = Math.abs(Math.sin(eatCycle * Math.PI * 2));
+          el.creatureHead.setAttribute('transform', `translate(0, ${biteSnap * 7}) scale(${1 + biteSnap * 0.16})`);
+
+          // Comic eat effects (crumbs & NOM NOM!)
+          if (t < 11.8) {
+            el.eatFxGroup.setAttribute('opacity', '1');
+            el.eatFxGroup.setAttribute('transform', `translate(${creatureX - 35}, ${creatureY - 20})`);
+            setCreatureState('eat');
+          } else {
+            // Last swallow / chew transition
+            el.eatFxGroup.setAttribute('opacity', '0');
+            setCreatureState('chew');
+          }
+
+          // Sound triggers for 6 crunchy bites across the feast
+          const chompTimes = [9.15, 9.60, 10.10, 10.60, 11.10, 11.55];
+          chompTimes.forEach((ct, idx) => {
+            if (t >= ct) {
+              sfx.triggerOnce(`chomp_${idx}`, (ctx) => sfx.playChomp(ctx, 215 + idx * 25));
+            }
+          });
+
+          // Final big gulp at 11.85s
+          if (t >= 11.85) {
+            sfx.triggerOnce('gulp', (ctx) => sfx.playGulp(ctx));
+          }
+        } else {
+          // The Epic Burp & Content Belly Pat (12.2s - 14.4s)
+          creatureX = 445;
+          creatureY = 402;
+          creatureLegsOpacity = 1;
+          creatureLegLRot = 0;
+          creatureLegRRot = 0;
+
+          // Maximum bloated round belly
+          creatureScaleX = 1.34;
+          creatureScaleY = 0.88;
+
+          if (t < 12.5) {
+            // Anticipation pause with bloated tummy & puffed cheeks
+            setCreatureState('chew');
+            creatureRot = 0;
+            creatureArmLRot = -10;
+            creatureArmRRot = 10;
+          } else if (t < 13.5) {
+            // 12.5s: THE BELCH ERUPTS!!
+            sfx.triggerOnce('burp', (ctx) => sfx.playBurp(ctx));
+
+            // Belch smoke ring & text rising & expanding
+            const burpP = invLerp(12.5, 13.5, t);
+            const burpOpacity = clamp(1 - invLerp(13.1, 13.5, t), 0, 1);
+            el.burpRing.setAttribute('opacity', String(burpOpacity));
+            el.burpRing.setAttribute('transform', `translate(445, ${lerp(375, 295, burpP)}) scale(${1 + burpP * 1.15})`);
+
+            // Belch body rumble & vibration
+            const rumble = Math.sin((t - 12.5) * 36) * Math.max(0, 1 - (t - 12.5) / 0.7);
+            creatureRot = rumble * 5;
+            creatureScaleX = 1.34 + rumble * 0.08;
+
+            if (t < 12.9) {
+              // Mouth opens wide emitting the cloud
+              setCreatureState('boo');
+              creatureArmLRot = -25;
+              creatureArmRRot = 25;
+            } else {
+              setCreatureState('chew');
+              creatureArmLRot = -10;
+              creatureArmRRot = 10;
+            }
+
+            // Screen vibration during the peak belch
+            if (t >= 12.5 && t < 12.9) {
+              shakeWrap.classList.add('shake-heavy');
+            } else {
+              shakeWrap.classList.remove('shake-heavy');
+            }
+          } else {
+            // 13.5s - 14.4s: Smug content smile & comedic belly patting
+            shakeWrap.classList.remove('shake-heavy');
+            setCreatureState('chew');
+            creatureRot = 0;
+            headRot = -4;
+
+            // Rhythmic tummy patting with claw hand
+            const patCycle = Math.sin((t - 13.5) * Math.PI * 5); // ~2.5 friendly pats
+            creatureArmRRot = lerp(10, 40, (patCycle + 1) * 0.5);
+            creatureArmLRot = -12;
+            creatureScaleX = 1.34 - Math.max(0, patCycle) * 0.04;
+          }
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // PHASE 6: SNEAK BACK TO HAYBALE & DISGUISE (14.4s - 16.2s)
+      // Creature tiptoes backwards onto the hay bale and freezes into innocent disguise.
+      // -----------------------------------------------------------------------
+      else if (t < 16.2) {
+        girlX = -300;
+        basketAttached = false;
+        basketX = 475;
+        basketY = 442;
+        basketRot = 115;
+
+        sfx.triggerOnce('slinkBack', (ctx) => sfx.playSlinkBack(ctx));
+
+        const slinkP = invLerp(14.4, 16.2, t);
+        setCreatureState(slinkP > 0.85 ? 'dormant' : 'chew');
+
+        // Slinking backwards smoothly onto haybale
+        creatureX = lerp(445, 640, easeInOutQuad(slinkP));
+        creatureY = lerp(402, 365, easeInOutQuad(slinkP));
+        creatureRot = lerp(-6, 0, slinkP);
+        creatureScaleX = lerp(1.3, 1.0, slinkP);
+        creatureScaleY = lerp(0.92, 1.0, slinkP);
+        creatureArmLRot = lerp(-15, 5, slinkP);
+        creatureArmRRot = lerp(15, -5, slinkP);
+
+        // Sneaky tiptoe leg steps
+        creatureLegLRot = Math.sin(slinkP * Math.PI * 7) * 22;
+        creatureLegRRot = -Math.sin(slinkP * Math.PI * 7) * 22;
+
+        // Legs retract into haybale
+        if (t < 15.8) {
+          creatureLegsOpacity = 1;
+        } else {
+          creatureLegsOpacity = 1 - invLerp(15.8, 16.2, t);
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // PHASE 7: PENALTY BANNER OVERLAY ("Removed X coins") (16.2s - 18.5s)
+      // Spooky banner drops down with spring bounce. Creature is completely dormant.
+      // -----------------------------------------------------------------------
+      else {
+        girlX = -300;
+        basketAttached = false;
+        basketX = 475;
+        basketY = 442;
+        basketRot = 115;
+
+        setCreatureState('dormant');
+        creatureX = 640;
+        creatureY = 365;
+        creatureRot = 0;
+        creatureScaleX = 1;
+        creatureScaleY = 1;
+        creatureArmLRot = 5;
+        creatureArmRRot = -5;
+        creatureLegsOpacity = 0;
+        creatureLegLRot = 0;
+        creatureLegRRot = 0;
+
+        sfx.triggerOnce('bannerPenalty', (ctx) => sfx.playBannerPenalty(ctx));
+      }
+
+      // Apply Creature Transforms
+      el.creatureRoot.setAttribute('transform', `translate(${creatureX}, ${creatureY}) rotate(${creatureRot}) scale(${creatureScaleX}, ${creatureScaleY})`);
+      el.creatureArmL.setAttribute('transform', `translate(-18, 14) rotate(${creatureArmLRot})`);
+      el.creatureArmR.setAttribute('transform', `translate(18, 14) rotate(${creatureArmRRot})`);
+      el.creatureLegs.setAttribute('opacity', String(creatureLegsOpacity));
+      el.creatureLegL.setAttribute('transform', `translate(-10, 36) rotate(${creatureLegLRot})`);
+      el.creatureLegR.setAttribute('transform', `translate(10, 36) rotate(${creatureLegRRot})`);
+
+      // Apply Girl Transforms
+      el.girlRoot.setAttribute('transform', `translate(${girlX}, ${girlY}) scale(${girlScaleX}, 1)`);
+      el.girlLegL.setAttribute('transform', `translate(-6, 2) rotate(${legLRot})`);
+      el.girlLegR.setAttribute('transform', `translate(6, 2) rotate(${legRRot})`);
+      el.girlArmL.setAttribute('transform', `translate(-7, -22) rotate(${armLRot})`);
+      el.girlArmR.setAttribute('transform', `translate(7, -22) rotate(${armRRot})`);
+      el.witchCape.setAttribute('transform', `rotate(${capeFlutter}, 0, -20)`);
+      el.girlHead.setAttribute('transform', `translate(0, -32) rotate(${headRot})`);
+
+      // Basket positioning
+      if (basketAttached) {
+        // Tied to girl's front hand
+        el.pumpkinBasket.setAttribute('transform', `translate(${girlX + 16}, ${girlY - 8}) rotate(${armRRot * 0.7})`);
+        el.basketCandiesInside.setAttribute('opacity', '1');
+      } else {
+        el.pumpkinBasket.setAttribute('transform', `translate(${basketX}, ${basketY}) rotate(${basketRot})`);
+        el.basketCandiesInside.setAttribute('opacity', '0');
+      }
+
+      // Candies animation logic:
+      // - t < 3.5: inside basket (hidden from ground)
+      // - 3.5 - 4.0: burst out in arcs as basket flips
+      // - 4.0 - 9.0: resting on ground while chase, skid, & trot take place!
+      // - 9.0 - 11.8: sucked into creature mouth (shrink & disappear across extended feast)
+      // - > 11.8: completely eaten (opacity 0)
+      el.candies.forEach((candyEl, i) => {
+        if (!candyEl) return;
+        const target = CANDY_REST_POSITIONS[i];
+
+        if (t < 3.5) {
+          candyEl.setAttribute('opacity', '0');
+        } else if (t < 4.0) {
+          candyEl.setAttribute('opacity', '1');
+          const p = invLerp(3.5, 4.0, t);
+          // Arc trajectory from basket to rest position
+          const startX = 435;
+          const startY = 375;
+          const arcX = lerp(startX, target.x, p);
+          // Parabolic bounce arc
+          const arcY = lerp(startY, target.y, p) - Math.sin(p * Math.PI) * (42 + i * 6);
+          const rot = lerp(0, target.rot * 3, p);
+          candyEl.setAttribute('transform', `translate(${arcX}, ${arcY}) rotate(${rot})`);
+        } else if (t < 9.0) {
+          // Sitting on the ground during the chase, skid, and trot back!
+          candyEl.setAttribute('opacity', '1');
+          candyEl.setAttribute('transform', `translate(${target.x}, ${target.y}) rotate(${target.rot})`);
+        } else if (t < 11.8) {
+          // Candies spaced out across the extended feast (9.15s to 11.6s)!
+          const eatStagger = 9.15 + (i / 7) * 2.3;
+          if (t < eatStagger) {
+            candyEl.setAttribute('opacity', '1');
+            candyEl.setAttribute('transform', `translate(${target.x}, ${target.y}) rotate(${target.rot})`);
+          } else if (t < eatStagger + 0.22) {
+            // Sucking into mouth
+            const suckP = invLerp(eatStagger, eatStagger + 0.22, t);
+            const suckX = lerp(target.x, creatureX - 10, suckP);
+            const suckY = lerp(target.y, creatureY + 8, suckP);
+            const scale = lerp(1, 0.08, suckP);
+            const spin = target.rot + suckP * 360;
+            candyEl.setAttribute('opacity', String(1 - suckP * 0.8));
+            candyEl.setAttribute('transform', `translate(${suckX}, ${suckY}) rotate(${spin}) scale(${scale})`);
+          } else {
+            // Eaten!
+            candyEl.setAttribute('opacity', '0');
+          }
+        } else {
+          candyEl.setAttribute('opacity', '0');
+        }
+      });
+
+      // Penalty Banner Overlay Animation (drops down at 16.2s)
+      if (t < 16.2) {
+        el.penaltyBanner.setAttribute('transform', 'translate(480, -90)');
+      } else {
+        const p = easeOutBack(clamp(invLerp(16.2, 17.0, t), 0, 1));
+        const bannerY = lerp(-90, 80, p);
+        el.penaltyBanner.setAttribute('transform', `translate(480, ${bannerY})`);
+      }
+    }
+
+    // =========================================================================
+    // ANIMATION LOOP & CONTROLS
+    // =========================================================================
+    let startTime = null;
+    let animRunning = true;
+    let animPaused = false;
+    let pauseTimestamp = 0;
+    let manualTime = null;
+
+    function animLoop(timestamp) {
+      if (!startTime) startTime = timestamp;
+
+      if (!animPaused) {
+        const elapsedSec = (timestamp - startTime) / 1000;
+        renderAtTime(elapsedSec);
+
+        if (elapsedSec < TOTAL_DURATION) {
+          requestAnimationFrame(animLoop);
+        } else {
+          animRunning = false;
+        }
+      }
+    }
+
+    function startAnimation() {
+      sfx.reset();
+      startTime = performance.now();
+      animRunning = true;
+      animPaused = false;
+      requestAnimationFrame(animLoop);
+    }
+
+    function replay() {
+      startAnimation();
+    }
+
+    // Global click / tap / keyboard to replay
+    window.addEventListener('click', () => {
+      sfx.init();
+      if (!animRunning) {
+        replay();
+      }
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' || e.code === 'Enter' || e.code === 'KeyR') {
+        e.preventDefault();
+        sfx.init();
+        replay();
+      }
+    });
+
+    // Start playback immediately on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      startAnimation();
+    });
+  </script>
+</body>
+</html>

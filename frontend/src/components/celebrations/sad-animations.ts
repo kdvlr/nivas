@@ -8,7 +8,7 @@
  * - Pauses background frame loops on document.visibilitychange.
  */
 
-export type SadAnimationName = 'icecream' | 'balance-beam' | 'bicycle-rain' | 'storm'
+export type SadAnimationName = 'icecream' | 'balance-beam' | 'bicycle-rain' | 'trick-or-treat' | 'storm'
 
 export interface SadAnimationOptions {
   title?: string
