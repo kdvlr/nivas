@@ -63,6 +63,7 @@ export function isSwaraBirthday(d?: Date): boolean {
   const date = d ?? getSeasonalDate()
   const override = getHolidayOverride()?.toLowerCase()
   if (override === 'swara' || override === 'birthday' || override === 'bday' || override === 'swarabday' || override === 'oct31' || override === 'halloweenbday') return true
+  if (getQueryParam('bday') === '1' || getQueryParam('birthday') === '1') return true
   return date.getMonth() === 9 && date.getDate() === 31
 }
 

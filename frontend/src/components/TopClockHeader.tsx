@@ -106,11 +106,19 @@ export default function TopClockHeader({ now, config, className = '' }: TopClock
       </div>
 
       {isSwaraBirthday(now) && (
-        <div className="mt-1 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-pink-500/20 via-purple-500/20 to-amber-500/20 text-pink-600 dark:text-pink-300 border border-pink-400/40 text-[10px] sm:text-xs font-bold shadow-sm tracking-wide animate-pulse">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            window.dispatchEvent(new CustomEvent('trigger-birthday-fanfare'))
+          }}
+          title="Tap for Birthday Fanfare & Confetti!"
+          className="mt-1 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-pink-500/20 via-purple-500/20 to-amber-500/20 text-pink-600 dark:text-pink-300 border border-pink-400/40 text-[10px] sm:text-xs font-bold shadow-sm tracking-wide animate-pulse cursor-pointer hover:scale-105 active:scale-95 transition-transform"
+        >
           <span>🎂</span>
           <span>Happy Birthday Swara!</span>
           <span>👑</span>
-        </div>
+        </button>
       )}
     </div>
   )

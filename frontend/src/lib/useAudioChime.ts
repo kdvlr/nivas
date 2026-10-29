@@ -79,3 +79,87 @@ export function playChime(type: 'gentle' | 'reminder' | 'alarm' = 'reminder') {
     console.warn('[AudioChime] Unable to play chime:', e)
   }
 }
+
+/** Soft synthesized balloon pop with a high cheerful sparkle */
+export function playBalloonPopSound() {
+  try {
+    const ctx = getAudioContext()
+    const now = ctx.currentTime
+
+    // 1. Quick downward frequency sweep (poof / pop)
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.type = 'triangle'
+    osc.frequency.setValueAtTime(420, now)
+    osc.frequency.exponentialRampToValueAtTime(65, now + 0.08)
+
+    gain.gain.setValueAtTime(0.32, now)
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09)
+
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+
+    osc.start(now)
+    osc.stop(now + 0.1)
+
+    // 2. High sparkle chime
+    const sparkle = ctx.createOscillator()
+    const sparkleGain = ctx.createGain()
+    sparkle.type = 'sine'
+    sparkle.frequency.setValueAtTime(1046.5, now + 0.03) // C6
+    sparkle.frequency.exponentialRampToValueAtTime(1318.5, now + 0.12) // E6
+
+    sparkleGain.gain.setValueAtTime(0.18, now + 0.03)
+    sparkleGain.gain.exponentialRampToValueAtTime(0.001, now + 0.25)
+
+    sparkle.connect(sparkleGain)
+    sparkleGain.connect(ctx.destination)
+
+    sparkle.start(now + 0.03)
+    sparkle.stop(now + 0.28)
+  } catch (e) {
+    console.warn('[AudioChime] Balloon pop audio error:', e)
+  }
+}
+
+/** Triumphant birthday arpeggio fanfare flourish */
+export function playBirthdayFanfareSound() {
+  try {
+    const ctx = getAudioContext()
+    const now = ctx.currentTime
+
+    const masterGain = ctx.createGain()
+    masterGain.gain.setValueAtTime(0.26, now)
+    masterGain.gain.exponentialRampToValueAtTime(0.001, now + 2.6)
+    masterGain.connect(ctx.destination)
+
+    // Upbeat celebratory melody arpeggio: C5 -> E5 -> G5 -> C6 -> E6
+    const notes = [
+      { f: 523.25, t: 0.0, d: 0.2 },   // C5
+      { f: 659.25, t: 0.14, d: 0.2 },  // E5
+      { f: 783.99, t: 0.28, d: 0.22 }, // G5
+      { f: 1046.5, t: 0.44, d: 0.38 }, // C6
+      { f: 1318.5, t: 0.72, d: 0.85 }, // E6 chord flourish
+    ]
+
+    notes.forEach(({ f, t, d }) => {
+      const osc = ctx.createOscillator()
+      const g = ctx.createGain()
+
+      osc.type = 'triangle'
+      osc.frequency.setValueAtTime(f, now + t)
+
+      g.gain.setValueAtTime(0, now + t)
+      g.gain.linearRampToValueAtTime(0.32, now + t + 0.02)
+      g.gain.exponentialRampToValueAtTime(0.001, now + t + d)
+
+      osc.connect(g)
+      g.connect(masterGain)
+
+      osc.start(now + t)
+      osc.stop(now + t + d + 0.05)
+    })
+  } catch (e) {
+    console.warn('[AudioChime] Birthday fanfare audio error:', e)
+  }
+}

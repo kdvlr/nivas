@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useMemo, useRef, useId } from 'react'
+import React, { useState, useEffect, useMemo, useRef, useId, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import confetti from 'canvas-confetti'
+import { playBalloonPopSound, playBirthdayFanfareSound } from '../lib/useAudioChime'
 import Icon from './Icon'
 import { api } from '../lib/api'
 import { useData } from '../lib/hooks'
@@ -339,51 +341,252 @@ function BirthdayBow({ seed = 0 }: { seed?: number }) {
   )
 }
 
-function FloatingBirthdayBalloons() {
-  const balloons = useMemo(() => [
-    { left: '8%', delay: '0s', dur: '16s', scale: 0.95, color: '#ec4899', shine: '#fbcfe8' },
-    { left: '22%', delay: '5s', dur: '19s', scale: 1.1, color: '#38bdf8', shine: '#bae6fd' },
-    { left: '76%', delay: '2s', dur: '17s', scale: 1.0, color: '#facc15', shine: '#fef9c3' },
-    { left: '88%', delay: '8s', dur: '18s', scale: 0.9, color: '#a855f7', shine: '#f3e8ff' },
-  ], [])
+function BirthdayCrownTopper({ seed = 0 }: { seed?: number }) {
+  const crownId = useMemo(() => `bday_crown_${seed}`, [seed])
+  return (
+    <div className="relative flex flex-col items-center pointer-events-none select-none filter drop-shadow-[0_4px_10px_rgba(0,0,0,0.38)]">
+      <svg
+        width="116"
+        height="76"
+        viewBox="0 0 116 76"
+        className="pointer-events-none"
+        aria-hidden="true"
+      >
+        <defs>
+          <linearGradient id={`${crownId}_gold`} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#fffbeb" />
+            <stop offset="20%" stopColor="#fef08a" />
+            <stop offset="45%" stopColor="#facc15" />
+            <stop offset="75%" stopColor="#eab308" />
+            <stop offset="100%" stopColor="#a16207" />
+          </linearGradient>
+          <linearGradient id={`${crownId}_gem_pink`} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ffe4e6" />
+            <stop offset="40%" stopColor="#f43f5e" />
+            <stop offset="100%" stopColor="#9f1239" />
+          </linearGradient>
+          <linearGradient id={`${crownId}_gem_blue`} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#e0f2fe" />
+            <stop offset="40%" stopColor="#38bdf8" />
+            <stop offset="100%" stopColor="#0369a1" />
+          </linearGradient>
+          <linearGradient id={`${crownId}_ribbon`} x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#be123c" />
+            <stop offset="50%" stopColor="#ec4899" />
+            <stop offset="100%" stopColor="#be123c" />
+          </linearGradient>
+        </defs>
 
-  const bows = useMemo(() => [
-    { left: '16%', delay: '3s', dur: '21s', scale: 0.9, seed: 0 },
-    { left: '82%', delay: '7s', dur: '23s', scale: 0.95, seed: 1 },
-    { left: '48%', delay: '12s', dur: '25s', scale: 0.85, seed: 2 },
-  ], [])
+        {/* Crown Arches & Spires */}
+        {/* Base back shadow */}
+        <path d="M 18 52 Q 58 46 98 52 L 100 58 Q 58 52 16 58 Z" fill="#713f12" />
+
+        {/* Outer Filigree Peaks */}
+        <path d="M 20 52 Q 18 38 26 30 Q 32 38 30 52 Z" fill={`url(#${crownId}_gold)`} stroke="#a16207" strokeWidth="0.8" />
+        <path d="M 96 52 Q 98 38 90 30 Q 84 38 86 52 Z" fill={`url(#${crownId}_gold)`} stroke="#a16207" strokeWidth="0.8" />
+
+        {/* Mid Peaks */}
+        <path d="M 30 52 Q 34 30 44 20 Q 50 32 46 52 Z" fill={`url(#${crownId}_gold)`} stroke="#a16207" strokeWidth="0.8" />
+        <path d="M 86 52 Q 82 30 72 20 Q 66 32 70 52 Z" fill={`url(#${crownId}_gold)`} stroke="#a16207" strokeWidth="0.8" />
+
+        {/* Center Majestic Spire */}
+        <path d="M 46 52 Q 50 24 58 8 Q 66 24 70 52 Z" fill={`url(#${crownId}_gold)`} stroke="#a16207" strokeWidth="0.9" />
+
+        {/* Open Filigree Heart in Center */}
+        <path
+          d="M 58 26 C 54 20, 48 22, 50 28 C 51 34, 58 39, 58 42 C 58 39, 65 34, 66 28 C 68 22, 62 20, 58 26 Z"
+          fill={`url(#${crownId}_gem_pink)`}
+          stroke="#fff1f2"
+          strokeWidth="0.8"
+        />
+
+        {/* Curved Base Tiara Band */}
+        <path d="M 16 51 Q 58 45 100 51 L 98 57 Q 58 51 18 57 Z" fill={`url(#${crownId}_gold)`} stroke="#854d0e" strokeWidth="0.8" />
+
+        {/* Pearl row along base band */}
+        {[22, 31, 40, 49, 58, 67, 76, 85, 94].map((cx, i) => (
+          <circle key={i} cx={cx} cy={51.5 + Math.sin((i / 8) * Math.PI) * -2.5} r="2.2" fill="#fffbeb" stroke="#ca8a04" strokeWidth="0.5" />
+        ))}
+
+        {/* Jewels on Spire Tips */}
+        <circle cx="26" cy="30" r="3.2" fill={`url(#${crownId}_gem_blue)`} stroke="#ffffff" strokeWidth="0.6" />
+        <circle cx="90" cy="30" r="3.2" fill={`url(#${crownId}_gem_blue)`} stroke="#ffffff" strokeWidth="0.6" />
+        <circle cx="44" cy="20" r="3.8" fill={`url(#${crownId}_gem_pink)`} stroke="#ffffff" strokeWidth="0.7" />
+        <circle cx="72" cy="20" r="3.8" fill={`url(#${crownId}_gem_pink)`} stroke="#ffffff" strokeWidth="0.7" />
+
+        {/* Top Majestic Star / Diamond on center spire */}
+        <g transform="translate(58, 8)">
+          <path d="M 0 -7 L 2 -2 L 7 0 L 2 2 L 0 7 L -2 2 L -7 0 L -2 -2 Z" fill="#ffffff" stroke="#fef08a" strokeWidth="0.6" />
+          <circle cx="0" cy="0" r="1.8" fill="#fde047" />
+        </g>
+
+        {/* Shimmering Star Sparkles */}
+        <g style={{ animation: 'crownTwinkle 2s ease-in-out infinite' }}>
+          <path d="M 40 14 L 41 16 L 43 17 L 41 18 L 40 20 L 39 18 L 37 17 L 39 16 Z" fill="#ffffff" opacity="0.9" />
+          <path d="M 76 14 L 77 16 L 79 17 L 77 18 L 76 20 L 75 18 L 73 17 L 75 16 Z" fill="#ffffff" opacity="0.9" />
+        </g>
+
+        {/* Pink Satin Ribbon Banner Underneath */}
+        <g transform="translate(16, 58)">
+          <polygon points="-6,10 0,2 14,2 14,14 0,14" fill="#9f1239" />
+          <polygon points="90,10 84,2 70,2 70,14 84,14" fill="#9f1239" />
+          <rect x="6" y="1" width="72" height="15" rx="3.5" fill={`url(#${crownId}_ribbon)`} stroke="#fde047" strokeWidth="0.9" />
+          <text
+            x="42"
+            y="11.5"
+            textAnchor="middle"
+            fill="#ffffff"
+            fontSize="7"
+            fontWeight="900"
+            fontFamily="sans-serif"
+            letterSpacing="0.8"
+            style={{ textShadow: '0 1px 2px rgba(159, 18, 57, 0.6)' }}
+          >
+            👑 BIRTHDAY GIRL 👑
+          </text>
+        </g>
+      </svg>
+      <style>{`
+        @keyframes crownTwinkle {
+          0%, 100% { opacity: 0.3; transform: scale(0.85); }
+          50% { opacity: 1; transform: scale(1.15); }
+        }
+      `}</style>
+    </div>
+  )
+}
+
+interface PopBurst {
+  id: number
+  x: number
+  y: number
+  color: string
+  text: string
+}
+
+const BALLOON_POP_MESSAGES = [
+  'Pop! 🎈',
+  'Happy 9th Birthday! 🎂',
+  'Princess Swara! 👑',
+  'Make a Wish! ⭐',
+  'Superstar! 🌟',
+  'Yay Swara! 💖',
+  'So Awesome! ✨',
+]
+
+function FloatingBirthdayBalloons() {
+  const [poppedMap, setPoppedMap] = useState<Record<number, boolean>>({})
+  const [popBursts, setPopBursts] = useState<PopBurst[]>([])
+  const burstsTimerRef = useRef<ReturnType<typeof setTimeout>[]>([])
+
+  const balloons = useMemo(
+    () => [
+      { id: 0, left: '8%', delay: '0s', dur: '16s', scale: 0.95, color: '#ec4899', shine: '#fbcfe8' },
+      { id: 1, left: '22%', delay: '5s', dur: '19s', scale: 1.1, color: '#38bdf8', shine: '#bae6fd' },
+      { id: 2, left: '38%', delay: '9s', dur: '17s', scale: 0.9, color: '#f43f5e', shine: '#ffe4e6' },
+      { id: 3, left: '62%', delay: '13s', dur: '18s', scale: 1.05, color: '#a855f7', shine: '#f3e8ff' },
+      { id: 4, left: '76%', delay: '2s', dur: '17s', scale: 1.0, color: '#facc15', shine: '#fef9c3' },
+      { id: 5, left: '88%', delay: '8s', dur: '18s', scale: 0.9, color: '#34d399', shine: '#d1fae5' },
+    ],
+    [],
+  )
+
+  const bows = useMemo(
+    () => [
+      { left: '16%', delay: '3s', dur: '21s', scale: 0.9, seed: 0 },
+      { left: '82%', delay: '7s', dur: '23s', scale: 0.95, seed: 1 },
+      { left: '48%', delay: '12s', dur: '25s', scale: 0.85, seed: 2 },
+    ],
+    [],
+  )
+
+  const handlePop = (id: number, color: string, e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation()
+    playBalloonPopSound()
+
+    let clientX = window.innerWidth / 2
+    let clientY = window.innerHeight / 2
+    if ('clientX' in e && typeof e.clientX === 'number') {
+      clientX = e.clientX
+      clientY = e.clientY
+    } else if ('touches' in e && e.touches.length > 0) {
+      clientX = e.touches[0].clientX
+      clientY = e.touches[0].clientY
+    } else {
+      const target = e.currentTarget as HTMLElement
+      const rect = target.getBoundingClientRect()
+      clientX = rect.left + rect.width / 2
+      clientY = rect.top + rect.height / 2
+    }
+
+    const burstId = Date.now() + Math.random()
+    const msg = BALLOON_POP_MESSAGES[Math.floor(Math.random() * BALLOON_POP_MESSAGES.length)]
+
+    setPoppedMap((prev) => ({ ...prev, [id]: true }))
+    setPopBursts((prev) => [...prev, { id: burstId, x: clientX, y: clientY, color, text: msg }])
+
+    // Respawns balloon after 4s
+    const respawnTimer = setTimeout(() => {
+      setPoppedMap((prev) => ({ ...prev, [id]: false }))
+    }, 4000)
+
+    // Cleans up burst after 1.8s
+    const burstCleanupTimer = setTimeout(() => {
+      setPopBursts((prev) => prev.filter((b) => b.id !== burstId))
+    }, 1800)
+
+    burstsTimerRef.current.push(respawnTimer, burstCleanupTimer)
+  }
+
+  useEffect(() => {
+    return () => {
+      burstsTimerRef.current.forEach(clearTimeout)
+    }
+  }, [])
 
   return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden z-10 select-none">
-      {balloons.map((b, i) => (
-        <div
-          key={i}
-          className="absolute -bottom-40"
-          style={{
-            left: b.left,
-            animation: `floatUpBalloon ${b.dur} linear infinite`,
-            animationDelay: b.delay,
-            transform: `scale(${b.scale})`,
-          }}
-        >
-          <svg width="70" height="180" viewBox="0 0 70 180" className="filter drop-shadow-[0_6px_12px_rgba(0,0,0,0.2)]">
-            <path
-              d="M 35 10 C 14 10, 4 30, 4 52 C 4 76, 26 95, 33 100 L 32 105 L 38 105 L 37 100 C 44 95, 66 76, 66 52 C 66 30, 56 10, 35 10 Z"
-              fill={b.color}
-            />
-            <ellipse cx="24" cy="38" rx="8" ry="16" fill={b.shine} opacity="0.45" transform="rotate(-25 24 38)" />
-            <circle cx="20" cy="24" r="3" fill="#ffffff" opacity="0.75" />
-            <polygon points="32,104 38,104 35,108" fill={b.color} />
-            <path
-              d="M 35 108 Q 30 120 40 135 T 32 155 T 42 175"
-              stroke="rgba(255,255,255,0.7)"
-              strokeWidth="1.4"
-              fill="none"
-              strokeLinecap="round"
-            />
-          </svg>
-        </div>
-      ))}
+    <div className="absolute inset-0 pointer-events-none overflow-hidden z-20 select-none">
+      {balloons.map((b) => {
+        if (poppedMap[b.id]) return null
+        return (
+          <div
+            key={b.id}
+            className="absolute -bottom-40 pointer-events-auto cursor-pointer active:scale-90 transition-transform"
+            style={{
+              left: b.left,
+              animation: `floatUpBalloon ${b.dur} linear infinite`,
+              animationDelay: b.delay,
+              transform: `scale(${b.scale})`,
+            }}
+            onClick={(e) => handlePop(b.id, b.color, e)}
+            onTouchStart={(e) => handlePop(b.id, b.color, e)}
+            title="Tap to pop!"
+          >
+            <svg
+              width="70"
+              height="180"
+              viewBox="0 0 70 180"
+              className="filter drop-shadow-[0_6px_12px_rgba(0,0,0,0.25)] hover:brightness-110 transition-all"
+            >
+              <path
+                d="M 35 10 C 14 10, 4 30, 4 52 C 4 76, 26 95, 33 100 L 32 105 L 38 105 L 37 100 C 44 95, 66 76, 66 52 C 66 30, 56 10, 35 10 Z"
+                fill={b.color}
+              />
+              <ellipse cx="24" cy="38" rx="8" ry="16" fill={b.shine} opacity="0.45" transform="rotate(-25 24 38)" />
+              <circle cx="20" cy="24" r="3" fill="#ffffff" opacity="0.75" />
+              <polygon points="32,104 38,104 35,108" fill={b.color} />
+              <path
+                d="M 35 108 Q 30 120 40 135 T 32 155 T 42 175"
+                stroke="rgba(255,255,255,0.7)"
+                strokeWidth="1.4"
+                fill="none"
+                strokeLinecap="round"
+              />
+            </svg>
+          </div>
+        )
+      })}
+
       {bows.map((b, i) => (
         <div
           key={`bow-${i}`}
@@ -398,22 +601,54 @@ function FloatingBirthdayBalloons() {
           <BirthdayBow seed={b.seed} />
         </div>
       ))}
+
+      {/* Pop Particle & Message Bursts */}
+      {popBursts.map((p) => (
+        <div
+          key={p.id}
+          className="fixed pointer-events-none z-50 -translate-x-1/2 -translate-y-1/2"
+          style={{ left: `${p.x}px`, top: `${p.y}px` }}
+        >
+          {/* Confetti Sparks Ring */}
+          {[0, 36, 72, 108, 144, 180, 216, 252, 288, 324].map((deg, idx) => (
+            <div
+              key={idx}
+              className="absolute w-2 h-2 rounded-full"
+              style={{
+                backgroundColor: idx % 2 === 0 ? p.color : '#fde047',
+                boxShadow: `0 0 6px ${p.color}`,
+                animation: `balloonPopSpark 0.75s cubic-bezier(0.2, 0.9, 0.3, 1) forwards`,
+                ['--angle' as string]: `${deg}deg`,
+              }}
+            />
+          ))}
+          {/* Celebratory Message Pill */}
+          <div
+            className="whitespace-nowrap px-3.5 py-1.5 rounded-full font-black text-xs sm:text-sm tracking-wide shadow-xl border border-pink-300/80 bg-white/95 text-pink-600"
+            style={{ animation: 'balloonMsgFloat 1.6s ease-out forwards' }}
+          >
+            {p.text}
+          </div>
+        </div>
+      ))}
+
       <style>{`
         @keyframes floatUpBalloon {
-          0% {
-            transform: translateY(0) rotate(0deg);
-            opacity: 0;
-          }
-          5% {
-            opacity: 0.95;
-          }
-          90% {
-            opacity: 0.95;
-          }
-          100% {
-            transform: translateY(-130vh) rotate(8deg);
-            opacity: 0;
-          }
+          0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+          5% { opacity: 0.95; }
+          90% { opacity: 0.95; }
+          100% { transform: translateY(-130vh) rotate(8deg); opacity: 0; }
+        }
+        @keyframes balloonPopSpark {
+          0% { transform: rotate(var(--angle)) translateX(0) scale(1.4); opacity: 1; }
+          100% { transform: rotate(var(--angle)) translateX(48px) scale(0.2); opacity: 0; }
+        }
+        @keyframes balloonMsgFloat {
+          0% { transform: translateY(0) scale(0.6); opacity: 0; }
+          15% { transform: translateY(-12px) scale(1.1); opacity: 1; }
+          30% { transform: translateY(-20px) scale(1); opacity: 1; }
+          80% { transform: translateY(-42px) scale(0.98); opacity: 0.95; }
+          100% { transform: translateY(-56px) scale(0.9); opacity: 0; }
         }
       `}</style>
     </div>
@@ -2558,6 +2793,401 @@ function StruttingTurkey() {
       >
         <Turkey flip={direction === -1} />
       </motion.div>
+    </motion.div>
+  )
+}
+
+function ParadeSvg({ celebrating }: { celebrating: boolean }) {
+  return (
+    <div className="relative filter drop-shadow-[0_8px_16px_rgba(0,0,0,0.3)]">
+      <svg
+        width="420"
+        height="125"
+        viewBox="0 0 420 125"
+        className="pointer-events-none"
+        aria-hidden="true"
+      >
+        <defs>
+          <linearGradient id="wagon_red" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#f87171" />
+            <stop offset="40%" stopColor="#ef4444" />
+            <stop offset="100%" stopColor="#b91c1c" />
+          </linearGradient>
+          <linearGradient id="puppy_gold" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#fde68a" />
+            <stop offset="40%" stopColor="#fbbf24" />
+            <stop offset="100%" stopColor="#d97706" />
+          </linearGradient>
+          <linearGradient id="cake_strawb" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#f472b6" />
+            <stop offset="100%" stopColor="#db2777" />
+          </linearGradient>
+        </defs>
+
+        {/* Wagon Pull Cord */}
+        <path
+          d="M 330 76 Q 300 84 275 88"
+          stroke="#ca8a04"
+          strokeWidth="2.2"
+          strokeDasharray="4 2"
+          fill="none"
+        />
+
+        {/* 1. TRAILING DACHSHUND PUPPY */}
+        <g transform="translate(20, 30)">
+          {/* Heart Balloon */}
+          <g style={{ animation: 'paradeBalloonWobble 3s ease-in-out infinite' }}>
+            <path
+              d="M 68 8 C 68 -2, 58 -8, 52 -2 C 46 -8, 36 -2, 36 8 C 36 18, 52 30, 52 30 C 52 30, 68 18, 68 8 Z"
+              fill="#f43f5e"
+            />
+            <path d="M 52 30 Q 58 45 68 62" stroke="rgba(255,255,255,0.7)" strokeWidth="1.2" fill="none" />
+          </g>
+          {/* Dachshund Body */}
+          <g style={{ animation: celebrating ? 'paradeHappyHop 0.5s ease-in-out infinite' : 'paradeTrot 0.45s ease-in-out infinite' }}>
+            {/* Tail */}
+            <path
+              d="M 12 56 Q 2 45 6 36"
+              stroke="#78350f"
+              strokeWidth="3.5"
+              strokeLinecap="round"
+              fill="none"
+              style={{ transformOrigin: '12px 56px', animation: 'paradeTailWag 0.25s ease-in-out infinite alternate' }}
+            />
+            {/* Long Brown Body */}
+            <rect x="12" y="52" width="54" height="20" rx="9" fill="#92400e" />
+            {/* Paws */}
+            <rect x="18" y="70" width="7" height="12" rx="3" fill="#78350f" />
+            <rect x="29" y="70" width="7" height="12" rx="3" fill="#92400e" />
+            <rect x="48" y="70" width="7" height="12" rx="3" fill="#78350f" />
+            <rect x="58" y="70" width="7" height="12" rx="3" fill="#92400e" />
+            {/* Head */}
+            <circle cx="68" cy="48" r="13" fill="#92400e" />
+            <path d="M 66 42 Q 60 38 60 54 Q 66 56 68 50" fill="#78350f" />
+            <circle cx="74" cy="46" r="2.2" fill="#0f172a" />
+            <circle cx="75" cy="45" r="0.8" fill="#ffffff" />
+            {/* Snout & Nose */}
+            <ellipse cx="78" cy="51" rx="6" ry="4" fill="#78350f" />
+            <circle cx="82" cy="50" r="1.8" fill="#0f172a" />
+            {/* Pink Bowtie */}
+            <polygon points="65,58 72,55 72,61" fill="#ec4899" />
+            <polygon points="79,58 72,55 72,61" fill="#ec4899" />
+            <circle cx="72" cy="58" r="2" fill="#f43f5e" />
+          </g>
+        </g>
+
+        {/* 2. THE CLASSIC RED WAGON */}
+        <g transform="translate(110, 0)">
+          {/* Bobbing Balloon tied to Wagon */}
+          <g style={{ animation: 'paradeBalloonWobble 3.5s ease-in-out infinite' }}>
+            <ellipse cx="8" cy="24" rx="11" ry="14" fill="#ec4899" />
+            <ellipse cx="5" cy="20" rx="3" ry="6" fill="#fbcfe8" opacity="0.6" transform="rotate(-20 5 20)" />
+            <polygon points="6,38 10,38 8,42" fill="#ec4899" />
+            <path d="M 8 42 Q 4 58 12 72" stroke="rgba(255,255,255,0.75)" strokeWidth="1.2" fill="none" />
+          </g>
+
+          {/* Cargo: 2-Tier Birthday Cake */}
+          <g transform="translate(24, 28)">
+            {/* Bottom tier */}
+            <rect x="0" y="24" width="56" height="20" rx="3" fill="#fbcfe8" stroke="#f472b6" strokeWidth="1.2" />
+            <path d="M 0 28 Q 6 34 12 28 Q 18 34 24 28 Q 30 34 36 28 Q 42 34 48 28 Q 54 34 56 28 L 56 24 L 0 24 Z" fill="url(#cake_strawb)" />
+            {/* Top tier */}
+            <rect x="9" y="8" width="38" height="17" rx="3" fill="#ffffff" stroke="#f472b6" strokeWidth="1.2" />
+            <path d="M 9 12 Q 15 17 21 12 Q 27 17 33 12 Q 39 17 47 12 L 47 8 L 9 8 Z" fill="url(#cake_strawb)" />
+            {/* Candles */}
+            {[17, 28, 39].map((cx, i) => (
+              <g key={i} transform={`translate(${cx}, 0)`}>
+                <rect x="-1.5" y="0" width="3" height="8" rx="0.5" fill={i === 1 ? '#38bdf8' : '#facc15'} />
+                <path
+                  d="M 0 -4 Q 2.5 -1 0 1 Q -2.5 -1 0 -4 Z"
+                  fill="#f97316"
+                  style={{ animation: 'paradeFlame 0.6s ease-in-out infinite alternate' }}
+                />
+                <circle cx="0" cy="-1" r="1.2" fill="#fef08a" />
+              </g>
+            ))}
+          </g>
+
+          {/* Cargo: Wrapped Gift Boxes */}
+          <g transform="translate(86, 32)">
+            <rect x="0" y="16" width="24" height="24" rx="2" fill="#c084fc" />
+            <rect x="10" y="16" width="4" height="24" fill="#fde047" />
+            <rect x="0" y="26" width="24" height="4" fill="#fde047" />
+            <rect x="22" y="12" width="24" height="28" rx="2" fill="#38bdf8" />
+            <rect x="32" y="12" width="4" height="28" fill="#f43f5e" />
+            <rect x="22" y="24" width="24" height="4" fill="#f43f5e" />
+            <rect x="8" y="0" width="20" height="17" rx="2" fill="#f472b6" />
+            <rect x="16" y="0" width="4" height="17" fill="#ffffff" />
+            <rect x="8" y="7" width="20" height="3" fill="#ffffff" />
+            <ellipse cx="14" cy="-1" rx="4" ry="2" fill="#ffffff" transform="rotate(-30 14 -1)" />
+            <ellipse cx="22" cy="-1" rx="4" ry="2" fill="#ffffff" transform="rotate(30 22 -1)" />
+          </g>
+
+          {/* 3. DRUMMER KITTEN */}
+          <g transform="translate(122, 28)">
+            <ellipse cx="14" cy="30" rx="11" ry="14" fill="#ea580c" />
+            <ellipse cx="14" cy="32" rx="7" ry="10" fill="#fff7ed" />
+            <circle cx="14" cy="14" r="10" fill="#ea580c" />
+            <polygon points="6,8 3,0 11,5" fill="#ea580c" />
+            <polygon points="5,7 4,2 9,5" fill="#fbcfe8" />
+            <polygon points="22,8 25,0 17,5" fill="#ea580c" />
+            <polygon points="23,7 24,2 19,5" fill="#fbcfe8" />
+            <circle cx="11" cy="13" r="1.5" fill="#0f172a" />
+            <circle cx="17" cy="13" r="1.5" fill="#0f172a" />
+            <circle cx="14" cy="16" r="1" fill="#f43f5e" />
+            <polygon points="10,6 14,-6 18,6" fill="#38bdf8" />
+            <circle cx="14" cy="-6" r="2" fill="#fde047" />
+
+            {/* Drum & Drumsticks */}
+            <g transform="translate(4, 28)">
+              <ellipse cx="10" cy="12" rx="10" ry="4" fill="#94a3b8" stroke="#475569" strokeWidth="1" />
+              <rect x="0" y="12" width="20" height="10" fill="#f43f5e" />
+              <ellipse cx="10" cy="22" rx="10" ry="4" fill="#cbd5e1" stroke="#475569" strokeWidth="1" />
+              <line
+                x1="4"
+                y1="6"
+                x2="9"
+                y2="12"
+                stroke="#facc15"
+                strokeWidth="1.8"
+                style={{ transformOrigin: '4px 6px', animation: 'paradeDrumL 0.25s ease-in-out infinite alternate' }}
+              />
+              <line
+                x1="16"
+                y1="6"
+                x2="11"
+                y2="12"
+                stroke="#facc15"
+                strokeWidth="1.8"
+                style={{ transformOrigin: '16px 6px', animation: 'paradeDrumR 0.25s ease-in-out infinite alternate' }}
+              />
+            </g>
+
+            {/* Floating Musical Notes */}
+            <g style={{ animation: 'paradeMusicFloat 2s ease-out infinite' }}>
+              <text x="22" y="4" fill="#ec4899" fontSize="11" fontWeight="bold">♪</text>
+              <text x="28" y="-6" fill="#38bdf8" fontSize="13" fontWeight="bold">♫</text>
+            </g>
+          </g>
+
+          {/* Red Wooden Wagon Body */}
+          <rect x="12" y="70" width="144" height="30" rx="5" fill="url(#wagon_red)" stroke="#991b1b" strokeWidth="2" />
+          <line x1="14" y1="80" x2="154" y2="80" stroke="#7f1d1d" strokeWidth="1" opacity="0.6" />
+          <line x1="14" y1="90" x2="154" y2="90" stroke="#7f1d1d" strokeWidth="1" opacity="0.6" />
+          <rect x="152" y="78" width="12" height="6" rx="2" fill="#475569" />
+
+          {/* Yellow Spoke Wheels */}
+          <g transform="translate(36, 102)">
+            <circle cx="0" cy="0" r="15" fill="#facc15" stroke="#ca8a04" strokeWidth="2.5" />
+            <circle cx="0" cy="0" r="11" fill="none" stroke="#eab308" strokeWidth="1.2" />
+            <g style={{ animation: 'paradeWheelSpin 1.4s linear infinite' }}>
+              <line x1="-11" y1="0" x2="11" y2="0" stroke="#a16207" strokeWidth="1.4" />
+              <line x1="0" y1="-11" x2="0" y2="11" stroke="#a16207" strokeWidth="1.4" />
+              <line x1="-8" y1="-8" x2="8" y2="8" stroke="#a16207" strokeWidth="1.4" />
+              <line x1="-8" y1="8" x2="8" y2="-8" stroke="#a16207" strokeWidth="1.4" />
+            </g>
+            <circle cx="0" cy="0" r="4.5" fill="#f1f5f9" stroke="#475569" strokeWidth="1.2" />
+          </g>
+          <g transform="translate(132, 102)">
+            <circle cx="0" cy="0" r="15" fill="#facc15" stroke="#ca8a04" strokeWidth="2.5" />
+            <circle cx="0" cy="0" r="11" fill="none" stroke="#eab308" strokeWidth="1.2" />
+            <g style={{ animation: 'paradeWheelSpin 1.4s linear infinite' }}>
+              <line x1="-11" y1="0" x2="11" y2="0" stroke="#a16207" strokeWidth="1.4" />
+              <line x1="0" y1="-11" x2="0" y2="11" stroke="#a16207" strokeWidth="1.4" />
+              <line x1="-8" y1="-8" x2="8" y2="8" stroke="#a16207" strokeWidth="1.4" />
+              <line x1="-8" y1="8" x2="8" y2="-8" stroke="#a16207" strokeWidth="1.4" />
+            </g>
+            <circle cx="0" cy="0" r="4.5" fill="#f1f5f9" stroke="#475569" strokeWidth="1.2" />
+          </g>
+        </g>
+
+        {/* 4. LEADING GOLDEN RETRIEVER PUPPY */}
+        <g transform="translate(295, 26)">
+          <g style={{ animation: celebrating ? 'paradeHappyHop 0.5s ease-in-out infinite' : 'paradeTrot 0.45s ease-in-out infinite' }}>
+            <path
+              d="M 12 52 Q -2 40 4 28"
+              stroke="#d97706"
+              strokeWidth="4.5"
+              strokeLinecap="round"
+              fill="none"
+              style={{ transformOrigin: '12px 52px', animation: 'paradeTailWag 0.22s ease-in-out infinite alternate' }}
+            />
+            <rect x="18" y="66" width="9" height="18" rx="4" fill="#d97706" />
+            <rect x="29" y="66" width="9" height="18" rx="4" fill="#f59e0b" />
+            <ellipse cx="44" cy="54" rx="28" ry="18" fill="url(#puppy_gold)" />
+            <rect x="58" y="66" width="9" height="18" rx="4" fill="#d97706" />
+            <rect x="69" y="66" width="9" height="18" rx="4" fill="#f59e0b" />
+            <circle cx="82" cy="40" r="16" fill="url(#puppy_gold)" />
+            <path
+              d="M 76 34 Q 68 28 66 48 Q 74 54 78 44"
+              fill="#d97706"
+              style={{ transformOrigin: '76px 34px', animation: 'paradeEarFlap 0.45s ease-in-out infinite alternate' }}
+            />
+            <ellipse cx="94" cy="44" rx="8" ry="6" fill="#fde68a" />
+            <circle cx="98" cy="42" r="2.5" fill="#0f172a" />
+            <circle cx="88" cy="36" r="2.6" fill="#0f172a" />
+            <circle cx="89" cy="35" r="0.9" fill="#ffffff" />
+            <path d="M 94 48 C 94 54 99 54 99 48" fill="#f43f5e" />
+            <polygon points="68,52 86,52 77,66" fill="#06b6d4" />
+            <circle cx="77" cy="58" r="1.2" fill="#ffffff" />
+            <polygon points="78,26 84,6 90,26" fill="#a855f7" />
+            <line x1="80" y1="21" x2="88" y2="21" stroke="#ec4899" strokeWidth="2.5" />
+            <line x1="81" y1="14" x2="87" y2="14" stroke="#facc15" strokeWidth="2" />
+            <circle cx="84" cy="5" r="3" fill="#facc15" />
+          </g>
+        </g>
+      </svg>
+
+      <style>{`
+        @keyframes paradeTrot {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-4px); }
+        }
+        @keyframes paradeHappyHop {
+          0%, 100% { transform: translateY(0) scale(1); }
+          50% { transform: translateY(-7px) scale(1.03); }
+        }
+        @keyframes paradeTailWag {
+          0% { transform: rotate(-18deg); }
+          100% { transform: rotate(24deg); }
+        }
+        @keyframes paradeEarFlap {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(-14deg); }
+        }
+        @keyframes paradeWheelSpin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        @keyframes paradeBalloonWobble {
+          0%, 100% { transform: rotate(-5deg) translateY(0); }
+          50% { transform: rotate(6deg) translateY(-5px); }
+        }
+        @keyframes paradeFlame {
+          0% { transform: scale(0.85); opacity: 0.85; }
+          100% { transform: scale(1.2); opacity: 1; }
+        }
+        @keyframes paradeDrumL {
+          0% { transform: rotate(-15deg); }
+          100% { transform: rotate(15deg); }
+        }
+        @keyframes paradeDrumR {
+          0% { transform: rotate(15deg); }
+          100% { transform: rotate(-15deg); }
+        }
+        @keyframes paradeMusicFloat {
+          0% { transform: translate(0, 0) scale(0.8); opacity: 0; }
+          40% { opacity: 1; }
+          100% { transform: translate(12px, -24px) scale(1.2); opacity: 0; }
+        }
+      `}</style>
+    </div>
+  )
+}
+
+function BirthdayParade() {
+  const [active, setActive] = useState(false)
+  const [phase, setPhase] = useState<'entering' | 'celebrating' | 'exiting'>('entering')
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
+
+  const clearAllTimers = () => {
+    timersRef.current.forEach(clearTimeout)
+    timersRef.current = []
+  }
+
+  const trigger = useCallback(() => {
+    clearAllTimers()
+    const qp = getQueryParam('parade')
+    if (qp === 'freeze') {
+      setPhase('celebrating')
+      setActive(true)
+      return
+    }
+
+    setPhase('entering')
+    setActive(true)
+
+    // Schedule phases:
+    // 0s - 4.8s: entering (trots to mid-screen)
+    // 4.8s - 8.5s: celebrating (pauses, puppy bobs, kitten drums, speech bubble appears)
+    // 8.5s - 13.5s: exiting (trots off screen)
+    timersRef.current.push(
+      setTimeout(() => {
+        setPhase('celebrating')
+      }, 4800),
+      setTimeout(() => {
+        setPhase('exiting')
+      }, 8500),
+      setTimeout(() => {
+        setActive(false)
+        timersRef.current.push(
+          setTimeout(trigger, 120_000 + Math.random() * 60_000),
+        )
+      }, 13500),
+    )
+  }, [])
+
+  useEffect(() => {
+    const qp = getQueryParam('parade')
+    if (qp) {
+      trigger()
+      return () => clearAllTimers()
+    }
+
+    const handleCustom = () => trigger()
+    window.addEventListener('trigger-parade', handleCustom)
+
+    const initialTimer = setTimeout(trigger, 5000)
+    timersRef.current.push(initialTimer)
+
+    return () => {
+      window.removeEventListener('trigger-parade', handleCustom)
+      clearAllTimers()
+    }
+  }, [trigger])
+
+  if (!active) return null
+
+  const isFreeze = getQueryParam('parade') === 'freeze'
+  const screenW = typeof window !== 'undefined' ? window.innerWidth : 1920
+  const midX = Math.round(screenW * 0.35)
+
+  let targetX = midX
+  let animDuration = 0.5
+  let animEase: any = 'linear'
+
+  if (isFreeze) {
+    targetX = midX
+  } else if (phase === 'entering') {
+    targetX = midX
+    animDuration = 4.8
+    animEase = [0.25, 0.1, 0.25, 1.0]
+  } else if (phase === 'celebrating') {
+    targetX = midX
+    animDuration = 0.1
+  } else if (phase === 'exiting') {
+    targetX = screenW + 450
+    animDuration = 5.0
+    animEase = [0.4, 0.0, 0.6, 1.0]
+  }
+
+  return (
+    <motion.div
+      initial={isFreeze ? { x: midX } : phase === 'entering' ? { x: -450 } : undefined}
+      animate={{ x: targetX }}
+      transition={{ duration: animDuration, ease: animEase }}
+      className="fixed bottom-2 pointer-events-none z-30 select-none"
+    >
+      <div className="relative">
+        {phase === 'celebrating' && (
+          <div className="absolute -top-16 left-[48%] -translate-x-1/2 z-40 whitespace-nowrap px-4 py-2 rounded-2xl bg-gradient-to-r from-pink-500 via-purple-500 to-amber-500 text-white font-black text-xs sm:text-sm shadow-2xl border-2 border-white animate-bounce">
+            🎉 Happy 9th Birthday Swara! 🎂
+            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-x-8 border-x-transparent border-t-8 border-t-purple-500" />
+          </div>
+        )}
+
+        <ParadeSvg celebrating={phase === 'celebrating'} />
+      </div>
     </motion.div>
   )
 }
@@ -5716,7 +6346,13 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
   // Select the top attachment element based on weather kind & sky phase
   let topElement: React.ReactNode = null
 
-  if (isOctober(seasonalNow)) {
+  if (isSwaraBirthday(seasonalNow) || Boolean(getQueryParam('crown'))) {
+    topElement = (
+      <div className="absolute bottom-[calc(100%-14px)] pointer-events-none select-none z-10">
+        <BirthdayCrownTopper seed={seedOffset} />
+      </div>
+    )
+  } else if (isOctober(seasonalNow)) {
     if (phase === 'dusk' || phase === 'night') {
       topElement = (
         <div className="absolute bottom-[calc(100%-12px)] pointer-events-none select-none z-10">
@@ -5827,6 +6463,240 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
         {card}
       </motion.div>
     </motion.div>
+  )
+}
+
+function BirthdayFanfareOverlay({ seasonalDate }: { seasonalDate?: Date }) {
+  const [active, setActive] = useState(false)
+  const [fading, setFading] = useState(false)
+  const lastHourTriggeredRef = useRef<number>(-1)
+  const timerRef = useRef<ReturnType<typeof setTimeout>[]>([])
+
+  const clearTimers = () => {
+    timerRef.current.forEach(clearTimeout)
+    timerRef.current = []
+  }
+
+  const trigger = useCallback(() => {
+    clearTimers()
+    setFading(false)
+    setActive(true)
+    playBirthdayFanfareSound()
+
+    // Dual corner confetti cannons
+    confetti({
+      particleCount: 95,
+      angle: 60,
+      spread: 75,
+      origin: { x: 0.08, y: 0.85 },
+      colors: ['#f43f5e', '#ec4899', '#facc15', '#38bdf8', '#a855f7'],
+      disableForReducedMotion: true,
+    })
+    confetti({
+      particleCount: 95,
+      angle: 120,
+      spread: 75,
+      origin: { x: 0.92, y: 0.85 },
+      colors: ['#f43f5e', '#ec4899', '#facc15', '#38bdf8', '#a855f7'],
+      disableForReducedMotion: true,
+    })
+
+    // Second wave burst at 1.4s
+    const secondWave = setTimeout(() => {
+      confetti({
+        particleCount: 70,
+        spread: 90,
+        origin: { x: 0.5, y: 0.4 },
+        colors: ['#ffd700', '#ff69b4', '#00ffff', '#ff1493'],
+        disableForReducedMotion: true,
+      })
+    }, 1400)
+    timerRef.current.push(secondWave)
+
+    // Auto dismiss after 6.4s (with 0.6s fade)
+    timerRef.current.push(
+      setTimeout(() => setFading(true), 5800),
+      setTimeout(() => {
+        setActive(false)
+        setFading(false)
+      }, 6400),
+    )
+  }, [])
+
+  const dismiss = () => {
+    clearTimers()
+    setFading(true)
+    setTimeout(() => {
+      setActive(false)
+      setFading(false)
+    }, 350)
+  }
+
+  useEffect(() => {
+    const handleCustom = () => trigger()
+    window.addEventListener('trigger-birthday-fanfare', handleCustom)
+
+    if (getQueryParam('fanfare') === '1') {
+      trigger()
+    }
+
+    // Hourly check on Swara's birthday
+    const interval = setInterval(() => {
+      const now = new Date()
+      const isBday = isSwaraBirthday(now)
+      if (isBday && now.getMinutes() === 0 && now.getHours() !== lastHourTriggeredRef.current) {
+        lastHourTriggeredRef.current = now.getHours()
+        trigger()
+      }
+    }, 30_000)
+
+    return () => {
+      window.removeEventListener('trigger-birthday-fanfare', handleCustom)
+      clearInterval(interval)
+      clearTimers()
+    }
+  }, [trigger, seasonalDate])
+
+  if (!active) return null
+
+  return (
+    <div
+      onClick={dismiss}
+      className={`fixed inset-0 z-[120] flex items-center justify-center p-4 select-none cursor-pointer transition-opacity duration-500 ${
+        fading ? 'opacity-0 pointer-events-none' : 'opacity-100 pointer-events-auto'
+      }`}
+      style={{
+        background: 'radial-gradient(circle at 50% 40%, rgba(55, 12, 75, 0.9) 0%, rgba(12, 6, 25, 0.96) 100%)',
+      }}
+    >
+      {/* Sweeping Theatrical Spotlight Cones */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-40">
+        <div
+          className="absolute -bottom-10 left-10 w-96 h-[120vh] origin-bottom-left"
+          style={{
+            background: 'linear-gradient(65deg, rgba(254, 240, 138, 0.45) 0%, rgba(250, 204, 21, 0.15) 45%, transparent 75%)',
+            animation: 'spotlightSweepL 4s ease-in-out infinite alternate',
+          }}
+        />
+        <div
+          className="absolute -bottom-10 right-10 w-96 h-[120vh] origin-bottom-right"
+          style={{
+            background: 'linear-gradient(-65deg, rgba(244, 114, 182, 0.45) 0%, rgba(236, 72, 153, 0.15) 45%, transparent 75%)',
+            animation: 'spotlightSweepR 4s ease-in-out infinite alternate',
+          }}
+        />
+      </div>
+
+      {/* Main Hero Card Stage */}
+      <div
+        className="relative max-w-xl w-full flex flex-col items-center text-center p-8 sm:p-12 rounded-3xl backdrop-blur-2xl bg-white/10 dark:bg-black/30 border border-white/30 shadow-[0_25px_60px_rgba(0,0,0,0.6)] animate-in fade-in zoom-in-95 duration-500"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Floating Crowned Giant Numeral 9 */}
+        <div className="relative mb-4 filter drop-shadow-[0_12px_24px_rgba(250,204,21,0.45)]">
+          <svg width="150" height="150" viewBox="0 0 150 150" className="pointer-events-none">
+            <defs>
+              <linearGradient id="fanfare_gold_9" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#fffbeb" />
+                <stop offset="25%" stopColor="#fef08a" />
+                <stop offset="50%" stopColor="#facc15" />
+                <stop offset="75%" stopColor="#eab308" />
+                <stop offset="100%" stopColor="#a16207" />
+              </linearGradient>
+              <linearGradient id="fanfare_gem_pink" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#ffe4e6" />
+                <stop offset="50%" stopColor="#f43f5e" />
+                <stop offset="100%" stopColor="#9f1239" />
+              </linearGradient>
+            </defs>
+
+            {/* Sparkling Diamond Tiara Crown perched atop the "9" */}
+            <g transform="translate(38, 2) scale(0.65)">
+              <path d="M 18 52 Q 58 46 98 52 L 100 58 Q 58 52 16 58 Z" fill="#713f12" />
+              <path d="M 20 52 Q 18 38 26 30 Q 32 38 30 52 Z" fill="url(#fanfare_gold_9)" stroke="#a16207" strokeWidth="0.8" />
+              <path d="M 96 52 Q 98 38 90 30 Q 84 38 86 52 Z" fill="url(#fanfare_gold_9)" stroke="#a16207" strokeWidth="0.8" />
+              <path d="M 30 52 Q 34 30 44 20 Q 50 32 46 52 Z" fill="url(#fanfare_gold_9)" stroke="#a16207" strokeWidth="0.8" />
+              <path d="M 86 52 Q 82 30 72 20 Q 66 32 70 52 Z" fill="url(#fanfare_gold_9)" stroke="#a16207" strokeWidth="0.8" />
+              <path d="M 46 52 Q 50 24 58 8 Q 66 24 70 52 Z" fill="url(#fanfare_gold_9)" stroke="#a16207" strokeWidth="0.9" />
+              <circle cx="58" cy="8" r="4.5" fill="#ffffff" />
+              <circle cx="44" cy="20" r="3.2" fill="url(#fanfare_gem_pink)" />
+              <circle cx="72" cy="20" r="3.2" fill="url(#fanfare_gem_pink)" />
+            </g>
+
+            {/* Giant 3D Sculpted Golden "9" */}
+            <path
+              d="M 86 42 C 60 42 46 62 46 84 C 46 104 60 118 78 118 C 96 118 108 104 108 82 C 108 48 94 42 86 42 Z M 78 98 C 68 98 62 88 62 80 C 62 70 70 60 80 60 C 90 60 94 70 94 80 C 94 90 88 98 78 98 Z"
+              fill="#78350f"
+              transform="translate(4, 5)"
+            />
+            <path
+              d="M 86 42 C 60 42 46 62 46 84 C 46 104 60 118 78 118 C 96 118 108 104 108 82 C 108 48 94 42 86 42 Z M 78 98 C 68 98 62 88 62 80 C 62 70 70 60 80 60 C 90 60 94 70 94 80 C 94 90 88 98 78 98 Z"
+              fill="url(#fanfare_gold_9)"
+              stroke="#ffffff"
+              strokeWidth="2.5"
+            />
+            <path
+              d="M 84 48 C 66 48 54 64 54 80"
+              stroke="#ffffff"
+              strokeWidth="3"
+              strokeLinecap="round"
+              fill="none"
+              opacity="0.85"
+            />
+          </svg>
+        </div>
+
+        {/* Milestone Pill */}
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-pink-500/30 via-purple-500/30 to-amber-500/30 border border-amber-300/40 text-amber-200 text-xs sm:text-sm font-extrabold uppercase tracking-widest mb-3 shadow-lg">
+          <span>🎂</span>
+          <span>9 Years of Magic & Smiles</span>
+          <span>✨</span>
+        </div>
+
+        {/* Happy Birthday Subhead */}
+        <h2 className="text-xl sm:text-2xl font-black text-amber-100 tracking-wider uppercase mb-1">
+          HAPPY 9TH BIRTHDAY
+        </h2>
+
+        {/* Big Hero Gradient Name */}
+        <h1
+          className="text-5xl sm:text-7xl font-black tracking-tight mb-4"
+          style={{
+            background: 'linear-gradient(135deg, #fffbeb 0%, #fde047 30%, #f43f5e 75%, #ec4899 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            filter: 'drop-shadow(0 4px 18px rgba(244,63,94,0.6))',
+          }}
+        >
+          SWARA!
+        </h1>
+
+        {/* Heartfelt Wish */}
+        <p className="text-sm sm:text-base font-semibold text-pink-100/90 max-w-md leading-relaxed mb-6">
+          May your special day be packed with joy, laughter, gymnastics triumphs, sweet treats, and wonderful adventures!
+        </p>
+
+        {/* Tap to continue button */}
+        <button
+          type="button"
+          onClick={dismiss}
+          className="px-6 py-2 rounded-full bg-white/20 hover:bg-white/30 text-white font-bold text-xs sm:text-sm tracking-wide transition-all border border-white/40 cursor-pointer shadow-md"
+        >
+          Tap anywhere to close ✨
+        </button>
+      </div>
+
+      <style>{`
+        @keyframes spotlightSweepL {
+          0% { transform: rotate(-10deg); }
+          100% { transform: rotate(18deg); }
+        }
+        @keyframes spotlightSweepR {
+          0% { transform: rotate(10deg); }
+          100% { transform: rotate(-18deg); }
+        }
+      `}</style>
+    </div>
   )
 }
 
@@ -6293,8 +7163,14 @@ export default function Slideshow({
       {/* October Spooky Delight: Dancing and running away skeleton */}
       {isOctober(seasonalDate) && <DancingSkeleton seasonalDate={seasonalDate} />}
 
-      {/* Swara's Birthday Delights (Oct 31): Floating Birthday Balloons */}
-      {isSwaraBirthday(seasonalDate) && <FloatingBirthdayBalloons />}
+      {/* Swara's Birthday Delights (Oct 31): Interactive Tap-to-Pop Floating Birthday Balloons */}
+      {(isSwaraBirthday(seasonalDate) || Boolean(getQueryParam('balloons'))) && <FloatingBirthdayBalloons />}
+
+      {/* Swara's Birthday Parade (Oct 31 or ?parade=1): Puppy & Kitten Birthday Parade */}
+      {(isSwaraBirthday(seasonalDate) || Boolean(getQueryParam('parade'))) && <BirthdayParade />}
+
+      {/* Swara's Grand Birthday Fanfare & Confetti Blast */}
+      <BirthdayFanfareOverlay seasonalDate={seasonalDate} />
 
       {/* Holiday Delights (Running Elf across bottom bezel, Dec 1-24) */}
       {isElfSeason(seasonalDate) && !isNewYearSeason(seasonalDate) && <RunningElf />}
