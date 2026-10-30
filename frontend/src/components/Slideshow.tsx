@@ -525,7 +525,7 @@ const BALLOON_POP_MESSAGES = [
   'So Awesome! ✨',
 ]
 
-function FloatingBirthdayBalloons() {
+function FloatingBirthdayBalloons({ onPop }: { onPop?: () => void }) {
   const [poppedMap, setPoppedMap] = useState<Record<number, boolean>>({})
   const [popBursts, setPopBursts] = useState<PopBurst[]>([])
   const burstsTimerRef = useRef<ReturnType<typeof setTimeout>[]>([])
@@ -551,13 +551,16 @@ function FloatingBirthdayBalloons() {
     [],
   )
 
-  const handlePop = (id: number, color: string, e: React.MouseEvent | React.TouchEvent) => {
+  const handlePop = (id: number, color: string, e: React.MouseEvent | React.TouchEvent | React.PointerEvent) => {
     e.stopPropagation()
+    if (poppedMap[id]) return
+
+    onPop?.()
     playBalloonPopSound()
 
     let clientX = window.innerWidth / 2
     let clientY = window.innerHeight / 2
-    if ('clientX' in e && typeof e.clientX === 'number') {
+    if ('clientX' in e && typeof e.clientX === 'number' && e.clientX > 0) {
       clientX = e.clientX
       clientY = e.clientY
     } else if ('touches' in e && e.touches.length > 0) {
@@ -598,19 +601,35 @@ function FloatingBirthdayBalloons() {
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden z-20 select-none">
       {balloons.map((b) => {
-        if (poppedMap[b.id]) return null
+        const isPopped = Boolean(poppedMap[b.id])
         return (
           <div
             key={b.id}
-            className="absolute -bottom-40 pointer-events-auto cursor-pointer active:scale-90 transition-transform"
+            className={`absolute -bottom-40 transition-transform ${
+              isPopped
+                ? 'opacity-0 pointer-events-none scale-0'
+                : 'pointer-events-auto cursor-pointer active:scale-90'
+            }`}
             style={{
               left: b.left,
-              animation: `floatUpBalloon ${b.dur} linear infinite`,
+              animation: isPopped ? 'none' : `floatUpBalloon ${b.dur} linear infinite`,
               animationDelay: b.delay,
-              transform: `scale(${b.scale})`,
+              transform: isPopped ? 'scale(0)' : `scale(${b.scale})`,
             }}
-            onClick={(e) => handlePop(b.id, b.color, e)}
-            onTouchStart={(e) => handlePop(b.id, b.color, e)}
+            onPointerDown={(e) => {
+              e.stopPropagation()
+            }}
+            onTouchStart={(e) => {
+              e.stopPropagation()
+              handlePop(b.id, b.color, e)
+            }}
+            onTouchEnd={(e) => {
+              e.stopPropagation()
+            }}
+            onClick={(e) => {
+              e.stopPropagation()
+              handlePop(b.id, b.color, e)
+            }}
             title="Tap to pop!"
           >
             <svg
@@ -7007,13 +7026,32 @@ export default function Slideshow({
     }
   } catch {}
 
+  const lastBalloonPopTimeRef = useRef<number>(0)
+
+  const handleRootClick = (e: React.MouseEvent) => {
+    // If a balloon was just popped (within the last 800ms), ignore this click
+    // so popping a balloon never dismisses the slideshow, while tapping anywhere
+    // else on screen continues to exit back to the dashboard as normal.
+    if (Date.now() - lastBalloonPopTimeRef.current < 800) {
+      return
+    }
+    onDismiss()
+  }
+
   return (
     <div
       ref={rootRef}
       className="fixed inset-0 z-[100] overflow-hidden cursor-none select-none"
-      onClick={onDismiss}
-      onTouchStart={(event) => { swipeStart.current = event.changedTouches[0]?.clientX ?? null }}
+      onClick={handleRootClick}
+      onTouchStart={(event) => {
+        if (Date.now() - lastBalloonPopTimeRef.current < 800) return
+        swipeStart.current = event.changedTouches[0]?.clientX ?? null
+      }}
       onTouchEnd={(event) => {
+        if (Date.now() - lastBalloonPopTimeRef.current < 800) {
+          swipeStart.current = null
+          return
+        }
         const start = swipeStart.current
         const end = event.changedTouches[0]?.clientX
         swipeStart.current = null
@@ -7202,7 +7240,9 @@ export default function Slideshow({
       {isOctober(seasonalDate) && <DancingSkeleton seasonalDate={seasonalDate} />}
 
       {/* Swara's Birthday Delights (Oct 31): Interactive Tap-to-Pop Floating Birthday Balloons */}
-      {(isSwaraBirthday(seasonalDate) || Boolean(getQueryParam('balloons'))) && <FloatingBirthdayBalloons />}
+      {(isSwaraBirthday(seasonalDate) || Boolean(getQueryParam('balloons'))) && (
+        <FloatingBirthdayBalloons onPop={() => { lastBalloonPopTimeRef.current = Date.now() }} />
+      )}
 
       {/* Swara's Birthday Parade (Oct 31 or ?parade=1): Puppy & Kitten Birthday Parade */}
       {(isSwaraBirthday(seasonalDate) || Boolean(getQueryParam('parade'))) && <BirthdayParade />}
