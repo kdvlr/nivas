@@ -34,7 +34,7 @@ const Photos = lazy(() => import('./views/Photos'))
 const YTMusic = lazy(() => import('./views/YTMusic'))
 import MiniPlayerBar, { Track } from './components/ytmusic/MiniPlayerBar'
 import FloatingActionButton from './components/FloatingActionButton'
-import Slideshow, { hasSkyOverride } from './components/Slideshow'
+import Slideshow, { hasSkyOverride, getQueryParam } from './components/Slideshow'
 import { TimerProvider, useTimer } from './context/TimerContext'
 import CreateTimerModal from './components/timer/CreateTimerModal'
 import FullScreenTimer from './components/timer/FullScreenTimer'
@@ -467,11 +467,15 @@ function AppContent() {
     }
   }, [kidsNuggetsDisplayed, slideshowActive, armSlideshowTimer])
 
-  // "#/photos?sky=night&skyfx=stormy" jumps straight into the slideshow so the
-  // sky preview is one URL away. Keyed on the route, so dismissing it stays
-  // dismissed until you navigate again.
+  // Jump straight into the slideshow if sky override, ?slideshow=1, or ?bday=1 is present
   useEffect(() => {
-    if (route === 'photos' && hasSkyOverride() && !isTimerActive) setSlideshowActive(true)
+    if (
+      route === 'photos' &&
+      (hasSkyOverride() || getQueryParam('slideshow') === '1' || getQueryParam('bday') === '1' || getQueryParam('birthday') === '1') &&
+      !isTimerActive
+    ) {
+      setSlideshowActive(true)
+    }
   }, [route, isTimerActive])
 
   // Fetch the photo list for the screensaver.

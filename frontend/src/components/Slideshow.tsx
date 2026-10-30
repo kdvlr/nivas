@@ -6526,7 +6526,8 @@ function BirthdayFanfareOverlay({ seasonalDate }: { seasonalDate?: Date }) {
     )
   }, [])
 
-  const dismiss = () => {
+  const dismiss = (e?: React.MouseEvent) => {
+    e?.stopPropagation()
     clearTimers()
     setFading(true)
     setTimeout(() => {
@@ -7027,6 +7028,21 @@ export default function Slideshow({
               <span>{secondaryEmoji}</span>
               <span>{secondaryFormatted}</span>
             </div>
+          )}
+          {isSwaraBirthday(seasonalDate) && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                window.dispatchEvent(new CustomEvent('trigger-birthday-fanfare'))
+              }}
+              title="Tap for Birthday Fanfare & Confetti!"
+              className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-pink-500/30 via-purple-500/30 to-amber-500/30 text-amber-200 border border-amber-300/40 text-xs font-bold shadow-md tracking-wide animate-pulse pointer-events-auto cursor-pointer hover:scale-105 active:scale-95 transition-transform"
+            >
+              <span>🎂</span>
+              <span>Happy Birthday Swara!</span>
+              <span>👑</span>
+            </button>
           )}
           <button
             onClick={(e) => {
