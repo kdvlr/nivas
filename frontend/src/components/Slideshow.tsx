@@ -6401,7 +6401,7 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
     const isBday = isSwaraBirthday(seasonalNow)
     if (isBday) {
       topElement = (
-        <div className="absolute bottom-[calc(100%-12px)] pointer-events-none select-none z-10">
+        <div className="absolute bottom-[calc(100%-58px)] pointer-events-none select-none z-10">
           <JackOLantern seed={seedOffset} hasPartyHat={true} />
         </div>
       )
