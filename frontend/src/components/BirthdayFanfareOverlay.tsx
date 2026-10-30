@@ -12,6 +12,7 @@ export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfare
   const [fading, setFading] = useState(false)
   const lastHourTriggeredRef = useRef<number>(-1)
   const timerRef = useRef<ReturnType<typeof setTimeout>[]>([])
+  const openedAtRef = useRef<number>(0)
 
   const clearTimers = () => {
     timerRef.current.forEach(clearTimeout)
@@ -20,6 +21,7 @@ export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfare
 
   const trigger = useCallback(() => {
     clearTimers()
+    openedAtRef.current = Date.now()
     setFading(false)
     setActive(true)
     playBirthdayFanfareSound()
@@ -93,6 +95,7 @@ export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfare
 
   const dismiss = (e?: React.MouseEvent) => {
     e?.stopPropagation()
+    if (Date.now() - openedAtRef.current < 750) return
     stopBirthdayFanfareSound()
     clearTimers()
     setFading(true)

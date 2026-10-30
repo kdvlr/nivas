@@ -1027,6 +1027,15 @@ function SetupInner() {
                 Surprise me!
               </button>
               <button
+                type="button"
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('trigger-birthday-fanfare'))
+                }}
+                className="btn-glass px-4 py-2 text-sm border-pink-500/30 text-pink-600 dark:text-pink-400 font-bold hover:bg-pink-500/10 active:scale-95 transition-all"
+              >
+                🎂 Test Birthday Fanfare & Tune
+              </button>
+              <button
                 onClick={() => celebrateSad({ title: 'Room Not Clean', coinsLost: 10, animation: 'icecream' })}
                 className="btn-glass px-4 py-2 text-sm border-rose-500/30 text-rose-500 hover:bg-rose-500/10 active:scale-95 transition-all"
               >
