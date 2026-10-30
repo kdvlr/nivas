@@ -6513,6 +6513,9 @@ function BirthdayFanfareOverlay({ seasonalDate }: { seasonalDate?: Date }) {
     }, 1400)
     timerRef.current.push(secondWave)
 
+    const isFreeze = getQueryParam('fanfare') === 'freeze'
+    if (isFreeze) return
+
     // Auto dismiss after 6.4s (with 0.6s fade)
     timerRef.current.push(
       setTimeout(() => setFading(true), 5800),
@@ -6536,7 +6539,7 @@ function BirthdayFanfareOverlay({ seasonalDate }: { seasonalDate?: Date }) {
     const handleCustom = () => trigger()
     window.addEventListener('trigger-birthday-fanfare', handleCustom)
 
-    if (getQueryParam('fanfare') === '1') {
+    if (getQueryParam('fanfare') === '1' || getQueryParam('fanfare') === 'freeze') {
       trigger()
     }
 
