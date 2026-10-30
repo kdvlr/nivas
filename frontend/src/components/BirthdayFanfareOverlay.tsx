@@ -5,7 +5,6 @@ import {
   playBirthdayFanfareSound,
   stopBirthdayFanfareSound,
   playBooGiggleSound,
-  playFireworkSound,
 } from '../lib/useAudioChime'
 
 interface BirthdayFanfareOverlayProps {
@@ -14,37 +13,9 @@ interface BirthdayFanfareOverlayProps {
 
 const PASTEL_COLORS = ['#f43f5e', '#ec4899', '#c084fc', '#a855f7', '#5eead4', '#fde047']
 
-// Custom Firework Shape Generators
-function getHeartShape(): confetti.Shape | 'circle' {
-  if (typeof window !== 'undefined' && typeof (window as unknown as { Path2D?: unknown }).Path2D === 'function') {
-    try {
-      return confetti.shapeFromPath({
-        path: 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z',
-      })
-    } catch {
-      return 'circle'
-    }
-  }
-  return 'circle'
-}
-
-function getDiamondShape(): confetti.Shape | 'star' {
-  if (typeof window !== 'undefined' && typeof (window as unknown as { Path2D?: unknown }).Path2D === 'function') {
-    try {
-      return confetti.shapeFromPath({
-        path: 'M12 0 L15 9 L24 12 L15 15 L12 24 L9 15 L0 12 L9 9 Z',
-      })
-    } catch {
-      return 'star'
-    }
-  }
-  return 'star'
-}
-
 export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfareOverlayProps) {
   const [active, setActive] = useState(false)
   const [fading, setFading] = useState(false)
-  const [theme, setTheme] = useState<'pastel' | 'midnight'>('pastel')
   const [flippedBoo, setFlippedBoo] = useState<string | null>(null)
   const [poppedBow, setPoppedBow] = useState<string | null>(null)
 
@@ -52,7 +23,6 @@ export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfare
   const timerRef = useRef<ReturnType<typeof setTimeout>[]>([])
   const openedAtRef = useRef<number>(0)
   const confettiPatternRef = useRef<number>(0)
-  const fireworkPatternRef = useRef<number>(0)
 
   const clearTimers = () => {
     timerRef.current.forEach(clearTimeout)
@@ -201,7 +171,7 @@ export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfare
     })
   }
 
-  // Multi-directional Confetti (Pastel Theme)
+  // Multi-directional Confetti Burst
   const handleBurstConfetti = (e: React.MouseEvent) => {
     e.stopPropagation()
     const pattern = confettiPatternRef.current % 6
@@ -209,7 +179,7 @@ export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfare
 
     switch (pattern) {
       case 0:
-        // Pattern 0: Dual Bottom Corner Cannons (Angled inward)
+        // Dual Bottom Corner Cannons (Angled inward)
         confetti({
           particleCount: 80,
           angle: 60,
@@ -231,7 +201,7 @@ export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfare
         break
 
       case 1:
-        // Pattern 1: Left Horizontal Wind Blast (Sweeping across from the left)
+        // Left Horizontal Wind Blast (Sweeping across from the left)
         confetti({
           particleCount: 90,
           angle: 25,
@@ -245,7 +215,7 @@ export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfare
         break
 
       case 2:
-        // Pattern 2: Right Horizontal Wind Blast (Sweeping across from the right)
+        // Right Horizontal Wind Blast (Sweeping across from the right)
         confetti({
           particleCount: 90,
           angle: 155,
@@ -259,7 +229,7 @@ export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfare
         break
 
       case 3:
-        // Pattern 3: Bottom Geyser Fountain (Shooting straight up into the sky)
+        // Bottom Geyser Fountain (Shooting straight up into the sky)
         confetti({
           particleCount: 110,
           angle: 90,
@@ -272,7 +242,7 @@ export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfare
         break
 
       case 4:
-        // Pattern 4: Top Cascading Curtain (Rainbow Skyfall cascading down)
+        // Top Cascading Curtain (Rainbow Skyfall cascading down)
         confetti({
           particleCount: 45,
           angle: 270,
@@ -309,7 +279,7 @@ export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfare
 
       case 5:
       default:
-        // Pattern 5: Triple Diagonal Volley (Left, Right, Center)
+        // Triple Diagonal Volley (Left, Right, Center)
         confetti({
           particleCount: 60,
           angle: 70,
@@ -342,215 +312,6 @@ export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfare
     }
   }
 
-  // Multi-directional & Multi-shaped Fireworks (Midnight Theme)
-  const handleLaunchFireworks = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    playFireworkSound()
-
-    const heart = getHeartShape()
-    const diamond = getDiamondShape()
-    const pattern = fireworkPatternRef.current % 5
-    fireworkPatternRef.current += 1
-
-    switch (pattern) {
-      case 0: {
-        // Pattern 0: Rocket mortar from Left Corner -> High Starburst Peony
-        // Launch streak
-        confetti({
-          particleCount: 16,
-          angle: 58,
-          spread: 12,
-          startVelocity: 60,
-          origin: { x: 0.08, y: 0.95 },
-          colors: ['#ffe066', '#ffffff'],
-          shapes: ['circle'],
-          ticks: 45,
-          disableForReducedMotion: true,
-        })
-        // Aerial shell burst at peak
-        setTimeout(() => {
-          confetti({
-            particleCount: 95,
-            spread: 360,
-            startVelocity: 44,
-            decay: 0.92,
-            scalar: 1.25,
-            origin: { x: 0.36, y: 0.28 },
-            colors: ['#ffe066', '#38bdf8', '#f43f5e', '#facc15', '#ffffff'],
-            shapes: ['star', diamond],
-            disableForReducedMotion: true,
-          })
-        }, 260)
-        // Secondary crackle
-        setTimeout(() => {
-          confetti({
-            particleCount: 40,
-            spread: 280,
-            startVelocity: 26,
-            origin: { x: 0.38, y: 0.32 },
-            colors: ['#ffd700', '#ffffff'],
-            shapes: ['circle'],
-            disableForReducedMotion: true,
-          })
-        }, 420)
-        break
-      }
-
-      case 1: {
-        // Pattern 1: Rocket mortar from Right Corner -> Heart & Rose Peony
-        confetti({
-          particleCount: 16,
-          angle: 122,
-          spread: 12,
-          startVelocity: 60,
-          origin: { x: 0.92, y: 0.95 },
-          colors: ['#ff69b4', '#ffffff'],
-          shapes: ['circle'],
-          ticks: 45,
-          disableForReducedMotion: true,
-        })
-        setTimeout(() => {
-          confetti({
-            particleCount: 95,
-            spread: 360,
-            startVelocity: 44,
-            decay: 0.92,
-            scalar: 1.3,
-            origin: { x: 0.64, y: 0.28 },
-            colors: ['#ec4899', '#f43f5e', '#d946ef', '#ff69b4', '#fbcfe8'],
-            shapes: [heart, 'circle'],
-            disableForReducedMotion: true,
-          })
-        }, 260)
-        break
-      }
-
-      case 2: {
-        // Pattern 2: Dual Cross-Mortar Salvo (Left & Right intersecting in mid-air)
-        // Left mortar
-        confetti({
-          particleCount: 14,
-          angle: 65,
-          spread: 10,
-          startVelocity: 62,
-          origin: { x: 0.12, y: 0.95 },
-          colors: ['#38bdf8', '#ffffff'],
-          shapes: ['circle'],
-          ticks: 40,
-          disableForReducedMotion: true,
-        })
-        // Right mortar
-        setTimeout(() => {
-          confetti({
-            particleCount: 14,
-            angle: 115,
-            spread: 10,
-            startVelocity: 62,
-            origin: { x: 0.88, y: 0.95 },
-            colors: ['#c084fc', '#ffffff'],
-            shapes: ['circle'],
-            ticks: 40,
-            disableForReducedMotion: true,
-          })
-        }, 150)
-        // Burst 1 (Left target)
-        setTimeout(() => {
-          confetti({
-            particleCount: 80,
-            spread: 360,
-            startVelocity: 42,
-            decay: 0.92,
-            origin: { x: 0.32, y: 0.22 },
-            colors: ['#38bdf8', '#67e8f9', '#ffd700', '#ffffff'],
-            shapes: ['star', 'circle'],
-            disableForReducedMotion: true,
-          })
-        }, 260)
-        // Burst 2 (Right target)
-        setTimeout(() => {
-          confetti({
-            particleCount: 80,
-            spread: 360,
-            startVelocity: 42,
-            decay: 0.92,
-            origin: { x: 0.68, y: 0.22 },
-            colors: ['#a855f7', '#ec4899', '#f43f5e', '#fbcfe8'],
-            shapes: [heart, diamond],
-            disableForReducedMotion: true,
-          })
-        }, 410)
-        break
-      }
-
-      case 3: {
-        // Pattern 3: Horizon Salvo Trio (Three consecutive aerial bursts across the sky)
-        // Burst Left
-        confetti({
-          particleCount: 75,
-          spread: 360,
-          startVelocity: 40,
-          decay: 0.93,
-          origin: { x: 0.22, y: 0.32 },
-          colors: ['#4ade80', '#2dd4bf', '#fde047', '#ffffff'],
-          shapes: ['star', 'square'],
-          disableForReducedMotion: true,
-        })
-        // Burst Right
-        setTimeout(() => {
-          confetti({
-            particleCount: 75,
-            spread: 360,
-            startVelocity: 40,
-            decay: 0.93,
-            origin: { x: 0.78, y: 0.34 },
-            colors: ['#f43f5e', '#fb7185', '#ec4899', '#ffffff'],
-            shapes: [heart, 'circle'],
-            disableForReducedMotion: true,
-          })
-        }, 160)
-        // Burst High Center
-        setTimeout(() => {
-          confetti({
-            particleCount: 110,
-            spread: 360,
-            startVelocity: 48,
-            decay: 0.91,
-            scalar: 1.25,
-            origin: { x: 0.50, y: 0.18 },
-            colors: ['#38bdf8', '#c084fc', '#ffd700', '#f43f5e', '#ffffff'],
-            shapes: ['star', diamond, 'circle'],
-            disableForReducedMotion: true,
-          })
-        }, 320)
-        break
-      }
-
-      case 4:
-      default: {
-        // Pattern 4: Golden Weeping Willow Skyfall (Long-lasting shimmering golden branches)
-        confetti({
-          particleCount: 130,
-          spread: 360,
-          startVelocity: 46,
-          gravity: 0.55,
-          decay: 0.94,
-          ticks: 190,
-          scalar: 1.15,
-          origin: { x: 0.5, y: 0.22 },
-          colors: ['#ffe066', '#fef08a', '#fbbf24', '#fef9c3', '#ffffff'],
-          shapes: ['star', 'circle', diamond],
-          disableForReducedMotion: true,
-        })
-        break
-      }
-    }
-  }
-
-  const toggleTheme = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    setTheme((prev) => (prev === 'pastel' ? 'midnight' : 'pastel'))
-  }
-
   useEffect(() => {
     const handleCustom = () => trigger()
     window.addEventListener('trigger-birthday-fanfare', handleCustom)
@@ -579,8 +340,6 @@ export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfare
 
   if (!active) return null
 
-  const isDark = theme === 'midnight'
-
   return (
     <div
       onClick={dismiss}
@@ -588,10 +347,8 @@ export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfare
         fading ? 'opacity-0 pointer-events-none' : 'opacity-100 pointer-events-auto'
       }`}
       style={{
-        background: isDark
-          ? 'radial-gradient(ellipse at 50% 40%, rgba(46, 16, 101, 0.96) 0%, rgba(30, 17, 54, 0.98) 45%, rgba(15, 7, 40, 0.99) 85%, rgba(5, 2, 18, 1) 100%)'
-          : 'radial-gradient(ellipse at 50% 40%, rgba(255, 255, 255, 0.96) 0%, rgba(255, 240, 245, 0.97) 35%, rgba(252, 231, 243, 0.98) 70%, rgba(237, 233, 254, 0.99) 100%)',
-        transition: 'background 0.6s ease',
+        background:
+          'radial-gradient(ellipse at 50% 40%, rgba(255, 255, 255, 0.96) 0%, rgba(255, 240, 245, 0.97) 35%, rgba(252, 231, 243, 0.98) 70%, rgba(237, 233, 254, 0.99) 100%)',
       }}
     >
       {/* Ambient Theatrical Spotlight Cones */}
@@ -599,18 +356,14 @@ export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfare
         <div
           className="absolute -top-[10vh] left-0 w-[45vw] h-[125vh] origin-top blur-3xl"
           style={{
-            background: isDark
-              ? 'linear-gradient(135deg, rgba(244, 114, 182, 0.3) 0%, transparent 70%)'
-              : 'linear-gradient(135deg, rgba(254, 205, 211, 0.55) 0%, transparent 70%)',
+            background: 'linear-gradient(135deg, rgba(254, 205, 211, 0.55) 0%, transparent 70%)',
             animation: 'spotlightSweepL 6s ease-in-out infinite alternate',
           }}
         />
         <div
           className="absolute -top-[10vh] right-0 w-[45vw] h-[125vh] origin-top blur-3xl"
           style={{
-            background: isDark
-              ? 'linear-gradient(-135deg, rgba(168, 85, 247, 0.3) 0%, transparent 70%)'
-              : 'linear-gradient(-135deg, rgba(216, 180, 254, 0.55) 0%, transparent 70%)',
+            background: 'linear-gradient(-135deg, rgba(216, 180, 254, 0.55) 0%, transparent 70%)',
             animation: 'spotlightSweepR 6s ease-in-out infinite alternate',
           }}
         />
@@ -620,11 +373,9 @@ export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfare
       <div
         className="relative max-w-5xl w-[92vw] aspect-[2048/1142] flex items-center justify-center rounded-3xl backdrop-blur-2xl transition-all duration-500 z-10"
         style={{
-          background: isDark ? 'rgba(26, 14, 48, 0.88)' : 'rgba(255, 255, 255, 0.85)',
-          border: isDark ? '1.5px solid rgba(216, 180, 254, 0.35)' : '1.5px solid rgba(244, 114, 182, 0.38)',
-          boxShadow: isDark
-            ? '0 25px 60px rgba(0, 0, 0, 0.6), inset 0 0 35px rgba(168, 85, 247, 0.15)'
-            : '0 25px 60px rgba(244, 63, 94, 0.18), inset 0 0 35px rgba(255, 255, 255, 0.7)',
+          background: 'rgba(255, 255, 255, 0.85)',
+          border: '1.5px solid rgba(244, 114, 182, 0.38)',
+          boxShadow: '0 25px 60px rgba(244, 63, 94, 0.18), inset 0 0 35px rgba(255, 255, 255, 0.7)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -641,9 +392,6 @@ export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfare
           src="/boos_assets/banner_typography_perfect.png"
           alt="Happy Birthday Swara!"
           className="absolute inset-0 w-full h-full object-contain pointer-events-none z-10 select-none"
-          style={{
-            filter: isDark ? 'drop-shadow(0 2px 14px rgba(244, 114, 182, 0.35))' : 'none',
-          }}
         />
 
         {/* Corner Giant Ribbon Bows */}
@@ -659,9 +407,7 @@ export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfare
             left: '3.4%',
             transformOrigin: 'top left',
             animation: 'ribbonSwayLeft 5.5s ease-in-out infinite',
-            filter: isDark
-              ? 'drop-shadow(0 10px 20px rgba(0, 0, 0, 0.5))'
-              : 'drop-shadow(0 12px 24px rgba(216, 180, 254, 0.4))',
+            filter: 'drop-shadow(0 12px 24px rgba(216, 180, 254, 0.4))',
             transition: 'transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
           }}
           onClick={(e) => handleBowClick('top_left', e)}
@@ -680,9 +426,7 @@ export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfare
             right: '3.6%',
             transformOrigin: 'top right',
             animation: 'ribbonSwayRight 5.8s ease-in-out infinite',
-            filter: isDark
-              ? 'drop-shadow(0 10px 20px rgba(0, 0, 0, 0.5))'
-              : 'drop-shadow(0 12px 24px rgba(216, 180, 254, 0.4))',
+            filter: 'drop-shadow(0 12px 24px rgba(216, 180, 254, 0.4))',
             transition: 'transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
           }}
           onClick={(e) => handleBowClick('top_right', e)}
@@ -701,9 +445,7 @@ export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfare
             left: '9.8%',
             top: '47.7%',
             animation: flippedBoo === 'left' ? 'booFlip 0.75s ease-out' : 'booWanderLeft 4.6s ease-in-out infinite',
-            filter: isDark
-              ? 'drop-shadow(0 10px 22px rgba(244, 63, 94, 0.35)) drop-shadow(0 0 15px rgba(255, 255, 255, 0.25))'
-              : 'drop-shadow(0 10px 22px rgba(244, 63, 94, 0.25))',
+            filter: 'drop-shadow(0 10px 22px rgba(244, 63, 94, 0.25))',
           }}
           onClick={(e) => handleBooClick('left', e)}
           title="Tap me to giggle & flip!"
@@ -721,9 +463,7 @@ export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfare
             left: '44.5%',
             top: '71.5%',
             animation: flippedBoo === 'center' ? 'booFlip 0.75s ease-out' : 'booCelebrateCenter 3.8s ease-in-out infinite',
-            filter: isDark
-              ? 'drop-shadow(0 10px 22px rgba(168, 85, 247, 0.4)) drop-shadow(0 0 15px rgba(255, 255, 255, 0.25))'
-              : 'drop-shadow(0 10px 22px rgba(168, 85, 247, 0.25))',
+            filter: 'drop-shadow(0 10px 22px rgba(168, 85, 247, 0.25))',
           }}
           onClick={(e) => handleBooClick('center', e)}
           title="Tap me to jump high!"
@@ -741,9 +481,7 @@ export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfare
             right: '9.9%',
             top: '55.4%',
             animation: flippedBoo === 'right' ? 'booFlip 0.75s ease-out' : 'booWanderRight 4.9s ease-in-out infinite',
-            filter: isDark
-              ? 'drop-shadow(0 10px 22px rgba(94, 234, 212, 0.35)) drop-shadow(0 0 15px rgba(255, 255, 255, 0.25))'
-              : 'drop-shadow(0 10px 22px rgba(94, 234, 212, 0.25))',
+            filter: 'drop-shadow(0 10px 22px rgba(94, 234, 212, 0.25))',
           }}
           onClick={(e) => handleBooClick('right', e)}
           title="Tap me to wave & spin!"
@@ -822,54 +560,23 @@ export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfare
         />
       </div>
 
-      {/* Streamlined Bottom Controls: Confetti / Fireworks & Theme Toggle */}
+      {/* Confetti Option Alone */}
       <div
-        className="mt-4 sm:mt-6 flex items-center justify-center gap-3 sm:gap-4 z-20"
+        className="mt-4 sm:mt-6 flex items-center justify-center z-20"
         onClick={(e) => e.stopPropagation()}
       >
-        {isDark ? (
-          <button
-            type="button"
-            onClick={handleLaunchFireworks}
-            className="px-5 py-2.5 rounded-full font-extrabold text-xs sm:text-sm text-white shadow-xl transition-all active:scale-95 flex items-center gap-2 cursor-pointer"
-            style={{
-              background: 'linear-gradient(135deg, #7c3aed 0%, #ec4899 50%, #f59e0b 100%)',
-              boxShadow: '0 4px 20px rgba(168, 85, 247, 0.5), inset 0 0 12px rgba(255, 255, 255, 0.25)',
-              border: '1px solid rgba(255, 255, 255, 0.35)',
-            }}
-          >
-            <span className="text-base sm:text-lg">🎆</span>
-            <span>Launch Fireworks</span>
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={handleBurstConfetti}
-            className="px-5 py-2.5 rounded-full font-extrabold text-xs sm:text-sm text-white shadow-xl transition-all active:scale-95 flex items-center gap-2 cursor-pointer"
-            style={{
-              background: 'linear-gradient(135deg, #f43f5e 0%, #ec4899 50%, #a855f7 100%)',
-              boxShadow: '0 4px 20px rgba(244, 63, 94, 0.45), inset 0 0 12px rgba(255, 255, 255, 0.3)',
-              border: '1px solid rgba(255, 255, 255, 0.5)',
-            }}
-          >
-            <span className="text-base sm:text-lg">🎊</span>
-            <span>Burst Confetti</span>
-          </button>
-        )}
-
         <button
           type="button"
-          onClick={toggleTheme}
-          className="px-5 py-2.5 rounded-full font-bold text-xs sm:text-sm backdrop-blur-xl transition-all active:scale-95 flex items-center gap-2 cursor-pointer shadow-lg"
+          onClick={handleBurstConfetti}
+          className="px-6 py-2.5 rounded-full font-extrabold text-xs sm:text-sm text-white shadow-xl transition-all active:scale-95 flex items-center gap-2 cursor-pointer"
           style={{
-            background: isDark ? 'rgba(30, 17, 54, 0.85)' : 'rgba(255, 255, 255, 0.9)',
-            color: isDark ? '#fdf4ff' : '#1e1b4b',
-            border: isDark ? '1.5px solid rgba(216, 180, 254, 0.4)' : '1.5px solid rgba(244, 114, 182, 0.45)',
-            boxShadow: isDark ? '0 4px 16px rgba(0, 0, 0, 0.4)' : '0 4px 16px rgba(244, 63, 94, 0.15)',
+            background: 'linear-gradient(135deg, #f43f5e 0%, #ec4899 50%, #a855f7 100%)',
+            boxShadow: '0 4px 22px rgba(244, 63, 94, 0.45), inset 0 0 12px rgba(255, 255, 255, 0.3)',
+            border: '1px solid rgba(255, 255, 255, 0.55)',
           }}
         >
-          <span className="text-base sm:text-lg">{isDark ? '🌸' : '🌙'}</span>
-          <span>{isDark ? 'Pastel Theme' : 'Midnight Theme'}</span>
+          <span className="text-base sm:text-lg">🎊</span>
+          <span>Burst Confetti</span>
         </button>
       </div>
 
