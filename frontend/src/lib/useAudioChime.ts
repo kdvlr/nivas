@@ -342,3 +342,55 @@ export function playBooGiggleSound() {
   }
 }
 
+export function playFireworkSound() {
+  try {
+    const ctx = getAudioContext()
+    const now = ctx.currentTime
+
+    // 1. Launch whistle / whoosh
+    const launchOsc = ctx.createOscillator()
+    const launchGain = ctx.createGain()
+    launchOsc.type = 'sine'
+    launchOsc.frequency.setValueAtTime(320, now)
+    launchOsc.frequency.exponentialRampToValueAtTime(1400, now + 0.22)
+    launchGain.gain.setValueAtTime(0.01, now)
+    launchGain.gain.linearRampToValueAtTime(0.25, now + 0.08)
+    launchGain.gain.exponentialRampToValueAtTime(0.001, now + 0.24)
+    launchOsc.connect(launchGain)
+    launchGain.connect(ctx.destination)
+    launchOsc.start(now)
+    launchOsc.stop(now + 0.25)
+
+    // 2. Detonation boom at burst time
+    const burstTime = now + 0.24
+    const boomOsc = ctx.createOscillator()
+    const boomGain = ctx.createGain()
+    boomOsc.type = 'triangle'
+    boomOsc.frequency.setValueAtTime(130, burstTime)
+    boomOsc.frequency.exponentialRampToValueAtTime(42, burstTime + 0.35)
+    boomGain.gain.setValueAtTime(0.45, burstTime)
+    boomGain.gain.exponentialRampToValueAtTime(0.001, burstTime + 0.38)
+    boomOsc.connect(boomGain)
+    boomGain.connect(ctx.destination)
+    boomOsc.start(burstTime)
+    boomOsc.stop(burstTime + 0.4)
+
+    // 3. Shimmer sparkles on burst
+    const shimmerNotes = [1318.5, 1567.98, 2093]
+    shimmerNotes.forEach((freq, idx) => {
+      const sOsc = ctx.createOscillator()
+      const sGain = ctx.createGain()
+      sOsc.type = 'sine'
+      sOsc.frequency.setValueAtTime(freq, burstTime + idx * 0.04)
+      sGain.gain.setValueAtTime(0.18, burstTime + idx * 0.04)
+      sGain.gain.exponentialRampToValueAtTime(0.001, burstTime + idx * 0.04 + 0.2)
+      sOsc.connect(sGain)
+      sGain.connect(ctx.destination)
+      sOsc.start(burstTime + idx * 0.04)
+      sOsc.stop(burstTime + idx * 0.04 + 0.22)
+    })
+  } catch (e) {
+    console.warn('[AudioChime] Firework sound error:', e)
+  }
+}
+

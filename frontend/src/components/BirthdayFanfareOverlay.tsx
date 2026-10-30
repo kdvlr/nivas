@@ -1,13 +1,45 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react'
 import confetti from 'canvas-confetti'
 import { getQueryParam, isSwaraBirthday } from './sky/queryParam'
-import { playBirthdayFanfareSound, stopBirthdayFanfareSound, playBooGiggleSound } from '../lib/useAudioChime'
+import {
+  playBirthdayFanfareSound,
+  stopBirthdayFanfareSound,
+  playBooGiggleSound,
+  playFireworkSound,
+} from '../lib/useAudioChime'
 
 interface BirthdayFanfareOverlayProps {
   seasonalDate?: Date
 }
 
 const PASTEL_COLORS = ['#f43f5e', '#ec4899', '#c084fc', '#a855f7', '#5eead4', '#fde047']
+
+// Custom Firework Shape Generators
+function getHeartShape(): confetti.Shape | 'circle' {
+  if (typeof window !== 'undefined' && typeof (window as unknown as { Path2D?: unknown }).Path2D === 'function') {
+    try {
+      return confetti.shapeFromPath({
+        path: 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z',
+      })
+    } catch {
+      return 'circle'
+    }
+  }
+  return 'circle'
+}
+
+function getDiamondShape(): confetti.Shape | 'star' {
+  if (typeof window !== 'undefined' && typeof (window as unknown as { Path2D?: unknown }).Path2D === 'function') {
+    try {
+      return confetti.shapeFromPath({
+        path: 'M12 0 L15 9 L24 12 L15 15 L12 24 L9 15 L0 12 L9 9 Z',
+      })
+    } catch {
+      return 'star'
+    }
+  }
+  return 'star'
+}
 
 export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfareOverlayProps) {
   const [active, setActive] = useState(false)
@@ -19,6 +51,8 @@ export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfare
   const lastHourTriggeredRef = useRef<number>(-1)
   const timerRef = useRef<ReturnType<typeof setTimeout>[]>([])
   const openedAtRef = useRef<number>(0)
+  const confettiPatternRef = useRef<number>(0)
+  const fireworkPatternRef = useRef<number>(0)
 
   const clearTimers = () => {
     timerRef.current.forEach(clearTimeout)
@@ -136,7 +170,6 @@ export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfare
     setFlippedBoo(id)
     setTimeout(() => setFlippedBoo((cur) => (cur === id ? null : cur)), 750)
 
-    // Sparkle burst around the boo
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
     confetti({
       particleCount: 30,
@@ -168,32 +201,348 @@ export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfare
     })
   }
 
+  // Multi-directional Confetti (Pastel Theme)
   const handleBurstConfetti = (e: React.MouseEvent) => {
     e.stopPropagation()
-    confetti({
-      particleCount: 80,
-      spread: 100,
-      origin: { x: 0.5, y: 0.5 },
-      colors: PASTEL_COLORS,
-      disableForReducedMotion: true,
-    })
+    const pattern = confettiPatternRef.current % 6
+    confettiPatternRef.current += 1
+
+    switch (pattern) {
+      case 0:
+        // Pattern 0: Dual Bottom Corner Cannons (Angled inward)
+        confetti({
+          particleCount: 80,
+          angle: 60,
+          spread: 75,
+          startVelocity: 55,
+          origin: { x: 0.05, y: 0.9 },
+          colors: PASTEL_COLORS,
+          disableForReducedMotion: true,
+        })
+        confetti({
+          particleCount: 80,
+          angle: 120,
+          spread: 75,
+          startVelocity: 55,
+          origin: { x: 0.95, y: 0.9 },
+          colors: PASTEL_COLORS,
+          disableForReducedMotion: true,
+        })
+        break
+
+      case 1:
+        // Pattern 1: Left Horizontal Wind Blast (Sweeping across from the left)
+        confetti({
+          particleCount: 90,
+          angle: 25,
+          spread: 65,
+          startVelocity: 65,
+          drift: 0.8,
+          origin: { x: 0.0, y: 0.45 },
+          colors: ['#ec4899', '#f43f5e', '#ffd700', '#38bdf8'],
+          disableForReducedMotion: true,
+        })
+        break
+
+      case 2:
+        // Pattern 2: Right Horizontal Wind Blast (Sweeping across from the right)
+        confetti({
+          particleCount: 90,
+          angle: 155,
+          spread: 65,
+          startVelocity: 65,
+          drift: -0.8,
+          origin: { x: 1.0, y: 0.45 },
+          colors: ['#a855f7', '#c084fc', '#5eead4', '#facc15'],
+          disableForReducedMotion: true,
+        })
+        break
+
+      case 3:
+        // Pattern 3: Bottom Geyser Fountain (Shooting straight up into the sky)
+        confetti({
+          particleCount: 110,
+          angle: 90,
+          spread: 110,
+          startVelocity: 65,
+          origin: { x: 0.5, y: 0.98 },
+          colors: PASTEL_COLORS,
+          disableForReducedMotion: true,
+        })
+        break
+
+      case 4:
+        // Pattern 4: Top Cascading Curtain (Rainbow Skyfall cascading down)
+        confetti({
+          particleCount: 45,
+          angle: 270,
+          spread: 70,
+          startVelocity: 28,
+          gravity: 1.1,
+          drift: 0.3,
+          origin: { x: 0.2, y: -0.05 },
+          colors: PASTEL_COLORS,
+          disableForReducedMotion: true,
+        })
+        confetti({
+          particleCount: 55,
+          angle: 270,
+          spread: 80,
+          startVelocity: 30,
+          gravity: 1.1,
+          origin: { x: 0.5, y: -0.05 },
+          colors: PASTEL_COLORS,
+          disableForReducedMotion: true,
+        })
+        confetti({
+          particleCount: 45,
+          angle: 270,
+          spread: 70,
+          startVelocity: 28,
+          gravity: 1.1,
+          drift: -0.3,
+          origin: { x: 0.8, y: -0.05 },
+          colors: PASTEL_COLORS,
+          disableForReducedMotion: true,
+        })
+        break
+
+      case 5:
+      default:
+        // Pattern 5: Triple Diagonal Volley (Left, Right, Center)
+        confetti({
+          particleCount: 60,
+          angle: 70,
+          spread: 65,
+          origin: { x: 0.15, y: 0.85 },
+          colors: ['#f43f5e', '#ffd700', '#38bdf8'],
+          disableForReducedMotion: true,
+        })
+        setTimeout(() => {
+          confetti({
+            particleCount: 60,
+            angle: 110,
+            spread: 65,
+            origin: { x: 0.85, y: 0.85 },
+            colors: ['#a855f7', '#ec4899', '#5eead4'],
+            disableForReducedMotion: true,
+          })
+        }, 120)
+        setTimeout(() => {
+          confetti({
+            particleCount: 90,
+            angle: 90,
+            spread: 120,
+            origin: { x: 0.5, y: 0.5 },
+            colors: PASTEL_COLORS,
+            disableForReducedMotion: true,
+          })
+        }, 240)
+        break
+    }
   }
 
-  const handleReplay = (e: React.MouseEvent) => {
+  // Multi-directional & Multi-shaped Fireworks (Midnight Theme)
+  const handleLaunchFireworks = (e: React.MouseEvent) => {
     e.stopPropagation()
-    clearTimers()
-    openedAtRef.current = Date.now()
-    playBirthdayFanfareSound()
-    fireChoreographedConfetti()
+    playFireworkSound()
 
-    if (getQueryParam('fanfare') !== 'freeze') {
-      timerRef.current.push(
-        setTimeout(() => setFading(true), 11800),
+    const heart = getHeartShape()
+    const diamond = getDiamondShape()
+    const pattern = fireworkPatternRef.current % 5
+    fireworkPatternRef.current += 1
+
+    switch (pattern) {
+      case 0: {
+        // Pattern 0: Rocket mortar from Left Corner -> High Starburst Peony
+        // Launch streak
+        confetti({
+          particleCount: 16,
+          angle: 58,
+          spread: 12,
+          startVelocity: 60,
+          origin: { x: 0.08, y: 0.95 },
+          colors: ['#ffe066', '#ffffff'],
+          shapes: ['circle'],
+          ticks: 45,
+          disableForReducedMotion: true,
+        })
+        // Aerial shell burst at peak
         setTimeout(() => {
-          setActive(false)
-          setFading(false)
-        }, 12400),
-      )
+          confetti({
+            particleCount: 95,
+            spread: 360,
+            startVelocity: 44,
+            decay: 0.92,
+            scalar: 1.25,
+            origin: { x: 0.36, y: 0.28 },
+            colors: ['#ffe066', '#38bdf8', '#f43f5e', '#facc15', '#ffffff'],
+            shapes: ['star', diamond],
+            disableForReducedMotion: true,
+          })
+        }, 260)
+        // Secondary crackle
+        setTimeout(() => {
+          confetti({
+            particleCount: 40,
+            spread: 280,
+            startVelocity: 26,
+            origin: { x: 0.38, y: 0.32 },
+            colors: ['#ffd700', '#ffffff'],
+            shapes: ['circle'],
+            disableForReducedMotion: true,
+          })
+        }, 420)
+        break
+      }
+
+      case 1: {
+        // Pattern 1: Rocket mortar from Right Corner -> Heart & Rose Peony
+        confetti({
+          particleCount: 16,
+          angle: 122,
+          spread: 12,
+          startVelocity: 60,
+          origin: { x: 0.92, y: 0.95 },
+          colors: ['#ff69b4', '#ffffff'],
+          shapes: ['circle'],
+          ticks: 45,
+          disableForReducedMotion: true,
+        })
+        setTimeout(() => {
+          confetti({
+            particleCount: 95,
+            spread: 360,
+            startVelocity: 44,
+            decay: 0.92,
+            scalar: 1.3,
+            origin: { x: 0.64, y: 0.28 },
+            colors: ['#ec4899', '#f43f5e', '#d946ef', '#ff69b4', '#fbcfe8'],
+            shapes: [heart, 'circle'],
+            disableForReducedMotion: true,
+          })
+        }, 260)
+        break
+      }
+
+      case 2: {
+        // Pattern 2: Dual Cross-Mortar Salvo (Left & Right intersecting in mid-air)
+        // Left mortar
+        confetti({
+          particleCount: 14,
+          angle: 65,
+          spread: 10,
+          startVelocity: 62,
+          origin: { x: 0.12, y: 0.95 },
+          colors: ['#38bdf8', '#ffffff'],
+          shapes: ['circle'],
+          ticks: 40,
+          disableForReducedMotion: true,
+        })
+        // Right mortar
+        setTimeout(() => {
+          confetti({
+            particleCount: 14,
+            angle: 115,
+            spread: 10,
+            startVelocity: 62,
+            origin: { x: 0.88, y: 0.95 },
+            colors: ['#c084fc', '#ffffff'],
+            shapes: ['circle'],
+            ticks: 40,
+            disableForReducedMotion: true,
+          })
+        }, 150)
+        // Burst 1 (Left target)
+        setTimeout(() => {
+          confetti({
+            particleCount: 80,
+            spread: 360,
+            startVelocity: 42,
+            decay: 0.92,
+            origin: { x: 0.32, y: 0.22 },
+            colors: ['#38bdf8', '#67e8f9', '#ffd700', '#ffffff'],
+            shapes: ['star', 'circle'],
+            disableForReducedMotion: true,
+          })
+        }, 260)
+        // Burst 2 (Right target)
+        setTimeout(() => {
+          confetti({
+            particleCount: 80,
+            spread: 360,
+            startVelocity: 42,
+            decay: 0.92,
+            origin: { x: 0.68, y: 0.22 },
+            colors: ['#a855f7', '#ec4899', '#f43f5e', '#fbcfe8'],
+            shapes: [heart, diamond],
+            disableForReducedMotion: true,
+          })
+        }, 410)
+        break
+      }
+
+      case 3: {
+        // Pattern 3: Horizon Salvo Trio (Three consecutive aerial bursts across the sky)
+        // Burst Left
+        confetti({
+          particleCount: 75,
+          spread: 360,
+          startVelocity: 40,
+          decay: 0.93,
+          origin: { x: 0.22, y: 0.32 },
+          colors: ['#4ade80', '#2dd4bf', '#fde047', '#ffffff'],
+          shapes: ['star', 'square'],
+          disableForReducedMotion: true,
+        })
+        // Burst Right
+        setTimeout(() => {
+          confetti({
+            particleCount: 75,
+            spread: 360,
+            startVelocity: 40,
+            decay: 0.93,
+            origin: { x: 0.78, y: 0.34 },
+            colors: ['#f43f5e', '#fb7185', '#ec4899', '#ffffff'],
+            shapes: [heart, 'circle'],
+            disableForReducedMotion: true,
+          })
+        }, 160)
+        // Burst High Center
+        setTimeout(() => {
+          confetti({
+            particleCount: 110,
+            spread: 360,
+            startVelocity: 48,
+            decay: 0.91,
+            scalar: 1.25,
+            origin: { x: 0.50, y: 0.18 },
+            colors: ['#38bdf8', '#c084fc', '#ffd700', '#f43f5e', '#ffffff'],
+            shapes: ['star', diamond, 'circle'],
+            disableForReducedMotion: true,
+          })
+        }, 320)
+        break
+      }
+
+      case 4:
+      default: {
+        // Pattern 4: Golden Weeping Willow Skyfall (Long-lasting shimmering golden branches)
+        confetti({
+          particleCount: 130,
+          spread: 360,
+          startVelocity: 46,
+          gravity: 0.55,
+          decay: 0.94,
+          ticks: 190,
+          scalar: 1.15,
+          origin: { x: 0.5, y: 0.22 },
+          colors: ['#ffe066', '#fef08a', '#fbbf24', '#fef9c3', '#ffffff'],
+          shapes: ['star', 'circle', diamond],
+          disableForReducedMotion: true,
+        })
+        break
+      }
     }
   }
 
@@ -473,60 +822,54 @@ export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfare
         />
       </div>
 
-      {/* Interactive HUD Action Bar */}
+      {/* Streamlined Bottom Controls: Confetti / Fireworks & Theme Toggle */}
       <div
-        className="mt-4 sm:mt-6 flex flex-wrap items-center justify-center gap-2 sm:gap-3 z-20"
+        className="mt-4 sm:mt-6 flex items-center justify-center gap-3 sm:gap-4 z-20"
         onClick={(e) => e.stopPropagation()}
       >
-        <button
-          type="button"
-          onClick={handleReplay}
-          className="px-4 py-2 rounded-full font-bold text-xs sm:text-sm text-white shadow-lg transition-transform active:scale-95 flex items-center gap-1.5 cursor-pointer"
-          style={{
-            background: 'linear-gradient(135deg, #ec4899 0%, #a855f7 100%)',
-            boxShadow: '0 4px 16px rgba(236, 72, 153, 0.4)',
-          }}
-        >
-          <span>🎉</span> <span>Replay Fanfare & Music</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={handleBurstConfetti}
-          className="px-4 py-2 rounded-full font-bold text-xs sm:text-sm backdrop-blur-md transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shadow-md"
-          style={{
-            background: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.85)',
-            color: isDark ? '#fdf4ff' : '#1e1b4b',
-            border: isDark ? '1px solid rgba(216, 180, 254, 0.3)' : '1px solid rgba(244, 114, 182, 0.4)',
-          }}
-        >
-          <span>🎊</span> <span>Burst Confetti</span>
-        </button>
+        {isDark ? (
+          <button
+            type="button"
+            onClick={handleLaunchFireworks}
+            className="px-5 py-2.5 rounded-full font-extrabold text-xs sm:text-sm text-white shadow-xl transition-all active:scale-95 flex items-center gap-2 cursor-pointer"
+            style={{
+              background: 'linear-gradient(135deg, #7c3aed 0%, #ec4899 50%, #f59e0b 100%)',
+              boxShadow: '0 4px 20px rgba(168, 85, 247, 0.5), inset 0 0 12px rgba(255, 255, 255, 0.25)',
+              border: '1px solid rgba(255, 255, 255, 0.35)',
+            }}
+          >
+            <span className="text-base sm:text-lg">🎆</span>
+            <span>Launch Fireworks</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleBurstConfetti}
+            className="px-5 py-2.5 rounded-full font-extrabold text-xs sm:text-sm text-white shadow-xl transition-all active:scale-95 flex items-center gap-2 cursor-pointer"
+            style={{
+              background: 'linear-gradient(135deg, #f43f5e 0%, #ec4899 50%, #a855f7 100%)',
+              boxShadow: '0 4px 20px rgba(244, 63, 94, 0.45), inset 0 0 12px rgba(255, 255, 255, 0.3)',
+              border: '1px solid rgba(255, 255, 255, 0.5)',
+            }}
+          >
+            <span className="text-base sm:text-lg">🎊</span>
+            <span>Burst Confetti</span>
+          </button>
+        )}
 
         <button
           type="button"
           onClick={toggleTheme}
-          className="px-4 py-2 rounded-full font-bold text-xs sm:text-sm backdrop-blur-md transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shadow-md"
+          className="px-5 py-2.5 rounded-full font-bold text-xs sm:text-sm backdrop-blur-xl transition-all active:scale-95 flex items-center gap-2 cursor-pointer shadow-lg"
           style={{
-            background: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.85)',
+            background: isDark ? 'rgba(30, 17, 54, 0.85)' : 'rgba(255, 255, 255, 0.9)',
             color: isDark ? '#fdf4ff' : '#1e1b4b',
-            border: isDark ? '1px solid rgba(216, 180, 254, 0.3)' : '1px solid rgba(244, 114, 182, 0.4)',
+            border: isDark ? '1.5px solid rgba(216, 180, 254, 0.4)' : '1.5px solid rgba(244, 114, 182, 0.45)',
+            boxShadow: isDark ? '0 4px 16px rgba(0, 0, 0, 0.4)' : '0 4px 16px rgba(244, 63, 94, 0.15)',
           }}
         >
-          <span>🎨</span> <span>{isDark ? 'Pastel Theme' : 'Midnight Theme'}</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={dismiss}
-          className="px-4 py-2 rounded-full font-bold text-xs sm:text-sm backdrop-blur-md transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer opacity-80 hover:opacity-100"
-          style={{
-            background: isDark ? 'rgba(0, 0, 0, 0.4)' : 'rgba(255, 255, 255, 0.6)',
-            color: isDark ? '#e2e8f0' : '#475569',
-            border: '1px solid rgba(148, 163, 184, 0.25)',
-          }}
-        >
-          <span>✨</span> <span>Tap anywhere to close</span>
+          <span className="text-base sm:text-lg">{isDark ? '🌸' : '🌙'}</span>
+          <span>{isDark ? 'Pastel Theme' : 'Midnight Theme'}</span>
         </button>
       </div>
 
