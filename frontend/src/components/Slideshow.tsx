@@ -6401,7 +6401,7 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
           <SittingElf seed={seedOffset} flip={elfFlip} />
         </div>
       )}
-      {isSwaraBirthday(seasonalNow) && (seasonalNow.getDate() === 31 || getQueryParam('bday') === '1') && (
+      {isSwaraBirthday(seasonalNow) && (
         <div
           className={`absolute -top-3.5 ${bowPosition === 'left' ? '-left-3.5' : '-right-3.5'} pointer-events-none z-20 select-none`}
         >
@@ -6418,7 +6418,7 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
 
   if (isOctober(seasonalNow)) {
     const isBday = isSwaraBirthday(seasonalNow)
-    const isActualBirthdayDay = seasonalNow.getDate() === 31 || getQueryParam('partyhats') === '1'
+    const isActualBirthdayDay = isBday || getQueryParam('partyhats') === '1'
     if (isBday && isActualBirthdayDay) {
       topElement = (
         <div className="absolute bottom-[calc(100%-58px)] pointer-events-none select-none z-10">

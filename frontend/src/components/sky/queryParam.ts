@@ -70,8 +70,8 @@ export function isSwaraBirthday(d?: Date): boolean {
   const override = getHolidayOverride()?.toLowerCase()
   if (override === 'swara' || override === 'birthday' || override === 'bday' || override === 'swarabday' || override === 'oct31' || override === 'halloweenbday') return true
   if (getQueryParam('bday') === '1' || getQueryParam('birthday') === '1' || getQueryParam('fanfare') === '1') return true
-  // Swara's Birthday celebration is October 31
-  return date.getMonth() === 9 && date.getDate() === 31
+  // Swara's Birthday celebration: Oct 30 through Oct 31
+  return date.getMonth() === 9 && (date.getDate() === 30 || date.getDate() === 31)
 }
 
 export function isOctober(d?: Date): boolean {
