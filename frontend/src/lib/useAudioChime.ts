@@ -322,3 +322,23 @@ export function playBirthdayFanfareSound(): () => void {
   }
 }
 
+export function playBooGiggleSound() {
+  try {
+    const ctx = getAudioContext()
+    const now = ctx.currentTime
+    const osc = ctx.createOscillator()
+    const g = ctx.createGain()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(1046.5, now) // C6
+    osc.frequency.exponentialRampToValueAtTime(1567.98, now + 0.15) // G6
+    g.gain.setValueAtTime(0.3, now)
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.25)
+    osc.connect(g)
+    g.connect(ctx.destination)
+    osc.start(now)
+    osc.stop(now + 0.28)
+  } catch (e) {
+    console.warn('[AudioChime] Boo giggle error:', e)
+  }
+}
+
