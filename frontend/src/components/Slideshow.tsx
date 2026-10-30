@@ -6346,13 +6346,7 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
   // Select the top attachment element based on weather kind & sky phase
   let topElement: React.ReactNode = null
 
-  if (isSwaraBirthday(seasonalNow) || Boolean(getQueryParam('crown'))) {
-    topElement = (
-      <div className="absolute bottom-[calc(100%-14px)] pointer-events-none select-none z-10">
-        <BirthdayCrownTopper seed={seedOffset} />
-      </div>
-    )
-  } else if (isOctober(seasonalNow)) {
+  if (isOctober(seasonalNow)) {
     if (phase === 'dusk' || phase === 'night') {
       topElement = (
         <div className="absolute bottom-[calc(100%-12px)] pointer-events-none select-none z-10">
@@ -6593,61 +6587,28 @@ function BirthdayFanfareOverlay({ seasonalDate }: { seasonalDate?: Date }) {
 
       {/* Main Hero Card Stage */}
       <div
-        className="relative max-w-xl w-full flex flex-col items-center text-center p-8 sm:p-12 rounded-3xl backdrop-blur-2xl bg-white/10 dark:bg-black/30 border border-white/30 shadow-[0_25px_60px_rgba(0,0,0,0.6)] animate-in fade-in zoom-in-95 duration-500"
+        className="relative max-w-xl w-full flex flex-col items-center text-center p-8 sm:p-12 rounded-3xl backdrop-blur-2xl bg-slate-950/90 dark:bg-slate-950/95 border border-amber-300/30 shadow-[0_25px_60px_rgba(0,0,0,0.8)] animate-in fade-in zoom-in-95 duration-500"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Floating Crowned Giant Numeral 9 */}
-        <div className="relative mb-4 filter drop-shadow-[0_12px_24px_rgba(250,204,21,0.45)]">
-          <svg width="150" height="150" viewBox="0 0 150 150" className="pointer-events-none">
-            <defs>
-              <linearGradient id="fanfare_gold_9" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#fffbeb" />
-                <stop offset="25%" stopColor="#fef08a" />
-                <stop offset="50%" stopColor="#facc15" />
-                <stop offset="75%" stopColor="#eab308" />
-                <stop offset="100%" stopColor="#a16207" />
-              </linearGradient>
-              <linearGradient id="fanfare_gem_pink" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#ffe4e6" />
-                <stop offset="50%" stopColor="#f43f5e" />
-                <stop offset="100%" stopColor="#9f1239" />
-              </linearGradient>
-            </defs>
-
-            {/* Sparkling Diamond Tiara Crown perched atop the "9" */}
-            <g transform="translate(38, 2) scale(0.65)">
-              <path d="M 18 52 Q 58 46 98 52 L 100 58 Q 58 52 16 58 Z" fill="#713f12" />
-              <path d="M 20 52 Q 18 38 26 30 Q 32 38 30 52 Z" fill="url(#fanfare_gold_9)" stroke="#a16207" strokeWidth="0.8" />
-              <path d="M 96 52 Q 98 38 90 30 Q 84 38 86 52 Z" fill="url(#fanfare_gold_9)" stroke="#a16207" strokeWidth="0.8" />
-              <path d="M 30 52 Q 34 30 44 20 Q 50 32 46 52 Z" fill="url(#fanfare_gold_9)" stroke="#a16207" strokeWidth="0.8" />
-              <path d="M 86 52 Q 82 30 72 20 Q 66 32 70 52 Z" fill="url(#fanfare_gold_9)" stroke="#a16207" strokeWidth="0.8" />
-              <path d="M 46 52 Q 50 24 58 8 Q 66 24 70 52 Z" fill="url(#fanfare_gold_9)" stroke="#a16207" strokeWidth="0.9" />
-              <circle cx="58" cy="8" r="4.5" fill="#ffffff" />
-              <circle cx="44" cy="20" r="3.2" fill="url(#fanfare_gem_pink)" />
-              <circle cx="72" cy="20" r="3.2" fill="url(#fanfare_gem_pink)" />
-            </g>
-
-            {/* Giant 3D Sculpted Golden "9" */}
-            <path
-              d="M 86 42 C 60 42 46 62 46 84 C 46 104 60 118 78 118 C 96 118 108 104 108 82 C 108 48 94 42 86 42 Z M 78 98 C 68 98 62 88 62 80 C 62 70 70 60 80 60 C 90 60 94 70 94 80 C 94 90 88 98 78 98 Z"
-              fill="#78350f"
-              transform="translate(4, 5)"
-            />
-            <path
-              d="M 86 42 C 60 42 46 62 46 84 C 46 104 60 118 78 118 C 96 118 108 104 108 82 C 108 48 94 42 86 42 Z M 78 98 C 68 98 62 88 62 80 C 62 70 70 60 80 60 C 90 60 94 70 94 80 C 94 90 88 98 78 98 Z"
-              fill="url(#fanfare_gold_9)"
-              stroke="#ffffff"
-              strokeWidth="2.5"
-            />
-            <path
-              d="M 84 48 C 66 48 54 64 54 80"
-              stroke="#ffffff"
-              strokeWidth="3"
-              strokeLinecap="round"
-              fill="none"
-              opacity="0.85"
-            />
-          </svg>
+        <div className="relative flex flex-col items-center justify-center mb-2 select-none">
+          {/* Sparkling Tiara Crown perched atop the "9" */}
+          <div className="text-4xl sm:text-5xl -mb-3 filter drop-shadow-[0_4px_12px_rgba(250,204,21,0.7)] animate-bounce z-10">
+            👑
+          </div>
+          {/* Giant 3D Sculpted Golden "9" */}
+          <div
+            className="text-8xl sm:text-9xl font-black tabular-nums tracking-tighter leading-none"
+            style={{
+              background: 'linear-gradient(180deg, #fffbeb 0%, #fef08a 25%, #facc15 50%, #eab308 75%, #b45309 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              WebkitTextStroke: '2px rgba(255, 255, 255, 0.95)',
+              filter: 'drop-shadow(0 8px 24px rgba(250,204,21,0.55)) drop-shadow(0 4px 6px rgba(120,53,15,0.9))',
+            }}
+          >
+            9
+          </div>
         </div>
 
         {/* Milestone Pill */}

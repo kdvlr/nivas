@@ -8,6 +8,12 @@
 export const getQueryParam = (key: string): string | null => {
   const searchQP = new URLSearchParams(window.location.search)
   if (searchQP.has(key)) return searchQP.get(key)
+  const hash = window.location.hash
+  const hashQIdx = hash.indexOf('?')
+  if (hashQIdx !== -1) {
+    const hashQP = new URLSearchParams(hash.substring(hashQIdx))
+    if (hashQP.has(key)) return hashQP.get(key)
+  }
   const qIdx = window.location.href.indexOf('?')
   if (qIdx !== -1) {
     const qp = new URLSearchParams(window.location.href.substring(qIdx))
