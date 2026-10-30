@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useId, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import confetti from 'canvas-confetti'
-import { playBalloonPopSound, playBirthdayFanfareSound } from '../lib/useAudioChime'
+import { playBalloonPopSound, playBirthdayFanfareSound, stopBirthdayFanfareSound } from '../lib/useAudioChime'
 import Icon from './Icon'
 import { api } from '../lib/api'
 import { useData } from '../lib/hooks'
@@ -6572,33 +6572,58 @@ function BirthdayFanfareOverlay({ seasonalDate }: { seasonalDate?: Date }) {
       disableForReducedMotion: true,
     })
 
-    // Second wave burst at 1.4s
+    // Second wave burst at 2.5s (Phrase 2)
     const secondWave = setTimeout(() => {
       confetti({
-        particleCount: 70,
+        particleCount: 75,
         spread: 90,
         origin: { x: 0.5, y: 0.4 },
         colors: ['#ffd700', '#ff69b4', '#00ffff', '#ff1493'],
         disableForReducedMotion: true,
       })
-    }, 1400)
+    }, 2500)
     timerRef.current.push(secondWave)
+
+    // Third wave burst at 5.48s (Phrase 3 high octave jump: "Happy Birthday dear Swara!")
+    const thirdWave = setTimeout(() => {
+      confetti({
+        particleCount: 90,
+        spread: 100,
+        origin: { x: 0.5, y: 0.35 },
+        colors: ['#f43f5e', '#facc15', '#a855f7', '#38bdf8'],
+        disableForReducedMotion: true,
+      })
+    }, 5480)
+    timerRef.current.push(thirdWave)
+
+    // Fourth grand wave burst at 9.74s (Phrase 4 finale chord: "Happy Birthday to you!")
+    const fourthWave = setTimeout(() => {
+      confetti({
+        particleCount: 110,
+        spread: 120,
+        origin: { x: 0.5, y: 0.45 },
+        colors: ['#ffd700', '#ec4899', '#38bdf8', '#facc15', '#f43f5e'],
+        disableForReducedMotion: true,
+      })
+    }, 9740)
+    timerRef.current.push(fourthWave)
 
     const isFreeze = getQueryParam('fanfare') === 'freeze'
     if (isFreeze) return
 
-    // Auto dismiss after 6.4s (with 0.6s fade)
+    // Auto dismiss after song completes at ~11.8s (with 0.6s fade)
     timerRef.current.push(
-      setTimeout(() => setFading(true), 5800),
+      setTimeout(() => setFading(true), 11800),
       setTimeout(() => {
         setActive(false)
         setFading(false)
-      }, 6400),
+      }, 12400),
     )
   }, [])
 
   const dismiss = (e?: React.MouseEvent) => {
     e?.stopPropagation()
+    stopBirthdayFanfareSound()
     clearTimers()
     setFading(true)
     setTimeout(() => {
@@ -6629,6 +6654,7 @@ function BirthdayFanfareOverlay({ seasonalDate }: { seasonalDate?: Date }) {
       window.removeEventListener('trigger-birthday-fanfare', handleCustom)
       clearInterval(interval)
       clearTimers()
+      stopBirthdayFanfareSound()
     }
   }, [trigger, seasonalDate])
 
