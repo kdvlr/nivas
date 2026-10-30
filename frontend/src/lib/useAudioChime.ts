@@ -18,6 +18,23 @@ function getAudioContext(): AudioContext {
   return audioCtx
 }
 
+// Proactive user-gesture unlock for tablet / kiosk browsers
+if (typeof window !== 'undefined') {
+  const unlockAudio = () => {
+    try {
+      const ctx = getAudioContext()
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {})
+      }
+    } catch {
+      // ignore
+    }
+  }
+  window.addEventListener('pointerdown', unlockAudio, { passive: true })
+  window.addEventListener('touchstart', unlockAudio, { passive: true })
+  window.addEventListener('click', unlockAudio, { passive: true })
+}
+
 export function playChime(type: 'gentle' | 'reminder' | 'alarm' = 'reminder') {
   try {
     const ctx = getAudioContext()
@@ -142,10 +159,15 @@ export function playBirthdayFanfareSound(): () => void {
 
   try {
     const ctx = getAudioContext()
-    const now = ctx.currentTime
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {})
+    }
+
+    // Schedule slightly in future to prevent audio thread starvation / missed first note
+    const now = ctx.currentTime + (ctx.state === 'suspended' ? 0.12 : 0.05)
 
     const masterGain = ctx.createGain()
-    masterGain.gain.setValueAtTime(0.28, now)
+    masterGain.gain.setValueAtTime(0.72, now)
     masterGain.connect(ctx.destination)
 
     const activeOscs: OscillatorNode[] = []
@@ -206,7 +228,7 @@ export function playBirthdayFanfareSound(): () => void {
       osc.frequency.setValueAtTime(freq, time)
 
       g.gain.setValueAtTime(0, time)
-      g.gain.linearRampToValueAtTime(gainLevel, time + 0.015)
+      g.gain.linearRampToValueAtTime(gainLevel * 0.75, time + 0.015)
       g.gain.exponentialRampToValueAtTime(0.0001, time + dur)
 
       osc.connect(g)
@@ -223,22 +245,22 @@ export function playBirthdayFanfareSound(): () => void {
       shimmer.frequency.setValueAtTime(freq * 2, time)
 
       shimmerGain.gain.setValueAtTime(0, time)
-      shimmerGain.gain.linearRampToValueAtTime(gainLevel * 0.25, time + 0.01)
-      shimmerGain.gain.exponentialRampToValueAtTime(0.0001, time + dur * 0.7)
+      shimmerGain.gain.linearRampToValueAtTime(gainLevel * 0.40, time + 0.01)
+      shimmerGain.gain.exponentialRampToValueAtTime(0.0001, time + dur * 0.75)
 
       shimmer.connect(shimmerGain)
       shimmerGain.connect(masterGain)
 
       shimmer.start(time)
-      shimmer.stop(time + dur * 0.7 + 0.05)
+      shimmer.stop(time + dur * 0.75 + 0.05)
       activeOscs.push(shimmer)
     }
 
     melody.forEach((item) => {
-      playTone(now + item.t, item.f, item.d, 0.32)
+      playTone(now + item.t, item.f, item.d, 0.45)
       if (item.chord) {
         item.chord.forEach((chordFreq) => {
-          playTone(now + item.t, chordFreq, item.d * 1.15, 0.16)
+          playTone(now + item.t, chordFreq, item.d * 1.15, 0.22)
         })
       }
     })

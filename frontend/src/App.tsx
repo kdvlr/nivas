@@ -150,6 +150,7 @@ const getTzDateString = (date: Date, timeZone: string) => {
 import { playChime } from './lib/useAudioChime'
 import TopClockHeader from './components/TopClockHeader'
 import AmbientCalendarOverlay, { type ReminderPayload } from './components/AmbientCalendarOverlay'
+import BirthdayFanfareOverlay from './components/BirthdayFanfareOverlay'
 
 function AppContent() {
   const { isTimerActive, timer } = useTimer()
@@ -1024,6 +1025,8 @@ function AppContent() {
             onClose={handleStopPlayer}
           />
         )}
+        {/* Swara's Birthday Hourly Celebration & Interactive Fanfare */}
+        <BirthdayFanfareOverlay />
         {/* Kids Brain Nuggets Floating Window */}
         <MorningKidsBanner
           forceOpen={kidsHubOpen}
