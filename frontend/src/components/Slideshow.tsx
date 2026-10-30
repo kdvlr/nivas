@@ -211,8 +211,25 @@ function Pumpkin({ seed = 0 }: { seed?: number }) {
   )
 }
 
-function JackOLantern({ seed = 0, hasBirthdayCandle = false }: { seed?: number; hasBirthdayCandle?: boolean }) {
+const JACK_PARTY_HAT_PALETTES = [
+  { cone: '#ec4899', stroke: '#db2777', stripe1: '#38bdf8', stripe2: '#facc15', stripe3: '#a855f7', pom: '#fde047', brim: '#fef08a' }, // Magenta / Rainbow
+  { cone: '#8b5cf6', stroke: '#6d28d9', stripe1: '#ec4899', stripe2: '#facc15', stripe3: '#38bdf8', pom: '#f43f5e', brim: '#e0e7ff' }, // Violet / Pink
+  { cone: '#06b6d4', stroke: '#0e7490', stripe1: '#f43f5e', stripe2: '#facc15', stripe3: '#a855f7', pom: '#facc15', brim: '#cffafe' }, // Cyan / Fiesta
+  { cone: '#f59e0b', stroke: '#b45309', stripe1: '#ec4899', stripe2: '#38bdf8', stripe3: '#10b981', pom: '#ec4899', brim: '#fef3c7' }, // Golden / Confetti
+]
+
+function JackOLantern({
+  seed = 0,
+  hasBirthdayCandle = false,
+  hasPartyHat = false,
+}: {
+  seed?: number
+  hasBirthdayCandle?: boolean
+  hasPartyHat?: boolean
+}) {
   const gradId = useId()
+  const hat = JACK_PARTY_HAT_PALETTES[Math.abs(seed) % JACK_PARTY_HAT_PALETTES.length]
+  const tilt = (seed % 2 === 0 ? 1 : -1) * (7 + (Math.abs(seed) % 4))
   return (
     <svg
       width="112"
@@ -234,29 +251,31 @@ function JackOLantern({ seed = 0, hasBirthdayCandle = false }: { seed?: number; 
       {/* Soft warm aura glow behind lantern */}
       <circle cx="48" cy="62" r="42" fill="rgba(251, 146, 60, 0.22)" />
 
-      {/* Stem or Festive Birthday Candle */}
-      {hasBirthdayCandle ? (
-        <g>
-          {/* Candle stick */}
-          <rect x="45.5" y="10" width="5" height="22" rx="1.5" fill="#f43f5e" />
-          {/* Diagonal stripes on candle */}
-          <path d="M 45.5 14 L 50.5 12" stroke="#fef08a" strokeWidth="1.6" />
-          <path d="M 45.5 20 L 50.5 18" stroke="#fef08a" strokeWidth="1.6" />
-          <path d="M 45.5 26 L 50.5 24" stroke="#fef08a" strokeWidth="1.6" />
-          {/* Wick */}
-          <line x1="48" y1="10" x2="48" y2="6" stroke="#451a03" strokeWidth="1.2" strokeLinecap="round" />
-          {/* Candle Flame Glow */}
-          <circle cx="48" cy="2" r="7" fill="rgba(250, 204, 21, 0.35)" />
-          {/* Flame Tear */}
-          <path d="M 48 -3 C 51 1, 51 5, 48 6 C 45 5, 45 1, 48 -3 Z" fill="#facc15" />
-          <path d="M 48 0 C 49.5 2, 49.5 4, 48 5 C 46.5 4, 46.5 2, 48 0 Z" fill="#ffffff" />
-          {/* Sparkle stars */}
-          <circle cx="42" cy="-1" r="0.8" fill="#fde047" opacity="0.85" />
-          <circle cx="54" cy="1" r="0.8" fill="#fde047" opacity="0.85" />
-        </g>
-      ) : (
-        /* Stem */
-        <path d="M48 30 C46 17 53 10 59 8 C57 8 51 13 48 20 C46 24 45 30 45 30 Z" fill="#1e3a1f" />
+      {/* Stem or Festive Birthday Candle (when not wearing party hat) */}
+      {!hasPartyHat && (
+        hasBirthdayCandle ? (
+          <g>
+            {/* Candle stick */}
+            <rect x="45.5" y="10" width="5" height="22" rx="1.5" fill="#f43f5e" />
+            {/* Diagonal stripes on candle */}
+            <path d="M 45.5 14 L 50.5 12" stroke="#fef08a" strokeWidth="1.6" />
+            <path d="M 45.5 20 L 50.5 18" stroke="#fef08a" strokeWidth="1.6" />
+            <path d="M 45.5 26 L 50.5 24" stroke="#fef08a" strokeWidth="1.6" />
+            {/* Wick */}
+            <line x1="48" y1="10" x2="48" y2="6" stroke="#451a03" strokeWidth="1.2" strokeLinecap="round" />
+            {/* Candle Flame Glow */}
+            <circle cx="48" cy="2" r="7" fill="rgba(250, 204, 21, 0.35)" />
+            {/* Flame Tear */}
+            <path d="M 48 -3 C 51 1, 51 5, 48 6 C 45 5, 45 1, 48 -3 Z" fill="#facc15" />
+            <path d="M 48 0 C 49.5 2, 49.5 4, 48 5 C 46.5 4, 46.5 2, 48 0 Z" fill="#ffffff" />
+            {/* Sparkle stars */}
+            <circle cx="42" cy="-1" r="0.8" fill="#fde047" opacity="0.85" />
+            <circle cx="54" cy="1" r="0.8" fill="#fde047" opacity="0.85" />
+          </g>
+        ) : (
+          /* Stem */
+          <path d="M48 30 C46 17 53 10 59 8 C57 8 51 13 48 20 C46 24 45 30 45 30 Z" fill="#1e3a1f" />
+        )
       )}
 
       {/* Darker Night Pumpkin Lobes */}
@@ -269,6 +288,38 @@ function JackOLantern({ seed = 0, hasBirthdayCandle = false }: { seed?: number; 
       {/* Rib Shadows */}
       <path d="M37 36 C31 46 30 73 37 85" stroke="#7c2d12" strokeWidth="1.6" fill="none" opacity="0.75" />
       <path d="M59 36 C65 46 66 73 59 85" stroke="#7c2d12" strokeWidth="1.6" fill="none" opacity="0.75" />
+
+      {/* Festive Birthday Cone Party Hat */}
+      {hasPartyHat && (
+        <g transform={`translate(48, 36) rotate(${tilt})`}>
+          {/* Streamer ribbons trailing from tip */}
+          <path d="M 0 -28 Q -5 -22 -10 -15" stroke="#f472b6" strokeWidth="1.2" fill="none" opacity="0.85" strokeLinecap="round" />
+          <path d="M 0 -28 Q 5 -20 9 -12" stroke="#38bdf8" strokeWidth="1.2" fill="none" opacity="0.85" strokeLinecap="round" />
+
+          {/* Fluffy Pom-pom on cone tip */}
+          <circle cx="0" cy="-28" r="3.5" fill={hat.pom} stroke="#ca8a04" strokeWidth="0.8" />
+          <circle cx="-1" cy="-29" r="1.2" fill="#ffffff" opacity="0.8" />
+
+          {/* Main Cone */}
+          <path d="M -13 0 L 0 -27 L 13 0 Z" fill={hat.cone} stroke={hat.stroke} strokeWidth="1" />
+
+          {/* Festive Colorful Diagonal Stripes */}
+          <path d="M -9 -7 L 0 -27 L 3 -19 Z" fill={hat.stripe1} />
+          <path d="M -5 -15 L 0 -27 L -1 -11 Z" fill={hat.stripe2} />
+          <path d="M 4 -7 L 0 -27 L 9 0 Z" fill={hat.stripe3} />
+
+          {/* Sparkles on hat */}
+          <circle cx="-1" cy="-7" r="1.1" fill="#ffffff" />
+          <circle cx="3" cy="-14" r="0.9" fill="#fef08a" />
+
+          {/* Hat Brim Ruffle Trim */}
+          <ellipse cx="0" cy="0" rx="13.5" ry="3" fill={hat.brim} stroke={hat.stroke} strokeWidth="0.6" />
+          {/* Polka dots on brim */}
+          <circle cx="-7" cy="0" r="1" fill={hat.cone} />
+          <circle cx="0" cy="0.4" r="1" fill={hat.stripe1} />
+          <circle cx="7" cy="0" r="1" fill={hat.stripe3} />
+        </g>
+      )}
 
       {/* Glowing Carved Eyes */}
       <polygon points="32,50 43,55 36,63" fill={`url(#${gradId})`} />
@@ -6347,10 +6398,17 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
   let topElement: React.ReactNode = null
 
   if (isOctober(seasonalNow)) {
-    if (phase === 'dusk' || phase === 'night') {
+    const isBday = isSwaraBirthday(seasonalNow)
+    if (isBday) {
       topElement = (
         <div className="absolute bottom-[calc(100%-12px)] pointer-events-none select-none z-10">
-          <JackOLantern seed={seedOffset} hasBirthdayCandle={isSwaraBirthday(seasonalNow)} />
+          <JackOLantern seed={seedOffset} hasPartyHat={true} />
+        </div>
+      )
+    } else if (phase === 'dusk' || phase === 'night') {
+      topElement = (
+        <div className="absolute bottom-[calc(100%-12px)] pointer-events-none select-none z-10">
+          <JackOLantern seed={seedOffset} />
         </div>
       )
     } else {
