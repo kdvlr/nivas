@@ -20,20 +20,23 @@ const isTouchDevice =
     /Android|webOS|iPhone|iPad|iPod|Tablet/i.test(navigator.userAgent))
 
 // Adaptive parameters for smooth 60 FPS on Android tablets and high-DPI displays:
-// - Reduce particle count to avoid saturating ARM CPU core draw calls
-// - Scale flake size up (scalar: 1.18) so fewer particles look just as full and festive
-// - Cap ticks to 100-110 so old particles finish cleanly before next bursts
-// - Ensure zIndex: 9999 so canvas renders directly on top of modal, avoiding backdrop invalidations
-const PARTICLE_SCALE = isTouchDevice ? 0.52 : 0.85
-const TICK_LIMIT = isTouchDevice ? 100 : 135
+// - Use square shapes (quad fill) which rasterize much faster than circular arcs on mobile GPUs
+// - Keep particle counts light and punchy: 15-25 large flakes per cannon on tablets
+// - Scale flake size up (scalar: 1.35) so confetti flutters like real celebratory ribbon flakes
+// - Ticks capped to 85 frames (~1.4s) for snappy bursts with zero accumulation
+// - zIndex: 9999 ensures canvas renders directly on top of modal, avoiding backdrop invalidations
+const PARTICLE_SCALE = isTouchDevice ? 0.38 : 0.75
+const TICK_LIMIT = isTouchDevice ? 85 : 120
 
 function fireConfetti(opts: confetti.Options) {
-  const count = Math.max(12, Math.round((opts.particleCount ?? 50) * PARTICLE_SCALE))
+  const baseCount = opts.particleCount ?? 40
+  const count = Math.max(8, Math.round(baseCount * PARTICLE_SCALE))
   return confetti({
     ...opts,
     particleCount: count,
     ticks: opts.ticks ?? TICK_LIMIT,
-    scalar: (opts.scalar ?? 1.0) * (isTouchDevice ? 1.18 : 1.05),
+    scalar: (opts.scalar ?? 1.0) * (isTouchDevice ? 1.35 : 1.1),
+    shapes: isTouchDevice ? ['square'] : ['square', 'circle'],
     zIndex: 9999,
     disableForReducedMotion: true,
   })
@@ -151,6 +154,7 @@ export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfare
     setTimeout(() => {
       setActive(false)
       setFading(false)
+      confetti.reset()
     }, 350)
   }
 
@@ -323,13 +327,13 @@ export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfare
     }
   }
 
-  // Notify system when modal is open to pause background heavy canvas loops
+  // Notify system when modal is open to pause background heavy canvas loops and freeze slideshow DOM
   useEffect(() => {
-    window.dispatchEvent(new CustomEvent('modal-overlay-active', { detail: active }))
+    window.dispatchEvent(new CustomEvent('modal-overlay-active', { detail: active && !fading }))
     return () => {
       window.dispatchEvent(new CustomEvent('modal-overlay-active', { detail: false }))
     }
-  }, [active])
+  }, [active, fading])
 
   useEffect(() => {
     const handleCustom = () => trigger()
@@ -367,7 +371,7 @@ export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfare
       }`}
       style={{
         background:
-          'radial-gradient(ellipse at 50% 40%, rgba(255, 255, 255, 0.96) 0%, rgba(255, 240, 245, 0.97) 35%, rgba(252, 231, 243, 0.98) 70%, rgba(237, 233, 254, 0.99) 100%)',
+          'radial-gradient(ellipse at 50% 40%, #ffffff 0%, #fff0f5 35%, #fce7f3 70%, #ede9fe 100%)',
       }}
     >
       {/* Ambient Theatrical Spotlight Cones (Hardware accelerated, zero-blur GPU light beams) */}

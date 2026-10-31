@@ -7334,7 +7334,10 @@ export default function Slideshow({
   return (
     <div
       ref={rootRef}
-      className="fixed inset-0 z-[100] overflow-hidden cursor-none select-none"
+      className={`slideshow-root fixed inset-0 z-[100] overflow-hidden cursor-none select-none ${
+        isOverlayOpen ? 'invisible pointer-events-none' : ''
+      }`}
+      style={isOverlayOpen ? { visibility: 'hidden' } : undefined}
       onClick={handleRootClick}
       onTouchStart={(event) => {
         if (Date.now() - lastBalloonPopTimeRef.current < 800) return
@@ -7354,6 +7357,13 @@ export default function Slideshow({
       }}
     >
       <style>{'@keyframes sky-cloud { from { transform: translateX(-60vmin); } to { transform: translateX(110vw); } }'}</style>
+      {isOverlayOpen && (
+        <style>{`
+          .slideshow-root, .slideshow-root * {
+            animation-play-state: paused !important;
+          }
+        `}</style>
+      )}
 
       {/* Clock & Date Ambient Glass Overlay */}
       <div className="absolute top-6 right-6 z-40 flex flex-col items-end select-none">
