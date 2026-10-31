@@ -7084,8 +7084,19 @@ export default function Slideshow({
   }, [])
 
   const [seasonalDate] = useState(() => getSeasonalDate(now))
+  const [isOverlayOpen, setIsOverlayOpen] = useState(false)
+
+  useEffect(() => {
+    const handleOverlay = (e: Event) => {
+      const custom = e as CustomEvent<boolean>
+      setIsOverlayOpen(!!custom.detail)
+    }
+    window.addEventListener('modal-overlay-active', handleOverlay)
+    return () => window.removeEventListener('modal-overlay-active', handleOverlay)
+  }, [])
+
   const phase: SkyPhase = override.phase ?? computePhase(now, sun.sunrise, sun.sunset)
-  const skyState: SkyState = { phase, kind, paused: !!selectedVideo || hidden, quality }
+  const skyState: SkyState = { phase, kind, paused: !!selectedVideo || hidden || isOverlayOpen, quality }
   const stateRef = useRef<SkyState>(skyState)
   stateRef.current = skyState
 
