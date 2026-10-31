@@ -468,11 +468,11 @@ function AppContent() {
     }
   }, [kidsNuggetsDisplayed, slideshowActive, armSlideshowTimer])
 
-  // Jump straight into the slideshow if sky override, ?slideshow=1, or ?bday=1 is present
+  // Jump straight into the slideshow if sky override, ?slideshow=1, or ?bday=1 / ?zombie / ?cake is present
   useEffect(() => {
     if (
-      route === 'photos' &&
-      (hasSkyOverride() || getQueryParam('slideshow') === '1' || getQueryParam('bday') === '1' || getQueryParam('birthday') === '1') &&
+      (route === 'photos' || getQueryParam('slideshow') === '1' || getQueryParam('zombie') || getQueryParam('cake')) &&
+      (hasSkyOverride() || getQueryParam('slideshow') === '1' || getQueryParam('bday') === '1' || getQueryParam('birthday') === '1' || getQueryParam('zombie') || getQueryParam('cake')) &&
       !isTimerActive
     ) {
       setSlideshowActive(true)

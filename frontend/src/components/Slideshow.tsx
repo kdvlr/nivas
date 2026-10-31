@@ -4052,18 +4052,310 @@ const ZOMBIE_STYLE_KEYFRAMES = `
     18% { transform: scale(1.2, 1.15); opacity: 0.40; }
     65% { transform: scale(0.85, 0.85); opacity: 0.18; }
   }
+  /* --- Chased Cake With Legs Keyframes --- */
+  @keyframes cakeStroll {
+      0.0% { transform: translate3d(50px, 78px, 0) scaleX(1); }
+      1.6% { transform: translate3d(50px, 78px, 0) scaleX(1); }
+      3.8% { transform: translate3d(270px, 68px, 0) scaleX(1); }
+      5.9% { transform: translate3d(270px, 68px, 0) scaleX(1); }
+      8.2% { transform: translate3d(500px, 76px, 0) scaleX(1); }
+     11.4% { transform: translate3d(500px, 76px, 0) scaleX(1); }
+     13.8% { transform: translate3d(740px, 84px, 0) scaleX(1); }
+     17.4% { transform: translate3d(740px, 84px, 0) scaleX(1); }
+     19.8% { transform: translate3d(980px, 86px, 0) scaleX(1); }
+     23.4% { transform: translate3d(980px, 86px, 0) scaleX(1); }
+     25.8% { transform: translate3d(1220px, 73px, 0) scaleX(1); }
+     29.4% { transform: translate3d(1220px, 73px, 0) scaleX(1); }
+     31.8% { transform: translate3d(1460px, 65px, 0) scaleX(1); }
+     35.4% { transform: translate3d(1460px, 65px, 0) scaleX(1); }
+     37.8% { transform: translate3d(1700px, 68px, 0) scaleX(1); }
+     41.2% { transform: translate3d(1700px, 68px, 0) scaleX(1); }
+     43.6% { transform: translate3d(1940px, 76px, 0) scaleX(1); }
+     46.3% { transform: translate3d(1940px, 76px, 0) scaleX(1); }
+     48.0% { transform: translate3d(2100px, 80px, 0) scaleX(1); }
+     48.5% { transform: translate3d(2100px, 80px, 0) scaleX(1); }
+     49.0% { transform: translate3d(2100px, 80px, 0) scaleX(-1); }
+     50.5% { transform: translate3d(1870px, 74px, 0) scaleX(-1); }
+     52.5% { transform: translate3d(1870px, 74px, 0) scaleX(-1); }
+     54.9% { transform: translate3d(1630px, 64px, 0) scaleX(-1); }
+     57.5% { transform: translate3d(1630px, 64px, 0) scaleX(-1); }
+     59.9% { transform: translate3d(1390px, 68px, 0) scaleX(-1); }
+     62.9% { transform: translate3d(1390px, 68px, 0) scaleX(-1); }
+     65.3% { transform: translate3d(1150px, 75px, 0) scaleX(-1); }
+     68.4% { transform: translate3d(1150px, 75px, 0) scaleX(-1); }
+     70.8% { transform: translate3d(910px, 87px, 0) scaleX(-1); }
+     73.9% { transform: translate3d(910px, 87px, 0) scaleX(-1); }
+     76.3% { transform: translate3d(670px, 82px, 0) scaleX(-1); }
+     79.4% { transform: translate3d(670px, 82px, 0) scaleX(-1); }
+     81.8% { transform: translate3d(430px, 74px, 0) scaleX(-1); }
+     84.9% { transform: translate3d(430px, 74px, 0) scaleX(-1); }
+     87.3% { transform: translate3d(190px, 70px, 0) scaleX(-1); }
+     90.5% { transform: translate3d(190px, 70px, 0) scaleX(-1); }
+     92.5% { transform: translate3d(-140px, 84px, 0) scaleX(-1); }
+     97.5% { transform: translate3d(-140px, 84px, 0) scaleX(-1); }
+     98.0% { transform: translate3d(-140px, 84px, 0) scaleX(1); }
+     99.0% { transform: translate3d(50px, 78px, 0) scaleX(1); }
+    100.0% { transform: translate3d(50px, 78px, 0) scaleX(1); }
+  }
+  @keyframes cakeLegsVis {
+      0.0%,   1.5% { opacity: 0; transform: scaleY(0); }
+      1.6%,   3.7% { opacity: 1; transform: scaleY(1); }
+      3.8%,   5.8% { opacity: 0; transform: scaleY(0); }
+      5.9%,   8.1% { opacity: 1; transform: scaleY(1); }
+      8.2%,  11.3% { opacity: 0; transform: scaleY(0); }
+     11.4%,  13.7% { opacity: 1; transform: scaleY(1); }
+     13.8%,  17.3% { opacity: 0; transform: scaleY(0); }
+     17.4%,  19.7% { opacity: 1; transform: scaleY(1); }
+     19.8%,  23.3% { opacity: 0; transform: scaleY(0); }
+     23.4%,  25.7% { opacity: 1; transform: scaleY(1); }
+     25.8%,  29.3% { opacity: 0; transform: scaleY(0); }
+     29.4%,  31.7% { opacity: 1; transform: scaleY(1); }
+     31.8%,  35.3% { opacity: 0; transform: scaleY(0); }
+     35.4%,  37.7% { opacity: 1; transform: scaleY(1); }
+     37.8%,  41.1% { opacity: 0; transform: scaleY(0); }
+     41.2%,  43.5% { opacity: 1; transform: scaleY(1); }
+     43.6%,  46.2% { opacity: 0; transform: scaleY(0); }
+     46.3%,  47.9% { opacity: 1; transform: scaleY(1); }
+     48.0%,  52.4% { opacity: 0; transform: scaleY(0); }
+     52.5%,  54.8% { opacity: 1; transform: scaleY(1); }
+     54.9%,  57.4% { opacity: 0; transform: scaleY(0); }
+     57.5%,  59.8% { opacity: 1; transform: scaleY(1); }
+     59.9%,  62.8% { opacity: 0; transform: scaleY(0); }
+     62.9%,  65.2% { opacity: 1; transform: scaleY(1); }
+     65.3%,  68.3% { opacity: 0; transform: scaleY(0); }
+     68.4%,  70.7% { opacity: 1; transform: scaleY(1); }
+     70.8%,  73.8% { opacity: 0; transform: scaleY(0); }
+     73.9%,  76.2% { opacity: 1; transform: scaleY(1); }
+     76.3%,  79.3% { opacity: 0; transform: scaleY(0); }
+     79.4%,  81.7% { opacity: 1; transform: scaleY(1); }
+     81.8%,  84.8% { opacity: 0; transform: scaleY(0); }
+     84.9%,  87.2% { opacity: 1; transform: scaleY(1); }
+     87.3%,  90.4% { opacity: 0; transform: scaleY(0); }
+     90.5%,  92.4% { opacity: 1; transform: scaleY(1); }
+     92.5%, 100.0% { opacity: 0; transform: scaleY(0); }
+  }
+  @keyframes cakeCalmVis {
+      0.0%,   1.5% { opacity: 1; }
+      1.6%,   3.7% { opacity: 0; }
+      3.8%,   5.8% { opacity: 1; }
+      5.9%,   8.1% { opacity: 0; }
+      8.2%,  11.3% { opacity: 1; }
+     11.4%,  13.7% { opacity: 0; }
+     13.8%,  17.3% { opacity: 1; }
+     17.4%,  19.7% { opacity: 0; }
+     19.8%,  23.3% { opacity: 1; }
+     23.4%,  25.7% { opacity: 0; }
+     25.8%,  29.3% { opacity: 1; }
+     29.4%,  31.7% { opacity: 0; }
+     31.8%,  35.3% { opacity: 1; }
+     35.4%,  37.7% { opacity: 0; }
+     37.8%,  41.1% { opacity: 1; }
+     41.2%,  43.5% { opacity: 0; }
+     43.6%,  46.2% { opacity: 1; }
+     46.3%,  47.9% { opacity: 0; }
+     48.0%,  52.4% { opacity: 1; }
+     52.5%,  54.8% { opacity: 0; }
+     54.9%,  57.4% { opacity: 1; }
+     57.5%,  59.8% { opacity: 0; }
+     59.9%,  62.8% { opacity: 1; }
+     62.9%,  65.2% { opacity: 0; }
+     65.3%,  68.3% { opacity: 1; }
+     68.4%,  70.7% { opacity: 0; }
+     70.8%,  73.8% { opacity: 1; }
+     73.9%,  76.2% { opacity: 0; }
+     76.3%,  79.3% { opacity: 1; }
+     79.4%,  81.7% { opacity: 0; }
+     81.8%,  84.8% { opacity: 1; }
+     84.9%,  87.2% { opacity: 0; }
+     87.3%,  90.4% { opacity: 1; }
+     90.5%,  92.4% { opacity: 0; }
+     92.5%, 100.0% { opacity: 1; }
+  }
+  @keyframes cakePanicVis {
+      0.0%,   1.5% { opacity: 0; }
+      1.6%,   3.7% { opacity: 1; }
+      3.8%,   5.8% { opacity: 0; }
+      5.9%,   8.1% { opacity: 1; }
+      8.2%,  11.3% { opacity: 0; }
+     11.4%,  13.7% { opacity: 1; }
+     13.8%,  17.3% { opacity: 0; }
+     17.4%,  19.7% { opacity: 1; }
+     19.8%,  23.3% { opacity: 0; }
+     23.4%,  25.7% { opacity: 1; }
+     25.8%,  29.3% { opacity: 0; }
+     29.4%,  31.7% { opacity: 1; }
+     31.8%,  35.3% { opacity: 0; }
+     35.4%,  37.7% { opacity: 1; }
+     37.8%,  41.1% { opacity: 0; }
+     41.2%,  43.5% { opacity: 1; }
+     43.6%,  46.2% { opacity: 0; }
+     46.3%,  47.9% { opacity: 1; }
+     48.0%,  52.4% { opacity: 0; }
+     52.5%,  54.8% { opacity: 1; }
+     54.9%,  57.4% { opacity: 0; }
+     57.5%,  59.8% { opacity: 1; }
+     59.9%,  62.8% { opacity: 0; }
+     62.9%,  65.2% { opacity: 1; }
+     65.3%,  68.3% { opacity: 0; }
+     68.4%,  70.7% { opacity: 1; }
+     70.8%,  73.8% { opacity: 0; }
+     73.9%,  76.2% { opacity: 1; }
+     76.3%,  79.3% { opacity: 0; }
+     79.4%,  81.7% { opacity: 1; }
+     81.8%,  84.8% { opacity: 0; }
+     84.9%,  87.2% { opacity: 1; }
+     87.3%,  90.4% { opacity: 0; }
+     90.5%,  92.4% { opacity: 1; }
+     92.5%, 100.0% { opacity: 0; }
+  }
+  @keyframes cakePanicTilt {
+      0.0%,   1.4% { transform: rotate(0deg); }
+      1.6% { transform: rotate(14deg) scale(1.08, 0.92); }
+      1.7%,   3.6% { transform: rotate(14deg); }
+      3.7% { transform: rotate(-6deg) scale(1.12, 0.88); }
+      3.8%,   5.7% { transform: rotate(0deg); }
+      5.9% { transform: rotate(14deg) scale(1.08, 0.92); }
+      6.0%,   8.0% { transform: rotate(14deg); }
+      8.1% { transform: rotate(-6deg) scale(1.12, 0.88); }
+      8.2%,  11.2% { transform: rotate(0deg); }
+     11.4% { transform: rotate(14deg) scale(1.08, 0.92); }
+     11.5%,  13.6% { transform: rotate(14deg); }
+     13.7% { transform: rotate(-6deg) scale(1.12, 0.88); }
+     13.8%,  17.2% { transform: rotate(0deg); }
+     17.4% { transform: rotate(14deg) scale(1.08, 0.92); }
+     17.5%,  19.6% { transform: rotate(14deg); }
+     19.7% { transform: rotate(-6deg) scale(1.12, 0.88); }
+     19.8%,  23.2% { transform: rotate(0deg); }
+     23.4% { transform: rotate(14deg) scale(1.08, 0.92); }
+     23.5%,  25.6% { transform: rotate(14deg); }
+     25.7% { transform: rotate(-6deg) scale(1.12, 0.88); }
+     25.8%,  29.2% { transform: rotate(0deg); }
+     29.4% { transform: rotate(14deg) scale(1.08, 0.92); }
+     29.5%,  31.6% { transform: rotate(14deg); }
+     31.7% { transform: rotate(-6deg) scale(1.12, 0.88); }
+     31.8%,  35.2% { transform: rotate(0deg); }
+     35.4% { transform: rotate(14deg) scale(1.08, 0.92); }
+     35.5%,  37.6% { transform: rotate(14deg); }
+     37.7% { transform: rotate(-6deg) scale(1.12, 0.88); }
+     37.8%,  41.0% { transform: rotate(0deg); }
+     41.2% { transform: rotate(14deg) scale(1.08, 0.92); }
+     41.3%,  43.4% { transform: rotate(14deg); }
+     43.5% { transform: rotate(-6deg) scale(1.12, 0.88); }
+     43.6%,  46.1% { transform: rotate(0deg); }
+     46.3% { transform: rotate(14deg) scale(1.08, 0.92); }
+     46.4%,  47.8% { transform: rotate(14deg); }
+     47.9% { transform: rotate(-6deg) scale(1.12, 0.88); }
+     48.0%,  52.3% { transform: rotate(0deg); }
+     52.5% { transform: rotate(14deg) scale(1.08, 0.92); }
+     52.6%,  54.7% { transform: rotate(14deg); }
+     54.8% { transform: rotate(-6deg) scale(1.12, 0.88); }
+     54.9%,  57.3% { transform: rotate(0deg); }
+     57.5% { transform: rotate(14deg) scale(1.08, 0.92); }
+     57.6%,  59.7% { transform: rotate(14deg); }
+     59.8% { transform: rotate(-6deg) scale(1.12, 0.88); }
+     59.9%,  62.7% { transform: rotate(0deg); }
+     62.9% { transform: rotate(14deg) scale(1.08, 0.92); }
+     63.0%,  65.1% { transform: rotate(14deg); }
+     65.2% { transform: rotate(-6deg) scale(1.12, 0.88); }
+     65.3%,  68.2% { transform: rotate(0deg); }
+     68.4% { transform: rotate(14deg) scale(1.08, 0.92); }
+     68.5%,  70.6% { transform: rotate(14deg); }
+     70.7% { transform: rotate(-6deg) scale(1.12, 0.88); }
+     70.8%,  73.7% { transform: rotate(0deg); }
+     73.9% { transform: rotate(14deg) scale(1.08, 0.92); }
+     74.0%,  76.1% { transform: rotate(14deg); }
+     76.2% { transform: rotate(-6deg) scale(1.12, 0.88); }
+     76.3%,  79.2% { transform: rotate(0deg); }
+     79.4% { transform: rotate(14deg) scale(1.08, 0.92); }
+     79.5%,  81.6% { transform: rotate(14deg); }
+     81.7% { transform: rotate(-6deg) scale(1.12, 0.88); }
+     81.8%,  84.7% { transform: rotate(0deg); }
+     84.9% { transform: rotate(14deg) scale(1.08, 0.92); }
+     85.0%,  87.1% { transform: rotate(14deg); }
+     87.2% { transform: rotate(-6deg) scale(1.12, 0.88); }
+     87.3%,  90.3% { transform: rotate(0deg); }
+     90.5% { transform: rotate(14deg) scale(1.08, 0.92); }
+     90.6%,  92.3% { transform: rotate(14deg); }
+     92.4% { transform: rotate(-6deg) scale(1.12, 0.88); }
+     92.5%, 100.0% { transform: rotate(0deg); }
+  }
+  @keyframes cakeLegsPatter {
+    0%   { transform: rotate(-35deg); }
+    100% { transform: rotate(35deg); }
+  }
+  @keyframes cakeFlameWiggle {
+    0%, 100% { transform: scale(1) rotate(0deg); }
+    50%      { transform: scale(1.08, 0.92) rotate(-3deg); }
+  }
+  /* Leisurely 16s demo chase loop for ?zombie=chase or ?cake=chase */
+  @keyframes zombieChaseDemo {
+    0%   { transform: translate3d(480px, 80px, 0) scaleX(1); }
+    100% { transform: translate3d(1280px, 80px, 0) scaleX(1); }
+  }
+  @keyframes cakeDemoWorld {
+    0%, 14%   { transform: translate3d(620px, 78px, 0) scaleX(1); }
+    32%, 48%  { transform: translate3d(840px, 84px, 0) scaleX(1); }
+    66%, 80%  { transform: translate3d(1060px, 74px, 0) scaleX(1); }
+    96%, 100% { transform: translate3d(1280px, 66px, 0) scaleX(1); }
+  }
+  @keyframes cakeDemoLegsVis {
+    0%, 13.9%    { opacity: 0; transform: scaleY(0); }
+    14%, 31.8%   { opacity: 1; transform: scaleY(1); }
+    32%, 47.9%   { opacity: 0; transform: scaleY(0); }
+    48%, 65.8%   { opacity: 1; transform: scaleY(1); }
+    66%, 79.9%   { opacity: 0; transform: scaleY(0); }
+    80%, 95.8%   { opacity: 1; transform: scaleY(1); }
+    96%, 100%    { opacity: 0; transform: scaleY(0); }
+  }
+  @keyframes cakeDemoCalmVis {
+    0%, 13.9%    { opacity: 1; }
+    14%, 31.8%   { opacity: 0; }
+    32%, 47.9%   { opacity: 1; }
+    48%, 65.8%   { opacity: 0; }
+    66%, 79.9%   { opacity: 1; }
+    80%, 95.8%   { opacity: 0; }
+    96%, 100%    { opacity: 1; }
+  }
+  @keyframes cakeDemoPanicVis {
+    0%, 13.9%    { opacity: 0; }
+    14%, 31.8%   { opacity: 1; }
+    32%, 47.9%   { opacity: 0; }
+    48%, 65.8%   { opacity: 1; }
+    66%, 79.9%   { opacity: 0; }
+    80%, 95.8%   { opacity: 1; }
+    96%, 100%    { opacity: 0; }
+  }
+  @keyframes cakeDemoPanicTilt {
+    0%, 13.5%    { transform: rotate(0deg); }
+    14%          { transform: rotate(14deg) scale(1.08, 0.92); }
+    14.1%, 31%   { transform: rotate(14deg); }
+    31.5%        { transform: rotate(-6deg) scale(1.12, 0.88); }
+    32%, 47.5%   { transform: rotate(0deg); }
+    48%          { transform: rotate(14deg) scale(1.08, 0.92); }
+    48.1%, 65%   { transform: rotate(14deg); }
+    65.5%        { transform: rotate(-6deg) scale(1.12, 0.88); }
+    66%, 79.5%   { transform: rotate(0deg); }
+    80%          { transform: rotate(14deg) scale(1.08, 0.92); }
+    80.1%, 95%   { transform: rotate(14deg); }
+    95.5%        { transform: rotate(-6deg) scale(1.12, 0.88); }
+    96%, 100%    { transform: rotate(0deg); }
+  }
 `
 
 function ShamblingZombie({ isNight = false, isBirthday = false }: { isNight?: boolean; isBirthday?: boolean }) {
   const isZombieMid =
     typeof window !== 'undefined' &&
     new URLSearchParams(window.location.search || (window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '')).get('zombie') === 'mid'
+  const isChaseDemo =
+    typeof window !== 'undefined' &&
+    (new URLSearchParams(window.location.search || (window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '')).get('zombie') === 'chase' ||
+     new URLSearchParams(window.location.search || (window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '')).get('cake') === 'chase')
 
   return (
     <g
       style={{
         willChange: 'transform',
-        animation: isZombieMid ? 'none' : 'zombieStroll 200s linear infinite',
+        animation: isZombieMid ? 'none' : isChaseDemo ? 'zombieChaseDemo 16s linear infinite' : 'zombieStroll 200s linear infinite',
         transform: isZombieMid ? 'translate3d(680px, 80px, 0)' : undefined,
       }}
     >
@@ -4237,7 +4529,7 @@ function ShamblingZombie({ isNight = false, isBirthday = false }: { isNight?: bo
             <path d="M -3 3.5 Q 0 6.5 4 3.5 Z" fill="#0f172a" />
             <rect x="-1" y="3.2" width="1.6" height="2" fill="#ffffff" rx="0.3" />
 
-            {isNight ? (
+            {isNight && (
               // Night: Cute Satin Sleep Mask covering his eyes!
               <g transform="translate(0, -0.8) rotate(-1)">
                 {/* Elastic strap wrapping around head */}
@@ -4273,21 +4565,213 @@ function ShamblingZombie({ isNight = false, isBirthday = false }: { isNight?: bo
                   </g>
                 )}
               </g>
-            ) : isBirthday ? (
-              // Daytime: Birthday Party Cone Hat
+            )}
+
+            {isBirthday && (
+              // Birthday Party Cone Hat (wears it DAY AND NIGHT!)
               <g transform="translate(1, -9) rotate(14)">
                 <path d="M -4.5 0 L 0 -14 L 4.5 0 Z" fill="#ec4899" stroke="#db2777" strokeWidth="0.6" />
                 <path d="M -3 -4 L 0 -14 L 1 -9 Z" fill="#38bdf8" />
                 <path d="M -1.5 0 L 0 -14 L 0 -6 Z" fill="#facc15" />
                 <circle cx="0" cy="-14" r="1.8" fill="#facc15" />
               </g>
-            ) : null}
+            )}
           </g>
         </g>
       </g>
     </g>
   )
 }
+
+function ChasedCake({ isNight = false, isBirthday = false }: { isNight?: boolean; isBirthday?: boolean }) {
+  const [clicked, setClicked] = useState(false)
+  const isCakeDisabled =
+    typeof window !== 'undefined' &&
+    (new URLSearchParams(window.location.search || (window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '')).get('cake') === '0' ||
+     new URLSearchParams(window.location.search || (window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '')).get('nocake') === '1')
+  const isZombieMid =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search || (window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '')).get('zombie') === 'mid'
+  const isChaseDemo =
+    typeof window !== 'undefined' &&
+    (new URLSearchParams(window.location.search || (window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '')).get('zombie') === 'chase' ||
+     new URLSearchParams(window.location.search || (window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '')).get('cake') === 'chase')
+
+  if (isCakeDisabled) return null
+
+  return (
+    <g
+      onClick={() => {
+        setClicked(true)
+        setTimeout(() => setClicked(false), 2400)
+      }}
+      style={{
+        cursor: 'pointer',
+        willChange: 'transform',
+        animation: isZombieMid ? 'none' : isChaseDemo ? 'cakeDemoWorld 16s linear infinite' : 'cakeStroll 200s linear infinite',
+        transform: isZombieMid ? 'translate3d(760px, 80px, 0)' : undefined,
+      }}
+    >
+      <g transform="scale(0.85)">
+        <g
+          style={{
+            transformOrigin: '0 20px',
+            animation: clicked
+              ? 'cakePanicTilt 2s ease-in-out infinite'
+              : isZombieMid
+              ? 'none'
+              : isChaseDemo
+              ? 'cakeDemoPanicTilt 16s linear infinite'
+              : 'cakePanicTilt 200s linear infinite',
+          }}
+        >
+          {/* Shadow underneath */}
+          <ellipse cx="0" cy="22" rx="20" ry="5" fill="rgba(0, 0, 0, 0.28)" />
+
+          {/* SPROUTED RUNNING LEGS (hidden scaleY(0) / opacity 0 when calm & settled) */}
+          <g
+            style={{
+              transformOrigin: '0 18px',
+              animation: clicked
+                ? 'none'
+                : isZombieMid
+                ? 'none'
+                : isChaseDemo
+                ? 'cakeDemoLegsVis 16s linear infinite'
+                : 'cakeLegsVis 200s linear infinite',
+              opacity: clicked ? 1 : undefined,
+              transform: clicked ? 'scaleY(1)' : undefined,
+            }}
+          >
+            {/* Left Leg */}
+            <g style={{ transformOrigin: '-6px 18px', animation: 'cakeLegsPatter 0.16s ease-in-out infinite alternate' }}>
+              <path d="M -6 18 L -8 29" stroke="#ec4899" strokeWidth="4.2" strokeLinecap="round" />
+              <path d="M -5.8 21 L -7.8 21 M -6.4 25 L -8.4 25" stroke="#ffffff" strokeWidth="1.1" />
+              <ellipse cx="-10" cy="31" rx="5.2" ry="2.8" fill="#dc2626" stroke="#991b1b" strokeWidth="0.5" />
+              <path d="M -14 31 C -14 29, -12 28, -10 29 L -10 33 L -13 33 Z" fill="#ffffff" />
+            </g>
+            {/* Right Leg */}
+            <g style={{ transformOrigin: '6px 18px', animation: 'cakeLegsPatter 0.16s ease-in-out infinite alternate-reverse' }}>
+              <path d="M 6 18 L 8 29" stroke="#ec4899" strokeWidth="4.2" strokeLinecap="round" />
+              <path d="M 6.2 21 L 8.2 21 M 6.8 25 L 8.8 25" stroke="#ffffff" strokeWidth="1.1" />
+              <ellipse cx="10" cy="31" rx="5.2" ry="2.8" fill="#dc2626" stroke="#991b1b" strokeWidth="0.5" />
+              <path d="M 7 31 C 7 29, 9 28, 11 29 L 11 33 L 8 33 Z" fill="#ffffff" />
+            </g>
+            {/* Cartoon dust puffs kicked behind running feet */}
+            <circle cx="-20" cy="27" r="3" fill="#e2e8f0" opacity="0.6" />
+            <circle cx="-25" cy="24" r="2" fill="#e2e8f0" opacity="0.4" />
+          </g>
+
+          {/* Golden Platter Base */}
+          <ellipse cx="0" cy="20" rx="24" ry="5.5" fill="#facc15" stroke="#ca8a04" strokeWidth="0.8" />
+          <ellipse cx="0" cy="18.5" rx="21" ry="4.5" fill="#fef08a" />
+          {isNight && (
+            <ellipse cx="0" cy="20" rx="26" ry="6" fill="rgba(251, 191, 36, 0.16)" />
+          )}
+
+          {/* Bottom Tier (Pastel Strawberry Frosting) */}
+          <path
+            d="M -18 5 C -18 1, 18 1, 18 5 L 18 17 C 18 20, -18 20, -18 17 Z"
+            fill="#f472b6"
+            stroke="#db2777"
+            strokeWidth="0.8"
+          />
+          {/* Whipped Scallops along bottom of Tier 1 */}
+          <path
+            d="M -18 17 Q -13.5 19.5 -9 17 Q -4.5 19.5 0 17 Q 4.5 19.5 9 17 Q 13.5 19.5 18 17"
+            stroke="#ffffff"
+            strokeWidth="2.2"
+            fill="none"
+            strokeLinecap="round"
+          />
+          {/* Sprinkles on Bottom Tier */}
+          <rect x="-12" y="8" width="2.2" height="1.1" rx="0.5" fill="#38bdf8" transform="rotate(20 -12 8)" />
+          <rect x="-5" y="12" width="2.2" height="1.1" rx="0.5" fill="#facc15" transform="rotate(-15 -5 12)" />
+          <rect x="7" y="7" width="2.2" height="1.1" rx="0.5" fill="#a855f7" transform="rotate(35 7 7)" />
+          <rect x="12" y="11" width="2.2" height="1.1" rx="0.5" fill="#4ade80" transform="rotate(-25 12 11)" />
+
+          {/* Top Tier (Cream Frosting with Berry Drips) */}
+          <path
+            d="M -12 -6 C -12 -9, 12 -9, 12 -6 L 12 5 C 12 7.5, -12 7.5, -12 5 Z"
+            fill="#fff1f2"
+            stroke="#fda4af"
+            strokeWidth="0.6"
+          />
+          <path
+            d="M -12 -5 Q -9 1 -7 -5 Q -4 3 -2 -5 Q 1 2 4 -5 Q 8 1 10 -5 Q 12 -1 12 -5 L 12 -7 L -12 -7 Z"
+            fill="#e11d48"
+          />
+          {/* Whipped Cream Rosettes on top */}
+          <circle cx="-9" cy="-7" r="2.2" fill="#ffffff" />
+          <circle cx="0" cy="-8" r="2.5" fill="#ffffff" />
+          <circle cx="9" cy="-7" r="2.2" fill="#ffffff" />
+
+          {/* Birthday Candle */}
+          <rect x="-1.8" y="-20" width="3.6" height="13" rx="1" fill="#38bdf8" stroke="#0284c7" strokeWidth="0.5" />
+          <path d="M -1.8 -17 L 1.8 -15 M -1.8 -12 L 1.8 -10 M -1.8 -7 L 1.8 -5" stroke="#facc15" strokeWidth="1.1" strokeLinecap="round" />
+          <line x1="0" y1="-20" x2="0" y2="-22.5" stroke="#334155" strokeWidth="1" />
+
+          {/* Candle Flame Glow (Extra luminous at night) */}
+          <circle
+            cx="0"
+            cy="-26"
+            r={isNight ? 14 : 8}
+            fill={isNight ? 'rgba(251, 191, 36, 0.45)' : 'rgba(251, 191, 36, 0.25)'}
+          />
+          <g style={{ transformOrigin: '0 -22px', animation: 'cakeFlameWiggle 0.6s ease-in-out infinite' }}>
+            <path d="M 0 -23 C -2.5 -25.5, -2.5 -29, 0 -31.5 C 2.5 -29, 2.5 -25.5, 0 -23 Z" fill="#f59e0b" />
+            <path d="M 0 -24 C -1.3 -26, -1.3 -28, 0 -30 C 1.3 -28, 1.3 -26, 0 -24 Z" fill="#fef08a" />
+          </g>
+
+          {/* CALM / SERENE FACE (Shown when settled: innocent cute cake) */}
+          <g
+            style={{
+              animation: clicked
+                ? 'none'
+                : isZombieMid
+                ? 'none'
+                : isChaseDemo
+                ? 'cakeDemoCalmVis 16s linear infinite'
+                : 'cakeCalmVis 200s linear infinite',
+              opacity: clicked ? 0 : undefined,
+            }}
+          >
+            <path d="M -7 9 Q -4.5 11.5 -2 9" stroke="#be185d" strokeWidth="0.9" fill="none" strokeLinecap="round" />
+            <path d="M 2 9 Q 4.5 11.5 7 9" stroke="#be185d" strokeWidth="0.9" fill="none" strokeLinecap="round" />
+            <ellipse cx="-6" cy="10.5" rx="1.6" ry="0.8" fill="#fda4af" opacity="0.75" />
+            <ellipse cx="6" cy="10.5" rx="1.6" ry="0.8" fill="#fda4af" opacity="0.75" />
+            <path d="M -1.2 11.5 Q 0 13 1.2 11.5" stroke="#be185d" strokeWidth="0.75" fill="none" strokeLinecap="round" />
+          </g>
+
+          {/* PANIC / ALARMED FACE (Shown when running: looking back in shock!) */}
+          <g
+            style={{
+              animation: clicked
+                ? 'none'
+                : isZombieMid
+                ? 'none'
+                : isChaseDemo
+                ? 'cakeDemoPanicVis 16s linear infinite'
+                : 'cakePanicVis 200s linear infinite',
+              opacity: clicked ? 1 : undefined,
+            }}
+          >
+            <ellipse cx="-5" cy="8" rx="3.8" ry="4.8" fill="#ffffff" stroke="#0f172a" strokeWidth="0.8" />
+            <ellipse cx="-6.8" cy="8" rx="1.8" ry="2.2" fill="#0f172a" />
+            <circle cx="-7.4" cy="7.2" r="0.7" fill="#ffffff" />
+            <ellipse cx="4" cy="8" rx="3.8" ry="4.8" fill="#ffffff" stroke="#0f172a" strokeWidth="0.8" />
+            <ellipse cx="2.2" cy="8" rx="1.8" ry="2.2" fill="#0f172a" />
+            <circle cx="1.6" cy="7.2" r="0.7" fill="#ffffff" />
+            <ellipse cx="-0.8" cy="12.5" rx="1.6" ry="2.2" fill="#0f172a" />
+            {/* Flying sweat drop */}
+            <path d="M 11 2 C 11 0.5, 13.5 0.5, 13.5 2 C 13.5 3.5, 11 4.5, 11 2 Z" fill="#38bdf8" />
+          </g>
+        </g>
+      </g>
+    </g>
+  )
+}
+
 
 const MUMMY_STYLE_KEYFRAMES = `
   @keyframes mummyGraveyardPath {
@@ -4758,6 +5242,7 @@ function DaytimePumpkinPatch({ isBirthday = false }: { isBirthday?: boolean }) {
 
         {/* --- Meadow Walking Zombie (Shuffling across background ridge behind foreground hill) --- */}
         <ShamblingZombie isNight={false} isBirthday={isBirthday} />
+        <ChasedCake isNight={false} isBirthday={isBirthday} />
 
         {/* --- Foreground Lush Grass Horizon --- */}
         <path
@@ -5167,6 +5652,7 @@ function SpookyGraveyard({ isBirthday = false }: { isBirthday?: boolean }) {
 
         {/* --- Shambling Pajama Zombie (Sleepwalking across graveyard ridge) --- */}
         <ShamblingZombie isNight={true} isBirthday={isBirthday} />
+        <ChasedCake isNight={true} isBirthday={isBirthday} />
 
         {/* --- Foreground Hill Silhouette --- */}
         <path
