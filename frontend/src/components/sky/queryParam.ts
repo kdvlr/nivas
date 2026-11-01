@@ -88,8 +88,8 @@ export function isDiwaliSeason(d?: Date): boolean {
   const date = d ?? getSeasonalDate()
   const override = getHolidayOverride()?.toLowerCase()
   if (override === 'diwali') return true
-  // In November, celebrate Diwali festival window (Nov 1 - Nov 12)
-  return date.getMonth() === 10 && date.getDate() >= 1 && date.getDate() <= 12
+  // In November, celebrate Diwali festival window only on Nov 7, 8, and 9
+  return date.getMonth() === 10 && date.getDate() >= 7 && date.getDate() <= 9
 }
 
 export function isThanksgivingWeek(d?: Date): boolean {

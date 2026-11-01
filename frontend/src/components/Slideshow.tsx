@@ -2057,8 +2057,8 @@ function AutumnHarvestHorizon({
   const holidayOverride = getHolidayOverride()?.toLowerCase()
   const horizonOverride = getQueryParam('horizon')?.toLowerCase()
 
-  // Only switch to full DiwaliTempleHorizon when explicitly requested by override
-  if (holidayOverride === 'diwali' || horizonOverride === 'diwali') {
+  // During Diwali (Nov 7, 8, and 9, or explicit override), display the majestic Indian Temple & Ghat skyline
+  if ((isDiwali || holidayOverride === 'diwali' || horizonOverride === 'diwali') && horizonOverride !== 'autumn' && horizonOverride !== 'harvest') {
     return <DiwaliTempleHorizon seasonalDate={seasonalDate} phase={phase} />
   }
 
