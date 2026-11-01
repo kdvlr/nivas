@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef, useId, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import confetti from 'canvas-confetti'
-import { autumnVisits } from '../lib/autumnAmbience'
+import { autumnVisits, autumnProgress } from '../lib/autumnAmbience'
 import { playBalloonPopSound } from '../lib/useAudioChime'
 import Icon from './Icon'
+import { AutumnLeafTopper, DiyaTopper, ThanksgivingTopper } from './SeasonalPhotoToppers'
+import { DiwaliSceneDetails, FallSceneDetails } from './SeasonalSceneDetails'
 import { api } from '../lib/api'
 import { useData } from '../lib/hooks'
 import { startStarCanvas, startFxCanvas, SkyPhase, SkyKind, SkyState } from './sky/skyEngine'
@@ -1123,362 +1125,6 @@ function CandyCane({ seed = 0 }: { seed?: number }) {
   )
 }
 
-function AutumnLeafTopper({ seed = 0 }: { seed?: number }) {
-  const flip = seed % 2 === 0
-  return (
-    <svg
-      width="112"
-      height="181"
-      viewBox="0 0 96 155"
-      className="pointer-events-none filter drop-shadow-[0_4px_12px_rgba(0,0,0,0.3)]"
-      aria-hidden="true"
-    >
-      <g transform={flip ? 'translate(96, 0) scale(-1, 1)' : undefined}>
-        {/* Amber Birch Leaf (Background tilted right) */}
-        <g transform="translate(56, 52) rotate(28)">
-          <path
-            d="M 0 0 C 12 -12, 18 -26, 0 -38 C -18 -26, -12 -12, 0 0 Z"
-            fill="#d97706"
-          />
-          <path d="M 0 0 L 0 -34" stroke="#92400e" strokeWidth="0.8" fill="none" />
-        </g>
-
-        {/* Golden Oak Leaf (Background tilted left) */}
-        <g transform="translate(38, 54) rotate(-32)">
-          <path
-            d="M 0 0 C -10 -8, -14 -16, -6 -20 C -15 -25, -12 -34, -2 -38 C -8 -44, 2 -50, 0 -52 C -2 -50, 8 -44, 2 -38 C 12 -34, 15 -25, 6 -20 C 14 -16, 10 -8, 0 0 Z"
-            fill="#eab308"
-          />
-          <path d="M 0 0 L 0 -48" stroke="#ca8a04" strokeWidth="1" fill="none" />
-        </g>
-
-        {/* Crimson Sugar Maple Leaf (Foreground Center) */}
-        <g transform="translate(48, 56) rotate(-4)">
-          <path
-            d="M 0 0 L 0 -8 
-               L -10 -4 L -18 -8 L -12 -14 
-               L -22 -22 L -10 -22 
-               L 0 -36 
-               L 10 -22 L 22 -22 
-               L 12 -14 L 18 -8 L 10 -4 
-               L 0 -8 Z"
-            fill="#dc2626"
-          />
-          {/* Maple veins */}
-          <path d="M 0 0 L 0 -32 M 0 -12 L -15 -19 M 0 -12 L 15 -19" stroke="#991b1b" strokeWidth="1.2" fill="none" />
-        </g>
-
-        {/* Acorn clustered in front */}
-        <g transform="translate(48, 62)">
-          {/* Nut */}
-          <path
-            d="M -7 4 C -7 14, 7 14, 7 4 Z"
-            fill="#78350f"
-          />
-          {/* Nut highlight */}
-          <ellipse cx="-2.5" cy="7" rx="1.5" ry="3" fill="#92400e" opacity="0.6" />
-          {/* Textured Cupule Cap */}
-          <ellipse cx="0" cy="3" rx="8" ry="4" fill="#451a03" />
-          <path d="M -6 3 Q 0 1 6 3 M -5 4 Q 0 2 5 4" stroke="#5c2607" strokeWidth="0.8" fill="none" />
-          {/* Stem */}
-          <path d="M 0 0 Q -2 -5 -4 -7" stroke="#451a03" strokeWidth="1.8" strokeLinecap="round" fill="none" />
-        </g>
-
-        {/* Rustic Twine Bow */}
-        <g transform="translate(48, 60)">
-          <path d="M 0 0 C -12 -6, -14 4, 0 2 Z" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" />
-          <path d="M 0 0 C 12 -6, 14 4, 0 2 Z" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" />
-          <circle cx="0" cy="1" r="2.2" fill="#b45309" />
-          {/* Bow tails */}
-          <path d="M -2 2 Q -8 10 -10 16" stroke="#d97706" strokeWidth="1.8" strokeLinecap="round" fill="none" />
-          <path d="M 2 2 Q 8 10 11 15" stroke="#d97706" strokeWidth="1.8" strokeLinecap="round" fill="none" />
-        </g>
-
-        {/* Tether Knot & Rustic Twine lifting photo */}
-        <ellipse cx="48" cy="88" rx="3.5" ry="2.2" fill="#92400e" />
-        <path
-          d="M 48 88 C 43 108 53 128 48 153"
-          stroke="#ca8a04"
-          strokeWidth="1.8"
-          strokeDasharray="4 2"
-          fill="none"
-        />
-      </g>
-    </svg>
-  )
-}
-
-function DiyaTopper({ seed = 0 }: { seed?: number }) {
-  const diyaGradId = useId()
-  const flameGradId = useId()
-
-  return (
-    <svg
-      width="112"
-      height="181"
-      viewBox="0 0 96 155"
-      className="pointer-events-none filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.35)]"
-      style={{ willChange: 'transform' }}
-      aria-hidden="true"
-    >
-      {/* Soft warm flame aura glow (clean SVG vector, zero blur filter overhead) */}
-      <circle cx="48" cy="50" r="38" fill="rgba(251, 191, 36, 0.22)" />
-      <defs>
-        <linearGradient id={diyaGradId} x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#ea580c" />
-          <stop offset="60%" stopColor="#c2410c" />
-          <stop offset="100%" stopColor="#7c2d12" />
-        </linearGradient>
-        <radialGradient id={flameGradId} cx="50%" cy="60%" r="50%">
-          <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="25%" stopColor="#fef08a" />
-          <stop offset="65%" stopColor="#f59e0b" />
-          <stop offset="100%" stopColor="#dc2626" />
-        </radialGradient>
-      </defs>
-
-      <style>{`
-        @keyframes diyaFlameDance {
-          0%, 100% { transform: scale(1) rotate(-1deg); }
-          50% { transform: scale(1.08, 0.94) rotate(2deg); }
-        }
-        @keyframes diyaGlowPulse {
-          0%, 100% { opacity: 0.85; }
-          50% { opacity: 1; }
-        }
-      `}</style>
-
-      {/* Radiant ambient glow halo */}
-      <circle cx="48" cy="38" r="24" fill="rgba(251, 191, 36, 0.25)" style={{ animation: 'diyaGlowPulse 2.4s ease-in-out infinite' }} />
-
-      {/* Dancing Teardrop Flame */}
-      <g style={{ transformOrigin: '48px 46px', animation: 'diyaFlameDance 1.8s ease-in-out infinite' }}>
-        {/* Outer flame */}
-        <path
-          d="M 48 20 C 42 30, 40 42, 48 46 C 56 42, 54 30, 48 20 Z"
-          fill={`url(#${flameGradId})`}
-        />
-        {/* Inner white flame core */}
-        <ellipse cx="48" cy="40" rx="3.5" ry="5.5" fill="#ffffff" opacity="0.9" />
-      </g>
-
-      {/* Cotton wick */}
-      <path d="M 48 46 L 48 50" stroke="#451a03" strokeWidth="2.2" strokeLinecap="round" />
-
-      {/* Ornate Terracotta Diya Bowl */}
-      <g>
-        {/* Base shadow / foot */}
-        <ellipse cx="48" cy="74" rx="14" ry="4" fill="#5c1d06" />
-
-        {/* Diya Clay Body */}
-        <path
-          d="M 22 56 
-             C 22 72, 34 76, 48 76 
-             C 62 76, 74 72, 74 56 
-             C 74 54, 70 52, 65 52 
-             C 56 52, 52 48, 48 48 
-             C 44 48, 40 52, 31 52 
-             C 26 52, 22 54, 22 56 Z"
-          fill={`url(#${diyaGradId})`}
-        />
-
-        {/* Diya Rim Beading / Gold Filigree */}
-        <path
-          d="M 23 54 Q 48 58 73 54"
-          stroke="#facc15"
-          strokeWidth="1.8"
-          strokeDasharray="2.5 2.5"
-          fill="none"
-        />
-
-        {/* Decorative floral carving on bowl */}
-        <path
-          d="M 38 64 Q 48 70 58 64 M 44 67 Q 48 71 52 67"
-          stroke="#fbbf24"
-          strokeWidth="1.4"
-          strokeLinecap="round"
-          fill="none"
-        />
-        <circle cx="48" cy="62" r="2" fill="#facc15" />
-      </g>
-
-      {/* Golden Bead Tether Suspender lifting photo */}
-      <ellipse cx="48" cy="78" rx="3.5" ry="2" fill="#ca8a04" />
-      <g stroke="#facc15" strokeWidth="1.6" fill="none">
-        <path d="M 48 79 C 45 98 52 118 48 153" stroke="#f59e0b" strokeWidth="1.8" strokeDasharray="3 3" />
-        <circle cx="48" cy="85" r="1.6" fill="#facc15" />
-        <circle cx="47" cy="102" r="1.6" fill="#facc15" />
-        <circle cx="49" cy="120" r="1.6" fill="#facc15" />
-        <circle cx="48" cy="138" r="1.6" fill="#facc15" />
-      </g>
-    </svg>
-  )
-}
-
-function ThanksgivingTopper({ seed = 0 }: { seed?: number }) {
-  const flip = seed % 2 === 0
-  return (
-    <svg
-      width="112"
-      height="181"
-      viewBox="0 0 96 155"
-      className="pointer-events-none filter drop-shadow-[0_4px_14px_rgba(0,0,0,0.35)]"
-      aria-hidden="true"
-    >
-      <style>{`
-        @keyframes turkeySnoodSway {
-          0%, 100% { transform: rotate(0deg); }
-          50% { transform: rotate(12deg); }
-        }
-        @keyframes turkeyPlumagePulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.03, 0.98); }
-        }
-      `}</style>
-      <g transform={flip ? 'translate(96, 0) scale(-1, 1)' : undefined}>
-        {/* Turkey Body, Fan & Hat lowered by 24px so hat & fan are 100% visible on screen */}
-        <g transform="translate(0, 24)">
-          {/* 1. Magnificent Fanned Tail Feathers (Warm Autumn Radiance) */}
-          <g style={{ transformOrigin: '48px 62px', animation: 'turkeyPlumagePulse 2.8s ease-in-out infinite' }}>
-            {[-60, -43, -26, -9, 9, 26, 43, 60].map((deg, i) => (
-              <g key={deg} transform={`translate(48, 62) rotate(${deg}) translate(0, -38)`}>
-                {/* Outer feather shaft & vane */}
-                <path
-                  d="M -5 20 L -6 0 Q 0 -10 6 0 L 5 20 Z"
-                  fill={i % 2 === 0 ? '#78350f' : '#92400e'}
-                />
-                {/* Vibrant Cinnamon-Orange chevron band */}
-                <path
-                  d="M -5.8 8 L 5.8 8 L 6.2 1 L -6.2 1 Z"
-                  fill="#ea580c"
-                />
-                {/* Golden Yellow feather tip */}
-                <path
-                  d="M -6.2 1 L 6.2 1 Q 0 -9 -6.2 1 Z"
-                  fill="#facc15"
-                />
-                {/* White tip accent outline */}
-                <path
-                  d="M -3 -3 Q 0 -8 3 -3"
-                  stroke="#ffffff"
-                  strokeWidth="1.2"
-                  strokeLinecap="round"
-                  fill="none"
-                />
-              </g>
-            ))}
-          </g>
-
-          {/* 2. Plump Roasted-Chestnut Turkey Body */}
-          <g>
-            {/* Main Body */}
-            <ellipse cx="48" cy="58" rx="16" ry="15" fill="#78350f" />
-            {/* Layered Warm Brown Breast */}
-            <ellipse cx="48" cy="60" rx="12" ry="11" fill="#92400e" />
-            {/* Scalloped Breast Plumage Details */}
-            <path
-              d="M 42 56 Q 48 60 54 56 M 40 62 Q 48 67 56 62 M 43 68 Q 48 72 53 68"
-              stroke="#d97706"
-              strokeWidth="1.2"
-              strokeLinecap="round"
-              fill="none"
-            />
-
-            {/* Left and Right Folded Wings */}
-            <path
-              d="M 33 48 C 26 56, 30 68, 38 68 C 36 60, 36 52, 33 48 Z"
-              fill="#5c2607"
-            />
-            <path
-              d="M 63 48 C 70 56, 66 68, 58 68 C 60 60, 60 52, 63 48 Z"
-              fill="#5c2607"
-            />
-          </g>
-
-          {/* 3. Perched Golden Feet & Harvest Base */}
-          <g>
-            {/* Turkey Feet Perched at base */}
-            <path d="M 41 72 L 41 78 M 38 78 L 44 78 M 39 76 L 41 78" stroke="#f59e0b" strokeWidth="2.2" strokeLinecap="round" fill="none" />
-            <path d="M 55 72 L 55 78 M 52 78 L 58 78 M 57 76 L 55 78" stroke="#f59e0b" strokeWidth="2.2" strokeLinecap="round" fill="none" />
-
-            {/* Rustic Harvest Perch Bar */}
-            <rect x="22" y="78" width="52" height="4.5" rx="2.2" fill="#451a03" />
-            <rect x="24" y="79" width="48" height="1.8" fill="#78350f" opacity="0.6" />
-
-            {/* Mini Autumn Leaves at the perch ends */}
-            {/* Golden Oak Leaf (Left) */}
-            <g transform="translate(24, 79) rotate(-35)">
-              <path d="M 0 0 C -6 -4, -8 -10, 0 -14 C 8 -10, 6 -4, 0 0 Z" fill="#eab308" />
-            </g>
-            {/* Crimson Maple Leaf (Right) */}
-            <g transform="translate(72, 79) rotate(35)">
-              <path d="M 0 0 C -5 -5, -8 -12, 0 -16 C 8 -12, 5 -5, 0 0 Z" fill="#dc2626" />
-            </g>
-            {/* Central Harvest Acorn */}
-            <ellipse cx="48" cy="80" rx="3.5" ry="2" fill="#451a03" />
-            <path d="M 45 80 C 45 85, 51 85, 51 80 Z" fill="#78350f" />
-          </g>
-
-          {/* 4. Turkey Head, Face & Pilgrim Hat */}
-          <g>
-            {/* Head */}
-            <circle cx="48" cy="38" r="9.5" fill="#92400e" />
-
-            {/* Rosy/Red Caruncle Cheeks */}
-            <circle cx="42" cy="40" r="3" fill="#dc2626" opacity="0.75" />
-            <circle cx="54" cy="40" r="3" fill="#dc2626" opacity="0.75" />
-
-            {/* Big Expressive Friendly Eyes */}
-            <ellipse cx="44" cy="36" rx="2.4" ry="3.2" fill="#ffffff" />
-            <circle cx="44.5" cy="36" r="1.5" fill="#1c1917" />
-            <circle cx="43.8" cy="35.2" r="0.6" fill="#ffffff" />
-
-            <ellipse cx="52" cy="36" rx="2.4" ry="3.2" fill="#ffffff" />
-            <circle cx="51.5" cy="36" r="1.5" fill="#1c1917" />
-            <circle cx="50.8" cy="35.2" r="0.6" fill="#ffffff" />
-
-            {/* Cute Pointed Golden Beak */}
-            <polygon points="45,38 51,38 48,46" fill="#f59e0b" stroke="#d97706" strokeWidth="0.8" />
-
-            {/* Wobbling Ruby-Red Snood / Wattle */}
-            <g style={{ transformOrigin: '46px 38px', animation: 'turkeySnoodSway 1.8s ease-in-out infinite' }}>
-              <path
-                d="M 46 38 C 42 41, 41 48, 45 51 C 48 51, 48 45, 47 41 Z"
-                fill="#dc2626"
-              />
-            </g>
-
-            {/* Classic Pilgrim Hat */}
-            {/* Wide Flat Brim */}
-            <ellipse cx="48" cy="29" rx="16" ry="3.5" fill="#18181b" />
-            {/* Tapered Crown */}
-            <path d="M 39 29 L 41 12 L 55 12 L 57 29 Z" fill="#27272a" />
-            {/* Festive Orange Hatband */}
-            <rect x="40" y="24" width="16" height="5" fill="#ea580c" />
-            {/* Golden Square Buckle */}
-            <rect x="45" y="23" width="6" height="7" rx="1" fill="#facc15" stroke="#18181b" strokeWidth="1" />
-          </g>
-        </g>
-
-        {/* 5. Clean Golden Braided Suspension Cords lifting Photo Frame */}
-        <g stroke="#f59e0b" strokeWidth="1.8" fill="none">
-          {/* Left Cord */}
-          <path d="M 34 104 L 34 153" strokeDasharray="3 2" />
-          <circle cx="34" cy="106" r="2" fill="#facc15" />
-          <circle cx="34" cy="128" r="1.8" fill="#facc15" />
-          <circle cx="34" cy="150" r="2.2" fill="#facc15" />
-
-          {/* Right Cord */}
-          <path d="M 62 104 L 62 153" strokeDasharray="3 2" />
-          <circle cx="62" cy="106" r="2" fill="#facc15" />
-          <circle cx="62" cy="128" r="1.8" fill="#facc15" />
-          <circle cx="62" cy="150" r="2.2" fill="#facc15" />
-        </g>
-      </g>
-    </svg>
-  )
-}
-
 function DiwaliTempleHorizon({
   seasonalDate,
   phase,
@@ -1504,9 +1150,9 @@ function DiwaliTempleHorizon({
         aria-hidden="true"
       >
         <style>{`
-          .autumn-harvest[data-static="true"] svg g { animation: none !important; }
+          .autumn-harvest[data-static="true"] svg * { animation: none !important; }
           @media (prefers-reduced-motion: reduce) {
-            .autumn-harvest svg g { animation: none !important; }
+            .autumn-harvest svg * { animation: none !important; }
           }
 
           @keyframes templeDiyaFlicker {
@@ -2050,6 +1696,7 @@ function DiwaliTempleHorizon({
             <circle cx="4" cy="-5" r="7" fill="rgba(241, 245, 249, 0.35)" />
           </g>
         </g>
+        <DiwaliSceneDetails phase={phase} />
       </svg>
     </div>
   )
@@ -2068,6 +1715,8 @@ function AutumnHarvestHorizon({
 }) {
   const isNightOrDusk = phase === 'night' || phase === 'dusk'
   const isDiwali = isDiwaliSeason(seasonalDate)
+  const thanksgiving = isThanksgivingWeek(seasonalDate)
+  const progress = autumnProgress(seasonalDate ?? new Date())
   const holidayOverride = getHolidayOverride()?.toLowerCase()
   const horizonOverride = getQueryParam('horizon')?.toLowerCase()
 
@@ -2128,6 +1777,19 @@ function AutumnHarvestHorizon({
     oF1: '#78350f', oF2: '#9a3412', oF3: '#c2410c', oF4: '#ea580c', oL1: '#f59e0b', oL2: '#fbbf24',
     leaves: ['#dc2626', '#ef4444', '#b91c1c', '#ea580c', '#f97316', '#c2410c', '#f59e0b', '#d97706', '#b45309', '#eab308', '#facc15'],
     driftBack: '#5c2205', driftMid: '#85320c', driftFront: '#b44410'
+  }
+
+  if (thanksgiving && !isNightOrDusk) {
+    c.pumpkin1 = '#a95f32'
+    c.pumpkin2 = '#c18747'
+    c.hayLight = '#c6a36b'
+    c.hillSlope = '#5e3d2c'
+  }
+  if (!isNightOrDusk) {
+    c.bF3 = progress > 0.65 ? '#b17a4a' : c.bF3
+    c.bF4 = progress > 0.65 ? '#c69257' : c.bF4
+    c.mF4 = progress > 0.65 ? '#9a4b35' : c.mF4
+    c.oF4 = progress > 0.65 ? '#966140' : c.oF4
   }
 
   return (
@@ -2216,9 +1878,9 @@ function AutumnHarvestHorizon({
         `}</style>
 
         <style>{`
-          .autumn-harvest[data-static="true"] svg g { animation: none !important; }
+          .autumn-harvest[data-static="true"] svg * { animation: none !important; }
           @media (prefers-reduced-motion: reduce) {
-            .autumn-harvest svg g { animation: none !important; }
+            .autumn-harvest svg * { animation: none !important; }
           }
         `}</style>
 
@@ -2230,7 +1892,7 @@ function AutumnHarvestHorizon({
         />
 
         {/* Static, low-contrast canopy adds depth without another animation layer. */}
-        <g opacity={isNightOrDusk ? 0.3 : 0.4}>
+        <g opacity={(isNightOrDusk ? 0.3 : 0.4) * (1 - progress * 0.65)}>
           {Array.from({ length: 16 }, (_, i) => (
             <g key={i} transform={`translate(${80 + i * 116}, ${102 + Math.sin(i * 1.7) * 7})`}>
               <path d="M0 10V-14M0-2L-6-9" stroke={c.woodDark} strokeWidth="2" />
@@ -2326,7 +1988,7 @@ function AutumnHarvestHorizon({
           </g>
 
           {/* Animated Birch Foliage Canopy */}
-          <g style={{ transformOrigin: '0px 6px', animation: 'treeSwayGentle 6.5s ease-in-out infinite' }}>
+          <g opacity={1 - progress * 0.72} style={{ transformOrigin: '0px 6px', animation: 'treeSwayGentle 6.5s ease-in-out infinite' }}>
             <circle cx="-14" cy="-28" r="17" fill={c.bF1} opacity="0.95" />
             <circle cx="14" cy="-28" r="17" fill={c.bF1} opacity="0.95" />
             <circle cx="0" cy="-42" r="22" fill={c.bF1} opacity="0.95" />
@@ -2374,7 +2036,7 @@ function AutumnHarvestHorizon({
           </g>
 
           {/* Animated Sugar Maple Canopy */}
-          <g style={{ transformOrigin: '1px 10px', animation: 'treeSwaySoft 7.2s ease-in-out infinite', animationDelay: '0.8s' }}>
+          <g opacity={1 - progress * 0.72} style={{ transformOrigin: '1px 10px', animation: 'treeSwaySoft 7.2s ease-in-out infinite', animationDelay: '0.8s' }}>
             <circle cx="-22" cy="-26" r="20" fill={c.mF1} opacity="0.95" />
             <circle cx="22" cy="-26" r="20" fill={c.mF1} opacity="0.95" />
             <circle cx="0" cy="-38" r="26" fill={c.mF1} opacity="0.95" />
@@ -2504,7 +2166,7 @@ function AutumnHarvestHorizon({
           </g>
 
           {/* Animated Oak Canopy */}
-          <g style={{ transformOrigin: '0px 12px', animation: 'treeSwayWind 7.8s ease-in-out infinite', animationDelay: '1.4s' }}>
+          <g opacity={1 - progress * 0.72} style={{ transformOrigin: '0px 12px', animation: 'treeSwayWind 7.8s ease-in-out infinite', animationDelay: '1.4s' }}>
             <circle cx="-26" cy="-24" r="22" fill={c.oF1} opacity="0.95" />
             <circle cx="26" cy="-24" r="22" fill={c.oF1} opacity="0.95" />
             <circle cx="0" cy="-36" r="28" fill={c.oF1} opacity="0.95" />
@@ -2548,7 +2210,7 @@ function AutumnHarvestHorizon({
           </g>
 
           {/* Canopy */}
-          <g style={{ transformOrigin: '0px 8px', animation: 'treeSwaySoft 6.8s ease-in-out infinite', animationDelay: '1.8s' }}>
+          <g opacity={1 - progress * 0.72} style={{ transformOrigin: '0px 8px', animation: 'treeSwaySoft 6.8s ease-in-out infinite', animationDelay: '1.8s' }}>
             <circle cx="-16" cy="-22" r="16" fill={c.mF2} opacity="0.95" />
             <circle cx="16" cy="-22" r="16" fill={c.mF2} opacity="0.95" />
             <circle cx="0" cy="-32" r="20" fill={c.mF2} opacity="0.95" />
@@ -2684,6 +2346,7 @@ function AutumnHarvestHorizon({
             </g>
           </g>
         )}
+        <FallSceneDetails phase={phase} thanksgiving={thanksgiving} />
       </svg>
     </div>
   )
@@ -3209,11 +2872,15 @@ function Turkey({ flip = false }: { flip?: boolean }) {
       width="84"
       height="80"
       viewBox="0 0 76 72"
-      className="pointer-events-none select-none filter drop-shadow-[0_3px_8px_rgba(0,0,0,0.35)]"
+      className="pointer-events-none select-none"
       style={{ transform: flip ? 'scaleX(-1)' : undefined }}
       aria-hidden="true"
     >
       <style>{`
+        @keyframes harvestTurkeyPeck {
+          0%, 31%, 42%, 53%, 65%, 100% { transform: rotate(0deg); }
+          36%, 47% { transform: rotate(48deg); }
+        }
         @keyframes turkeyWattleSway {
           0%, 100% { transform: rotate(0deg); }
           50% { transform: rotate(14deg); }
@@ -3242,6 +2909,8 @@ function Turkey({ flip = false }: { flip?: boolean }) {
         fill="#78350f"
       />
 
+      {/* Two pecks while stopped at the harvest basket. */}
+      <g style={{ transformOrigin: '45px 43px', animation: 'harvestTurkeyPeck 12s linear both' }}>
       {/* Turkey Neck and Head */}
       <path
         d="M 44 44 C 48 36, 52 28, 50 20 C 53 22, 56 28, 52 44 Z"
@@ -3270,6 +2939,8 @@ function Turkey({ flip = false }: { flip?: boolean }) {
         />
       </g>
 
+      </g>
+
       {/* Big Yellow Turkey Legs & Strutting Feet */}
       <g stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round">
         <line x1="32" y1="58" x2="30" y2="67" />
@@ -3293,7 +2964,7 @@ function StruttingTurkey() {
     const trigger = () => {
       if (activeRef.current) return
       if (timerRef.current) clearTimeout(timerRef.current)
-      if (document.hidden || !autumnVisits.claim(performance.now(), 8_500)) {
+      if (document.hidden || !autumnVisits.claim(performance.now(), 12_000)) {
         timerRef.current = setTimeout(trigger, 5_000)
         return
       }
@@ -3323,14 +2994,17 @@ function StruttingTurkey() {
   return (
     <motion.div
       initial={{ x: direction === 1 ? -90 : window.innerWidth + 90 }}
-      animate={{ x: direction === 1 ? window.innerWidth + 90 : -90 }}
-      transition={{ duration: 8.5, ease: 'linear' }}
+      animate={{ x: [direction === 1 ? -90 : window.innerWidth + 90,
+        window.innerWidth * (346 / 1920) - (direction === 1 ? 70 : 12),
+        window.innerWidth * (346 / 1920) - (direction === 1 ? 70 : 12),
+        direction === 1 ? window.innerWidth + 90 : -90] }}
+      transition={{ duration: 12, times: [0, 0.3, 0.6, 1], ease: 'linear' }}
       onAnimationComplete={handleAnimationComplete}
       className="fixed bottom-1 pointer-events-none z-30 select-none"
     >
       <motion.div
-        animate={{ y: [0, -7, 0] }}
-        transition={{ duration: 0.38, repeat: Infinity, ease: 'easeInOut' }}
+        animate={{ y: [0, -4, 0, -4, 0, 0, -4, 0] }}
+        transition={{ duration: 12, times: [0, 0.1, 0.2, 0.25, 0.3, 0.6, 0.8, 1], ease: 'easeInOut' }}
       >
         <Turkey flip={direction === -1} />
       </motion.div>
@@ -7511,6 +7185,13 @@ export default function Slideshow({
   onClose,
 }: SlideshowProps) {
   const [currentIdx, setCurrentIdx] = useState(0)
+  const [photoEntering, setPhotoEntering] = useState(true)
+  useEffect(() => {
+    setPhotoEntering(true)
+    autumnVisits.defer(performance.now(), 2_000)
+    const timer = setTimeout(() => setPhotoEntering(false), 2_000)
+    return () => clearTimeout(timer)
+  }, [currentIdx])
   const [paused, setPaused] = useState(false)
   const swipeStart = useRef<number | null>(null)
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null)
@@ -7554,7 +7235,8 @@ export default function Slideshow({
     }
   }, [])
 
-  const [seasonalDate] = useState(() => getSeasonalDate(now))
+  // Overrides are cached by getHolidayOverride; real dates can still advance overnight.
+  const seasonalDate = getSeasonalDate(now)
   const [isOverlayOpen, setIsOverlayOpen] = useState(false)
 
   useEffect(() => {
@@ -7567,7 +7249,7 @@ export default function Slideshow({
   }, [])
 
   const phase: SkyPhase = override.phase ?? computePhase(now, sun.sunrise, sun.sunset)
-  const skyState: SkyState = { phase, kind, paused: !!selectedVideo || hidden || isOverlayOpen, quality }
+  const skyState: SkyState = { phase, kind, quiet: isNovember(seasonalDate) && photoEntering, paused: !!selectedVideo || hidden || isOverlayOpen, quality }
   const stateRef = useRef<SkyState>(skyState)
   stateRef.current = skyState
 
@@ -7997,7 +7679,7 @@ export default function Slideshow({
 
       {/* November autumn harvest & Thanksgiving / Diwali horizon in FOREGROUND (photos float up from behind) */}
       {(isNovember(seasonalDate) || isDiwaliSeason(seasonalDate) || isThanksgivingWeek(seasonalDate)) && (
-        <AutumnHarvestHorizon seasonalDate={seasonalDate} phase={phase} quality={quality} paused={!!skyState.paused} />
+        <AutumnHarvestHorizon seasonalDate={seasonalDate} phase={phase} quality={quality} paused={!!skyState.paused || photoEntering} />
       )}
 
       {/* Swara's Birthday daytime delights: party streamers & sunglasses-wearing acrobatic spiders */}
