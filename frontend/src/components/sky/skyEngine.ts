@@ -14,6 +14,8 @@ export interface SkyState {
   quality?: 'high' | 'medium' | 'low'
 }
 
+import { autumnVisits } from '../../lib/autumnAmbience'
+
 const rand = (a: number, b: number) => a + Math.random() * (b - a)
 import {
   getQueryParam,
@@ -31,7 +33,7 @@ import {
 
 // Cap the frame rate: full-screen 60fps canvas work is wasted on ambient
 // weather. rAF still schedules, we just skip paints.
-const FRAME_MS = 31
+const FRAME_MS = 34
 const FRAME_MS_LOW = 50
 const FRAME_MS_MIN = 66 // ~15fps: enough for drifting ambience on weak devices
 
@@ -445,6 +447,10 @@ export function startFxCanvas(
   let gifts: FallingGift[] = []
   let leaves: FallingLeaf[] = []
   let lanterns: SkyLantern[] = []
+  let nextAutumnGust = performance.now() + rand(12_000, 24_000)
+  let gustStarted = -Infinity
+  let nextDiwaliBurst = performance.now() + 20_000
+  let diwaliBurstUntil = 0
   let rockets: FireworksRocket[] = []
   let sparks: FireworksSpark[] = []
   let flashes: FireworksFlash[] = []
@@ -556,7 +562,7 @@ export function startFxCanvas(
 
     const leafColors = ['#dc2626', '#b91c1c', '#ea580c', '#c2410c', '#d97706', '#b45309', '#f59e0b']
     const leafTypes: ('maple' | 'oak' | 'birch')[] = ['maple', 'oak', 'birch']
-    leaves = Array.from({ length: Math.round(26 * density) }, () => ({
+    leaves = Array.from({ length: Math.max(6, Math.round(12 * density)) }, () => ({
       x: Math.random() * w,
       baseX: Math.random() * w,
       y: Math.random() * h,
@@ -572,7 +578,7 @@ export function startFxCanvas(
     }))
 
     const lanternColors = ['#f97316', '#ea580c', '#f59e0b', '#dc2626', '#eab308']
-    lanterns = Array.from({ length: Math.round(12 * density) }, () => ({
+    lanterns = Array.from({ length: Math.max(2, Math.round(4 * density)) }, () => ({
       x: Math.random() * w,
       baseX: Math.random() * w,
       y: Math.random() * h,
@@ -2300,7 +2306,7 @@ export function startFxCanvas(
     const wantsFlies = (phase === 'night' || phase === 'dusk') && calm
     const wantsLeaves = november && calm
     const wantsLanterns = diwali && (phase === 'night' || phase === 'dusk') && calm
-    const wantsDiwaliFireworks = diwali && calm
+    const wantsDiwaliFireworks = diwali && calm && (phase === 'dusk' || phase === 'night')
     const wantsSwaraFireworks = swaraBirthday && (phase === 'dusk' || phase === 'night') && calm
     const batsPossible = october && calm
     const creaturesPossible = calm && (daylight || november)
@@ -2409,14 +2415,14 @@ export function startFxCanvas(
 
     // 2. Birds (daylight) or Canada Geese in V-formation (November)
     if (creaturesPossible) {
-      if (!flock && t > nextFlock) {
+      if (!flock && t > nextFlock && (!november || autumnVisits.claim(t, 12_000))) {
         const dir: 1 | -1 = Math.random() < 0.5 ? 1 : -1
         const scale = november ? rand(1.2, 1.55) : rand(0.8, 1.3)
-        const gooseCount = 7 + Math.floor(Math.random() * 4) // 7-10 geese in V
+        const gooseCount = state.quality === 'high' ? 7 : 5 // Smaller formations on tablet quality tiers
         flock = {
           x: dir === 1 ? -160 : w + 160,
           y: november ? h * rand(0.04, 0.14) : h * rand(0.08, 0.32),
-          speed: november ? rand(90, 125) : rand(90, 130),
+          speed: november ? (w + 800) / 12 : rand(90, 130),
           dir,
           scale,
           birds: november
@@ -2805,14 +2811,23 @@ export function startFxCanvas(
 
     // November: swirling falling autumn leaves
     if (wantsLeaves) {
+      if (t >= nextAutumnGust) {
+        gustStarted = t
+        nextAutumnGust = t + rand(22_000, 38_000)
+      }
+      // One shared envelope, no new particles or per-leaf timers for a gust.
+      const gustAge = (t - gustStarted) / 5_000
+      const gust = gustAge < 1 ? Math.sin(gustAge * Math.PI) : 0
       for (const l of leaves) {
+        l.baseX += gust * 42 * dt
+        if (l.baseX > w + 40) l.baseX = -40
         l.y += l.speed * dt
         if (l.y > h + 30) {
           l.y = -35
           l.baseX = Math.random() * w
         }
         l.x = l.baseX + Math.sin(t / 1200 + l.offset) * l.sway
-        l.angle += l.rotSpeed * dt
+        l.angle += l.rotSpeed * dt * (1 + gust)
         drawLeaf(l, t)
       }
     }
@@ -2833,8 +2848,13 @@ export function startFxCanvas(
     // Festive Fireworks: New Year's Season, Diwali Nights & Swara's Birthday Dusk/Night!
     const wantsFireworks = newYearSeason || wantsDiwaliFireworks || wantsSwaraFireworks
     if (wantsFireworks) {
-      if (t > nextRocket) {
-        nextRocket = t + rand(wantsSwaraFireworks ? 500 : (diwali ? 450 : 650), wantsSwaraFireworks ? 1300 : (diwali ? 1200 : 1500))
+      if (wantsDiwaliFireworks && t >= nextDiwaliBurst) {
+        diwaliBurstUntil = t + 5_000
+        nextDiwaliBurst = t + rand(60_000, 90_000)
+      }
+      const canLaunch = !diwali || wantsSwaraFireworks || t < diwaliBurstUntil
+      if (canLaunch && t > nextRocket) {
+        nextRocket = t + rand(wantsSwaraFireworks ? 500 : (diwali ? 1_800 : 650), wantsSwaraFireworks ? 1300 : (diwali ? 2_800 : 1500))
         const fireworkColors = wantsSwaraFireworks
           ? [
               '#ec4899', // Hot Pink
@@ -2865,7 +2885,7 @@ export function startFxCanvas(
               '#fb923c', // Amber
               '#ffffff', // Diamond
             ]
-        const launchCount = Math.random() < 0.3 ? 2 : 1
+        const launchCount = diwali ? 1 : (Math.random() < 0.3 ? 2 : 1)
         for (let l = 0; l < launchCount; l++) {
           let rx: number
           let tilt = 0
@@ -3024,7 +3044,7 @@ export function startFxCanvas(
             })
 
             // Standard burst apex: Sparks
-            const count = Math.floor(rand(35, 48))
+            const count = Math.floor(diwali ? rand(14, 22) * densityFor(state) : rand(35, 48))
             for (let j = 0; j < count; j++) {
               const angle = Math.random() * Math.PI * 2
               const speed = rand(70, 220)
@@ -3125,8 +3145,9 @@ export function startFxCanvas(
       }
 
       // Keep spark and flash limits capped for smooth 60 FPS performance on kiosk tablets
-      if (sparks.length > 130) {
-        sparks.splice(0, sparks.length - 130)
+      const sparkLimit = diwali ? (state.quality === 'high' ? 48 : 24) : 130
+      if (sparks.length > sparkLimit) {
+        sparks.splice(0, sparks.length - sparkLimit)
       }
       if (flashes.length > 4) {
         flashes.splice(0, flashes.length - 4)

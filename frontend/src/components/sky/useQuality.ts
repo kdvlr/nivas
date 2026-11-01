@@ -42,7 +42,11 @@ export interface QualityMetrics {
 
 export function useQuality(active: boolean): QualityMetrics {
   const forced = forcedTier()
-  const [quality, setQuality] = useState<Quality>(() => forced ?? stored() ?? 'high')
+  // Start Android kiosks conservatively instead of waiting for visible jank
+  // before the first downgrade. Explicit overrides and measured tiers win.
+  const [quality, setQuality] = useState<Quality>(() =>
+    forced ?? stored() ?? (/Android/i.test(navigator.userAgent) ? 'medium' : 'high')
+  )
   const [fps, setFps] = useState<number>(60)
   const [frameTimeMs, setFrameTimeMs] = useState<number>(16.7)
   const sampleCount = useRef(0)

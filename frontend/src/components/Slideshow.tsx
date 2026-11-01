@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useId, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import confetti from 'canvas-confetti'
+import { autumnVisits } from '../lib/autumnAmbience'
 import { playBalloonPopSound } from '../lib/useAudioChime'
 import Icon from './Icon'
 import { api } from '../lib/api'
@@ -1481,16 +1482,20 @@ function ThanksgivingTopper({ seed = 0 }: { seed?: number }) {
 function DiwaliTempleHorizon({
   seasonalDate,
   phase,
+  quality,
+  paused,
 }: {
   seasonalDate?: Date
   phase: SkyPhase
+  quality: Quality
+  paused: boolean
 }) {
   const isNightOrDusk = phase === 'night' || phase === 'dusk'
 
   return (
     <div
-      className="absolute bottom-0 left-0 right-0 h-48 pointer-events-none z-[25] select-none overflow-hidden"
-      style={{ willChange: 'transform', transform: 'translateZ(0)' }}
+      className="absolute bottom-0 left-0 right-0 h-48 pointer-events-none z-[25] select-none overflow-hidden autumn-harvest"
+      data-static={quality !== 'high' || paused}
     >
       <svg
         viewBox="0 0 1920 188"
@@ -1499,6 +1504,11 @@ function DiwaliTempleHorizon({
         aria-hidden="true"
       >
         <style>{`
+          .autumn-harvest[data-static="true"] svg g { animation: none !important; }
+          @media (prefers-reduced-motion: reduce) {
+            .autumn-harvest svg g { animation: none !important; }
+          }
+
           @keyframes templeDiyaFlicker {
             0%, 100% { opacity: 0.95; }
             50% { opacity: 0.65; }
@@ -2048,9 +2058,13 @@ function DiwaliTempleHorizon({
 function AutumnHarvestHorizon({
   seasonalDate,
   phase,
+  quality,
+  paused,
 }: {
   seasonalDate?: Date
   phase: SkyPhase
+  quality: Quality
+  paused: boolean
 }) {
   const isNightOrDusk = phase === 'night' || phase === 'dusk'
   const isDiwali = isDiwaliSeason(seasonalDate)
@@ -2059,7 +2073,7 @@ function AutumnHarvestHorizon({
 
   // During Diwali (Nov 7, 8, and 9, or explicit override), display the majestic Indian Temple & Ghat skyline
   if ((isDiwali || holidayOverride === 'diwali' || horizonOverride === 'diwali') && horizonOverride !== 'autumn' && horizonOverride !== 'harvest') {
-    return <DiwaliTempleHorizon seasonalDate={seasonalDate} phase={phase} />
+    return <DiwaliTempleHorizon seasonalDate={seasonalDate} phase={phase} quality={quality} paused={paused} />
   }
 
   const c = isNightOrDusk ? {
@@ -2118,8 +2132,8 @@ function AutumnHarvestHorizon({
 
   return (
     <div
-      className="absolute bottom-0 left-0 right-0 h-44 pointer-events-none z-[25] select-none overflow-hidden"
-      style={{ willChange: 'transform', transform: 'translateZ(0)' }}
+      className="absolute bottom-0 left-0 right-0 h-44 pointer-events-none z-[25] select-none overflow-hidden autumn-harvest"
+      data-static={quality !== 'high' || paused}
     >
       <svg
         viewBox="0 0 1920 176"
@@ -2201,12 +2215,30 @@ function AutumnHarvestHorizon({
           }
         `}</style>
 
+        <style>{`
+          .autumn-harvest[data-static="true"] svg g { animation: none !important; }
+          @media (prefers-reduced-motion: reduce) {
+            .autumn-harvest svg g { animation: none !important; }
+          }
+        `}</style>
+
         {/* 1. Background Distant Ridge & Hills */}
         <path
           d="M 0 176 L 0 115 Q 320 85, 640 105 Q 960 125, 1280 95 Q 1600 80, 1920 102 L 1920 176 Z"
           fill={c.hillFar}
           opacity={c.hillFarOpacity}
         />
+
+        {/* Static, low-contrast canopy adds depth without another animation layer. */}
+        <g opacity={isNightOrDusk ? 0.3 : 0.4}>
+          {Array.from({ length: 16 }, (_, i) => (
+            <g key={i} transform={`translate(${80 + i * 116}, ${102 + Math.sin(i * 1.7) * 7})`}>
+              <path d="M0 10V-14M0-2L-6-9" stroke={c.woodDark} strokeWidth="2" />
+              <ellipse cy="-17" rx={16 + i % 3 * 3} ry={17 + i % 4 * 2}
+                fill={[c.mF1, c.oF2, c.bF1][i % 3]} />
+            </g>
+          ))}
+        </g>
 
         {/* Distant Golden Aspen Grove on Background Ridge (x = 760-860) */}
         <g opacity={isNightOrDusk ? '0.6' : '0.85'}>
@@ -2975,6 +3007,11 @@ function RunningSquirrel() {
   }
 
   const trigger = (e?: Event) => {
+    const frozen = Boolean((e as CustomEvent | undefined)?.detail?.freeze)
+    if (!frozen && (document.hidden || !autumnVisits.claim(performance.now(), 9_400))) {
+      timersRef.current.push(setTimeout(trigger, 5_000))
+      return
+    }
     clearAllTimers()
     setShowMound(false)
     setMoundCoords(null)
@@ -3089,15 +3126,10 @@ function RunningSquirrel() {
       return
     }
     setActive(false)
-    // Keep the freshly buried acorn mound on the ground for 7 seconds so it can be appreciated
-    timersRef.current.push(
-      setTimeout(() => {
-        setShowMound(false)
-      }, 7000)
-    )
+    // Keep one static acorn mound until the next visit; never accumulate SVGs.
     // Schedule next run
     timersRef.current.push(
-      setTimeout(trigger, 30_000 + Math.random() * 35_000)
+      setTimeout(trigger, 45_000 + Math.random() * 45_000)
     )
   }
 
@@ -3251,15 +3283,25 @@ function Turkey({ flip = false }: { flip?: boolean }) {
 }
 
 function StruttingTurkey() {
+  const activeRef = useRef(false)
+  const triggerRef = useRef<() => void>(() => {})
   const [strutting, setStrutting] = useState(false)
   const [direction, setDirection] = useState<1 | -1>(1)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     const trigger = () => {
+      if (activeRef.current) return
+      if (timerRef.current) clearTimeout(timerRef.current)
+      if (document.hidden || !autumnVisits.claim(performance.now(), 8_500)) {
+        timerRef.current = setTimeout(trigger, 5_000)
+        return
+      }
+      activeRef.current = true
       setDirection(Math.random() < 0.5 ? 1 : -1)
       setStrutting(true)
     }
+    triggerRef.current = trigger
     window.addEventListener('trigger-turkey', trigger)
     timerRef.current = setTimeout(trigger, 8_000)
 
@@ -3270,12 +3312,10 @@ function StruttingTurkey() {
   }, [])
 
   const handleAnimationComplete = () => {
+    activeRef.current = false
     setStrutting(false)
     if (timerRef.current) clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(() => {
-      setDirection(Math.random() < 0.5 ? 1 : -1)
-      setStrutting(true)
-    }, 25_000 + Math.random() * 35_000)
+    timerRef.current = setTimeout(() => triggerRef.current(), 45_000 + Math.random() * 45_000)
   }
 
   if (!strutting) return null
@@ -7957,7 +7997,7 @@ export default function Slideshow({
 
       {/* November autumn harvest & Thanksgiving / Diwali horizon in FOREGROUND (photos float up from behind) */}
       {(isNovember(seasonalDate) || isDiwaliSeason(seasonalDate) || isThanksgivingWeek(seasonalDate)) && (
-        <AutumnHarvestHorizon seasonalDate={seasonalDate} phase={phase} />
+        <AutumnHarvestHorizon seasonalDate={seasonalDate} phase={phase} quality={quality} paused={!!skyState.paused} />
       )}
 
       {/* Swara's Birthday daytime delights: party streamers & sunglasses-wearing acrobatic spiders */}
@@ -7987,12 +8027,12 @@ export default function Slideshow({
       {isElfSeason(seasonalDate) && !isNewYearSeason(seasonalDate) && <RunningElf />}
 
       {/* November Autumn Delights: Burying Nut Squirrel (when not Thanksgiving week, or with query override) */}
-      {((isNovember(seasonalDate) && !isThanksgivingWeek(seasonalDate)) || Boolean(getQueryParam('squirrel'))) && (
+      {!skyState.paused && ((isNovember(seasonalDate) && !isThanksgivingWeek(seasonalDate)) || Boolean(getQueryParam('squirrel'))) && (
         <RunningSquirrel />
       )}
 
       {/* Thanksgiving Week: Strutting Cartoon Turkey */}
-      {isThanksgivingWeek(seasonalDate) && <StruttingTurkey />}
+      {!skyState.paused && isThanksgivingWeek(seasonalDate) && <StruttingTurkey />}
 
       {/* Bottom right controls & Now Playing dock */}
       <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 z-[110] flex flex-col items-end gap-3 pointer-events-none">
