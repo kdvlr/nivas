@@ -2054,10 +2054,66 @@ function AutumnHarvestHorizon({
 }) {
   const isNightOrDusk = phase === 'night' || phase === 'dusk'
   const isDiwali = isDiwaliSeason(seasonalDate)
+  const holidayOverride = getHolidayOverride()?.toLowerCase()
+  const horizonOverride = getQueryParam('horizon')?.toLowerCase()
 
-  // During Diwali season, display the majestic Indian Temple & Ghat skyline with 1000-wala string bomb & fireworks
-  if (isDiwali) {
+  // Only switch to full DiwaliTempleHorizon when explicitly requested by override
+  if (holidayOverride === 'diwali' || horizonOverride === 'diwali') {
     return <DiwaliTempleHorizon seasonalDate={seasonalDate} phase={phase} />
+  }
+
+  const c = isNightOrDusk ? {
+    hillFar: '#1c1008',
+    hillFarOpacity: '0.85',
+    hillMid: '#160a04',
+    hillMidOpacity: '0.9',
+    hillFore: '#0d0703',
+    hillSlope: '#180d06',
+    crest: '#2b1509',
+    grass: '#78350f',
+    woodDark: '#201208',
+    woodLight: '#361e0f',
+    woodPost: '#29160a',
+    hayDark: '#331d0b',
+    hayLight: '#4a2c12',
+    pumpkin1: '#9a3412',
+    pumpkin2: '#7c2d12',
+    stem: '#14532d',
+    birchTrunk: '#cbd5e1',
+    birchMark: '#1e293b',
+    bF1: '#78350f', bF2: '#92400e', bF3: '#b45309', bF4: '#d97706',
+    mTrunk: '#1a0d05',
+    mF1: '#450a0a', mF2: '#7f1d1d', mF3: '#991b1b', mF4: '#b91c1c', mL1: '#dc2626', mL2: '#ea580c',
+    oTrunk: '#180b03',
+    oF1: '#3d1602', oF2: '#78350f', oF3: '#92400e', oF4: '#b45309', oL1: '#d97706', oL2: '#f59e0b',
+    leaves: ['#7f1d1d', '#991b1b', '#b91c1c', '#78350f', '#92400e', '#b45309', '#c2410c', '#9a3412', '#7c2d12', '#d97706'],
+    driftBack: '#1a0b04', driftMid: '#2a1206', driftFront: '#3d1c0a'
+  } : {
+    hillFar: '#78350f',
+    hillFarOpacity: '0.65',
+    hillMid: '#632e08',
+    hillMidOpacity: '0.85',
+    hillFore: '#451a03',
+    hillSlope: '#5c2406',
+    crest: '#7a380e',
+    grass: '#b45309',
+    woodDark: '#54290c',
+    woodLight: '#783e15',
+    woodPost: '#693612',
+    hayDark: '#b45309',
+    hayLight: '#d97706',
+    pumpkin1: '#ea580c',
+    pumpkin2: '#f97316',
+    stem: '#15803d',
+    birchTrunk: '#f8fafc',
+    birchMark: '#334155',
+    bF1: '#ca8a04', bF2: '#eab308', bF3: '#facc15', bF4: '#fef08a',
+    mTrunk: '#291206',
+    mF1: '#7f1d1d', mF2: '#991b1b', mF3: '#dc2626', mF4: '#ef4444', mL1: '#f87171', mL2: '#fb923c',
+    oTrunk: '#240f04',
+    oF1: '#78350f', oF2: '#9a3412', oF3: '#c2410c', oF4: '#ea580c', oL1: '#f59e0b', oL2: '#fbbf24',
+    leaves: ['#dc2626', '#ef4444', '#b91c1c', '#ea580c', '#f97316', '#c2410c', '#f59e0b', '#d97706', '#b45309', '#eab308', '#facc15'],
+    driftBack: '#5c2205', driftMid: '#85320c', driftFront: '#b44410'
   }
 
   return (
@@ -2071,7 +2127,70 @@ function AutumnHarvestHorizon({
         className="w-full h-full"
         aria-hidden="true"
       >
+        <defs>
+          {/* Pointed Maple Leaf */}
+          <g id="autumn-leaf-maple">
+            <path d="M 0,-8 L 1.5,-3.5 L 5.5,-5 L 3,-1.2 L 7,1 L 3,2.5 L 4.5,6 L 1.2,4.5 L 0,8 L -1.2,4.5 L -4.5,6 L -3,2.5 L -7,1 L -3,-1.2 L -5.5,-5 L -1.5,-3.5 Z" />
+            <path d="M 0,4.5 L 0,9.5" stroke="rgba(0,0,0,0.35)" strokeWidth="0.75" fill="none" strokeLinecap="round" />
+          </g>
+          {/* Lobed Oak Leaf */}
+          <g id="autumn-leaf-oak">
+            <path d="M 0,-7.5 C 2.5,-6 4.2,-4.5 2.8,-2.5 C 5,-1.2 5,1 2.8,2.2 C 4.5,4.2 3.5,6.2 1.6,6.8 L 0,8 L -1.6,6.8 C -3.5,6.2 -4.5,4.2 -2.8,2.2 C -5,1 -5,-1.2 -2.8,-2.5 C -4.2,-4.5 -2.5,-6 0,-7.5 Z" />
+            <path d="M 0,5 L 0,9.5" stroke="rgba(0,0,0,0.35)" strokeWidth="0.75" fill="none" strokeLinecap="round" />
+          </g>
+          {/* Birch Leaf */}
+          <g id="autumn-leaf-birch">
+            <path d="M 0,-6.5 C 3.2,-3.2 3.2,3.2 0,6.5 C -3.2,3.2 -3.2,-3.2 0,-6.5 Z" />
+            <path d="M 0,4 L 0,7.5" stroke="rgba(0,0,0,0.35)" strokeWidth="0.65" fill="none" strokeLinecap="round" />
+          </g>
+
+          {/* Natural Undulating Leaf Drift Blanket under trees */}
+          <g id="autumn-tree-drift">
+            <path d="M -36 8 Q -24 0 -12 2 Q 0 -2 14 0 Q 26 -1 38 8 Q 20 12 0 11 Q -20 12 -36 8 Z" fill={c.driftBack} opacity="0.95" />
+            <path d="M -28 7 Q -16 1 -6 3 Q 4 0 16 2 Q 24 1 30 7 Q 15 10 0 9 Q -15 10 -28 7 Z" fill={c.driftMid} opacity="0.92" />
+            <path d="M -20 6 Q -10 2 0 3 Q 10 1 20 6 Q 10 8 0 8 Q -10 8 -20 6 Z" fill={c.driftFront} opacity="0.88" />
+            <use href="#autumn-leaf-maple" transform="translate(-18, 3) scale(0.65) rotate(25)" fill={c.leaves[0]} />
+            <use href="#autumn-leaf-oak" transform="translate(-8, 1) scale(0.6) rotate(-35)" fill={c.leaves[3]} />
+            <use href="#autumn-leaf-birch" transform="translate(6, 2) scale(0.7) rotate(55)" fill={c.leaves[7]} />
+            <use href="#autumn-leaf-maple" transform="translate(18, 4) scale(0.6) rotate(-15)" fill={c.leaves[1]} />
+            <use href="#autumn-leaf-oak" transform="translate(0, 5) scale(0.55) rotate(10)" fill={c.leaves[4]} />
+          </g>
+
+          {/* Grass Clump */}
+          <g id="autumn-grass-clump">
+            <path d="M -2 0 L -5 -8 M 0 0 L 0 -11 M 2 0 L 5 -7" stroke={c.grass} strokeWidth="1.2" strokeLinecap="round" fill="none" />
+          </g>
+        </defs>
+
         <style>{`
+          @keyframes treeSwaySoft {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(1.1deg); }
+          }
+          @keyframes treeSwayGentle {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(-1.3deg); }
+          }
+          @keyframes treeSwayWind {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(1.4deg); }
+          }
+          @keyframes leafEdgeFlutter {
+            0%, 100% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(4deg) scale(1.03); }
+          }
+          @keyframes groundLeafTumble1 {
+            0% { transform: translate(0, 0) rotate(0deg); opacity: 0.9; }
+            30% { transform: translate(35px, -8px) rotate(110deg); opacity: 1; }
+            65% { transform: translate(80px, -2px) rotate(240deg); opacity: 0.95; }
+            100% { transform: translate(130px, 0px) rotate(360deg); opacity: 0.9; }
+          }
+          @keyframes groundLeafTumble2 {
+            0% { transform: translate(0, 0) rotate(0deg); opacity: 0.85; }
+            35% { transform: translate(30px, -10px) rotate(-90deg); opacity: 1; }
+            70% { transform: translate(75px, -4px) rotate(-210deg); opacity: 0.9; }
+            100% { transform: translate(120px, 0px) rotate(-340deg); opacity: 0.85; }
+          }
           @keyframes harvestDiyaFlicker {
             0%, 100% { opacity: 0.95; }
             50% { opacity: 0.65; }
@@ -2080,120 +2199,432 @@ function AutumnHarvestHorizon({
             0%, 100% { opacity: 0.85; }
             50% { opacity: 0.55; }
           }
-          @keyframes treeSway {
-            0%, 100% { transform: rotate(0deg); }
-            50% { transform: rotate(1.2deg); }
-          }
         `}</style>
 
-        {/* --- Background Rolling Hills Silhouette --- */}
+        {/* 1. Background Distant Ridge & Hills */}
         <path
           d="M 0 176 L 0 115 Q 320 85, 640 105 Q 960 125, 1280 95 Q 1600 80, 1920 102 L 1920 176 Z"
-          fill={isNightOrDusk ? '#1c1008' : '#78350f'}
-          opacity={isNightOrDusk ? '0.85' : '0.65'}
+          fill={c.hillFar}
+          opacity={c.hillFarOpacity}
         />
 
-        {/* Distant Rustic Barn on distant ridge */}
-        <g transform="translate(1120, 84)" opacity="0.8">
+        {/* Distant Golden Aspen Grove on Background Ridge (x = 760-860) */}
+        <g opacity={isNightOrDusk ? '0.6' : '0.85'}>
+          <path d="M 764 113 L 766 84 M 792 115 L 794 80 M 822 116 L 824 86 M 852 117 L 854 84" stroke={isNightOrDusk ? '#201208' : '#54290c'} strokeWidth="1.8" />
+          <ellipse cx="766" cy="78" rx="12" ry="16" fill={isNightOrDusk ? '#78350f' : '#ca8a04'} />
+          <ellipse cx="767" cy="74" rx="8" ry="12" fill={isNightOrDusk ? '#92400e' : '#eab308'} />
+          <ellipse cx="794" cy="72" rx="14" ry="18" fill={isNightOrDusk ? '#92400e' : '#eab308'} />
+          <ellipse cx="795" cy="68" rx="10" ry="13" fill={isNightOrDusk ? '#b45309' : '#facc15'} />
+          <ellipse cx="824" cy="80" rx="11" ry="14" fill={isNightOrDusk ? '#78350f' : '#d97706'} />
+          <ellipse cx="854" cy="78" rx="13" ry="16" fill={isNightOrDusk ? '#9a3412' : '#ea580c'} />
+        </g>
+
+        {/* Distant Barn on Ridge */}
+        <g transform="translate(1120, 84)" opacity={isNightOrDusk ? '0.8' : '0.85'}>
           <polygon points="0,20 18,6 36,20 36,36 0,36" fill={isNightOrDusk ? '#2a140a' : '#991b1b'} />
           <polygon points="12,14 18,9 24,14 24,22 12,22" fill={isNightOrDusk ? '#160a04' : '#ffffff'} />
           <rect x="39" y="10" width="10" height="26" fill={isNightOrDusk ? '#201006' : '#64748b'} />
           <ellipse cx="44" cy="10" rx="5" ry="3" fill={isNightOrDusk ? '#2a140a' : '#94a3b8'} />
         </g>
 
-        {/* --- Foreground Rolling Ridge --- */}
+        {/* 2. Midground Rolling Hill */}
         <path
-          d="M 0 176 L 0 108 Q 280 88, 560 104 Q 840 120, 1120 98 Q 1400 82, 1680 100 Q 1820 106, 1920 94 L 1920 176 Z"
-          fill={isNightOrDusk ? '#0d0703' : '#451a03'}
+          d="M 0 176 L 0 115 Q 300 93, 620 109 Q 980 127, 1340 103 Q 1660 87, 1920 107 L 1920 176 Z"
+          fill={c.hillMid}
+          opacity={c.hillMidOpacity}
         />
 
-        {/* --- Autumn Trees (Oak, Maple, Birch) --- */}
-        {/* Tree 1: Golden Birch (Left, x = 110) */}
+        {/* 3. Foreground Main Rolling Ridge */}
+        <path
+          d="M 0 176 L 0 108 Q 280 88, 560 104 Q 840 120, 1120 98 Q 1400 82, 1680 100 Q 1820 106, 1920 94 L 1920 176 Z"
+          fill={c.hillFore}
+        />
+        {/* Warm Autumn Turf Slope Wash (Adds rich depth across ground!) */}
+        <path
+          d="M 0 108 Q 280 88, 560 104 Q 840 120, 1120 98 Q 1400 82, 1680 100 Q 1820 106, 1920 94 L 1920 135 Q 1680 142, 1400 124 Q 1120 138, 840 156 Q 560 140, 280 126 L 0 142 Z"
+          fill={c.hillSlope}
+          opacity="0.55"
+        />
+        <path
+          d="M 0 108 Q 280 88, 560 104 Q 840 120, 1120 98 Q 1400 82, 1680 100 Q 1820 106, 1920 94"
+          stroke={c.crest}
+          strokeWidth="2.2"
+          fill="none"
+          opacity="0.75"
+        />
+
+        {/* Tufts of grass along crest */}
+        <use href="#autumn-grass-clump" transform="translate(85, 106)" />
+        <use href="#autumn-grass-clump" transform="translate(250, 95)" />
+        <use href="#autumn-grass-clump" transform="translate(430, 99)" />
+        <use href="#autumn-grass-clump" transform="translate(670, 111)" />
+        <use href="#autumn-grass-clump" transform="translate(910, 117)" />
+        <use href="#autumn-grass-clump" transform="translate(1120, 98)" />
+        <use href="#autumn-grass-clump" transform="translate(1330, 91)" />
+        <use href="#autumn-grass-clump" transform="translate(1550, 94)" />
+        <use href="#autumn-grass-clump" transform="translate(1780, 104)" />
+
+        {/* 4. DETAILED AUTUMN TREES */}
+
+        {/* TREE 1: GOLDEN PAPER BIRCH (Left, x = 110, y = 110) */}
         <g transform="translate(110, 110)">
-          <path d="M -3 45 Q 0 20 -2 0 Q 3 20 5 45 Z" fill="#e2e8f0" stroke="#64748b" strokeWidth="0.8" />
-          <path d="M 0 25 L -8 18 M 2 15 L 10 8" stroke="#64748b" strokeWidth="1.2" />
-          <g style={{ transformOrigin: '0 0', animation: 'treeSway 6s ease-in-out infinite' }}>
-            <circle cx="0" cy="-22" r="28" fill="#eab308" opacity="0.9" />
-            <circle cx="-16" cy="-15" r="20" fill="#facc15" opacity="0.95" />
-            <circle cx="16" cy="-18" r="22" fill="#ca8a04" opacity="0.9" />
-            <circle cx="0" cy="-34" r="18" fill="#fef08a" opacity="0.85" />
+          {/* Root flare */}
+          <path d="M -8 36 Q -5 26 -2 14 L 3 14 Q 6 26 9 36 Z" fill={c.birchMark} opacity="0.85" />
+          {/* White Birch Trunk */}
+          <path d="M -3 36 Q -5 18 -2 -4 Q 0 -22 2 -38 L 5.5 -37 Q 3.5 -21 1.5 -4 Q -1 18 2.5 36 Z" fill={c.birchTrunk} />
+          {/* Bark markings */}
+          <g stroke={c.birchMark} strokeWidth="1.1" strokeLinecap="round">
+            <line x1="-2.5" y1="30" x2="1.8" y2="30" />
+            <line x1="-3" y1="22" x2="-0.5" y2="22" />
+            <line x1="0.5" y1="21.5" x2="2.5" y2="21.5" strokeWidth="0.8" />
+            <line x1="-2" y1="14" x2="1.8" y2="14" />
+            <line x1="-1.5" y1="6" x2="1" y2="6" />
+            <line x1="-1" y1="-2" x2="2" y2="-2" />
+            <line x1="-2" y1="-10" x2="1" y2="-10" />
           </g>
-        </g>
+          <polygon points="-2.5,18 -0.5,16.5 -2.5,15" fill={c.birchMark} />
+          <polygon points="2,3 0,4.5 2,6" fill={c.birchMark} />
 
-        {/* Tree 2: Crimson Sugar Maple (x = 340) */}
-        <g transform="translate(340, 106)">
-          <path d="M -4 48 Q 0 22 -2 0 Q 4 22 6 48 Z" fill="#291206" />
-          <g style={{ transformOrigin: '0 0', animation: 'treeSway 7.5s ease-in-out infinite', animationDelay: '1.2s' }}>
-            <circle cx="0" cy="-24" r="32" fill="#b91c1c" opacity="0.92" />
-            <circle cx="-18" cy="-16" r="24" fill="#dc2626" opacity="0.95" />
-            <circle cx="18" cy="-20" r="24" fill="#991b1b" opacity="0.9" />
-            <circle cx="0" cy="-38" r="20" fill="#ef4444" opacity="0.85" />
+          {/* Branches ascending into canopy */}
+          <g stroke={c.birchMark} strokeLinecap="round" fill="none">
+            <path d="M -2 2 Q -8 -6 -14 -14 Q -18 -22 -20 -30" strokeWidth="1.6" />
+            <path d="M 2 0 Q 8 -8 14 -16 Q 18 -24 20 -32" strokeWidth="1.6" />
+            <path d="M 0 -14 Q -3 -26 -4 -40" strokeWidth="1.3" />
+            <path d="M 1 -14 Q 5 -26 6 -42" strokeWidth="1.3" />
           </g>
-        </g>
 
-        {/* Tree 3: Amber Oak (Right, x = 1580) */}
-        <g transform="translate(1580, 102)">
-          <path d="M -5 50 Q 0 24 -2 0 Q 5 24 7 50 Z" fill="#291206" />
-          <g style={{ transformOrigin: '0 0', animation: 'treeSway 6.8s ease-in-out infinite', animationDelay: '0.6s' }}>
-            <circle cx="0" cy="-26" r="34" fill="#d97706" opacity="0.92" />
-            <circle cx="-20" cy="-18" r="26" fill="#f59e0b" opacity="0.95" />
-            <circle cx="20" cy="-22" r="26" fill="#b45309" opacity="0.9" />
-            <circle cx="0" cy="-42" r="22" fill="#fbbf24" opacity="0.85" />
-          </g>
-        </g>
+          {/* Animated Birch Foliage Canopy */}
+          <g style={{ transformOrigin: '0px 6px', animation: 'treeSwayGentle 6.5s ease-in-out infinite' }}>
+            <circle cx="-14" cy="-28" r="17" fill={c.bF1} opacity="0.95" />
+            <circle cx="14" cy="-28" r="17" fill={c.bF1} opacity="0.95" />
+            <circle cx="0" cy="-42" r="22" fill={c.bF1} opacity="0.95" />
+            <circle cx="-16" cy="-34" r="16" fill={c.bF2} opacity="0.95" />
+            <circle cx="16" cy="-34" r="16" fill={c.bF2} opacity="0.95" />
+            <circle cx="-8" cy="-48" r="16" fill={c.bF2} opacity="0.95" />
+            <circle cx="8" cy="-48" r="16" fill={c.bF2} opacity="0.95" />
+            <circle cx="0" cy="-44" r="17" fill={c.bF3} opacity="0.95" />
+            <circle cx="-8" cy="-56" r="14" fill={c.bF3} opacity="0.95" />
+            <circle cx="8" cy="-56" r="14" fill={c.bF3} opacity="0.95" />
+            <circle cx="0" cy="-64" r="13" fill={c.bF4} opacity="0.92" />
+            <ellipse cx="-5" cy="-46" rx="10" ry="7" fill={c.bF4} opacity="0.85" />
+            <ellipse cx="6" cy="-44" rx="10" ry="7" fill={c.bF4} opacity="0.85" />
 
-        {/* Tree 4: Deep Rust Maple (Right edge, x = 1820) */}
-        <g transform="translate(1820, 108)">
-          <path d="M -4 46 Q 0 22 -2 0 Q 4 22 6 46 Z" fill="#291206" />
-          <g style={{ transformOrigin: '0 0', animation: 'treeSway 7s ease-in-out infinite', animationDelay: '2s' }}>
-            <circle cx="0" cy="-22" r="28" fill="#9a3412" opacity="0.92" />
-            <circle cx="-16" cy="-14" r="22" fill="#c2410c" opacity="0.95" />
-            <circle cx="16" cy="-18" r="22" fill="#7c2d12" opacity="0.9" />
-          </g>
-        </g>
-
-        {/* --- Rustic Split-Rail Wooden Fence --- */}
-        <g stroke={isNightOrDusk ? '#3b2314' : '#78350f'} strokeWidth="2.5" strokeLinecap="round">
-          {[220, 260, 300, 480, 520, 560, 600, 1260, 1300, 1340, 1380, 1680, 1720, 1760].map((px) => (
-            <g key={px}>
-              <line x1={px} y1="134" x2={px} y2="100" />
-              <line x1={px - 4} y1="130" x2={px + 4} y2="104" strokeWidth="1.5" opacity="0.75" />
+            {/* Sprinkled Birch Leaves along Perimeter */}
+            <g style={{ animation: 'leafEdgeFlutter 3s ease-in-out infinite' }}>
+              <use href="#autumn-leaf-birch" transform="translate(-28, -22) scale(0.85) rotate(-35)" fill={c.bF4} />
+              <use href="#autumn-leaf-birch" transform="translate(-30, -42) scale(0.8) rotate(-65)" fill={c.bF3} />
+              <use href="#autumn-leaf-birch" transform="translate(-16, -66) scale(0.85) rotate(-20)" fill={c.bF4} />
+              <use href="#autumn-leaf-birch" transform="translate(6, -74) scale(0.9) rotate(10)" fill={c.bF4} />
+              <use href="#autumn-leaf-birch" transform="translate(24, -64) scale(0.8) rotate(45)" fill={c.bF3} />
+              <use href="#autumn-leaf-birch" transform="translate(30, -42) scale(0.85) rotate(75)" fill={c.bF4} />
+              <use href="#autumn-leaf-birch" transform="translate(28, -20) scale(0.75) rotate(110)" fill={c.bF2} />
             </g>
-          ))}
-          <path d="M 215 108 L 305 108 M 215 122 L 305 122" />
-          <path d="M 475 108 L 605 108 M 475 122 L 605 122" />
-          <path d="M 1255 108 L 1385 108 M 1255 122 L 1385 122" />
-          <path d="M 1675 108 L 1765 108 M 1675 122 L 1765 122" />
+          </g>
+
+          {/* Broad Leaf Drift Blanket at Birch Base */}
+          <use href="#autumn-tree-drift" transform="translate(0, 32) scale(1.1, 0.95)" />
         </g>
 
-        {/* --- Golden Round Hay Bales in the field --- */}
-        <g transform="translate(440, 118)">
-          <ellipse cx="0" cy="0" rx="14" ry="10" fill={isNightOrDusk ? '#5c3a1e' : '#b45309'} />
-          <ellipse cx="6" cy="0" rx="14" ry="10" fill={isNightOrDusk ? '#784d28' : '#d97706'} />
-          <ellipse cx="6" cy="0" rx="11" ry="8" stroke={isNightOrDusk ? '#5c3a1e' : '#b45309'} strokeWidth="1.2" fill="none" />
-        </g>
-        <g transform="translate(1420, 114)">
-          <ellipse cx="0" cy="0" rx="15" ry="11" fill={isNightOrDusk ? '#5c3a1e' : '#b45309'} />
-          <ellipse cx="7" cy="0" rx="15" ry="11" fill={isNightOrDusk ? '#784d28' : '#d97706'} />
-          <ellipse cx="7" cy="0" rx="12" ry="9" stroke={isNightOrDusk ? '#5c3a1e' : '#b45309'} strokeWidth="1.2" fill="none" />
+        {/* TREE 2: GRAND SUGAR MAPLE (Center-Left, x = 340, y = 106) */}
+        <g transform="translate(340, 106)">
+          {/* Root Flare */}
+          <path d="M -12 40 Q -8 30 -4 16 L 6 16 Q 10 30 14 40 Q 6 38 0 39 Q -6 38 -12 40 Z" fill={c.mTrunk} />
+          {/* Trunk */}
+          <path d="M -4 40 Q -5 20 -2 2 Q 0 -12 2 -26 L 6 -24 Q 4 -10 2 2 Q 4 20 6 40 Z" fill={c.mTrunk} />
+          <path d="M -2 32 Q -3 16 -1 4 M 1 30 Q 0 16 2 2 M 3 34 Q 2 18 3 8" stroke="#120601" strokeWidth="1" strokeLinecap="round" />
+
+          {/* Branches extending up into canopy */}
+          <g stroke={c.mTrunk} strokeLinecap="round" fill="none">
+            <path d="M -2 4 Q -12 -4 -18 -14 Q -24 -24 -26 -34" strokeWidth="2.6" />
+            <path d="M 2 2 Q 12 -4 18 -14 Q 24 -24 26 -34" strokeWidth="2.6" />
+            <path d="M 0 -10 Q -4 -22 -4 -42" strokeWidth="2" />
+            <path d="M 2 -10 Q 6 -22 6 -42" strokeWidth="2" />
+          </g>
+
+          {/* Animated Sugar Maple Canopy */}
+          <g style={{ transformOrigin: '1px 10px', animation: 'treeSwaySoft 7.2s ease-in-out infinite', animationDelay: '0.8s' }}>
+            <circle cx="-22" cy="-26" r="20" fill={c.mF1} opacity="0.95" />
+            <circle cx="22" cy="-26" r="20" fill={c.mF1} opacity="0.95" />
+            <circle cx="0" cy="-38" r="26" fill={c.mF1} opacity="0.95" />
+            <circle cx="-26" cy="-36" r="19" fill={c.mF2} opacity="0.95" />
+            <circle cx="26" cy="-36" r="19" fill={c.mF2} opacity="0.95" />
+            <circle cx="-14" cy="-52" r="20" fill={c.mF2} opacity="0.95" />
+            <circle cx="14" cy="-52" r="20" fill={c.mF2} opacity="0.95" />
+            <circle cx="0" cy="-46" r="22" fill={c.mF3} opacity="0.95" />
+            <circle cx="-12" cy="-62" r="17" fill={c.mF3} opacity="0.95" />
+            <circle cx="12" cy="-62" r="17" fill={c.mF3} opacity="0.95" />
+            <circle cx="0" cy="-72" r="15" fill={c.mF4} opacity="0.92" />
+            <ellipse cx="-16" cy="-44" rx="13" ry="9" fill={c.mL2} opacity="0.85" />
+            <ellipse cx="16" cy="-44" rx="13" ry="9" fill={c.mL2} opacity="0.85" />
+            <ellipse cx="0" cy="-58" rx="14" ry="10" fill={c.mL1} opacity="0.88" />
+
+            {/* Perimeter Pointed Maple Leaves */}
+            <g style={{ animation: 'leafEdgeFlutter 3.2s ease-in-out infinite', animationDelay: '0.5s' }}>
+              <use href="#autumn-leaf-maple" transform="translate(-40, -22) scale(0.9) rotate(-45)" fill={c.mL1} />
+              <use href="#autumn-leaf-maple" transform="translate(-44, -44) scale(0.85) rotate(-70)" fill={c.mL2} />
+              <use href="#autumn-leaf-maple" transform="translate(-28, -68) scale(0.95) rotate(-30)" fill={c.mL1} />
+              <use href="#autumn-leaf-maple" transform="translate(-6, -84) scale(1) rotate(5)" fill={c.mL2} />
+              <use href="#autumn-leaf-maple" transform="translate(18, -82) scale(0.95) rotate(35)" fill={c.mL1} />
+              <use href="#autumn-leaf-maple" transform="translate(38, -66) scale(0.9) rotate(65)" fill={c.mL2} />
+              <use href="#autumn-leaf-maple" transform="translate(44, -42) scale(0.85) rotate(85)" fill={c.mL1} />
+              <use href="#autumn-leaf-maple" transform="translate(38, -20) scale(0.8) rotate(115)" fill={c.mL2} />
+            </g>
+          </g>
+
+          {/* Maple Base Leaf Drift Blanket */}
+          <use href="#autumn-tree-drift" transform="translate(0, 32) scale(1.3, 1.05)" />
         </g>
 
-        {/* --- Harvest Field Pumpkins Scattered Around --- */}
+        {/* RUSTIC FENCES & HARVEST DETAILS */}
+        <g stroke={c.woodPost} strokeWidth="2.5" strokeLinecap="round">
+          <line x1="220" y1="130" x2="220" y2="98" />
+          <line x1="260" y1="130" x2="260" y2="98" />
+          <line x1="300" y1="130" x2="300" y2="98" />
+          <path d="M 215 106 L 305 106 M 215 118 L 305 118" stroke={c.woodDark} strokeWidth="2.2" />
+          <path d="M 215 107.5 L 305 107.5 M 215 119.5 L 305 119.5" stroke={c.woodLight} strokeWidth="1" opacity="0.8" />
+
+          <line x1="480" y1="132" x2="480" y2="100" />
+          <line x1="520" y1="132" x2="520" y2="100" />
+          <line x1="560" y1="132" x2="560" y2="100" />
+          <line x1="600" y1="132" x2="600" y2="100" />
+          <path d="M 475 108 L 605 108 M 475 120 L 605 120" stroke={c.woodDark} strokeWidth="2.2" />
+          <path d="M 475 109.5 L 605 109.5 M 475 121.5 L 605 121.5" stroke={c.woodLight} strokeWidth="1" opacity="0.8" />
+        </g>
+
+        {/* Leaves resting on left fence rails */}
+        <use href="#autumn-leaf-maple" transform="translate(242, 105) scale(0.6) rotate(15)" fill={c.leaves[1]} />
+        <use href="#autumn-leaf-birch" transform="translate(278, 105) scale(0.65) rotate(-25)" fill={c.leaves[7]} />
+        <use href="#autumn-leaf-oak" transform="translate(505, 107) scale(0.6) rotate(35)" fill={c.leaves[4]} />
+        <use href="#autumn-leaf-maple" transform="translate(548, 107) scale(0.55) rotate(-10)" fill={c.leaves[2]} />
+
+        {/* Hay Bale Left */}
+        <g transform="translate(440, 116)">
+          <ellipse cx="0" cy="0" rx="14" ry="10" fill={c.hayDark} />
+          <ellipse cx="6" cy="0" rx="14" ry="10" fill={c.hayLight} />
+          <ellipse cx="6" cy="0" rx="11" ry="8" stroke={c.hayDark} strokeWidth="1.2" fill="none" />
+          <ellipse cx="6" cy="0" rx="5" ry="4" stroke={c.hayDark} strokeWidth="1" fill="none" />
+          <use href="#autumn-leaf-maple" transform="translate(4, -9) scale(0.55) rotate(20)" fill={c.leaves[0]} />
+        </g>
+
+        {/* Pumpkins in Field */}
+        <g transform="translate(240, 130)">
+          <ellipse cx="-4" cy="0" rx="7.5" ry="6" fill={c.pumpkin1} />
+          <ellipse cx="4" cy="1" rx="6.5" ry="5.5" fill={c.pumpkin2} />
+          <path d="M -4 -5.5 L -5 -8 M 4 -4.5 L 5 -7" stroke={c.stem} strokeWidth="1.3" strokeLinecap="round" />
+        </g>
+        <g transform="translate(580, 129)">
+          <ellipse cx="4" cy="0" rx="8" ry="6.5" fill={c.pumpkin1} />
+          <ellipse cx="-4" cy="1" rx="7" ry="5.5" fill={c.pumpkin2} />
+          <path d="M 4 -6 L 3 -9 M -4 -4.5 L -5 -7" stroke={c.stem} strokeWidth="1.3" strokeLinecap="round" />
+        </g>
+
+        {/* Hay Bale Right */}
+        <g transform="translate(1410, 112)">
+          <ellipse cx="0" cy="0" rx="15" ry="11" fill={c.hayDark} />
+          <ellipse cx="7" cy="0" rx="15" ry="11" fill={c.hayLight} />
+          <ellipse cx="7" cy="0" rx="12" ry="9" stroke={c.hayDark} strokeWidth="1.2" fill="none" />
+          <ellipse cx="7" cy="0" rx="6" ry="4.5" stroke={c.hayDark} strokeWidth="1" fill="none" />
+          <use href="#autumn-leaf-oak" transform="translate(5, -10) scale(0.55) rotate(-15)" fill={c.leaves[3]} />
+        </g>
+
+        {/* Pumpkin Cluster Right */}
+        <g transform="translate(1324, 126)">
+          <ellipse cx="-4" cy="0" rx="8" ry="6" fill={c.pumpkin2} />
+          <ellipse cx="4" cy="1" rx="6.5" ry="5.5" fill={c.pumpkin1} />
+          <path d="M -4 -5.5 L -3 -8 M 4 -4.5 L 5 -7" stroke={c.stem} strokeWidth="1.3" strokeLinecap="round" />
+        </g>
+
+        {/* Right Split-Rail Fence */}
+        <g stroke={c.woodPost} strokeWidth="2.5" strokeLinecap="round">
+          <line x1="1260" y1="132" x2="1260" y2="100" />
+          <line x1="1300" y1="132" x2="1300" y2="100" />
+          <line x1="1340" y1="132" x2="1340" y2="100" />
+          <line x1="1380" y1="132" x2="1380" y2="100" />
+          <path d="M 1255 108 L 1385 108 M 1255 120 L 1385 120" stroke={c.woodDark} strokeWidth="2.2" />
+          <path d="M 1255 109.5 L 1385 109.5 M 1255 121.5 L 1385 121.5" stroke={c.woodLight} strokeWidth="1" opacity="0.8" />
+
+          <line x1="1680" y1="130" x2="1680" y2="98" />
+          <line x1="1720" y1="130" x2="1720" y2="98" />
+          <line x1="1760" y1="130" x2="1760" y2="98" />
+          <path d="M 1675 106 L 1765 106 M 1675 118 L 1765 118" stroke={c.woodDark} strokeWidth="2.2" />
+          <path d="M 1675 107.5 L 1765 107.5 M 1675 119.5 L 1765 119.5" stroke={c.woodLight} strokeWidth="1" opacity="0.8" />
+        </g>
+
+        {/* Leaves resting on right fence rails */}
+        <use href="#autumn-leaf-oak" transform="translate(1282, 107) scale(0.6) rotate(25)" fill={c.leaves[4]} />
+        <use href="#autumn-leaf-maple" transform="translate(1360, 107) scale(0.55) rotate(-35)" fill={c.leaves[1]} />
+        <use href="#autumn-leaf-oak" transform="translate(1705, 105) scale(0.6) rotate(10)" fill={c.leaves[5]} />
+
+        {/* TREE 3: ANCIENT MAJESTIC OAK (Right, x = 1530, y = 100) */}
+        <g transform="translate(1530, 100)">
+          {/* Buttress Roots */}
+          <path d="M -16 42 Q -12 32 -5 18 L 7 18 Q 14 32 20 42 Q 9 40 0 41 Q -9 40 -16 42 Z" fill={c.oTrunk} />
+          {/* Gnarled Trunk */}
+          <path d="M -6 42 Q -9 20 -4 0 Q 0 -14 3 -28 L 8 -26 Q 6 -12 4 0 Q 7 20 10 42 Z" fill={c.oTrunk} />
+          <path d="M -3 34 Q -4 16 -1 2 M 2 32 Q 1 14 3 0 M 5 36 Q 4 18 5 6" stroke="#0e0401" strokeWidth="1.2" strokeLinecap="round" />
+
+          {/* Sturdy limbs spreading into canopy */}
+          <g stroke={c.oTrunk} strokeLinecap="round" fill="none">
+            <path d="M -3 4 Q -16 -4 -24 -12 Q -32 -20 -36 -30" strokeWidth="3" />
+            <path d="M 4 2 Q 16 -4 24 -12 Q 32 -20 36 -30" strokeWidth="3" />
+            <path d="M -1 -10 Q -5 -24 -4 -38" strokeWidth="2.2" />
+            <path d="M 3 -10 Q 7 -24 8 -38" strokeWidth="2.2" />
+          </g>
+
+          {/* Animated Oak Canopy */}
+          <g style={{ transformOrigin: '0px 12px', animation: 'treeSwayWind 7.8s ease-in-out infinite', animationDelay: '1.4s' }}>
+            <circle cx="-26" cy="-24" r="22" fill={c.oF1} opacity="0.95" />
+            <circle cx="26" cy="-24" r="22" fill={c.oF1} opacity="0.95" />
+            <circle cx="0" cy="-36" r="28" fill={c.oF1} opacity="0.95" />
+            <circle cx="-30" cy="-36" r="21" fill={c.oF2} opacity="0.95" />
+            <circle cx="30" cy="-36" r="21" fill={c.oF2} opacity="0.95" />
+            <circle cx="-16" cy="-52" r="21" fill={c.oF2} opacity="0.95" />
+            <circle cx="16" cy="-52" r="21" fill={c.oF2} opacity="0.95" />
+            <circle cx="0" cy="-46" r="24" fill={c.oF3} opacity="0.95" />
+            <circle cx="-14" cy="-62" r="18" fill={c.oF3} opacity="0.95" />
+            <circle cx="14" cy="-62" r="18" fill={c.oF3} opacity="0.95" />
+            <circle cx="0" cy="-70" r="16" fill={c.oF4} opacity="0.92" />
+            <ellipse cx="-20" cy="-46" rx="15" ry="10" fill={c.oL2} opacity="0.85" />
+            <ellipse cx="20" cy="-46" rx="15" ry="10" fill={c.oL2} opacity="0.85" />
+            <ellipse cx="0" cy="-58" rx="16" ry="11" fill={c.oL1} opacity="0.88" />
+
+            {/* Perimeter Lobed Oak Leaves */}
+            <g style={{ animation: 'leafEdgeFlutter 3.5s ease-in-out infinite', animationDelay: '1s' }}>
+              <use href="#autumn-leaf-oak" transform="translate(-48, -20) scale(0.95) rotate(-40)" fill={c.oL1} />
+              <use href="#autumn-leaf-oak" transform="translate(-50, -44) scale(0.9) rotate(-65)" fill={c.oL2} />
+              <use href="#autumn-leaf-oak" transform="translate(-32, -68) scale(1) rotate(-25)" fill={c.oL2} />
+              <use href="#autumn-leaf-oak" transform="translate(-6, -82) scale(1.05) rotate(5)" fill={c.oL1} />
+              <use href="#autumn-leaf-oak" transform="translate(20, -80) scale(1) rotate(35)" fill={c.oL2} />
+              <use href="#autumn-leaf-oak" transform="translate(44, -66) scale(0.95) rotate(60)" fill={c.oL1} />
+              <use href="#autumn-leaf-oak" transform="translate(52, -42) scale(0.9) rotate(85)" fill={c.oL2} />
+              <use href="#autumn-leaf-oak" transform="translate(46, -18) scale(0.85) rotate(115)" fill={c.oL1} />
+            </g>
+          </g>
+
+          {/* Oak Base Leaf Blanket */}
+          <use href="#autumn-tree-drift" transform="translate(0, 32) scale(1.35, 1.1)" />
+        </g>
+
+        {/* TREE 4: FIERY RUST MAPLE (Far Right, x = 1810, y = 106) */}
+        <g transform="translate(1810, 106)">
+          <path d="M -7 36 Q -4 26 -2 14 L 3 14 Q 7 26 10 36 Z" fill={c.mTrunk} />
+          <path d="M -3 36 Q -5 18 -1 0 Q 2 -14 4 -26 L 8 -24 Q 6 -12 2 0 Q 0 18 4 36 Z" fill={c.mTrunk} />
+          <g stroke={c.mTrunk} strokeLinecap="round" fill="none">
+            <path d="M -2 4 Q -10 -4 -16 -12 Q -20 -18 -24 -24" strokeWidth="1.8" />
+            <path d="M 2 2 Q 10 -4 16 -12 Q 20 -18 24 -24" strokeWidth="1.8" />
+            <path d="M 0 -8 Q -3 -20 -2 -32" strokeWidth="1.5" />
+          </g>
+
+          {/* Canopy */}
+          <g style={{ transformOrigin: '0px 8px', animation: 'treeSwaySoft 6.8s ease-in-out infinite', animationDelay: '1.8s' }}>
+            <circle cx="-16" cy="-22" r="16" fill={c.mF2} opacity="0.95" />
+            <circle cx="16" cy="-22" r="16" fill={c.mF2} opacity="0.95" />
+            <circle cx="0" cy="-32" r="20" fill={c.mF2} opacity="0.95" />
+            <circle cx="-10" cy="-44" r="15" fill={c.mF3} opacity="0.95" />
+            <circle cx="10" cy="-44" r="15" fill={c.mF3} opacity="0.95" />
+            <circle cx="0" cy="-54" r="13" fill={c.mF4} opacity="0.92" />
+            <ellipse cx="0" cy="-40" rx="12" ry="8" fill={c.mL2} opacity="0.85" />
+
+            <use href="#autumn-leaf-maple" transform="translate(-30, -18) scale(0.8) rotate(-40)" fill={c.mL1} />
+            <use href="#autumn-leaf-maple" transform="translate(-20, -52) scale(0.85) rotate(-20)" fill={c.mL2} />
+            <use href="#autumn-leaf-maple" transform="translate(10, -58) scale(0.9) rotate(25)" fill={c.mL1} />
+            <use href="#autumn-leaf-maple" transform="translate(30, -40) scale(0.8) rotate(70)" fill={c.mL2} />
+          </g>
+
+          <use href="#autumn-tree-drift" transform="translate(0, 30) scale(1.1, 0.9)" />
+        </g>
+
+        {/* 5. ABUNDANT FALLEN LEAVES ON THE GROUND */}
+        {/* Natural leaf drifts along field contours */}
         <g>
-          <ellipse cx="236" cy="132" rx="7" ry="5.5" fill="#ea580c" />
-          <ellipse cx="244" cy="133" rx="6" ry="5" fill="#f97316" />
-          <path d="M 236 127 L 235 124 M 244 128 L 245 125" stroke="#15803d" strokeWidth="1.2" strokeLinecap="round" />
-
-          <ellipse cx="582" cy="130" rx="8" ry="6.2" fill="#c2410c" />
-          <ellipse cx="574" cy="132" rx="6.5" ry="5.2" fill="#ea580c" />
-
-          <ellipse cx="1320" cy="128" rx="8" ry="6" fill="#ea580c" />
-          <ellipse cx="1328" cy="129" rx="6.5" ry="5.2" fill="#f97316" />
-
-          <ellipse cx="1704" cy="128" rx="7.5" ry="5.8" fill="#c2410c" />
+          <use href="#autumn-tree-drift" transform="translate(260, 118) scale(0.95, 0.7)" />
+          <use href="#autumn-tree-drift" transform="translate(540, 120) scale(1, 0.75)" />
+          <use href="#autumn-tree-drift" transform="translate(720, 126) scale(0.85, 0.65)" />
+          <use href="#autumn-tree-drift" transform="translate(860, 130) scale(0.95, 0.7)" />
+          <use href="#autumn-tree-drift" transform="translate(1020, 128) scale(1, 0.75)" />
+          <use href="#autumn-tree-drift" transform="translate(1180, 124) scale(0.95, 0.7)" />
+          <use href="#autumn-tree-drift" transform="translate(1320, 120) scale(1.05, 0.75)" />
+          <use href="#autumn-tree-drift" transform="translate(1720, 118) scale(0.95, 0.7)" />
         </g>
 
-        {/* --- DIWALI SPECIAL: Glowing Diyas & Radiant Rangoli --- */}
+        {/* 60+ Scattered Fallen Autumn Leaves Across the Rolling Ridge */}
+        <g>
+          {/* Upper Ridge Slope (y = 108 to 125) */}
+          <use href="#autumn-leaf-maple" transform="translate(55, 115) scale(0.7) rotate(35)" fill={c.leaves[0]} />
+          <use href="#autumn-leaf-birch" transform="translate(150, 118) scale(0.75) rotate(-45)" fill={c.leaves[7]} />
+          <use href="#autumn-leaf-oak" transform="translate(205, 112) scale(0.7) rotate(80)" fill={c.leaves[4]} />
+          <use href="#autumn-leaf-maple" transform="translate(390, 116) scale(0.75) rotate(-20)" fill={c.leaves[1]} />
+          <use href="#autumn-leaf-oak" transform="translate(470, 118) scale(0.7) rotate(50)" fill={c.leaves[3]} />
+          <use href="#autumn-leaf-birch" transform="translate(630, 122) scale(0.7) rotate(-60)" fill={c.leaves[8]} />
+          <use href="#autumn-leaf-maple" transform="translate(710, 126) scale(0.8) rotate(25)" fill={c.leaves[2]} />
+          <use href="#autumn-leaf-oak" transform="translate(795, 125) scale(0.75) rotate(-35)" fill={c.leaves[5]} />
+          <use href="#autumn-leaf-birch" transform="translate(890, 128) scale(0.7) rotate(75)" fill={c.leaves[6]} />
+          <use href="#autumn-leaf-maple" transform="translate(980, 124) scale(0.75) rotate(-15)" fill={c.leaves[0]} />
+          <use href="#autumn-leaf-oak" transform="translate(1070, 120) scale(0.7) rotate(40)" fill={c.leaves[4]} />
+          <use href="#autumn-leaf-maple" transform="translate(1160, 116) scale(0.8) rotate(-55)" fill={c.leaves[1]} />
+          <use href="#autumn-leaf-birch" transform="translate(1250, 114) scale(0.7) rotate(60)" fill={c.leaves[7]} />
+          <use href="#autumn-leaf-oak" transform="translate(1450, 110) scale(0.75) rotate(-30)" fill={c.leaves[3]} />
+          <use href="#autumn-leaf-maple" transform="translate(1600, 112) scale(0.7) rotate(45)" fill={c.leaves[2]} />
+          <use href="#autumn-leaf-birch" transform="translate(1760, 115) scale(0.7) rotate(-70)" fill={c.leaves[8]} />
+          <use href="#autumn-leaf-oak" transform="translate(1860, 114) scale(0.75) rotate(15)" fill={c.leaves[5]} />
+
+          {/* Mid-Slope (y = 126 to 148) */}
+          <use href="#autumn-leaf-maple" transform="translate(35, 134) scale(0.8) rotate(-40)" fill={c.leaves[1]} />
+          <use href="#autumn-leaf-oak" transform="translate(95, 138) scale(0.85) rotate(105)" fill={c.leaves[3]} />
+          <use href="#autumn-leaf-birch" transform="translate(175, 136) scale(0.8) rotate(30)" fill={c.leaves[6]} />
+          <use href="#autumn-leaf-maple" transform="translate(290, 138) scale(0.85) rotate(-65)" fill={c.leaves[0]} />
+          <use href="#autumn-leaf-oak" transform="translate(365, 142) scale(0.8) rotate(20)" fill={c.leaves[5]} />
+          <use href="#autumn-leaf-birch" transform="translate(425, 140) scale(0.75) rotate(-85)" fill={c.leaves[7]} />
+          <use href="#autumn-leaf-maple" transform="translate(515, 145) scale(0.9) rotate(55)" fill={c.leaves[2]} />
+          <use href="#autumn-leaf-oak" transform="translate(605, 146) scale(0.85) rotate(-25)" fill={c.leaves[4]} />
+          <use href="#autumn-leaf-birch" transform="translate(680, 144) scale(0.8) rotate(90)" fill={c.leaves[8]} />
+          <use href="#autumn-leaf-maple" transform="translate(755, 146) scale(0.85) rotate(-10)" fill={c.leaves[1]} />
+          <use href="#autumn-leaf-oak" transform="translate(835, 148) scale(0.9) rotate(70)" fill={c.leaves[3]} />
+          <use href="#autumn-leaf-birch" transform="translate(930, 146) scale(0.8) rotate(-50)" fill={c.leaves[6]} />
+          <use href="#autumn-leaf-maple" transform="translate(1015, 145) scale(0.85) rotate(35)" fill={c.leaves[0]} />
+          <use href="#autumn-leaf-oak" transform="translate(1105, 144) scale(0.8) rotate(-80)" fill={c.leaves[5]} />
+          <use href="#autumn-leaf-maple" transform="translate(1210, 142) scale(0.9) rotate(15)" fill={c.leaves[2]} />
+          <use href="#autumn-leaf-birch" transform="translate(1295, 140) scale(0.8) rotate(-35)" fill={c.leaves[7]} />
+          <use href="#autumn-leaf-oak" transform="translate(1385, 142) scale(0.85) rotate(65)" fill={c.leaves[4]} />
+          <use href="#autumn-leaf-maple" transform="translate(1490, 144) scale(0.9) rotate(-15)" fill={c.leaves[1]} />
+          <use href="#autumn-leaf-birch" transform="translate(1575, 142) scale(0.8) rotate(80)" fill={c.leaves[8]} />
+          <use href="#autumn-leaf-oak" transform="translate(1660, 140) scale(0.85) rotate(-45)" fill={c.leaves[3]} />
+          <use href="#autumn-leaf-maple" transform="translate(1745, 138) scale(0.9) rotate(50)" fill={c.leaves[0]} />
+          <use href="#autumn-leaf-birch" transform="translate(1825, 136) scale(0.8) rotate(-60)" fill={c.leaves[6]} />
+
+          {/* Foreground Slope (y = 149 to 170) */}
+          <use href="#autumn-leaf-maple" transform="translate(70, 158) scale(0.95) rotate(45)" fill={c.leaves[0]} />
+          <use href="#autumn-leaf-oak" transform="translate(140, 162) scale(1) rotate(-30)" fill={c.leaves[4]} />
+          <use href="#autumn-leaf-birch" transform="translate(225, 160) scale(0.85) rotate(110)" fill={c.leaves[8]} />
+          <use href="#autumn-leaf-maple" transform="translate(320, 164) scale(0.95) rotate(-15)" fill={c.leaves[2]} />
+          <use href="#autumn-leaf-oak" transform="translate(450, 162) scale(1) rotate(75)" fill={c.leaves[3]} />
+          <use href="#autumn-leaf-birch" transform="translate(560, 165) scale(0.9) rotate(-40)" fill={c.leaves[7]} />
+          <use href="#autumn-leaf-maple" transform="translate(645, 168) scale(1) rotate(60)" fill={c.leaves[1]} />
+          <use href="#autumn-leaf-oak" transform="translate(735, 166) scale(0.95) rotate(-70)" fill={c.leaves[5]} />
+          <use href="#autumn-leaf-birch" transform="translate(820, 168) scale(0.85) rotate(25)" fill={c.leaves[6]} />
+          <use href="#autumn-leaf-maple" transform="translate(905, 170) scale(1.05) rotate(-55)" fill={c.leaves[0]} />
+          <use href="#autumn-leaf-oak" transform="translate(995, 168) scale(0.95) rotate(90)" fill={c.leaves[4]} />
+          <use href="#autumn-leaf-birch" transform="translate(1080, 166) scale(0.9) rotate(-20)" fill={c.leaves[8]} />
+          <use href="#autumn-leaf-maple" transform="translate(1165, 168) scale(1) rotate(40)" fill={c.leaves[2]} />
+          <use href="#autumn-leaf-oak" transform="translate(1260, 164) scale(0.95) rotate(-85)" fill={c.leaves[3]} />
+          <use href="#autumn-leaf-birch" transform="translate(1350, 162) scale(0.85) rotate(55)" fill={c.leaves[7]} />
+          <use href="#autumn-leaf-maple" transform="translate(1440, 166) scale(1) rotate(-35)" fill={c.leaves[1]} />
+          <use href="#autumn-leaf-oak" transform="translate(1530, 168) scale(0.95) rotate(15)" fill={c.leaves[5]} />
+          <use href="#autumn-leaf-birch" transform="translate(1620, 164) scale(0.85) rotate(-65)" fill={c.leaves[6]} />
+          <use href="#autumn-leaf-maple" transform="translate(1705, 166) scale(1) rotate(70)" fill={c.leaves[0]} />
+          <use href="#autumn-leaf-oak" transform="translate(1795, 164) scale(0.95) rotate(-25)" fill={c.leaves[4]} />
+          <use href="#autumn-leaf-birch" transform="translate(1875, 162) scale(0.9) rotate(45)" fill={c.leaves[8]} />
+        </g>
+
+        {/* 2 Lightweight Wind-Tumbling Ground Leaves */}
+        <g transform="translate(280, 134)" style={{ animation: 'groundLeafTumble1 8s linear infinite' }}>
+          <use href="#autumn-leaf-maple" scale="0.7" fill={c.leaves[0]} />
+        </g>
+        <g transform="translate(1120, 136)" style={{ animation: 'groundLeafTumble2 9.5s linear infinite', animationDelay: '2s' }}>
+          <use href="#autumn-leaf-oak" scale="0.7" fill={c.leaves[3]} />
+        </g>
+
+        {/* DIWALI SPECIAL: Glowing Diyas & Radiant Rangoli */}
         {isDiwali && (
           <g>
             {/* Glowing Clay Diyas on Fence Posts & Hill Crests */}
