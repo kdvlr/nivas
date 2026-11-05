@@ -7,6 +7,7 @@ import Icon from './Icon'
 import { AutumnLeafTopper, DiyaTopper, ThanksgivingTopper } from './SeasonalPhotoToppers'
 import { FallSceneDetails } from './SeasonalSceneDetails'
 import { DiwaliHorizon } from './DiwaliHorizon'
+import { DiwaliMarigoldBanner } from './DiwaliMarigoldBanner'
 import { diwaliTheme } from '../lib/diwaliTheme'
 import { api } from '../lib/api'
 import { useData } from '../lib/hooks'
@@ -99,7 +100,7 @@ export { getQueryParam }
 const PHASES: SkyPhase[] = ['dawn', 'day', 'dusk', 'night']
 const KINDS: SkyKind[] = ['clear', 'cloudy', 'rainy', 'snowy', 'stormy']
 const getPhaseOverride = () => {
-  const p = PHASES.find((x) => x === getQueryParam('sky'))
+  const p = PHASES.find((x) => x === getQueryParam('sky') || x === getQueryParam('phase'))
   if (p) return p
   const h = getHolidayOverride()?.toLowerCase()
   if (h === 'spooky') return 'night'
@@ -6775,6 +6776,22 @@ export default function Slideshow({
       result.push({ id: item.url, type: 'single', items: [item] })
       used.add(item.url)
     }
+
+    if (result.length === 0) {
+      result.push({
+        id: 'placeholder',
+        type: 'single',
+        items: [{
+          url: '/favicon.svg',
+          displayUrl: '/favicon.svg',
+          type: 'image',
+          name: 'Nivas Celebration',
+          width: 800,
+          height: 600,
+        }],
+      })
+    }
+
     return result
   }, [photos, shuffleSeed, isPortraitViewport])
 
@@ -7060,6 +7077,11 @@ export default function Slideshow({
 
       {/* String lights along the top sky background (behind photos & decorations, Dec 1-25) */}
       {isChristmasSeason(seasonalDate) && <StringLights />}
+
+      {/* Diwali Marigold & Mango Leaf Toran banner along the top (Nov 7-9 or ?holiday=diwali) */}
+      {isDiwaliSeason(seasonalDate) && (
+        <DiwaliMarigoldBanner phase={phase} quality={quality} paused={skyState.paused} />
+      )}
 
       {/* Background delights & distant bats (flying behind photos) */}
       <canvas ref={bgFxRef} className="absolute inset-0 w-full h-full pointer-events-none" />

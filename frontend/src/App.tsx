@@ -1005,7 +1005,7 @@ function AppContent() {
             </div>
           </div>
         </motion.div>
-        {slideshowActive && photosList.length > 0 && !isTimerActive && !kidsNuggetsDisplayed && (
+        {slideshowActive && (photosList.length > 0 || hasSkyOverride() || getQueryParam('slideshow') === '1') && !isTimerActive && !kidsNuggetsDisplayed && (
           <Slideshow
             photos={photosList}
             onDismiss={() => setSlideshowActive(false)}
