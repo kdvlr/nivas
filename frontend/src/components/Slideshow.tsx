@@ -7092,7 +7092,7 @@ export default function Slideshow({
       </AnimatePresence>
 
       {/* Weather + delights (rain, snow, fireflies, birds — in front of photos) */}
-      <canvas ref={fxRef} className="absolute inset-0 w-full h-full pointer-events-none z-20" />
+      <canvas ref={fxRef} className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: isDiwaliSeason(seasonalDate) ? 26 : 20 }} />
 
       {/* October daytime seasonal delights: pumpkin patch & sunflowers in FOREGROUND */}
       {isOctober(seasonalDate) && (phase === 'day' || phase === 'dawn') && (

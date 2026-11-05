@@ -453,6 +453,10 @@ export function startFxCanvas(
   let nextAutumnGust = performance.now() + rand(12_000, 24_000)
   let gustStarted = -Infinity
   const diwaliLaunch = createDiwaliLaunchGate(performance.now())
+  let groundNext = performance.now() + 6_000
+  let groundStart = -Infinity
+  let groundStep = -1
+  let groundRight = false
   let rockets: FireworksRocket[] = []
   let sparks: FireworksSpark[] = []
   let flashes: FireworksFlash[] = []
@@ -2312,6 +2316,7 @@ export function startFxCanvas(
     const wantsFlies = (phase === 'night' || phase === 'dusk') && calm
     const wantsLeaves = november && !diwali && calm
     const wantsLanterns = diwali && (phase === 'night' || phase === 'dusk') && calm
+    const wantsDiwaliGround = diwali && calm
     const wantsDiwaliFireworks = diwali && calm && (phase === 'dusk' || phase === 'night')
     const wantsSwaraFireworks = swaraBirthday && (phase === 'dusk' || phase === 'night') && calm
     const batsPossible = october && calm
@@ -2326,6 +2331,7 @@ export function startFxCanvas(
       wantsFlies ||
       wantsLeaves ||
       wantsLanterns ||
+      wantsDiwaliGround ||
       wantsDiwaliFireworks ||
       wantsSwaraFireworks ||
       wantsCandy ||
@@ -2852,12 +2858,12 @@ export function startFxCanvas(
     }
 
     // Festive Fireworks: New Year's Season, Diwali Nights & Swara's Birthday Dusk/Night!
-    const wantsFireworks = newYearSeason || wantsDiwaliFireworks || wantsSwaraFireworks
+    const wantsFireworks = newYearSeason || wantsDiwaliGround || wantsSwaraFireworks
     if (wantsFireworks) {
       // A photo entrance defers a launch; it never consumes a short launch
       // window. Existing rockets and sparks keep integrating below.
       const launchDue = diwali && !wantsSwaraFireworks
-        ? diwaliLaunch.claim(t, !!state.quiet)
+        ? wantsDiwaliFireworks && diwaliLaunch.claim(t, !!state.quiet)
         : !state.quiet && t > nextRocket
       if (launchDue) {
         nextRocket = t + rand(wantsSwaraFireworks ? 500 : (diwali ? 1_800 : 650), wantsSwaraFireworks ? 1300 : (diwali ? 2_800 : 1500))
@@ -2874,13 +2880,13 @@ export function startFxCanvas(
             ]
           : diwali
           ? [
-              '#facc15', // Sparkling Diwali Gold (Zari)
-              '#f6d9a6', // Warm ivory
-              '#d9a66b', // Brass
-              '#eaa363', // Saffron
-              '#d39b9f', // Rose
-              '#edc488', // Marigold
-              '#ffffff', // Diamond Sparkler
+              '#ff337e', // Fuchsia
+              '#00e5ff', // Electric cyan
+              '#a855ff', // Violet
+              '#39ff88', // Emerald
+              '#ffe138', // Gold
+              '#ff7426', // Tangerine
+              '#ffffff', // White sparkle
             ]
           : [
               '#facc15', // Gold
@@ -2895,15 +2901,15 @@ export function startFxCanvas(
         for (let l = 0; l < launchCount; l++) {
           let rx: number
           let tilt = 0
-          const isBottle = diwali && Math.random() < 0.85
+          const isBottle = diwali
           if (diwali || wantsSwaraFireworks) {
             // Strictly constrain to side columns so central photo frame is never obstructed
             const side = Math.random() < 0.5 ? 'left' : 'right'
             if (side === 'left') {
-              rx = w * rand(0.04, 0.16)
+              rx = diwali ? w * 0.1 : w * rand(0.04, 0.16)
               tilt = rand(0.015, 0.045)
             } else {
-              rx = w * rand(0.84, 0.96)
+              rx = diwali ? w * 0.9 : w * rand(0.84, 0.96)
               tilt = rand(-0.045, -0.015)
             }
           } else {
@@ -2913,7 +2919,7 @@ export function startFxCanvas(
 
           rockets.push({
             x: rx,
-            y: h + 15,
+            y: diwali ? h - 30 : h + 15,
             targetY: h * rand(0.08, 0.40),
             speed: isBottle ? rand(720, 960) : rand(620, 880),
             color: fireworkColors[Math.floor(Math.random() * fireworkColors.length)],
@@ -3150,8 +3156,70 @@ export function startFxCanvas(
         }
       }
 
+      // Two visible glass launch bottles and a 1000-wala ladi on each
+      // side of the terrace. A moving fuse consumes a compact visual chain;
+      // it does not create a thousand particles or independent animations.
+      if (wantsDiwaliGround) {
+        const groundY = h - 16
+        const span = Math.min(220, w * 0.23)
+        if (!state.quiet && t >= groundNext) {
+          groundStart = t
+          groundStep = -1
+          groundRight = !groundRight
+          groundNext = t + rand(16_000, 22_000)
+        }
+        const progress = (t - groundStart) / 6_000
+        const burning = progress >= 0 && progress < 1
+        const step = Math.min(47, Math.floor(progress * 48))
+        for (const right of [false, true]) {
+          const left = right ? w - span - 16 : 16
+          // Bottle neck, shoulder, and body, with a bright glass highlight.
+          const bottleX = right ? w * 0.9 : w * 0.1
+          ctx.fillStyle = '#078b75'
+          ctx.fillRect(bottleX - 3, groundY - 31, 6, 10)
+          ctx.fillRect(bottleX - 7, groundY - 21, 14, 20)
+          ctx.fillStyle = '#8dfbe0'
+          ctx.fillRect(bottleX - 4, groundY - 19, 2, 15)
+          ctx.fillStyle = '#ffe138'
+          ctx.fillRect(bottleX - 6, groundY - 12, 12, 6)
+          ctx.strokeStyle = '#d9a349'
+          ctx.lineWidth = 1.5
+          ctx.beginPath()
+          ctx.moveTo(left, groundY)
+          ctx.lineTo(left + span, groundY)
+          ctx.stroke()
+          for (let n = 0; n < 48; n++) {
+            const spent = right === groundRight && Number.isFinite(progress) && progress >= 0 && n < step
+            const x = left + n / 47 * span
+            ctx.fillStyle = spent ? '#624741' : n % 2 ? '#ff375f' : '#ef2344'
+            ctx.fillRect(x - 1.5, groundY + (n % 2 ? -7 : 1), 3, 6)
+            if (!spent) {
+              ctx.fillStyle = '#ffe16a'
+              ctx.fillRect(x - 1.5, groundY + (n % 2 ? -6 : 2), 3, 1)
+            }
+          }
+          if (burning && right === groundRight) {
+            const x = left + progress * span
+            ctx.fillStyle = '#fff4b5'
+            ctx.beginPath()
+            ctx.arc(x, groundY, 3 + Math.sin(t / 70), 0, Math.PI * 2)
+            ctx.fill()
+            // No catch-up loop after sleep: at most one small pop per paint.
+            if (step !== groundStep) {
+              groundStep = step
+              const count = state.quality === 'low' ? 2 : 4
+              for (let n = 0; n < count; n++) sparks.push({
+                x, y: groundY, vx: rand(-65, 65), vy: rand(-130, -45),
+                color: ['#ffe138', '#ff7426', '#ffffff'][n % 3],
+                alpha: 1, decay: rand(2.5, 4), size: rand(1, 2), gravity: 180,
+              })
+            }
+          }
+        }
+      }
+
       // Keep spark and flash limits capped for smooth 60 FPS performance on kiosk tablets
-      const sparkLimit = diwali ? (state.quality === 'high' ? 48 : 24) : 130
+      const sparkLimit = diwali ? (state.quality === 'high' ? 72 : state.quality === 'medium' ? 48 : 28) : 130
       if (sparks.length > sparkLimit) {
         sparks.splice(0, sparks.length - sparkLimit)
       }
