@@ -2,7 +2,7 @@ import { memo, useId, useState, useEffect, useRef, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import type { Quality } from './sky/useQuality'
 import { autumnVisits } from '../lib/autumnAmbience'
-import { getQueryParam } from './Slideshow'
+import { getQueryParam } from './sky/queryParam'
 
 export interface PeacockProps {
   quality?: Quality
@@ -18,9 +18,9 @@ type PeacockState = 'walking' | 'gathering' | 'fanning' | 'shimmering' | 'retrac
  * Walks majestically across the screen with a proud high-stepping gait,
  * rhythmic serpentine neck bobs, swaying crown crest, and long trailing train.
  *
- * Randomly pauses near the center to turn forward and unfurl an awe-inspiring,
- * 37-shaft iridescent feather fan with three concentric tiers of vibrant ocelli,
- * rapid feathery stridulation shimmer, and proud head tilts!
+ * Pauses near the center, turns forward, and opens an iridescent feather fan
+ * with three tiers of eyespots. Static feather detail and slow grouped motion
+ * keep the small silhouette readable on Android tablets.
  */
 export const Peacock = memo(function Peacock({
   quality = 'high',
@@ -28,7 +28,6 @@ export const Peacock = memo(function Peacock({
   onDisplayChange,
 }: PeacockProps) {
   const uid = useId()
-  const isTablet = quality === 'medium'
   const isLow = quality === 'low'
 
   const [active, setActive] = useState(false)
@@ -36,10 +35,11 @@ export const Peacock = memo(function Peacock({
   const [state, setState] = useState<PeacockState>('walking')
   const [displayX, setDisplayX] = useState<number>(960)
 
+  const pausedRef = useRef(paused)
+  pausedRef.current = paused
   const activeRef = useRef(false)
   const triggerRef = useRef<() => void>(() => {})
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const stateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Query parameter overrides for developer testing:
   // ?peacock=1, ?peacock=display, ?peacock=walk, ?peacock=freeze
@@ -47,7 +47,7 @@ export const Peacock = memo(function Peacock({
 
   // Fan feather layout: 37 radiating plumes across 172° arch
   const fanFeathers = useMemo(() => {
-    const count = 37
+    const count = quality === 'high' ? 37 : quality === 'medium' ? 25 : 19
     const feathers = []
     const startAngle = -Math.PI * 0.98 // ~ -176 deg (sweeps almost down to ground level)
     const endAngle = -Math.PI * 0.02   // ~ -4 deg
@@ -74,6 +74,8 @@ export const Peacock = memo(function Peacock({
 
       feathers.push({
         id: i,
+        deg,
+        shaftLen,
         tipX,
         tipY,
         o1,
@@ -82,7 +84,7 @@ export const Peacock = memo(function Peacock({
       })
     }
     return feathers
-  }, [])
+  }, [quality])
 
   // Scheduling and trigger loop
   useEffect(() => {
@@ -91,10 +93,9 @@ export const Peacock = memo(function Peacock({
       if (timerRef.current) clearTimeout(timerRef.current)
 
       const isForced = Boolean(peacockParam) || Boolean((e as CustomEvent)?.detail?.force)
-      const isFrozen = peacockParam === 'freeze' || Boolean((e as CustomEvent)?.detail?.freeze)
 
-      // Total sequence duration: walking (~16s) + optional display (~9s)
-      const claimDuration = 26_000
+      // Reserve walking, the full display, and brief photo-transition pauses.
+      const claimDuration = 45_000
       if (!isForced && (document.hidden || !autumnVisits.claim(performance.now(), claimDuration))) {
         timerRef.current = setTimeout(trigger, 8_000)
         return
@@ -124,47 +125,49 @@ export const Peacock = memo(function Peacock({
     return () => {
       window.removeEventListener('trigger-peacock', trigger)
       if (timerRef.current) clearTimeout(timerRef.current)
-      if (stateTimerRef.current) clearTimeout(stateTimerRef.current)
     }
   }, [peacockParam])
 
   // Lifecycle transitions for the Display sequence
   const handleReachDisplayPoint = () => {
-    // Decision roll: 75% chance to display, or 100% if URL forced
-    const willDisplay =
-      peacockParam === 'walk'
-        ? false
-        : peacockParam === 'display' || peacockParam === '1' || Math.random() < 0.75
-
-    if (!willDisplay) {
-      // Continue walking across screen without pause
+    if (peacockParam === 'walk') {
+      setState('resuming')
       return
     }
 
     onDisplayChange?.(true)
     setState('gathering')
 
-    // 1. Gather & Turn (0.7s) -> 2. Fan Blossoming (1.8s)
-    stateTimerRef.current = setTimeout(() => {
-      setState('fanning')
-
-      // 3. Grand Shimmer / Quiver Dance (5.2s)
-      stateTimerRef.current = setTimeout(() => {
-        setState('shimmering')
-
-        // 4. Retract plumage (1.6s)
-        stateTimerRef.current = setTimeout(() => {
-          setState('retracting')
-
-          // 5. Resume walking
-          stateTimerRef.current = setTimeout(() => {
-            setState('resuming')
-            onDisplayChange?.(false)
-          }, 1600)
-        }, 5200)
-      }, 1800)
-    }, 700)
   }
+
+  // One phase timer, preserving remaining time across photo-transition pauses.
+  useEffect(() => {
+    if (!active || peacockParam === 'freeze' || peacockParam === 'display') return
+    const phases: Partial<Record<PeacockState, [number, PeacockState]>> = {
+      gathering: [1000, 'fanning'],
+      fanning: [2200, 'shimmering'],
+      shimmering: [6000, 'retracting'],
+      retracting: [2000, 'resuming'],
+    }
+    const phase = phases[state]
+    if (!phase) return
+    let remaining = phase[0]
+    let started = 0
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const tick = () => {
+      if (pausedRef.current) { timer = setTimeout(tick, 100); return }
+      started = performance.now()
+      timer = setTimeout(() => {
+        remaining -= performance.now() - started
+        if (remaining <= 0) {
+          setState(phase[1])
+          if (phase[1] === 'resuming') onDisplayChange?.(false)
+        } else tick()
+      }, Math.min(100, remaining))
+    }
+    tick()
+    return () => clearTimeout(timer)
+  }, [active, state, peacockParam, onDisplayChange])
 
   const handleSequenceComplete = () => {
     activeRef.current = false
@@ -183,15 +186,16 @@ export const Peacock = memo(function Peacock({
   const isDisplaying =
     state === 'fanning' || state === 'shimmering' || state === 'retracting' || state === 'gathering'
   const isShimmering = state === 'shimmering'
+  const fanOpen = state === 'fanning' || isShimmering
   const screenW = typeof window !== 'undefined' ? window.innerWidth : 1920
 
   // Start offscreen and transit to opposite offscreen edge
-  const startX = direction === 1 ? -320 : screenW + 320
-  const exitX = direction === 1 ? screenW + 320 : -320
+  const startX = direction === 1 ? -90 : screenW + 90
+  const exitX = direction === 1 ? screenW + 90 : -90
 
   return (
     <div
-      className="fixed bottom-1 pointer-events-none z-30 select-none overflow-visible"
+      className="peacock fixed bottom-1 pointer-events-none z-30 select-none overflow-visible"
       style={{ left: 0, right: 0 }}
       aria-hidden="true"
     >
@@ -234,7 +238,7 @@ export const Peacock = memo(function Peacock({
         /* Display Plumage Shimmer (Rapid Feather Vibration / Stridulation) */
         @keyframes peacockFeatherQuiver {
           0% { transform: translate(310px, 360px) rotate(0deg) scale(1); }
-          100% { transform: translate(310px, 360px) rotate(0.45deg) scale(1.008); }
+          100% { transform: translate(310px, 360px) rotate(0.3deg) scale(1.003); }
         }
 
         /* Display Proud Body Sway */
@@ -255,9 +259,12 @@ export const Peacock = memo(function Peacock({
         .peacock-walking-neck { animation: peacockHeadWalk 1.9s ease-in-out infinite; }
         .peacock-walking-tail { animation: peacockTailWalk 1.9s ease-in-out infinite; }
         .peacock-crest-sway { animation: peacockCrestSway 2.5s ease-in-out infinite; }
-        .peacock-shimmer-fan { animation: peacockFeatherQuiver 0.11s ease-in-out infinite alternate !important; }
+        .peacock-shimmer-fan { animation: peacockFeatherQuiver 1.8s ease-in-out infinite alternate !important; }
         .peacock-swaying-body { animation: peacockDisplaySway 3.2s ease-in-out infinite alternate !important; }
         .peacock-head-tilt { animation: peacockHeadTilt 4.5s ease-in-out infinite !important; }
+        @media (prefers-reduced-motion: reduce) {
+          .peacock svg * { animation: none !important; transition-duration: 0.01ms !important; }
+        }
       `}</style>
 
       <motion.div
@@ -284,14 +291,14 @@ export const Peacock = memo(function Peacock({
           }
         }}
         className="absolute bottom-0 overflow-visible"
-        style={{ width: 620, height: 500 }}
+        style={{ width: 155, height: 125, marginLeft: -77.5 }}
       >
         <svg
           viewBox="0 0 620 500"
           className="w-full h-full overflow-visible"
           style={{
             transform: direction === -1 ? 'scaleX(-1)' : undefined,
-            transformOrigin: '310px 400px',
+            transformOrigin: '50% 80%',
           }}
         >
           <defs>
@@ -369,12 +376,12 @@ export const Peacock = memo(function Peacock({
           <g
             transform="translate(310, 360) scale(1)"
             style={{
-              transition: 'transform 1.6s cubic-bezier(0.34, 1.45, 0.64, 1), opacity 1.2s ease',
-              transform: isDisplaying ? 'translate(310px, 360px) scale(1)' : 'translate(310px, 360px) scale(0.02)',
-              opacity: isDisplaying ? 1 : 0,
+              transition: 'transform 2.1s cubic-bezier(0.22, 0.68, 0.3, 1), opacity 1.6s ease',
+              transform: fanOpen ? 'translate(310px, 360px) scale(1)' : 'translate(310px, 360px) scale(0.035, 0.72)',
+              opacity: fanOpen ? 1 : 0,
               transformOrigin: '0px 0px',
             }}
-            className={isShimmering && !paused ? 'peacock-shimmer-fan' : undefined}
+            className={isShimmering && !paused && !isLow ? 'peacock-shimmer-fan' : undefined}
           >
             {/* Ambient Green & Gold Backdrop Aura */}
             <path d="M -290 0 A 290 290 0 0 1 290 0 Z" fill="rgba(4, 120, 87, 0.28)" />
@@ -383,6 +390,15 @@ export const Peacock = memo(function Peacock({
             {/* 37 Radiating Feathers */}
             {fanFeathers.map((f) => (
               <g key={`shaft-${f.id}`}>
+                {/* Fine paired barbs share one static path per plume. */}
+                <g transform={`rotate(${f.deg})`}>
+                  <path d={`M 0 -28 Q -15 -${f.shaftLen * .5} -9 -${f.shaftLen - 15} Q 0 -${f.shaftLen + 8} 9 -${f.shaftLen - 15} Q 15 -${f.shaftLen * .5} 0 -28`}
+                    fill={f.id % 2 ? '#087f70' : '#116b4b'} opacity=".65" />
+                  <path d={Array.from({ length: 12 }, (_, n) => {
+                    const y = 42 + n * (f.shaftLen - 65) / 12
+                    return `M -9 -${y + 12} L 0 -${y} L 9 -${y + 12}`
+                  }).join(' ')} stroke={f.id % 2 ? '#8cba57' : '#46cbb3'} strokeWidth="1" fill="none" opacity=".7" />
+                </g>
                 {/* 1. Golden shaft (rachis) */}
                 <line
                   x1="0"
@@ -439,12 +455,13 @@ export const Peacock = memo(function Peacock({
           {/* ========================================================== */}
           <g
             style={{
-              transition: 'opacity 0.8s ease',
+              transition: 'opacity 0.75s ease, transform 1s ease-in-out',
+              transform: isDisplaying ? 'scaleX(1)' : 'scaleX(0.15)',
               opacity: isDisplaying ? 1 : 0,
               pointerEvents: isDisplaying ? 'auto' : 'none',
               transformOrigin: '310px 400px',
             }}
-            className={isDisplaying && !paused ? 'peacock-swaying-body' : undefined}
+            className={isShimmering && !paused && !isLow ? 'peacock-swaying-body' : undefined}
           >
             {/* Left Leg (Standing Firm) */}
             <g>
@@ -540,7 +557,8 @@ export const Peacock = memo(function Peacock({
           {/* ========================================================== */}
           <g
             style={{
-              transition: 'opacity 0.8s ease',
+              transition: 'opacity 0.75s ease, transform 1s ease-in-out',
+              transform: isDisplaying ? 'scaleX(0.12)' : 'scaleX(1)',
               opacity: !isDisplaying ? 1 : 0,
               pointerEvents: !isDisplaying ? 'auto' : 'none',
               transformOrigin: '310px 400px',
