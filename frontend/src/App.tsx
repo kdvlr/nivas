@@ -468,11 +468,11 @@ function AppContent() {
     }
   }, [kidsNuggetsDisplayed, slideshowActive, armSlideshowTimer])
 
-  // Jump straight into the slideshow if sky override, ?slideshow=1, or ?bday=1 / ?zombie / ?cake is present
+  // Jump straight into the slideshow if sky override, ?slideshow=1, ?peacock, or ?bday=1 / ?zombie / ?cake is present
   useEffect(() => {
     if (
-      (route === 'photos' || getQueryParam('slideshow') === '1' || getQueryParam('zombie') || getQueryParam('cake')) &&
-      (hasSkyOverride() || getQueryParam('slideshow') === '1' || getQueryParam('bday') === '1' || getQueryParam('birthday') === '1' || getQueryParam('zombie') || getQueryParam('cake')) &&
+      (route === 'photos' || getQueryParam('slideshow') === '1' || getQueryParam('peacock') || getQueryParam('zombie') || getQueryParam('cake')) &&
+      (hasSkyOverride() || getQueryParam('slideshow') === '1' || getQueryParam('peacock') || getQueryParam('bday') === '1' || getQueryParam('birthday') === '1' || getQueryParam('zombie') || getQueryParam('cake')) &&
       !isTimerActive
     ) {
       setSlideshowActive(true)
@@ -1005,7 +1005,7 @@ function AppContent() {
             </div>
           </div>
         </motion.div>
-        {slideshowActive && (photosList.length > 0 || hasSkyOverride() || getQueryParam('slideshow') === '1') && !isTimerActive && !kidsNuggetsDisplayed && (
+        {slideshowActive && (photosList.length > 0 || hasSkyOverride() || getQueryParam('slideshow') === '1' || getQueryParam('peacock') !== null) && !isTimerActive && !kidsNuggetsDisplayed && (
           <Slideshow
             photos={photosList}
             onDismiss={() => setSlideshowActive(false)}

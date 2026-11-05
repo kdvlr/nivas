@@ -8,6 +8,7 @@ import { AutumnLeafTopper, DiyaTopper, ThanksgivingTopper } from './SeasonalPhot
 import { FallSceneDetails } from './SeasonalSceneDetails'
 import { DiwaliHorizon } from './DiwaliHorizon'
 import { DiwaliMarigoldBanner } from './DiwaliMarigoldBanner'
+import { Peacock } from './Peacock'
 import { diwaliTheme } from '../lib/diwaliTheme'
 import { api } from '../lib/api'
 import { useData } from '../lib/hooks'
@@ -7164,6 +7165,11 @@ export default function Slideshow({
 
       {/* Thanksgiving Week: Strutting Cartoon Turkey */}
       {!skyState.paused && isThanksgivingWeek(seasonalDate) && <StruttingTurkey />}
+
+      {/* Indian Festive & Diwali Delights: Regal Strutting & Displaying Peacock */}
+      {!skyState.paused && (isDiwaliSeason(seasonalDate) || getQueryParam('peacock') !== null) && (
+        <Peacock quality={quality} paused={!!skyState.paused || photoEntering} />
+      )}
 
       {/* Bottom right controls & Now Playing dock */}
       <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 z-[110] flex flex-col items-end gap-3 pointer-events-none">
