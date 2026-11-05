@@ -5,7 +5,9 @@ import { autumnVisits, autumnProgress } from '../lib/autumnAmbience'
 import { playBalloonPopSound } from '../lib/useAudioChime'
 import Icon from './Icon'
 import { AutumnLeafTopper, DiyaTopper, ThanksgivingTopper } from './SeasonalPhotoToppers'
-import { DiwaliSceneDetails, FallSceneDetails } from './SeasonalSceneDetails'
+import { FallSceneDetails } from './SeasonalSceneDetails'
+import { DiwaliHorizon } from './DiwaliHorizon'
+import { diwaliTheme } from '../lib/diwaliTheme'
 import { api } from '../lib/api'
 import { useData } from '../lib/hooks'
 import { startStarCanvas, startFxCanvas, SkyPhase, SkyKind, SkyState } from './sky/skyEngine'
@@ -1125,583 +1127,6 @@ function CandyCane({ seed = 0 }: { seed?: number }) {
   )
 }
 
-function DiwaliTempleHorizon({
-  seasonalDate,
-  phase,
-  quality,
-  paused,
-}: {
-  seasonalDate?: Date
-  phase: SkyPhase
-  quality: Quality
-  paused: boolean
-}) {
-  const isNightOrDusk = phase === 'night' || phase === 'dusk'
-
-  return (
-    <div
-      className="absolute bottom-0 left-0 right-0 h-48 pointer-events-none z-[25] select-none overflow-hidden autumn-harvest"
-      data-static={quality !== 'high' || paused}
-    >
-      <svg
-        viewBox="0 0 1920 188"
-        preserveAspectRatio="none"
-        className="w-full h-full"
-        aria-hidden="true"
-      >
-        <style>{`
-          .autumn-harvest[data-static="true"] svg * { animation: none !important; }
-          @media (prefers-reduced-motion: reduce) {
-            .autumn-harvest svg * { animation: none !important; }
-          }
-
-          @keyframes templeDiyaFlicker {
-            0%, 100% { opacity: 0.95; }
-            50% { opacity: 0.65; }
-          }
-          @keyframes rangoliGlow {
-            0%, 100% { opacity: 0.9; }
-            50% { opacity: 0.6; }
-          }
-          @keyframes flagFlutter {
-            0%, 100% { transform: skewY(-3deg) scaleY(1); }
-            50% { transform: skewY(5deg) scaleY(0.96); }
-          }
-          @keyframes ladiFlash {
-            0%, 100% { opacity: 0; transform: scale(0.6); }
-            10% { opacity: 1; transform: scale(1.4); }
-            22% { opacity: 0.2; transform: scale(0.8); }
-            35% { opacity: 0.95; transform: scale(1.3); }
-            48% { opacity: 0.1; transform: scale(0.7); }
-            62% { opacity: 1; transform: scale(1.5); }
-            78% { opacity: 0.25; transform: scale(0.9); }
-          }
-          @keyframes ladiSparkBurst1 {
-            0% { transform: translate(0, 0) scale(0.5); opacity: 1; }
-            100% { transform: translate(-14px, -18px) scale(1.4); opacity: 0; }
-          }
-          @keyframes ladiSparkBurst2 {
-            0% { transform: translate(0, 0) scale(0.5); opacity: 1; }
-            100% { transform: translate(16px, -16px) scale(1.3); opacity: 0; }
-          }
-          @keyframes ladiSparkBurst3 {
-            0% { transform: translate(0, 0) scale(0.5); opacity: 1; }
-            100% { transform: translate(2px, -24px) scale(1.5); opacity: 0; }
-          }
-          @keyframes anaarFountain {
-            0%, 100% { opacity: 0.95; }
-            50% { opacity: 0.75; }
-          }
-          @keyframes chakriSpin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-          @keyframes bottleFuseSpark {
-            0%, 100% { opacity: 0.3; transform: scale(0.7); }
-            50% { opacity: 1; transform: scale(1.4); }
-          }
-          @keyframes bottleRocketLaunch1 {
-            0%, 65% { transform: translateY(0); opacity: 1; }
-            70% { transform: translateY(-8px); opacity: 1; }
-            76% { transform: translateY(-45px); opacity: 0.95; }
-            82% { transform: translateY(-110px); opacity: 0.7; }
-            85% { transform: translateY(-170px); opacity: 0; }
-            86%, 100% { transform: translateY(0); opacity: 0; }
-          }
-          @keyframes bottleRocketLaunch2 {
-            0%, 65% { transform: translateY(0); opacity: 1; }
-            70% { transform: translateY(-8px); opacity: 1; }
-            76% { transform: translateY(-45px); opacity: 0.95; }
-            82% { transform: translateY(-110px); opacity: 0.7; }
-            85% { transform: translateY(-170px); opacity: 0; }
-            86%, 100% { transform: translateY(0); opacity: 0; }
-          }
-          @keyframes bottleExhaustBlast1 {
-            0%, 68% { opacity: 0; transform: scale(0.3); }
-            70% { opacity: 1; transform: scale(1.3); }
-            75% { opacity: 0.85; transform: translateY(-10px) scale(1.5); }
-            82% { opacity: 0; transform: translateY(-24px) scale(0.5); }
-            100% { opacity: 0; transform: scale(0.3); }
-          }
-          @keyframes bottleExhaustBlast2 {
-            0%, 68% { opacity: 0; transform: scale(0.3); }
-            70% { opacity: 1; transform: scale(1.3); }
-            75% { opacity: 0.85; transform: translateY(-10px) scale(1.5); }
-            82% { opacity: 0; transform: translateY(-24px) scale(0.5); }
-            100% { opacity: 0; transform: scale(0.3); }
-          }
-        `}</style>
-
-        {/* --- LAYER 1: Distant Indian Temple & Palace Skyline --- */}
-        {/* Sky Silhouette Base Color */}
-        <g fill={isNightOrDusk ? '#190a16' : '#7c2d12'} opacity={isNightOrDusk ? '0.92' : '0.78'}>
-          {/* Connecting Palace Walls & Kangura Battlements across horizon */}
-          <path d="M 0 188 L 0 98 Q 320 84, 640 92 Q 960 98, 1280 88 Q 1600 82, 1920 94 L 1920 188 Z" />
-
-          {/* Temple 1: Left Mandir Shikhara (x = 160) */}
-          <g transform="translate(160, 92)">
-            {/* Curvilinear Shikhara spire */}
-            <path d="M -24 0 C -22 -35, -12 -58, 0 -72 C 12 -58, 22 -35, 24 0 Z" />
-            {/* Ribbed Amalaka Disc */}
-            <ellipse cx="0" cy="-72" rx="10" ry="3.5" fill={isNightOrDusk ? '#2d1428' : '#9a3412'} />
-            {/* Pointed Golden Kalash Finial */}
-            <path d="M -3 -73 L 0 -84 L 3 -73 Z" fill="#facc15" />
-            <circle cx="0" cy="-84" r="2.2" fill="#facc15" />
-            {/* Saffron Temple Flag (Dhwaja) fluttering */}
-            <g style={{ transformOrigin: '0 -84px', animation: 'flagFlutter 2.5s ease-in-out infinite' }}>
-              <polygon points="0,-84 18,-79 0,-74" fill="#f97316" />
-            </g>
-          </g>
-
-          {/* Pavilion 1: Rajput Domed Chhatri (x = 360) */}
-          <g transform="translate(360, 90)">
-            {/* Carved stone pillars */}
-            <line x1="-16" y1="0" x2="-16" y2="-28" stroke={isNightOrDusk ? '#2d1428' : '#9a3412'} strokeWidth="3" />
-            <line x1="16" y1="0" x2="16" y2="-28" stroke={isNightOrDusk ? '#2d1428' : '#9a3412'} strokeWidth="3" />
-            <line x1="-6" y1="0" x2="-6" y2="-28" stroke={isNightOrDusk ? '#2d1428' : '#9a3412'} strokeWidth="2.5" />
-            <line x1="6" y1="0" x2="6" y2="-28" stroke={isNightOrDusk ? '#2d1428' : '#9a3412'} strokeWidth="2.5" />
-            {/* Scalloped Arch Beam */}
-            <path d="M -20 -28 Q 0 -36 20 -28 Z" fill={isNightOrDusk ? '#2d1428' : '#9a3412'} />
-            {/* Graceful Fluted Dome */}
-            <path d="M -22 -28 C -20 -44, -10 -52, 0 -54 C 10 -52, 20 -44, 22 -28 Z" />
-            {/* Kalash on dome */}
-            <path d="M -2 -54 L 0 -62 L 2 -54 Z" fill="#facc15" />
-            <circle cx="0" cy="-62" r="1.8" fill="#facc15" />
-          </g>
-
-          {/* Temple 2: Grand Central Mandir Shikhara (x = 580) */}
-          <g transform="translate(580, 88)">
-            {/* Flanking mini spires (Urushringas) */}
-            <path d="M -34 0 C -32 -26, -24 -42, -18 -48 C -14 -40, -12 -22, -12 0 Z" fill={isNightOrDusk ? '#220e20' : '#882f14'} />
-            <path d="M 12 0 C 12 -22, 14 -40, 18 -48 C 24 -42, 32 -26, 34 0 Z" fill={isNightOrDusk ? '#220e20' : '#882f14'} />
-            {/* Main Towering Shikhara */}
-            <path d="M -28 0 C -25 -42, -14 -70, 0 -88 C 14 -70, 25 -42, 28 0 Z" />
-            {/* Ribbed Amalaka Disc */}
-            <ellipse cx="0" cy="-88" rx="12" ry="4.2" fill={isNightOrDusk ? '#2d1428' : '#9a3412'} />
-            {/* Golden Kalash Spire */}
-            <path d="M -4 -89 L 0 -102 L 4 -89 Z" fill="#facc15" />
-            <circle cx="0" cy="-102" r="2.5" fill="#facc15" />
-            {/* High Saffron Flag fluttering */}
-            <g style={{ transformOrigin: '0 -102px', animation: 'flagFlutter 2.8s ease-in-out infinite', animationDelay: '0.4s' }}>
-              <polygon points="0,-102 22,-96 0,-90" fill="#f97316" />
-            </g>
-          </g>
-
-          {/* Monument 3: Tiered Temple Gopuram / Gateway (Center, x = 960) */}
-          <g transform="translate(960, 92)">
-            {/* Stepped tiers */}
-            <polygon points="-42,0 -36,-18 36,-18 42,0" />
-            <polygon points="-34,-18 -28,-36 28,-36 34,-18" fill={isNightOrDusk ? '#251022' : '#8c3116'} />
-            <polygon points="-26,-36 -20,-52 20,-52 26,-36" />
-            <polygon points="-18,-52 -14,-66 14,-66 18,-52" fill={isNightOrDusk ? '#2d1428' : '#9a3412'} />
-            {/* Barrel-vaulted roof (Sala) with 5 Golden Kalash Finials */}
-            <path d="M -16 -66 C -14 -74, 14 -74, 16 -66 Z" fill="#facc15" />
-            {[-12, -6, 0, 6, 12].map((kx) => (
-              <g key={kx} transform={`translate(${kx}, -74)`}>
-                <line x1="0" y1="0" x2="0" y2="-6" stroke="#facc15" strokeWidth="1.5" />
-                <circle cx="0" cy="-6" r="1.4" fill="#facc15" />
-              </g>
-            ))}
-          </g>
-
-          {/* Temple 4: Right Mandir Shikhara (x = 1340) */}
-          <g transform="translate(1340, 90)">
-            <path d="M -22 0 C -20 -32, -10 -54, 0 -68 C 10 -54, 20 -32, 22 0 Z" />
-            <ellipse cx="0" cy="-68" rx="9" ry="3.2" fill={isNightOrDusk ? '#2d1428' : '#9a3412'} />
-            <path d="M -3 -69 L 0 -80 L 3 -69 Z" fill="#facc15" />
-            <circle cx="0" cy="-80" r="2" fill="#facc15" />
-            <g style={{ transformOrigin: '0 -80px', animation: 'flagFlutter 2.2s ease-in-out infinite', animationDelay: '0.8s' }}>
-              <polygon points="0,-80 18,-75 0,-70" fill="#f97316" />
-            </g>
-          </g>
-
-          {/* Pavilion 2: Domed Chhatri (x = 1560) */}
-          <g transform="translate(1560, 90)">
-            <line x1="-15" y1="0" x2="-15" y2="-26" stroke={isNightOrDusk ? '#2d1428' : '#9a3412'} strokeWidth="3" />
-            <line x1="15" y1="0" x2="15" y2="-26" stroke={isNightOrDusk ? '#2d1428' : '#9a3412'} strokeWidth="3" />
-            <path d="M -20 -26 C -18 -40, -8 -48, 0 -50 C 8 -48, 18 -40, 20 -26 Z" />
-            <circle cx="0" cy="-56" r="1.8" fill="#facc15" />
-          </g>
-
-          {/* Temple 5: Far Right Shikhara (x = 1780) */}
-          <g transform="translate(1780, 92)">
-            <path d="M -20 0 C -18 -30, -9 -50, 0 -62 C 9 -50, 18 -30, 20 0 Z" />
-            <ellipse cx="0" cy="-62" rx="8" ry="3" fill={isNightOrDusk ? '#2d1428' : '#9a3412'} />
-            <circle cx="0" cy="-72" r="1.8" fill="#facc15" />
-          </g>
-        </g>
-
-        {/* --- LAYER 2: Foreground Tiered Temple Ghats & Stone Balustrades --- */}
-        {/* Tiered stone ghat steps descending to foreground */}
-        <path
-          d="M 0 188 L 0 102 L 1920 102 L 1920 188 Z"
-          fill={isNightOrDusk ? '#0d040b' : '#571c0b'}
-        />
-        {/* Step 1 Terrace */}
-        <line x1="0" y1="120" x2="1920" y2="120" stroke={isNightOrDusk ? '#1f0a1c' : '#7c2d12'} strokeWidth="4" />
-        {/* Step 2 Terrace */}
-        <line x1="0" y1="144" x2="1920" y2="144" stroke={isNightOrDusk ? '#1f0a1c' : '#7c2d12'} strokeWidth="4" />
-
-        {/* Ornate Sandstone Balustrade Railing with carved pillars */}
-        <g stroke={isNightOrDusk ? '#291024' : '#882f14'} strokeWidth="2.5">
-          {[120, 200, 280, 420, 500, 640, 720, 860, 1060, 1200, 1280, 1420, 1500, 1640, 1720, 1860].map((bx) => (
-            <g key={bx}>
-              <line x1={bx} y1="120" x2={bx} y2="102" />
-              <circle cx={bx} cy="101" r="2.5" fill={isNightOrDusk ? '#3b1635' : '#a83a1b'} />
-            </g>
-          ))}
-          <line x1="110" y1="104" x2="1870" y2="104" strokeWidth="2" />
-        </g>
-
-        {/* --- LAYER 3: DEEPOTSAV - Rows of Glowing Clay Diyas along ledges --- */}
-        <g>
-          {[
-            120, 200, 280, 360, 440, 520, 600, 680, 760, 840,
-            1080, 1160, 1240, 1320, 1400, 1480, 1560, 1640, 1720, 1800
-          ].map((dx, i) => (
-            <g key={dx} transform={`translate(${dx}, 100)`}>
-              {/* Terracotta Diya Bowl */}
-              <path d="M -7 3 Q 0 6 7 3 Q 0 -1 -7 3 Z" fill="#9a3412" stroke="#ea580c" strokeWidth="0.8" />
-              {/* Dancing Teardrop Flame with Glow */}
-              <g style={{ transformOrigin: '0 2px', animation: `templeDiyaFlicker ${1.6 + (i % 4) * 0.25}s ease-in-out infinite`, animationDelay: `${(i % 6) * 0.2}s` }}>
-                <path d="M 0 -6 C -2.8 -2, -2.8 2, 0 2 C 2.8 2, 2.8 -2, 0 -6 Z" fill="#facc15" />
-                <ellipse cx="0" cy="0" rx="1.2" ry="2.2" fill="#ffffff" />
-              </g>
-            </g>
-          ))}
-
-          {/* Additional Lower Terrace Diyas */}
-          {[480, 640, 800, 1120, 1280, 1440].map((dx, i) => (
-            <g key={dx} transform={`translate(${dx}, 142)`}>
-              <path d="M -6 3 Q 0 6 6 3 Q 0 -1 -6 3 Z" fill="#9a3412" stroke="#ea580c" strokeWidth="0.8" />
-              <g style={{ transformOrigin: '0 2px', animation: `templeDiyaFlicker ${1.8 + (i % 3) * 0.3}s ease-in-out infinite`, animationDelay: `${i * 0.3}s` }}>
-                <path d="M 0 -5 C -2.5 -1, -2.5 2, 0 2 C 2.5 2, 2.5 -1, 0 -5 Z" fill="#facc15" />
-                <ellipse cx="0" cy="0" rx="1" ry="1.8" fill="#ffffff" />
-              </g>
-            </g>
-          ))}
-        </g>
-
-        {/* --- LAYER 4: CENTER RADIANT RANGOLI MANDALA (x = 960) --- */}
-        <g transform="translate(960, 150)" style={{ animation: 'rangoliGlow 3.5s ease-in-out infinite' }}>
-          {/* Outer dotted gold boundary */}
-          <circle cx="0" cy="0" r="32" stroke="#facc15" strokeWidth="1.4" strokeDasharray="3 3" fill="none" opacity="0.9" />
-          {/* Saffron ring */}
-          <circle cx="0" cy="0" r="24" stroke="#f97316" strokeWidth="1.6" fill="none" opacity="0.85" />
-          {/* 8-pointed star / lotus mandala */}
-          <polygon points="0,-22 6,-8 20,-8 10,2 14,16 0,8 -14,16 -10,2 -20,-8 -6,-8" fill="#fbbf24" opacity="0.65" />
-          <polygon points="0,22 -6,8 -20,8 -10,-2 -14,-16 0,-8 14,-16 10,-2 20,8 6,8" fill="#f43f5e" opacity="0.55" />
-          {/* Inner jewel flower */}
-          <circle cx="0" cy="0" r="10" fill="#ea580c" opacity="0.9" />
-          <circle cx="0" cy="0" r="5" fill="#fef08a" />
-          {/* Center Diya */}
-          <g style={{ transformOrigin: '0 0', animation: 'templeDiyaFlicker 1.8s ease-in-out infinite' }}>
-            <path d="M 0 -8 C -2.5 -3, -2.5 0, 0 0 C 2.5 0, 2.5 -3, 0 -8 Z" fill="#ffffff" />
-          </g>
-        </g>
-
-        {/* --- LAYER 5: INDIAN FIREWORKS (PATAKA) & 1000-WALA STRING BOMB --- */}
-        {/* A. 1000-Wala String Bomb (Ladi) on the Right Terrace (x = 1420 to 1720) */}
-        <g id="ladi-1000-wala">
-          {/* Long snaking fuse rope */}
-          <path
-            d="M 1420 156 Q 1460 150, 1500 158 Q 1540 166, 1580 154 Q 1620 148, 1660 156 Q 1690 162, 1720 155"
-            stroke="#e2e8f0"
-            strokeWidth="1.6"
-            strokeDasharray="2 2"
-            fill="none"
-            opacity="0.75"
-          />
-
-          {/* Tightly linked Red Paper Firecrackers (Ladi Cracker Roll) */}
-          {Array.from({ length: 32 }, (_, i) => {
-            const px = 1425 + i * 9.2
-            const py = 156 + Math.sin(i * 0.7) * 4
-            const rot = Math.cos(i * 0.9) * 22
-            return (
-              <g key={i} transform={`translate(${px}, ${py}) rotate(${rot})`}>
-                {/* Red Cracker Tube */}
-                <rect x="-2" y="-6" width="4" height="12" rx="1" fill="#dc2626" stroke="#991b1b" strokeWidth="0.5" />
-                {/* Golden/Yellow Label Band in Middle */}
-                <rect x="-2" y="-1.5" width="4" height="3" fill="#facc15" />
-                {/* Green Fuse End */}
-                <circle cx="0" cy="-6" r="0.9" fill="#16a34a" />
-              </g>
-            )
-          })}
-
-          {/* ACTIVE DETONATING HEAD of 1000-Wala: Continuous Explosive Crackles! */}
-          <g transform="translate(1540, 156)">
-            {/* White-Hot Explosive Flash Burst */}
-            <circle cx="0" cy="0" r="14" fill="#ffffff" style={{ animation: 'ladiFlash 0.35s ease-out infinite' }} />
-            <circle cx="0" cy="0" r="22" fill="#fef08a" opacity="0.6" style={{ animation: 'ladiFlash 0.35s ease-out infinite', animationDelay: '0.08s' }} />
-
-            {/* Golden Spark Starbursts Spraying in all Directions */}
-            <g style={{ animation: 'ladiSparkBurst1 0.4s ease-out infinite' }}>
-              <line x1="0" y1="0" x2="-14" y2="-18" stroke="#facc15" strokeWidth="2.2" strokeLinecap="round" />
-              <line x1="0" y1="0" x2="-20" y2="-6" stroke="#fb923c" strokeWidth="1.8" strokeLinecap="round" />
-              <circle cx="-14" cy="-18" r="1.8" fill="#ffffff" />
-            </g>
-            <g style={{ animation: 'ladiSparkBurst2 0.38s ease-out infinite', animationDelay: '0.12s' }}>
-              <line x1="0" y1="0" x2="16" y2="-16" stroke="#facc15" strokeWidth="2.2" strokeLinecap="round" />
-              <line x1="0" y1="0" x2="22" y2="-4" stroke="#f59e0b" strokeWidth="1.8" strokeLinecap="round" />
-              <circle cx="16" cy="-16" r="1.8" fill="#ffffff" />
-            </g>
-            <g style={{ animation: 'ladiSparkBurst3 0.44s ease-out infinite', animationDelay: '0.22s' }}>
-              <line x1="0" y1="0" x2="2" y2="-24" stroke="#ffffff" strokeWidth="2.4" strokeLinecap="round" />
-              <line x1="0" y1="0" x2="-8" y2="-26" stroke="#facc15" strokeWidth="1.8" strokeLinecap="round" />
-              <line x1="0" y1="0" x2="10" y2="-22" stroke="#ea580c" strokeWidth="1.8" strokeLinecap="round" />
-              <circle cx="2" cy="-24" r="2" fill="#ffffff" />
-            </g>
-
-            {/* Scattered Red Paper Shreds Flying Off */}
-            <rect x="-8" y="-12" width="3" height="3" fill="#dc2626" opacity="0.8" transform="rotate(45 -8 -12)" />
-            <rect x="12" y="-14" width="3.5" height="2.5" fill="#dc2626" opacity="0.8" transform="rotate(-30 12 -14)" />
-            <rect x="-3" y="-18" width="3" height="2" fill="#facc15" opacity="0.9" />
-
-            {/* Translucent Smoke Puff */}
-            <circle cx="-4" cy="-16" r="12" fill="rgba(241, 245, 249, 0.35)" />
-            <circle cx="8" cy="-20" r="10" fill="rgba(241, 245, 249, 0.28)" />
-          </g>
-
-          {/* Secondary Cracker Detonator at x = 1620 */}
-          <g transform="translate(1620, 154)">
-            <circle cx="0" cy="0" r="12" fill="#ffffff" style={{ animation: 'ladiFlash 0.42s ease-out infinite', animationDelay: '0.18s' }} />
-            <g style={{ animation: 'ladiSparkBurst1 0.46s ease-out infinite', animationDelay: '0.16s' }}>
-              <line x1="0" y1="0" x2="14" y2="-16" stroke="#facc15" strokeWidth="2" strokeLinecap="round" />
-              <line x1="0" y1="0" x2="-12" y2="-14" stroke="#f97316" strokeWidth="1.8" strokeLinecap="round" />
-            </g>
-          </g>
-        </g>
-
-        {/* B. Anaar (Flowerpot Firework Fountain) on the Left Terrace (x = 260) */}
-        <g id="anaar-flowerpot" transform="translate(260, 150)">
-          {/* Earthenware Conical Pot with Gold/Green Pattern */}
-          <polygon points="-12,18 12,18 5,0 -5,0" fill="#9a3412" stroke="#ea580c" strokeWidth="1" />
-          <polygon points="-10,14 10,14 4,3 -4,3" fill="#15803d" />
-          <polygon points="-7,10 7,10 3,5 -3,5" fill="#facc15" />
-          {/* Golden Rim Nozzle */}
-          <ellipse cx="0" cy="0" rx="5" ry="2" fill="#facc15" />
-
-          {/* Towering Fountain of Golden Sparks Shooting 100px up! */}
-          <g style={{ animation: 'anaarFountain 1.2s ease-in-out infinite' }}>
-            {/* Center Main Geyser Jet */}
-            <path
-              d="M 0 0 Q -4 -45, -8 -85 M 0 0 Q 0 -50, 0 -95 M 0 0 Q 4 -45, 8 -85"
-              stroke="#ffffff"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              fill="none"
-              opacity="0.95"
-            />
-            {/* Cascading Outward Golden Spark Arcs */}
-            <path
-              d="M 0 0 Q -12 -35, -24 -70 Q -32 -60, -36 -45 M 0 0 Q 12 -35, 24 -70 Q 32 -60, 36 -45"
-              stroke="#facc15"
-              strokeWidth="2"
-              strokeDasharray="4 3"
-              fill="none"
-            />
-            <path
-              d="M 0 0 Q -18 -28, -36 -52 Q -45 -40, -48 -25 M 0 0 Q 18 -28, 36 -52 Q 45 -40, 48 -25"
-              stroke="#fb923c"
-              strokeWidth="1.6"
-              strokeDasharray="3 3"
-              fill="none"
-            />
-
-            {/* Glowing Apex Sparkle Burst */}
-            <circle cx="0" cy="-95" r="7.5" fill="#facc15" opacity="0.35" />
-            <circle cx="0" cy="-95" r="4.5" fill="#ffffff" />
-            <circle cx="-8" cy="-85" r="3.2" fill="#fef08a" />
-            <circle cx="8" cy="-85" r="3.2" fill="#fef08a" />
-            <circle cx="-24" cy="-70" r="2.5" fill="#facc15" />
-            <circle cx="24" cy="-70" r="2.5" fill="#facc15" />
-            <circle cx="-36" cy="-45" r="2" fill="#f97316" />
-            <circle cx="36" cy="-45" r="2" fill="#f97316" />
-          </g>
-        </g>
-
-        {/* C. Chakri (Ground Spinner Firework) on the Center-Left Courtyard (x = 720) */}
-        <g id="chakri-spinner" transform="translate(720, 154)">
-          {/* Glowing Ground Burn Mark Ring */}
-          <ellipse cx="0" cy="0" rx="18" ry="7" fill="rgba(245, 158, 11, 0.35)" />
-
-          {/* Rapidly Spinning Chakri Disc & Fiery Spiral Jets */}
-          <g style={{ animation: 'chakriSpin 0.32s linear infinite' }}>
-            {/* Center Spiral Hub */}
-            <circle cx="0" cy="0" r="6" fill="#facc15" stroke="#ea580c" strokeWidth="1.5" />
-            <circle cx="0" cy="0" r="2.5" fill="#ffffff" />
-
-            {/* 4 Tangential Golden Fire Jets */}
-            <path d="M 0 -6 Q 14 -12, 22 -6" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" fill="none" />
-            <path d="M 6 0 Q 12 14, 6 22" stroke="#facc15" strokeWidth="2.2" strokeLinecap="round" fill="none" />
-            <path d="M 0 6 Q -14 12, -22 6" stroke="#f59e0b" strokeWidth="2.2" strokeLinecap="round" fill="none" />
-            <path d="M -6 0 Q -12 -14, -6 -22" stroke="#ea580c" strokeWidth="2.2" strokeLinecap="round" fill="none" />
-
-            {/* Whirling Particle Dots */}
-            <circle cx="20" cy="-7" r="1.8" fill="#ffffff" />
-            <circle cx="7" cy="20" r="1.8" fill="#ffffff" />
-            <circle cx="-20" cy="7" r="1.8" fill="#ffffff" />
-            <circle cx="-7" cy="-20" r="1.8" fill="#ffffff" />
-          </g>
-        </g>
-
-        {/* D. Bottle Rocket Station 1: Left Open Terrace (x = 85, on Step 2 Terrace y = 144) */}
-        <g id="bottle-rocket-station-left" transform="translate(85, 144)">
-          {/* Stone step burn mark / ground ash */}
-          <ellipse cx="0" cy="0" rx="14" ry="4" fill="rgba(30, 20, 20, 0.4)" />
-
-          {/* Spare Rockets leaning beside the bottle */}
-          {/* Spare 1: Green cartridge, leaning back against bottle */}
-          <g transform="translate(-12, 0) rotate(14)">
-            <line x1="0" y1="0" x2="0" y2="-36" stroke="#b45309" strokeWidth="1.2" />
-            <rect x="-2" y="-36" width="4" height="12" rx="1" fill="#15803d" />
-            <rect x="-2" y="-31" width="4" height="3" fill="#facc15" />
-            <polygon points="-2.5,-36 0,-44 2.5,-36" fill="#dc2626" />
-          </g>
-          {/* Spare 2: Red cartridge, lying on stone terrace */}
-          <g transform="translate(10, -1) rotate(78)">
-            <line x1="0" y1="0" x2="0" y2="-32" stroke="#b45309" strokeWidth="1.1" />
-            <rect x="-2" y="-32" width="4" height="11" rx="1" fill="#dc2626" />
-            <rect x="-2" y="-28" width="4" height="2.5" fill="#facc15" />
-            <polygon points="-2,-32 0,-39 2,-32" fill="#ef4444" />
-          </g>
-
-          {/* Authentic Translucent Green Glass Soda Bottle */}
-          <g>
-            {/* Bottle Foot / Base */}
-            <path
-              d="M -6 0 L -6 -16 C -6 -21, -3 -24, -2.5 -27 L -2.5 -33 L -4 -33 L -4 -35 L 4 -35 L 4 -33 L 2.5 -33 L 2.5 -27 C 3 -24, 6 -21, 6 -16 L 6 0 Z"
-              fill="#065f46"
-              stroke="#047857"
-              strokeWidth="0.8"
-              opacity="0.92"
-            />
-            {/* Bottle Liquid / Dark Glass depth */}
-            <path
-              d="M -4.5 -1 L -4.5 -15 C -4.5 -19, -2 -22, -1.8 -25 L -1.8 -32 L 1.8 -32 L 1.8 -25 C 2 -22, 4.5 -19, 4.5 -15 L 4.5 -1 Z"
-              fill="#022c22"
-              opacity="0.45"
-            />
-            {/* Glass Specular Highlight Curve */}
-            <path
-              d="M -4.5 -2 L -4.5 -15 C -4.5 -19, -2.5 -22, -1.8 -26 L -1.8 -32"
-              stroke="rgba(255, 255, 255, 0.55)"
-              strokeWidth="0.8"
-              strokeLinecap="round"
-              fill="none"
-            />
-          </g>
-
-          {/* Active Bottle Rocket Inside Bottle Neck with Launch Cycle */}
-          <g style={{ animation: 'bottleRocketLaunch1 4.5s ease-in infinite' }}>
-            {/* Bamboo Guide Stick extending down into bottle and up */}
-            <line x1="0" y1="-8" x2="0" y2="-48" stroke="#d97706" strokeWidth="1.3" />
-            {/* Cylindrical Red Rocket Cartridge */}
-            <rect x="-3" y="-52" width="6" height="16" rx="1.5" fill="#dc2626" stroke="#b91c1c" strokeWidth="0.5" />
-            {/* Golden Label Band */}
-            <rect x="-3" y="-46" width="6" height="4.5" fill="#facc15" />
-            {/* Conical Red Nose Cone */}
-            <polygon points="-3.5,-52 0,-63 3.5,-52" fill="#ef4444" />
-            <circle cx="0" cy="-62" r="0.8" fill="#fef08a" />
-
-            {/* Sputtering Green Fuse Wire & Sparkling Fuse Tip */}
-            <path d="M 0 -36 Q 3.5 -34 4 -31" stroke="#22c55e" strokeWidth="0.9" fill="none" />
-            <g transform="translate(4, -31)">
-              <circle cx="0" cy="0" r="2.4" fill="#ffffff" style={{ animation: 'bottleFuseSpark 0.22s infinite' }} />
-              <circle cx="0" cy="0" r="4.5" fill="#facc15" opacity="0.6" style={{ animation: 'bottleFuseSpark 0.22s infinite' }} />
-            </g>
-          </g>
-
-          {/* Fiery Launch Blast at Bottle Rim (Erupts when rocket blasts off!) */}
-          <g transform="translate(0, -35)" style={{ animation: 'bottleExhaustBlast1 4.5s ease-out infinite' }}>
-            {/* Central White Flash */}
-            <circle cx="0" cy="0" r="7" fill="#ffffff" />
-            <ellipse cx="0" cy="0" rx="11" ry="6" fill="#facc15" opacity="0.8" />
-            {/* Sprays of golden sparks down & around bottle lip */}
-            <line x1="0" y1="0" x2="-8" y2="8" stroke="#facc15" strokeWidth="1.8" strokeLinecap="round" />
-            <line x1="0" y1="0" x2="8" y2="7" stroke="#facc15" strokeWidth="1.8" strokeLinecap="round" />
-            <line x1="0" y1="0" x2="-4" y2="12" stroke="#ea580c" strokeWidth="1.6" strokeLinecap="round" />
-            <line x1="0" y1="0" x2="5" y2="11" stroke="#ea580c" strokeWidth="1.6" strokeLinecap="round" />
-            <line x1="0" y1="0" x2="0" y2="14" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" />
-            {/* Smoke plume */}
-            <circle cx="-3" cy="-3" r="6" fill="rgba(241, 245, 249, 0.45)" />
-            <circle cx="4" cy="-5" r="7" fill="rgba(241, 245, 249, 0.35)" />
-          </g>
-        </g>
-
-        {/* E. Bottle Rocket Station 2: Right Open Terrace (x = 1825, on Step 2 Terrace y = 144) */}
-        <g id="bottle-rocket-station-right" transform="translate(1825, 144)">
-          {/* Ground ash */}
-          <ellipse cx="0" cy="0" rx="14" ry="4" fill="rgba(30, 20, 20, 0.4)" />
-
-          {/* Spare Rocket leaning to the right */}
-          <g transform="translate(11, 0) rotate(-16)">
-            <line x1="0" y1="0" x2="0" y2="-36" stroke="#b45309" strokeWidth="1.2" />
-            <rect x="-2" y="-36" width="4" height="12" rx="1" fill="#dc2626" />
-            <rect x="-2" y="-31" width="4" height="3" fill="#facc15" />
-            <polygon points="-2.5,-36 0,-44 2.5,-36" fill="#ef4444" />
-          </g>
-
-          {/* Authentic Translucent Amber Glass Soda Bottle */}
-          <g>
-            <path
-              d="M -6 0 L -6 -16 C -6 -21, -3 -24, -2.5 -27 L -2.5 -33 L -4 -33 L -4 -35 L 4 -35 L 4 -33 L 2.5 -33 L 2.5 -27 C 3 -24, 6 -21, 6 -16 L 6 0 Z"
-              fill="#92400e"
-              stroke="#78350f"
-              strokeWidth="0.8"
-              opacity="0.94"
-            />
-            <path
-              d="M -4.5 -1 L -4.5 -15 C -4.5 -19, -2 -22, -1.8 -25 L -1.8 -32 L 1.8 -32 L 1.8 -25 C 2 -22, 4.5 -19, 4.5 -15 L 4.5 -1 Z"
-              fill="#451a03"
-              opacity="0.45"
-            />
-            <path
-              d="M -4.5 -2 L -4.5 -15 C -4.5 -19, -2.5 -22, -1.8 -26 L -1.8 -32"
-              stroke="rgba(255, 255, 255, 0.5)"
-              strokeWidth="0.8"
-              strokeLinecap="round"
-              fill="none"
-            />
-          </g>
-
-          {/* Active Bottle Rocket Inside Bottle Neck with Staggered Launch Cycle */}
-          <g style={{ animation: 'bottleRocketLaunch2 4.8s ease-in infinite', animationDelay: '2.2s' }}>
-            <line x1="0" y1="-8" x2="0" y2="-48" stroke="#d97706" strokeWidth="1.3" />
-            {/* Cylindrical Saffron Rocket Cartridge */}
-            <rect x="-3" y="-52" width="6" height="16" rx="1.5" fill="#ea580c" stroke="#c2410c" strokeWidth="0.5" />
-            <rect x="-3" y="-46" width="6" height="4.5" fill="#16a34a" />
-            <polygon points="-3.5,-52 0,-63 3.5,-52" fill="#facc15" />
-            <circle cx="0" cy="-62" r="0.8" fill="#ffffff" />
-
-            {/* Sputtering Fuse Wire & Sparkling Fuse Tip */}
-            <path d="M 0 -36 Q -3.5 -34 -4 -31" stroke="#22c55e" strokeWidth="0.9" fill="none" />
-            <g transform="translate(-4, -31)">
-              <circle cx="0" cy="0" r="2.4" fill="#ffffff" style={{ animation: 'bottleFuseSpark 0.22s infinite', animationDelay: '0.1s' }} />
-              <circle cx="0" cy="0" r="4.5" fill="#facc15" opacity="0.6" style={{ animation: 'bottleFuseSpark 0.22s infinite', animationDelay: '0.1s' }} />
-            </g>
-          </g>
-
-          {/* Fiery Launch Blast at Bottle Rim (Staggered) */}
-          <g transform="translate(0, -35)" style={{ animation: 'bottleExhaustBlast2 4.8s ease-out infinite', animationDelay: '2.2s' }}>
-            <circle cx="0" cy="0" r="7" fill="#ffffff" />
-            <ellipse cx="0" cy="0" rx="11" ry="6" fill="#facc15" opacity="0.8" />
-            <line x1="0" y1="0" x2="-8" y2="8" stroke="#facc15" strokeWidth="1.8" strokeLinecap="round" />
-            <line x1="0" y1="0" x2="8" y2="7" stroke="#facc15" strokeWidth="1.8" strokeLinecap="round" />
-            <line x1="0" y1="0" x2="-4" y2="12" stroke="#ea580c" strokeWidth="1.6" strokeLinecap="round" />
-            <line x1="0" y1="0" x2="5" y2="11" stroke="#ea580c" strokeWidth="1.6" strokeLinecap="round" />
-            <circle cx="-3" cy="-3" r="6" fill="rgba(241, 245, 249, 0.45)" />
-            <circle cx="4" cy="-5" r="7" fill="rgba(241, 245, 249, 0.35)" />
-          </g>
-        </g>
-        <DiwaliSceneDetails phase={phase} />
-      </svg>
-    </div>
-  )
-}
-
 function AutumnHarvestHorizon({
   seasonalDate,
   phase,
@@ -1722,7 +1147,7 @@ function AutumnHarvestHorizon({
 
   // During Diwali (Nov 7, 8, and 9, or explicit override), display the majestic Indian Temple & Ghat skyline
   if ((isDiwali || holidayOverride === 'diwali' || horizonOverride === 'diwali') && horizonOverride !== 'autumn' && horizonOverride !== 'harvest') {
-    return <DiwaliTempleHorizon seasonalDate={seasonalDate} phase={phase} quality={quality} paused={paused} />
+    return <DiwaliHorizon phase={phase} quality={quality} paused={paused} />
   }
 
   const c = isNightOrDusk ? {
@@ -6901,7 +6326,8 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
   const [mediaFailed, setMediaFailed] = useState(false)
   // On the lowest tier the perpetual sway is dropped: the entrance drift still
   // reads as floating, but nothing animates once a photo has settled.
-  const sway = quality !== 'low'
+  const diwali = isDiwaliSeason(seasonalDate)
+  const sway = diwali ? quality === 'high' : quality !== 'low'
   const seed = hashStr(item.url)
   // Two independent 0..1 values per photo so side-by-side pairs get visibly
   // different rise speeds, resting heights, and sway rhythms.
@@ -6925,7 +6351,7 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
   // Original camera clips are never autoplayed. A verified playback derivative
   // is the only video source eligible for unattended slideshow playback.
   const autoplayable = quality !== 'low' && !!item.playbackUrl
-  const tilt = ((seed % 44) / 10 - 2.2) * (pairIdx === 1 ? -1 : 1)
+  const tilt = ((seed % 44) / 10 - 2.2) * (pairIdx === 1 ? -1 : 1) * (diwali ? 0.35 : 1)
 
   const media = (
     <div
@@ -7012,7 +6438,8 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
     <div
       className="relative bg-[#faf8f5] p-3.5 pb-4 rounded-[4px] border border-neutral-200/60 flex flex-col items-center pointer-events-auto cursor-pointer"
       style={{
-        boxShadow: matShadow,
+        boxShadow: diwali ? `inset 0 0 0 1px #c49a5a, ${matShadow}` : matShadow,
+        ...(diwali ? { backgroundColor: diwaliTheme(phase).frame, borderColor: '#c49a5a' } : {}),
         transform: `rotate(${tilt.toFixed(1)}deg) translateZ(0)`,
         willChange: 'transform',
       }}
@@ -7073,7 +6500,7 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
     if (isDiwaliSeason(seasonalNow)) {
       topElement = (
         <div className="absolute bottom-[calc(100%-12px)] pointer-events-none select-none z-10">
-          <DiyaTopper seed={seedOffset} />
+          <DiyaTopper seed={seedOffset} phase={phase} />
         </div>
       )
     } else if (isThanksgivingWeek(seasonalNow)) {
@@ -7300,8 +6727,8 @@ export default function Slideshow({
     }
   }, [])
 
-  // Re-runs when the quality tier changes, because the canvases themselves are
-  // only mounted above the lowest tier — the engines must follow their refs.
+  // Keep the engines alive across quality changes. They read the current tier
+  // from stateRef, preserving active fireworks and their launch schedule.
   useEffect(() => {
     const stopStars = starRef.current ? startStarCanvas(starRef.current, () => stateRef.current) : undefined
     const stopFx = fxRef.current ? startFxCanvas(fxRef.current, () => stateRef.current, bgFxRef.current) : undefined
@@ -7309,7 +6736,7 @@ export default function Slideshow({
       stopStars?.()
       stopFx?.()
     }
-  }, [quality])
+  }, [])
 
   // Track shuffle seed so slides re-randomize every time the screensaver mounts or finishes a cycle
   const [shuffleSeed, setShuffleSeed] = useState(() => Math.random())
@@ -7450,7 +6877,7 @@ export default function Slideshow({
 
   const activeSlide = slides[currentIdx]
   const overcast = kind !== 'clear'
-  const gradient = SKY_GRADIENTS[phase][overcast ? 'overcast' : 'clear']
+  const gradient = isDiwaliSeason(seasonalDate) ? diwaliTheme(phase).sky : SKY_GRADIENTS[phase][overcast ? 'overcast' : 'clear']
   const items = activeSlide.items
   const pair = items.length > 1
 
@@ -7709,7 +7136,7 @@ export default function Slideshow({
       {isElfSeason(seasonalDate) && !isNewYearSeason(seasonalDate) && <RunningElf />}
 
       {/* November Autumn Delights: Burying Nut Squirrel (when not Thanksgiving week, or with query override) */}
-      {!skyState.paused && ((isNovember(seasonalDate) && !isThanksgivingWeek(seasonalDate)) || Boolean(getQueryParam('squirrel'))) && (
+      {!skyState.paused && ((isNovember(seasonalDate) && !isThanksgivingWeek(seasonalDate) && !isDiwaliSeason(seasonalDate)) || Boolean(getQueryParam('squirrel'))) && (
         <RunningSquirrel />
       )}
 

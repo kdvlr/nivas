@@ -11,11 +11,12 @@ export interface SkyState {
   kind: SkyKind
   paused?: boolean
   quiet?: boolean
-  // 'high' | 'medium' — 'low' never mounts a canvas at all.
+  // All tiers retain motion; lower tiers reduce density and resolution.
   quality?: 'high' | 'medium' | 'low'
 }
 
 import { autumnVisits } from '../../lib/autumnAmbience'
+import { createDiwaliLaunchGate } from '../../lib/diwaliAnimation'
 
 const rand = (a: number, b: number) => a + Math.random() * (b - a)
 import {
@@ -114,6 +115,7 @@ export function startStarCanvas(canvas: HTMLCanvasElement, get: () => SkyState):
     raf = requestAnimationFrame(frame)
     const state = get()
     if (state.paused) return
+    if (dpr !== dprFor(state)) resize()
 
     if (t - lastDraw < frameBudget(state)) return
     lastDraw = t
@@ -450,8 +452,7 @@ export function startFxCanvas(
   let lanterns: SkyLantern[] = []
   let nextAutumnGust = performance.now() + rand(12_000, 24_000)
   let gustStarted = -Infinity
-  let nextDiwaliBurst = performance.now() + 20_000
-  let diwaliBurstUntil = 0
+  const diwaliLaunch = createDiwaliLaunchGate(performance.now())
   let rockets: FireworksRocket[] = []
   let sparks: FireworksSpark[] = []
   let flashes: FireworksFlash[] = []
@@ -2282,8 +2283,12 @@ export function startFxCanvas(
     raf = requestAnimationFrame(frame)
     const state = get()
     if (state.paused) return
+    if (dpr !== dprFor(state)) resize()
 
-    if (t - lastDraw < frameBudget(state)) return
+    // Give moving rockets a smoother cadence while keeping idle ambience cheap.
+    const movingFireworks = rockets.length > 0 || sparks.length > 0
+    const budget = movingFireworks ? (state.quality === 'low' ? 50 : 1000 / 30 - 1) : frameBudget(state)
+    if (t - lastDraw < budget) return
     const dt = Math.min(0.08, (t - lastDraw) / 1000)
     lastDraw = t
 
@@ -2305,12 +2310,12 @@ export function startFxCanvas(
     // element entirely in that case so the compositor skips it.
     const wantsWeather = kind === 'rainy' || kind === 'stormy' || kind === 'snowy'
     const wantsFlies = (phase === 'night' || phase === 'dusk') && calm
-    const wantsLeaves = november && calm
+    const wantsLeaves = november && !diwali && calm
     const wantsLanterns = diwali && (phase === 'night' || phase === 'dusk') && calm
     const wantsDiwaliFireworks = diwali && calm && (phase === 'dusk' || phase === 'night')
     const wantsSwaraFireworks = swaraBirthday && (phase === 'dusk' || phase === 'night') && calm
     const batsPossible = october && calm
-    const creaturesPossible = calm && (daylight || november)
+    const creaturesPossible = !diwali && calm && (daylight || november)
     const witchPossible = october && calm
     const santaPossible = christmasDay && calm
     const wantsCandy = daylight && (swaraBirthday || getQueryParam('candy') === '1') && calm
@@ -2849,12 +2854,12 @@ export function startFxCanvas(
     // Festive Fireworks: New Year's Season, Diwali Nights & Swara's Birthday Dusk/Night!
     const wantsFireworks = newYearSeason || wantsDiwaliFireworks || wantsSwaraFireworks
     if (wantsFireworks) {
-      if (wantsDiwaliFireworks && t >= nextDiwaliBurst) {
-        diwaliBurstUntil = t + 5_000
-        nextDiwaliBurst = t + rand(60_000, 90_000)
-      }
-      const canLaunch = !diwali || wantsSwaraFireworks || t < diwaliBurstUntil
-      if (!state.quiet && canLaunch && t > nextRocket) {
+      // A photo entrance defers a launch; it never consumes a short launch
+      // window. Existing rockets and sparks keep integrating below.
+      const launchDue = diwali && !wantsSwaraFireworks
+        ? diwaliLaunch.claim(t, !!state.quiet)
+        : !state.quiet && t > nextRocket
+      if (launchDue) {
         nextRocket = t + rand(wantsSwaraFireworks ? 500 : (diwali ? 1_800 : 650), wantsSwaraFireworks ? 1300 : (diwali ? 2_800 : 1500))
         const fireworkColors = wantsSwaraFireworks
           ? [
@@ -2870,11 +2875,11 @@ export function startFxCanvas(
           : diwali
           ? [
               '#facc15', // Sparkling Diwali Gold (Zari)
-              '#ef4444', // Festive Crimson (Gulal)
-              '#22c55e', // Emerald Green (Hara)
-              '#f97316', // Saffron Orange (Kesari)
-              '#c084fc', // Vibrant Violet
-              '#38bdf8', // Sky Blue
+              '#f6d9a6', // Warm ivory
+              '#d9a66b', // Brass
+              '#eaa363', // Saffron
+              '#d39b9f', // Rose
+              '#edc488', // Marigold
               '#ffffff', // Diamond Sparkler
             ]
           : [
@@ -3045,7 +3050,7 @@ export function startFxCanvas(
             })
 
             // Standard burst apex: Sparks
-            const count = Math.floor(diwali ? rand(14, 22) * densityFor(state) : rand(35, 48))
+            const count = Math.floor(diwali ? (state.quality === 'low' ? 12 : state.quality === 'medium' ? 20 : 28) : rand(35, 48))
             for (let j = 0; j < count; j++) {
               const angle = Math.random() * Math.PI * 2
               const speed = rand(70, 220)
@@ -3178,8 +3183,9 @@ export function startFxCanvas(
         sp.x += sp.vx * dt
         sp.y += sp.vy * dt
         sp.vy += (sp.gravity ?? 120) * dt
-        sp.vx *= 0.96
-        sp.vy *= 0.96
+        const drag = Math.pow(0.96, dt * 30)
+        sp.vx *= drag
+        sp.vy *= drag
         sp.alpha -= sp.decay * dt
 
         if (sp.alpha <= 0) {

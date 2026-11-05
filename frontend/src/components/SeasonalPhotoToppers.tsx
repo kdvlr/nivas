@@ -1,4 +1,5 @@
 import { useId } from 'react'
+import { diwaliTheme, type DiwaliPhase } from '../lib/diwaliTheme'
 
 // Static SVGs share the photo attachment geometry; no filters or animation loops.
 export function AutumnLeafTopper({ seed = 0 }: { seed?: number }) {
@@ -86,9 +87,10 @@ export function AutumnLeafTopper({ seed = 0 }: { seed?: number }) {
   )
 }
 
-export function DiyaTopper({ seed = 0 }: { seed?: number }) {
+export function DiyaTopper({ seed = 0, phase = 'day' }: { seed?: number; phase?: DiwaliPhase }) {
   const diyaGradId = useId()
   const flameGradId = useId()
+  const { evening } = diwaliTheme(phase)
 
   return (
     <svg
@@ -99,12 +101,20 @@ export function DiyaTopper({ seed = 0 }: { seed?: number }) {
       aria-hidden="true"
     >
       {/* Soft warm flame aura glow (clean SVG vector, zero blur filter overhead) */}
-      <circle cx="48" cy="50" r="38" fill="rgba(251, 191, 36, 0.22)" />
+      {evening && <circle cx="48" cy="50" r="38" fill="rgba(251, 191, 36, 0.14)" />}
+      {/* A still lotus crest and mango leaves give the lamp a crafted silhouette. */}
+      <g transform="translate(48 64)">
+        {[-65, -40, 0, 40, 65].map((angle, i) => (
+          <ellipse key={angle} cy="-23" rx="6" ry="20" transform={`rotate(${angle})`}
+            fill={i % 2 ? '#b77855' : '#9b5967'} stroke="#dbb57e" strokeWidth=".7" />
+        ))}
+        <path d="M-20 5Q-43-13-40 2Q-35 15-20 5M20 5Q43-13 40 2Q35 15 20 5" fill="#63775a" stroke="#a4a875" strokeWidth=".7" />
+      </g>
       <defs>
         <linearGradient id={diyaGradId} x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#ea580c" />
-          <stop offset="60%" stopColor="#c2410c" />
-          <stop offset="100%" stopColor="#7c2d12" />
+          <stop offset="0%" stopColor={evening ? '#d6a15b' : '#b77b49'} />
+          <stop offset="60%" stopColor="#956039" />
+          <stop offset="100%" stopColor="#563523" />
         </linearGradient>
         <radialGradient id={flameGradId} cx="50%" cy="60%" r="50%">
           <stop offset="0%" stopColor="#ffffff" />
@@ -117,7 +127,7 @@ export function DiyaTopper({ seed = 0 }: { seed?: number }) {
 
 
       {/* Static ambient glow halo */}
-      <circle cx="48" cy="38" r="24" fill="rgba(251, 191, 36, 0.25)" />
+      {evening && <circle cx="48" cy="38" r="24" fill="rgba(251, 191, 36, 0.18)" />}
 
       {/* Still Teardrop Flame */}
       <g>

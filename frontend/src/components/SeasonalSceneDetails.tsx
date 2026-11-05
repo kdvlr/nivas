@@ -1,33 +1,6 @@
 import type { SkyPhase } from './sky/skyEngine'
 
 // Small SVG groups share the existing horizon. No new canvas, blur, or timers.
-export function DiwaliSceneDetails({ phase }: { phase: SkyPhase }) {
-  const evening = phase === 'dusk' || phase === 'night'
-  return (
-    <g aria-hidden="true">
-      {/* Still water and broken reflections below the steps. */}
-      <path d="M0 169Q450 164 960 171T1920 169V188H0Z" fill={evening ? '#172e40' : '#537c83'} opacity="0.85" />
-      {[96, 210, 400, 620, 1300, 1520, 1710, 1824].map((x, i) => (
-        <g key={x} opacity={evening ? 0.65 : 0.22} stroke="#fbbf24" strokeLinecap="round">
-          <path d={`M${x - 5} 173h10m-13 4h16m-12 4h8`} strokeWidth="1.4" />
-          <ellipse cx={x} cy="167" rx="5" ry="2" fill="#9a3412" stroke="none" />
-          <path d={`M${x} 165q-3-5 0-8q3 3 0 8`} fill={i % 2 ? '#fef08a' : '#fbbf24'} stroke="none" />
-        </g>
-      ))}
-      {/* Marigold garlands stay at the outer corners, clear of the photos. */}
-      {[0, 1].map(side => (
-        <g key={side} transform={side ? 'translate(1920 0) scale(-1 1)' : undefined}>
-          <path d="M0 28Q80 68 160 28" fill="none" stroke="#65752b" strokeWidth="2" />
-          {Array.from({ length: 13 }, (_, i) => (
-            <circle key={i} cx={i * 13} cy={28 + Math.sin(i / 12 * Math.PI) * 20}
-              r="4" fill={i % 2 ? '#f59e0b' : '#ea580c'} />
-          ))}
-        </g>
-      ))}
-    </g>
-  )
-}
-
 export function FallSceneDetails({ phase, thanksgiving }: { phase: SkyPhase; thanksgiving: boolean }) {
   const evening = phase === 'dusk' || phase === 'night'
   return (
