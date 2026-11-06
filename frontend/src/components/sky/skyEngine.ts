@@ -2936,8 +2936,8 @@ export function startFxCanvas(
           rockets.push({
             x: rx,
             y: diwali ? h - 30 : h + 15,
-            targetY: h * rand(0.08, 0.38),
-            speed: isBottle ? rand(700, 950) : rand(620, 880),
+            targetY: diwali ? h * rand(0.65, 0.85) : h * rand(0.08, 0.38),
+            speed: isBottle ? rand(460, 640) : rand(620, 880),
             color: fireworkColors[Math.floor(Math.random() * fireworkColors.length)],
             trail: [],
             isBottleRocket: isBottle,
@@ -2960,8 +2960,8 @@ export function startFxCanvas(
         rockets.push({
           x: rx,
           y: diwali ? h - 30 : h + 15,
-          targetY: h * rand(0.16, 0.30),
-          speed: rand(620, 780),
+          targetY: h * rand(0.65, 0.80),
+          speed: rand(440, 580),
           color: isBow ? '#ffd700' : '#ff7a00',
           trail: [],
           isBottleRocket: true,
