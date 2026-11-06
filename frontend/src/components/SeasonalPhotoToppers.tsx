@@ -88,117 +88,335 @@ export function AutumnLeafTopper({ seed = 0 }: { seed?: number }) {
 }
 
 export function DiyaTopper({ seed = 0, phase = 'day' }: { seed?: number; phase?: DiwaliPhase }) {
-  const diyaGradId = useId()
-  const flameGradId = useId()
+  const uid = useId()
   const { evening } = diwaliTheme(phase)
+  const isBrass = Math.abs(seed) % 2 === 1
 
   return (
     <svg
       width="112"
       height="181"
       viewBox="0 0 96 155"
-      className="pointer-events-none" data-seasonal-topper="diwali"
+      className="pointer-events-none"
+      data-seasonal-topper="diwali"
       aria-hidden="true"
     >
-      {/* Soft warm flame aura glow (clean SVG vector, zero blur filter overhead) */}
-      {evening && <circle cx="48" cy="50" r="38" fill="rgba(251, 191, 36, 0.14)" />}
-      {/* A still lotus crest and mango leaves give the lamp a crafted silhouette. */}
-      <g transform="translate(48 64)">
-        {[-65, -40, 0, 40, 65].map((angle, i) => (
-          <ellipse key={angle} cy="-23" rx="6" ry="20" transform={`rotate(${angle})`}
-            fill={i % 2 ? '#b77855' : '#9b5967'} stroke="#dbb57e" strokeWidth=".7" />
-        ))}
-        <path d="M-20 5Q-43-13-40 2Q-35 15-20 5M20 5Q43-13 40 2Q35 15 20 5" fill="#63775a" stroke="#a4a875" strokeWidth=".7" />
-      </g>
       <defs>
-        <linearGradient id={diyaGradId} x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor={evening ? '#d6a15b' : '#b77b49'} />
-          <stop offset="60%" stopColor="#956039" />
-          <stop offset="100%" stopColor="#563523" />
-        </linearGradient>
-        <radialGradient id={flameGradId} cx="50%" cy="60%" r="50%">
-          <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="25%" stopColor="#fef08a" />
-          <stop offset="65%" stopColor="#f59e0b" />
-          <stop offset="100%" stopColor="#dc2626" />
+        {/* Flame Halo Aura Glow */}
+        <radialGradient id={`${uid}-flame-glow`} cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#fef08a" stopOpacity={evening ? 0.75 : 0.45} />
+          <stop offset="35%" stopColor="#f59e0b" stopOpacity={evening ? 0.38 : 0.22} />
+          <stop offset="70%" stopColor="#ea580c" stopOpacity={evening ? 0.14 : 0.08} />
+          <stop offset="100%" stopColor="#ea580c" stopOpacity="0" />
         </radialGradient>
+
+        {/* Outer Sacred Flame Gradient */}
+        <linearGradient id={`${uid}-flame-outer`} x1="50%" y1="0%" x2="50%" y2="100%">
+          <stop offset="0%" stopColor="#dc2626" />
+          <stop offset="20%" stopColor="#ea580c" />
+          <stop offset="55%" stopColor="#f59e0b" />
+          <stop offset="85%" stopColor="#fde047" />
+          <stop offset="100%" stopColor="#0284c7" />
+        </linearGradient>
+
+        {/* Inner Flame Core Gradient */}
+        <linearGradient id={`${uid}-flame-inner`} x1="50%" y1="0%" x2="50%" y2="100%">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="45%" stopColor="#fffbeb" />
+          <stop offset="80%" stopColor="#fef08a" />
+          <stop offset="100%" stopColor="#facc15" />
+        </linearGradient>
+
+        {/* Liquid Ghee Pool Gradient */}
+        <radialGradient id={`${uid}-ghee-oil`} cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#fef08a" />
+          <stop offset="45%" stopColor="#f59e0b" />
+          <stop offset="85%" stopColor="#b45309" />
+          <stop offset="100%" stopColor="#78350f" />
+        </radialGradient>
+
+        {/* Terracotta Earthenware Gradients */}
+        <linearGradient id={`${uid}-terracotta-belly`} x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#f97316" />
+          <stop offset="15%" stopColor="#ea580c" />
+          <stop offset="45%" stopColor="#c2410c" />
+          <stop offset="80%" stopColor="#9a3412" />
+          <stop offset="100%" stopColor="#5c1d0b" />
+        </linearGradient>
+        <linearGradient id={`${uid}-terracotta-rim`} x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#7c2d12" />
+          <stop offset="25%" stopColor="#ea580c" />
+          <stop offset="50%" stopColor="#fef08a" />
+          <stop offset="75%" stopColor="#ea580c" />
+          <stop offset="100%" stopColor="#7c2d12" />
+        </linearGradient>
+
+        {/* Brass Panchaloha Gradients */}
+        <linearGradient id={`${uid}-brass-belly`} x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#92400e" />
+          <stop offset="18%" stopColor="#d97706" />
+          <stop offset="45%" stopColor="#fef08a" />
+          <stop offset="65%" stopColor="#f59e0b" />
+          <stop offset="85%" stopColor="#d97706" />
+          <stop offset="100%" stopColor="#78350f" />
+        </linearGradient>
+        <linearGradient id={`${uid}-brass-rim`} x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#b45309" />
+          <stop offset="30%" stopColor="#fef08a" />
+          <stop offset="50%" stopColor="#ffffff" />
+          <stop offset="70%" stopColor="#fef08a" />
+          <stop offset="100%" stopColor="#b45309" />
+        </linearGradient>
       </defs>
 
+      <style>{`
+        @keyframes diyaFlameSway-${uid} {
+          0%, 100% {
+            transform: scale(1) rotate(0deg);
+          }
+          25% {
+            transform: scale(0.96, 1.04) rotate(-1.5deg);
+          }
+          50% {
+            transform: scale(1.03, 0.97) rotate(0.8deg);
+          }
+          75% {
+            transform: scale(0.98, 1.02) rotate(-0.8deg);
+          }
+        }
+        .diya-flame-motion-${uid} {
+          transform-origin: 48px 62px;
+          animation: diyaFlameSway-${uid} 2.4s ease-in-out infinite;
+        }
+        @keyframes diyaHaloPulse-${uid} {
+          0%, 100% { transform: scale(1); opacity: ${evening ? '0.9' : '0.75'}; }
+          50% { transform: scale(1.1); opacity: ${evening ? '1' : '0.9'}; }
+        }
+        .diya-halo-motion-${uid} {
+          transform-origin: 48px 38px;
+          animation: diyaHaloPulse-${uid} 3.2s ease-in-out infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .diya-flame-motion-${uid}, .diya-halo-motion-${uid} {
+            animation: none !important;
+          }
+        }
+      `}</style>
 
+      {/* 1. Ambient Golden Halo Glow */}
+      <circle cx="48" cy="38" r="34" fill={`url(#${uid}-flame-glow)`} className={`diya-halo-motion-${uid}`} />
 
-      {/* Static ambient glow halo */}
-      {evening && <circle cx="48" cy="38" r="24" fill="rgba(251, 191, 36, 0.18)" />}
-
-      {/* Still Teardrop Flame */}
-      <g>
-        {/* Outer flame */}
+      {/* 2. Sacred Jyoti Flame (Akhand Deepam) */}
+      <g className={`diya-flame-motion-${uid}`}>
+        {/* Outer Teardrop Flame */}
         <path
-          d="M 48 20 C 42 30, 40 42, 48 46 C 56 42, 54 30, 48 20 Z"
-          fill={`url(#${flameGradId})`}
+          d="M 48 13 C 38 27, 30 44, 38 56 C 42 62, 54 62, 58 56 C 66 44, 58 27, 48 13 Z"
+          fill={`url(#${uid}-flame-outer)`}
         />
-        {/* Inner white flame core */}
-        <ellipse cx="48" cy="40" rx="3.5" ry="5.5" fill="#ffffff" opacity="0.9" />
+        {/* Mid Golden Mantle */}
+        <path
+          d="M 48 23 C 42 33, 36 44, 41 52 C 44 57, 52 57, 55 52 C 60 44, 54 33, 48 23 Z"
+          fill={`url(#${uid}-flame-inner)`}
+        />
+        {/* Pure White-Hot Core */}
+        <path
+          d="M 48 33 C 45 39, 42 45, 45 50 C 46 52, 50 52, 51 50 C 54 45, 51 39, 48 33 Z"
+          fill="#ffffff"
+        />
+        {/* Cerulean Blue Combustion Base */}
+        <ellipse cx="48" cy="57" rx="5.5" ry="2.4" fill="#0284c7" opacity="0.8" />
+        <ellipse cx="48" cy="57.5" rx="3.5" ry="1.5" fill="#38bdf8" opacity="0.95" />
+
+        {/* Cotton Wick (Rui ki Baati) nestled in spout with charred tip */}
+        <path d="M 48 64 L 48 55" stroke="#fef3c7" strokeWidth="2.5" strokeLinecap="round" />
+        <circle cx="48" cy="55" r="1.3" fill="#292524" />
       </g>
 
-      {/* Cotton wick */}
-      <path d="M 48 46 L 48 50" stroke="#451a03" strokeWidth="2.2" strokeLinecap="round" />
+      {/* 3. Traditional Diya Body (Terracotta Mitti or Brass Temple Vilakku) */}
+      {/* Base Drop Shadow */}
+      <ellipse cx="48" cy="98" rx="32" ry="4.5" fill="#020617" opacity={evening ? 0.5 : 0.25} />
 
-      {/* Ornate Terracotta Diya Bowl */}
-      <g>
-        {/* Base shadow / foot */}
-        <ellipse cx="48" cy="74" rx="14" ry="4" fill="#5c1d06" />
+      {/* Rear Rim of Oil Reservoir */}
+      <ellipse
+        cx="48"
+        cy="63"
+        rx="34"
+        ry="7.5"
+        fill={isBrass ? '#78350f' : '#5c1d0b'}
+        stroke={isBrass ? '#b45309' : '#7c2d12'}
+        strokeWidth="1.2"
+      />
+      {/* Liquid Golden Ghee Pool */}
+      <ellipse cx="48" cy="64" rx="30" ry="5.5" fill={`url(#${uid}-ghee-oil)`} />
 
-        {/* Diya Clay Body */}
-        <path
-          d="M 22 56 
-             C 22 72, 34 76, 48 76 
-             C 62 76, 74 72, 74 56 
-             C 74 54, 70 52, 65 52 
-             C 56 52, 52 48, 48 48 
-             C 44 48, 40 52, 31 52 
-             C 26 52, 22 54, 22 56 Z"
-          fill={`url(#${diyaGradId})`}
-        />
+      {/* Front Diya Bowl with authentic pinched center spout */}
+      <path
+        d="M 14 63
+           C 12 79, 26 94, 43 96
+           L 40 102 L 56 102 L 53 96
+           C 70 94, 84 79, 82 63
+           C 76 69, 64 73, 53 71
+           C 51 70, 49 67, 48 64
+           C 47 67, 45 70, 43 71
+           C 32 73, 20 69, 14 63 Z"
+        fill={isBrass ? `url(#${uid}-brass-belly)` : `url(#${uid}-terracotta-belly)`}
+        stroke={isBrass ? '#78350f' : '#5c1d0b'}
+        strokeWidth="1"
+      />
 
-        {/* Diya Rim Beading / Gold Filigree */}
-        <path
-          d="M 23 54 Q 48 58 73 54"
-          stroke="#facc15"
-          strokeWidth="1.8"
-          strokeDasharray="2.5 2.5"
-          fill="none"
-        />
+      {/* Pinched Spout Center Accent */}
+      <path
+        d="M 43 64 C 45 61, 51 61, 53 64 L 51 68 C 49 69, 47 69, 45 68 Z"
+        fill={isBrass ? '#fef08a' : '#ea580c'}
+        stroke="#fde047"
+        strokeWidth="0.8"
+      />
 
-        {/* Decorative floral carving on bowl */}
-        <path
-          d="M 38 64 Q 48 70 58 64 M 44 67 Q 48 71 52 67"
-          stroke="#fbbf24"
-          strokeWidth="1.4"
-          strokeLinecap="round"
-          fill="none"
-        />
-        <circle cx="48" cy="62" r="2" fill="#facc15" />
-      </g>
+      {/* Fluted Rim Band */}
+      <path
+        d="M 14 63 C 24 70, 34 73, 44 71 L 48 64 L 52 71 C 62 73, 72 70, 82 63"
+        fill="none"
+        stroke={isBrass ? `url(#${uid}-brass-rim)` : `url(#${uid}-terracotta-rim)`}
+        strokeWidth={isBrass ? '3' : '2.6'}
+        strokeLinecap="round"
+      />
 
-      {/* Marigolds distinguish the festival topper without animated particles. */}
-      <g transform={seed % 2 === 0 ? 'translate(96 0) scale(-1 1)' : undefined}>
-        {[{x: 22, y: 74}, {x: 32, y: 80}, {x: 43, y: 82}].map(({x, y}) => (
-          <g key={x} transform={`translate(${x} ${y})`}>
-            <circle r="5.5" fill="#ea580c" />
-            <path d="M-4 0H4M0-4V4M-3-3L3 3M-3 3L3-3" stroke="#fbbf24" strokeWidth="2.5" strokeLinecap="round" />
-            <circle r="1.8" fill="#b45309" />
+      {/* Decorative Traditional Motifs on Clay / Brass */}
+      {!isBrass ? (
+        <>
+          {/* Stamped Diwali Dots (Chitrakari) along Rim */}
+          <g fill="#fef08a">
+            <circle cx="20" cy="66.5" r="1.4" />
+            <circle cx="27" cy="69" r="1.4" />
+            <circle cx="35" cy="70.8" r="1.4" />
+            <circle cx="61" cy="70.8" r="1.4" />
+            <circle cx="69" cy="69" r="1.4" />
+            <circle cx="76" cy="66.5" r="1.4" />
           </g>
-        ))}
+          {/* Auspicious Kumkum Dots */}
+          <g fill="#dc2626">
+            <circle cx="23.5" cy="67.8" r="1.1" />
+            <circle cx="31" cy="70" r="1.1" />
+            <circle cx="39.5" cy="71.2" r="1.1" />
+            <circle cx="56.5" cy="71.2" r="1.1" />
+            <circle cx="65" cy="70" r="1.1" />
+            <circle cx="72.5" cy="67.8" r="1.1" />
+          </g>
+          {/* Central Sacred Kumkum Floral Motif on Belly */}
+          <g transform="translate(48, 83)">
+            <ellipse cx="0" cy="0" rx="3.8" ry="4.2" fill="#991b1b" stroke="#f59e0b" strokeWidth="0.8" />
+            <circle cx="0" cy="0" r="1.8" fill="#fde047" />
+            <circle cx="0" cy="0" r="0.8" fill="#991b1b" />
+            <path d="M -16 -6 C -12 2, -6 6, 0 3" fill="none" stroke="#ea580c" strokeWidth="1.2" opacity="0.85" />
+            <path d="M 16 -6 C 12 2, 6 6, 0 3" fill="none" stroke="#ea580c" strokeWidth="1.2" opacity="0.85" />
+            <path d="M -22 -10 C -18 -1, -10 6, 0 5" fill="none" stroke="#f59e0b" strokeWidth="0.8" opacity="0.75" />
+            <path d="M 22 -10 C 18 -1, 10 6, 0 5" fill="none" stroke="#f59e0b" strokeWidth="0.8" opacity="0.75" />
+          </g>
+        </>
+      ) : (
+        <>
+          {/* Engraved Brass Beading Dots */}
+          <g fill="#ffffff" opacity="0.95">
+            <circle cx="20" cy="66.5" r="1.4" />
+            <circle cx="27" cy="69" r="1.4" />
+            <circle cx="35" cy="70.8" r="1.4" />
+            <circle cx="61" cy="70.8" r="1.4" />
+            <circle cx="69" cy="69" r="1.4" />
+            <circle cx="76" cy="66.5" r="1.4" />
+          </g>
+          {/* Ornate Brass Filigree Ribs */}
+          <g stroke="#92400e" strokeWidth="1.2" fill="none" opacity="0.7">
+            <path d="M 28 72 C 32 82, 40 92, 44 96" />
+            <path d="M 68 72 C 64 82, 56 92, 52 96" />
+            <path d="M 48 74 L 48 96" stroke="#fef08a" strokeWidth="1.4" />
+          </g>
+        </>
+      )}
+
+      {/* Pedestal Stand (Peetham / Base) */}
+      <path
+        d="M 39 101 L 34 107 L 62 107 L 57 101 Z"
+        fill={isBrass ? `url(#${uid}-brass-belly)` : '#5c1d0b'}
+        stroke={isBrass ? '#78350f' : '#7c2d12'}
+        strokeWidth="0.8"
+      />
+      <ellipse
+        cx="48"
+        cy="107"
+        rx="14"
+        ry="2.2"
+        fill={isBrass ? '#f59e0b' : '#7c2d12'}
+        stroke={isBrass ? '#78350f' : '#ea580c'}
+        strokeWidth="0.8"
+      />
+      <line x1="33" y1="107" x2="63" y2="107" stroke="#fde047" strokeWidth="1.4" />
+
+      {/* 4. Fresh Marigold Garland (Genda Phool) & Auspicious Mango Leaves (Maavilai) */}
+      <g>
+        {/* Mango Leaves */}
+        <path d="M 34 105 C 22 103, 8 108, 4 114 C 12 117, 25 115, 35 108 Z" fill="#15803d" stroke="#14532d" strokeWidth="0.7" />
+        <path d="M 6 113 Q 20 110 34 106" fill="none" stroke="#22c55e" strokeWidth="0.7" opacity="0.7" />
+
+        <path d="M 62 105 C 74 103, 88 108, 92 114 C 84 117, 71 115, 61 108 Z" fill="#15803d" stroke="#14532d" strokeWidth="0.7" />
+        <path d="M 90 113 Q 76 110 62 106" fill="none" stroke="#22c55e" strokeWidth="0.7" opacity="0.7" />
+
+        {/* Marigold Blossom Cluster */}
+        <g transform="translate(24, 110)">
+          <circle r="7" fill="#ea580c" />
+          <circle r="5" fill="#f59e0b" />
+          <path d="M-5 0H5M0-5V5M-3.5-3.5L3.5 3.5M-3.5 3.5L3.5-3.5" stroke="#fde047" strokeWidth="2.4" strokeLinecap="round" />
+          <circle r="2" fill="#b45309" />
+        </g>
+        <g transform="translate(72, 110)">
+          <circle r="7" fill="#ea580c" />
+          <circle r="5" fill="#f59e0b" />
+          <path d="M-5 0H5M0-5V5M-3.5-3.5L3.5 3.5M-3.5 3.5L3.5-3.5" stroke="#fde047" strokeWidth="2.4" strokeLinecap="round" />
+          <circle r="2" fill="#b45309" />
+        </g>
+        <g transform="translate(36, 112)">
+          <circle r="7.5" fill="#c2410c" />
+          <circle r="5.5" fill="#ea580c" />
+          <path d="M-5 0H5M0-5V5M-3.5-3.5L3.5 3.5M-3.5 3.5L3.5-3.5" stroke="#facc15" strokeWidth="2.6" strokeLinecap="round" />
+          <circle r="2.2" fill="#7c2d12" />
+        </g>
+        <g transform="translate(60, 112)">
+          <circle r="7.5" fill="#c2410c" />
+          <circle r="5.5" fill="#ea580c" />
+          <path d="M-5 0H5M0-5V5M-3.5-3.5L3.5 3.5M-3.5 3.5L3.5-3.5" stroke="#facc15" strokeWidth="2.6" strokeLinecap="round" />
+          <circle r="2.2" fill="#7c2d12" />
+        </g>
+        <g transform="translate(48, 114)">
+          <circle r="8.5" fill="#ea580c" />
+          <circle r="7" fill="#f59e0b" />
+          <circle r="4.5" fill="#fde047" />
+          <path d="M-6 0H6M0-6V6M-4.5-4.5L4.5 4.5M-4.5 4.5L4.5-4.5" stroke="#fef08a" strokeWidth="2.8" strokeLinecap="round" />
+          <circle r="2.4" fill="#b45309" />
+        </g>
       </g>
 
-      {/* Golden Bead Tether Suspender lifting photo */}
-      <ellipse cx="48" cy="78" rx="3.5" ry="2" fill="#ca8a04" />
-      <g stroke="#facc15" strokeWidth="1.6" fill="none">
-        <path d="M 48 79 C 45 98 52 118 48 153" stroke="#f59e0b" strokeWidth="1.8" strokeDasharray="3 3" />
-        <circle cx="48" cy="85" r="1.6" fill="#facc15" />
-        <circle cx="47" cy="102" r="1.6" fill="#facc15" />
-        <circle cx="49" cy="120" r="1.6" fill="#facc15" />
-        <circle cx="48" cy="138" r="1.6" fill="#facc15" />
+      {/* 5. Sacred Suspender Cord with Golden Beads, Temple Bell & Frame Anchor */}
+      {/* Dangling golden temple bell (Ghanti) beneath center blossom */}
+      <g transform="translate(48, 124)">
+        <path d="M -4 0 L 4 0 L 5 6 L -5 6 Z" fill="#d97706" stroke="#fef08a" strokeWidth="0.8" />
+        <ellipse cx="0" cy="6" rx="5" ry="1.4" fill="#f59e0b" />
+        <circle cx="0" cy="8" r="1.5" fill="#fde047" />
+      </g>
+
+      {/* Sacred Red & Gold Kalava Thread */}
+      <g strokeLinecap="round">
+        <path d="M 48 130 C 47 137, 49 143, 48 149" stroke="#dc2626" strokeWidth="2" fill="none" />
+        <path d="M 48 130 C 49 137, 47 143, 48 149" stroke="#f59e0b" strokeWidth="1.4" strokeDasharray="2.5 2.5" fill="none" />
+      </g>
+
+      {/* Polished Golden Beads & Pearl */}
+      <circle cx="48" cy="134" r="2.2" fill="#facc15" stroke="#b45309" strokeWidth="0.6" />
+      <circle cx="48" cy="142" r="2.5" fill="#ffffff" stroke="#cbd5e1" strokeWidth="0.6" />
+
+      {/* Frame Anchor Hook / Brass Filigree Rosette Clip */}
+      <g transform="translate(48, 149)">
+        <rect x="-7" y="-1" width="14" height="4.5" rx="2" fill="#d97706" stroke="#fde047" strokeWidth="0.8" />
+        <circle cx="0" cy="1.2" r="2.2" fill="#f59e0b" />
+        <circle cx="0" cy="1.2" r="1.1" fill="#dc2626" />
       </g>
     </svg>
   )

@@ -95,7 +95,9 @@ export const DiwaliHorizon = memo(function DiwaliHorizon({ phase, quality, pause
             const x = 44 + group * 400 + i * 104
             return <g key={i} transform={`translate(${x} 24)`}>
               {t.evening && <ellipse cy="-5" rx="15" ry="12" fill="#f6bd60" opacity=".12" />}
-              <path d="M-10 0Q0 13 10 0Z" fill="#a65738" stroke="#d69458" strokeWidth=".8" />
+              <path d="M-11 0Q-9 9 1 8Q9 7 10 1L12-2L5-1Q-5-5-11 0Z" fill="#ad4931" stroke="#d4855b" strokeWidth=".8" />
+              <path d="M-9 0Q-4-4 4 0L9-1Q6 5-2 4Q-7 4-9 0Z" fill="#713b27" />
+              <path d="M-1 2L0-1" stroke="#eed4a1" strokeWidth="1.3" />
               <path d="M0 1Q-5-5 0-13Q5-5 0 1Z" fill={t.evening ? '#ffdf9d' : '#e9b75d'} />
               <path d="M0 0Q-2-3 0-6Q2-3 0 0Z" fill="#fff3ce" />
             </g>

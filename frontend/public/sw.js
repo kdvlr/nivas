@@ -1,5 +1,5 @@
 // Nivas Progressive Web App Service Worker
-const CACHE_NAME = 'nivas-cache-v12';
+const CACHE_NAME = 'nivas-cache-v13';
 
 const PRECACHE_ASSETS = [
   '/',

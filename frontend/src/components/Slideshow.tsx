@@ -6778,21 +6778,6 @@ export default function Slideshow({
       used.add(item.url)
     }
 
-    if (result.length === 0) {
-      result.push({
-        id: 'placeholder',
-        type: 'single',
-        items: [{
-          url: '/favicon.svg',
-          displayUrl: '/favicon.svg',
-          type: 'image',
-          name: 'Nivas Celebration',
-          width: 800,
-          height: 600,
-        }],
-      })
-    }
-
     return result
   }, [photos, shuffleSeed, isPortraitViewport])
 
@@ -6869,7 +6854,7 @@ export default function Slideshow({
   useEffect(() => {
     const memoryMb = (performance as any)?.memory ? Math.round((performance as any).memory.usedJSHeapSize / 1048576) : null
     console.info(
-      `[Nivas Telemetry] Slide ${currentIdx + 1}/${slides.length} | FPS: ${fps} (${frameTimeMs}ms) | Quality: ${quality}${memoryMb !== null ? ` | Heap: ${memoryMb}MB` : ''}`
+      `[Nivas Telemetry] Slide ${slides.length ? currentIdx + 1 : 0}/${slides.length} | FPS: ${fps} (${frameTimeMs}ms) | Quality: ${quality}${memoryMb !== null ? ` | Heap: ${memoryMb}MB` : ''}`
     )
   }, [currentIdx, slides.length, fps, frameTimeMs, quality])
 
@@ -6891,12 +6876,11 @@ export default function Slideshow({
     return () => clearInterval(timer)
   }, [slides.length, selectedVideo, paused])
 
-  if (slides.length === 0) return null
-
-  const activeSlide = slides[currentIdx]
+  // Keep the seasonal scene mounted while the photo list loads.
+  const activeSlide = slides[currentIdx] ?? slides[0]
   const overcast = kind !== 'clear'
   const gradient = isDiwaliSeason(seasonalDate) ? diwaliTheme(phase).sky : SKY_GRADIENTS[phase][overcast ? 'overcast' : 'clear']
-  const items = activeSlide.items
+  const items = activeSlide?.items ?? []
   const pair = items.length > 1
 
   // Secondary timezone formatting for the clock overlay
@@ -6949,7 +6933,7 @@ export default function Slideshow({
         const start = swipeStart.current
         const end = event.changedTouches[0]?.clientX
         swipeStart.current = null
-        if (start === null || end === undefined || Math.abs(end - start) < 48) return
+        if (slides.length < 2 || start === null || end === undefined || Math.abs(end - start) < 48) return
         event.stopPropagation()
         setCurrentIdx((index) => end < start ? (index + 1) % slides.length : (index - 1 + slides.length) % slides.length)
       }}
@@ -7039,7 +7023,7 @@ export default function Slideshow({
             </div>
             <div>FPS: <span className={fps >= 45 ? 'text-emerald-400' : fps >= 30 ? 'text-amber-400' : 'text-rose-400 font-bold'}>{fps}</span> ({frameTimeMs}ms)</div>
             <div>Quality Tier: <span className="text-cyan-400 font-semibold">{quality.toUpperCase()}</span></div>
-            <div>Slide: <span className="text-white font-medium">{currentIdx + 1} / {slides.length}</span></div>
+            <div>Slide: <span className="text-white font-medium">{slides.length ? currentIdx + 1 : 0} / {slides.length}</span></div>
             {(performance as any)?.memory && (
               <div>JS Heap: <span className="text-purple-300">{Math.round((performance as any).memory.usedJSHeapSize / 1048576)} MB</span></div>
             )}
@@ -7091,7 +7075,7 @@ export default function Slideshow({
           positioned, so popLayout's layout projection was measuring for
           nothing on every frame. */}
       <AnimatePresence>
-        <motion.div
+        {activeSlide && <motion.div
           key={activeSlide.id}
           className="absolute inset-0 flex items-center justify-center gap-12 p-10"
           animate={{ zIndex: 10 }}
@@ -7111,7 +7095,7 @@ export default function Slideshow({
               onOpenVideo={setSelectedVideo}
             />
           ))}
-        </motion.div>
+        </motion.div>}
       </AnimatePresence>
 
       {/* Weather + delights (rain, snow, fireflies, birds — in front of photos) */}
@@ -7180,6 +7164,7 @@ export default function Slideshow({
         >
           <button
             aria-label="Previous slide"
+            disabled={slides.length < 2}
             onClick={(e) => {
               e.stopPropagation()
               setCurrentIdx((i) => (i - 1 + slides.length) % slides.length)
@@ -7200,6 +7185,7 @@ export default function Slideshow({
           </button>
           <button
             aria-label="Next slide"
+            disabled={slides.length < 2}
             onClick={(e) => {
               e.stopPropagation()
               setCurrentIdx((i) => (i + 1) % slides.length)
