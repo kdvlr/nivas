@@ -6,6 +6,7 @@
  * real query string first, then fall back to whatever follows the first "?".
  */
 export const getQueryParam = (key: string): string | null => {
+  if (typeof window === 'undefined') return null
   const searchQP = new URLSearchParams(window.location.search)
   if (searchQP.has(key)) return searchQP.get(key)
   const hash = window.location.hash
@@ -88,8 +89,14 @@ export function isDiwaliSeason(d?: Date): boolean {
   const date = d ?? getSeasonalDate()
   const override = getHolidayOverride()?.toLowerCase()
   if (override === 'diwali') return true
-  // In November, celebrate Diwali festival window only on Nov 7, 8, and 9
-  return date.getMonth() === 10 && date.getDate() >= 7 && date.getDate() <= 9
+  if (date.getMonth() !== 10) return false // November only (0-indexed: month 10 = November)
+
+  const day = date.getDate()
+  // Starts from Nov 6 at 6:00 PM (18:00) and ends when Nov 9 starts (midnight 00:00:00)
+  if (day === 6) {
+    return date.getHours() >= 18
+  }
+  return day === 7 || day === 8
 }
 
 export function isThanksgivingWeek(d?: Date): boolean {

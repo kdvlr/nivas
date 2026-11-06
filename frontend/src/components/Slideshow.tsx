@@ -1147,7 +1147,7 @@ function AutumnHarvestHorizon({
   const holidayOverride = getHolidayOverride()?.toLowerCase()
   const horizonOverride = getQueryParam('horizon')?.toLowerCase()
 
-  // During Diwali (Nov 7, 8, and 9, or explicit override), display the majestic Indian Temple & Ghat skyline
+  // During Diwali (starts Nov 6 at 6pm through Nov 8, or explicit override), display the majestic Indian Temple & Ghat skyline
   if ((isDiwali || holidayOverride === 'diwali' || horizonOverride === 'diwali') && horizonOverride !== 'autumn' && horizonOverride !== 'harvest') {
     return <DiwaliHorizon phase={phase} quality={quality} paused={paused} />
   }
@@ -7063,7 +7063,7 @@ export default function Slideshow({
       {/* String lights along the top sky background (behind photos & decorations, Dec 1-25) */}
       {isChristmasSeason(seasonalDate) && <StringLights />}
 
-      {/* Diwali Marigold & Mango Leaf Toran banner along the top (Nov 7-9 or ?holiday=diwali) */}
+      {/* Diwali Marigold & Mango Leaf Toran banner along the top (starts Nov 6 6pm through Nov 8 or ?holiday=diwali) */}
       {isDiwaliSeason(seasonalDate) && (
         <DiwaliMarigoldBanner phase={phase} quality={quality} paused={skyState.paused} />
       )}
