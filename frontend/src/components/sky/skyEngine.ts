@@ -429,6 +429,9 @@ interface FireworksSpark {
   rotSpeed?: number
   hasGlitter?: boolean
   isSmoke?: boolean
+  isStreak?: boolean
+  isGlint?: boolean
+  streakLength?: number
 }
 
 interface FireworksFlash {
@@ -2872,6 +2875,11 @@ export function startFxCanvas(
     // Festive Fireworks: New Year's Season, Diwali Nights & Swara's Birthday Dusk/Night!
     const wantsFireworks = newYearSeason || wantsDiwaliGround || wantsSwaraFireworks
     if (wantsFireworks) {
+      // Keep spark and flash limits capped for smooth 60 FPS performance on kiosk tablets
+      const sparkLimit = diwali
+        ? (state.quality === 'high' ? 240 : state.quality === 'medium' ? 160 : 80)
+        : 130
+
       // A photo entrance defers a launch; it never consumes a short launch
       // window. Existing rockets and sparks keep integrating below.
       const launchDue = diwali && !wantsSwaraFireworks
@@ -3382,9 +3390,10 @@ export function startFxCanvas(
         if (!state.quiet && t >= nextAnaar) {
           anaarStart = t
           anaarRight = !anaarRight
-          nextAnaar = t + rand(8_000, 13_000)
+          nextAnaar = t + rand(9_000, 14_000)
         }
-        const anaarProgress = (t - anaarStart) / 4_200
+        const anaarDuration = 5_400
+        const anaarProgress = (t - anaarStart) / anaarDuration
         const anaarBurning = anaarProgress >= 0 && anaarProgress < 1
 
         for (const right of [false, true]) {
@@ -3448,116 +3457,318 @@ export function startFxCanvas(
             ctx.fill()
           }
 
-          // --- 2. Authentic Terracotta Flower Pot (Anaar / Fountain) ---
+          // --- 2. Authentic Diwali Terracotta Flower Pot (Anaar / Fountain) ---
+          // Modeled faithfully after traditional Indian Diwali conical anaar crackers
           const potX = right ? w * 0.84 : w * 0.16
-          const potW = 44
-          const potH = 46
+          const potW = 56
+          const potH = 74
+          const potTop = groundY - potH
 
-          // Flanged earthenware base foot
-          ctx.fillStyle = '#7c2d12'
-          ctx.fillRect(potX - potW * 0.5 - 2, groundY - 5, potW + 4, 5)
-
-          // Terracotta conical pottery body with graceful taper
-          const clayGrad = ctx.createLinearGradient(potX - potW * 0.5, 0, potX + potW * 0.5, 0)
-          clayGrad.addColorStop(0, '#78350f')
-          clayGrad.addColorStop(0.25, '#c2410c')
-          clayGrad.addColorStop(0.5, '#ea580c')
-          clayGrad.addColorStop(0.85, '#9a3412')
-          clayGrad.addColorStop(1, '#451a03')
-
-          ctx.fillStyle = clayGrad
+          // Soft contact drop shadow beneath pot base
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
           ctx.beginPath()
-          ctx.moveTo(potX - potW * 0.5, groundY - 5)
-          ctx.quadraticCurveTo(potX - potW * 0.5 + 4, groundY - 26, potX - 8, groundY - potH)
-          ctx.lineTo(potX + 8, groundY - potH)
-          ctx.quadraticCurveTo(potX + potW * 0.5 - 4, groundY - 26, potX + potW * 0.5, groundY - 5)
+          ctx.ellipse(potX, groundY - 2, potW * 0.55, 6, 0, 0, Math.PI * 2)
+          ctx.fill()
+
+          // Warm ground radiance behind the pot (drawn before pot so pottery colors stay crisp & opaque)
+          if (anaarBurning && right === anaarRight) {
+            const rad = ctx.createRadialGradient(potX, groundY - 15, 0, potX, groundY - 15, 240)
+            rad.addColorStop(0, 'rgba(255, 235, 130, 0.85)')
+            rad.addColorStop(0.35, 'rgba(245, 158, 11, 0.45)')
+            rad.addColorStop(0.7, 'rgba(234, 88, 12, 0.18)')
+            rad.addColorStop(1, 'transparent')
+            ctx.fillStyle = rad
+            ctx.beginPath()
+            ctx.arc(potX, groundY - 15, 240, 0, Math.PI * 2)
+            ctx.fill()
+          }
+
+          // 1. Scalloped Earthenware Base Foot (Rich Maroon / Clay)
+          ctx.fillStyle = '#7f1d1d'
+          ctx.beginPath()
+          ctx.moveTo(potX - potW * 0.52, groundY - 10)
+          ctx.lineTo(potX - potW * 0.55, groundY)
+          ctx.lineTo(potX + potW * 0.55, groundY)
+          ctx.lineTo(potX + potW * 0.52, groundY - 10)
           ctx.closePath()
           ctx.fill()
 
-          // Traditional Festive Brand Band (Vivid Red & Gold Foil)
+          // Scalloped gold beaded edge along base foot
+          ctx.fillStyle = '#ffd700'
+          const numBeads = 9
+          for (let b = 0; b < numBeads; b++) {
+            const bx = potX - potW * 0.46 + (b / (numBeads - 1)) * (potW * 0.92)
+            ctx.beginPath()
+            ctx.arc(bx, groundY - 3, 2.2, 0, Math.PI * 2)
+            ctx.fill()
+          }
+
+          // 2. Lower Conical Band (Vibrant Royal Blue with Golden Polka Dots)
+          const blueGrad = ctx.createLinearGradient(potX - potW * 0.5, 0, potX + potW * 0.5, 0)
+          blueGrad.addColorStop(0, '#1e3a8a')
+          blueGrad.addColorStop(0.3, '#2563eb')
+          blueGrad.addColorStop(0.7, '#3b82f6')
+          blueGrad.addColorStop(1, '#1d4ed8')
+          ctx.fillStyle = blueGrad
+          ctx.beginPath()
+          ctx.moveTo(potX - 24, groundY - 24)
+          ctx.lineTo(potX - potW * 0.52, groundY - 10)
+          ctx.lineTo(potX + potW * 0.52, groundY - 10)
+          ctx.lineTo(potX + 24, groundY - 24)
+          ctx.closePath()
+          ctx.fill()
+
+          // Bright golden polka dots across the blue band
+          for (let d = 0; d < 5; d++) {
+            const dx = potX - 18 + d * 9
+            ctx.fillStyle = '#facc15'
+            ctx.beginPath()
+            ctx.arc(dx, groundY - 17, 3.2, 0, Math.PI * 2)
+            ctx.fill()
+            ctx.fillStyle = '#fef08a'
+            ctx.beginPath()
+            ctx.arc(dx - 0.7, groundY - 17.7, 1.2, 0, Math.PI * 2)
+            ctx.fill()
+          }
+
+          // Gold divider trim bar
+          ctx.fillStyle = '#ffd700'
+          ctx.fillRect(potX - 24, groundY - 25.5, 48, 2.5)
+
+          // 3. Main Conical Body (Festive Crimson Red Cone)
+          const redGrad = ctx.createLinearGradient(potX - 24, 0, potX + 24, 0)
+          redGrad.addColorStop(0, '#991b1b')
+          redGrad.addColorStop(0.25, '#dc2626')
+          redGrad.addColorStop(0.55, '#ef4444')
+          redGrad.addColorStop(0.85, '#dc2626')
+          redGrad.addColorStop(1, '#7f1d1d')
+          ctx.fillStyle = redGrad
+          ctx.beginPath()
+          ctx.moveTo(potX - 24, groundY - 24)
+          ctx.lineTo(potX - 11, groundY - 56)
+          ctx.lineTo(potX + 11, groundY - 56)
+          ctx.lineTo(potX + 24, groundY - 24)
+          ctx.closePath()
+          ctx.fill()
+
+          // Upper and lower gold pinstripes on red cone
+          ctx.fillStyle = '#ffd700'
+          ctx.fillRect(potX - 23, groundY - 28, 46, 1.5)
+          ctx.fillRect(potX - 12.5, groundY - 55, 25, 1.5)
+
+          // 4. Central Festive Medallion (Authentic Traditional Flame/Diya Seal)
+          const medY = groundY - 39
+          // Outer Gold Ring
+          ctx.fillStyle = '#ffd700'
+          ctx.beginPath()
+          ctx.arc(potX, medY, 12, 0, Math.PI * 2)
+          ctx.fill()
+
+          // Emerald Green Border Ring
+          ctx.fillStyle = '#15803d'
+          ctx.beginPath()
+          ctx.arc(potX, medY, 10.5, 0, Math.PI * 2)
+          ctx.fill()
+
+          // Radiant Warm Yellow Background
+          ctx.fillStyle = '#fef08a'
+          ctx.beginPath()
+          ctx.arc(potX, medY, 8.8, 0, Math.PI * 2)
+          ctx.fill()
+
+          // Stylized Red Flame Motif
           ctx.fillStyle = '#dc2626'
           ctx.beginPath()
-          ctx.moveTo(potX - 16, groundY - 14)
-          ctx.lineTo(potX - 11, groundY - 32)
-          ctx.lineTo(potX + 11, groundY - 32)
-          ctx.lineTo(potX + 16, groundY - 14)
+          // Central flame teardrop
+          ctx.moveTo(potX, medY - 6.5)
+          ctx.quadraticCurveTo(potX + 3.8, medY, potX, medY + 5)
+          ctx.quadraticCurveTo(potX - 3.8, medY, potX, medY - 6.5)
+          ctx.fill()
+
+          // Flanking flame petal flourishes
+          ctx.beginPath()
+          ctx.moveTo(potX - 1, medY + 2)
+          ctx.quadraticCurveTo(potX - 5.5, medY - 2, potX - 3, medY - 4)
+          ctx.quadraticCurveTo(potX - 3, medY, potX - 1, medY + 2)
+          ctx.moveTo(potX + 1, medY + 2)
+          ctx.quadraticCurveTo(potX + 5.5, medY - 2, potX + 3, medY - 4)
+          ctx.quadraticCurveTo(potX + 3, medY, potX + 1, medY + 2)
+          ctx.fill()
+
+          ctx.fillStyle = '#ffd700'
+          ctx.beginPath()
+          ctx.arc(potX, medY - 0.5, 1.4, 0, Math.PI * 2)
+          ctx.fill()
+
+          // 5. Upper Shoulder Tier (Festive Emerald Green Conical Band)
+          const greenGrad = ctx.createLinearGradient(potX - 11, 0, potX + 11, 0)
+          greenGrad.addColorStop(0, '#14532d')
+          greenGrad.addColorStop(0.35, '#16a34a')
+          greenGrad.addColorStop(0.7, '#22c55e')
+          greenGrad.addColorStop(1, '#15803d')
+          ctx.fillStyle = greenGrad
+          ctx.beginPath()
+          ctx.moveTo(potX - 11, groundY - 56)
+          ctx.lineTo(potX - 7.5, groundY - 67)
+          ctx.lineTo(potX + 7.5, groundY - 67)
+          ctx.lineTo(potX + 11, groundY - 56)
           ctx.closePath()
           ctx.fill()
 
-          // Gold Foil Trim & Stamped Medallion
+          // Gold divider trim
           ctx.fillStyle = '#ffd700'
-          ctx.fillRect(potX - 16, groundY - 16, 32, 2.5)
-          ctx.fillRect(potX - 11.5, groundY - 33, 23, 2.5)
-          ctx.beginPath()
-          ctx.arc(potX, groundY - 23, 3.5, 0, Math.PI * 2)
-          ctx.fill()
+          ctx.fillRect(potX - 8, groundY - 67, 16, 2)
 
-          // Flared earthenware top nozzle rim & charred mouth
+          // 6. Golden Brass Neck Collar & Earthenware Nozzle Mouth
+          ctx.fillStyle = '#facc15'
+          ctx.fillRect(potX - 6.5, groundY - 70, 13, 3)
+
           ctx.fillStyle = '#451a03'
-          ctx.fillRect(potX - 9, groundY - potH - 4, 18, 5)
+          ctx.fillRect(potX - 5.5, groundY - 74, 11, 4)
           ctx.fillStyle = '#1c1917'
-          ctx.fillRect(potX - 6, groundY - potH - 4, 12, 2)
+          ctx.fillRect(potX - 3.5, groundY - 74, 7, 2)
 
-          // Protruding twisted cotton fuse
-          ctx.strokeStyle = '#e7e5e4'
-          ctx.lineWidth = 1.8
-          ctx.beginPath()
-          ctx.moveTo(potX, groundY - potH - 2)
-          ctx.lineTo(potX + 4, groundY - potH - 12)
-          ctx.stroke()
-
-          // Anaar Active Eruption (Towering Golden Zari Fountain!)
-          if (anaarBurning && right === anaarRight) {
-            // Intense warm golden ground radiance
-            const grad = ctx.createRadialGradient(potX, groundY - 20, 0, potX, groundY - 20, 130)
-            grad.addColorStop(0, 'rgba(255, 245, 180, 0.85)')
-            grad.addColorStop(0.35, 'rgba(245, 158, 11, 0.45)')
-            grad.addColorStop(0.7, 'rgba(234, 88, 12, 0.2)')
-            grad.addColorStop(1, 'transparent')
-            ctx.fillStyle = grad
+          // Protruding twisted cotton fuse (when idle)
+          if (!anaarBurning || right !== anaarRight) {
+            ctx.strokeStyle = '#e5e7eb'
+            ctx.lineWidth = 2.0
+            ctx.lineCap = 'round'
             ctx.beginPath()
-            ctx.arc(potX, groundY - 20, 130, 0, Math.PI * 2)
+            ctx.moveTo(potX, groundY - 73)
+            ctx.quadraticCurveTo(potX + 5, groundY - 80, potX + 6, groundY - 85)
+            ctx.stroke()
+
+            ctx.fillStyle = '#ef4444'
+            ctx.beginPath()
+            ctx.arc(potX + 6, groundY - 85, 1.8, 0, Math.PI * 2)
+            ctx.fill()
+          }
+
+          // 7. Anaar Active Eruption (Towering Golden Zari Fountain!)
+          if (anaarBurning && right === anaarRight) {
+            const potTopY = groundY - 74
+
+            // Dynamic roaring nozzle flame tongue
+            const isRoaring = anaarProgress >= 0.22 && anaarProgress < 0.82
+            const flameH = (isRoaring ? 46 : 24) * (0.85 + 0.3 * Math.sin(t * 0.04) + 0.15 * Math.sin(t * 0.09))
+            const flameW = (isRoaring ? 14 : 9) + 2.5 * Math.sin(t * 0.035)
+
+            // Outer fiery orange tongue
+            ctx.fillStyle = '#f97316'
+            ctx.beginPath()
+            ctx.moveTo(potX - flameW * 0.5, potTopY)
+            ctx.quadraticCurveTo(potX - flameW * 0.6, potTopY - flameH * 0.6, potX, potTopY - flameH)
+            ctx.quadraticCurveTo(potX + flameW * 0.6, potTopY - flameH * 0.6, potX + flameW * 0.5, potTopY)
+            ctx.closePath()
             ctx.fill()
 
-            // White-hot incandescent nozzle mouth
+            // Mid golden-yellow flame
+            ctx.fillStyle = '#fde047'
+            ctx.beginPath()
+            ctx.moveTo(potX - flameW * 0.35, potTopY)
+            ctx.quadraticCurveTo(potX - flameW * 0.4, potTopY - flameH * 0.5, potX, potTopY - flameH * 0.82)
+            ctx.quadraticCurveTo(potX + flameW * 0.4, potTopY - flameH * 0.5, potX + flameW * 0.35, potTopY)
+            ctx.closePath()
+            ctx.fill()
+
+            // Incandescent white-hot flame core
             ctx.fillStyle = '#ffffff'
             ctx.beginPath()
-            ctx.arc(potX, groundY - potH - 2, 4.5, 0, Math.PI * 2)
+            ctx.moveTo(potX - flameW * 0.2, potTopY)
+            ctx.quadraticCurveTo(potX - flameW * 0.2, potTopY - flameH * 0.3, potX, potTopY - flameH * 0.5)
+            ctx.quadraticCurveTo(potX + flameW * 0.2, potTopY - flameH * 0.3, potX + flameW * 0.2, potTopY)
+            ctx.closePath()
             ctx.fill()
 
-            if (anaarProgress >= 0.08 && anaarProgress < 0.92) {
-              // Roaring fountain spray leaping 180px–300px high!
-              const sparkCount = state.quality === 'low' ? 2 : state.quality === 'medium' ? 3 : 5
-              const peakMult = anaarProgress > 0.30 && anaarProgress < 0.75 ? 1.0 : 0.78
-              for (let s = 0; s < sparkCount; s++) {
-                const sprayAngle = rand(-0.28, 0.28)
-                const spraySpeed = rand(220, 370) * peakMult
+            if (anaarProgress >= 0.08 && anaarProgress < 0.94) {
+              const peakMult = isRoaring ? 1.0 : anaarProgress < 0.22 ? 0.70 : 0.55
+              const count = state.quality === 'low' ? 3 : state.quality === 'medium' ? 5 : 7
+
+              // A. Dense Vertical Jet Spire (Shoots high up in a tight white/yellow column)
+              for (let s = 0; s < Math.ceil(count * 0.45); s++) {
+                const spireSpeed = rand(520, 800) * peakMult
+                sparks.push({
+                  x: potX + rand(-3.5, 3.5),
+                  y: potTopY - rand(4, 16),
+                  vx: rand(-14, 14),
+                  vy: -spireSpeed,
+                  color: ['#ffffff', '#fffde7', '#fff500', '#facc15'][s % 4],
+                  alpha: 1.0,
+                  decay: rand(0.85, 1.35),
+                  size: rand(2.0, 2.8),
+                  gravity: 360,
+                  isStreak: true,
+                  streakLength: rand(28, 44),
+                  flicker: true,
+                })
+              }
+
+              // B. Cascading Outer Umbrella / Weeping Zari Rain (Fanning wide needle streaks)
+              for (let s = 0; s < Math.floor(count * 0.55); s++) {
+                const sprayAngle = rand(-0.46, 0.46)
+                const spraySpeed = rand(340, 580) * peakMult
                 sparks.push({
                   x: potX + rand(-4, 4),
-                  y: groundY - potH,
-                  vx: Math.sin(sprayAngle) * spraySpeed + rand(-15, 15),
+                  y: potTopY - rand(2, 10),
+                  vx: Math.sin(sprayAngle) * spraySpeed + rand(-16, 16),
                   vy: -Math.cos(sprayAngle) * spraySpeed,
-                  color: ['#ffffff', '#fffbeb', '#ffd700', '#f59e0b', '#ff7426', '#facc15'][s % 6],
+                  color: ['#fff500', '#ffd700', '#facc15', '#fbbf24', '#f59e0b', '#ff7426'][s % 6],
                   alpha: 1.0,
-                  decay: rand(0.9, 1.5),
-                  size: rand(1.6, 3.0),
-                  gravity: 330, // Heavy gravity produces towering umbrella fountain
+                  decay: rand(0.55, 0.85), // lingers to rain gracefully back down
+                  size: rand(1.8, 2.6),
+                  gravity: 460, // heavy gravity causes vertical falling needles
+                  isStreak: true,
+                  streakLength: rand(22, 36),
+                  flicker: true,
+                })
+              }
+
+              // C. Twinkling 4-Point Diamond Star Glints (✨)
+              if (Math.random() < (isRoaring ? 0.38 : 0.20) && sparks.length < sparkLimit) {
+                const glintH = rand(30, 480) * peakMult
+                sparks.push({
+                  x: potX + rand(-55, 55) * (glintH / 480 + 0.35),
+                  y: potTopY - glintH,
+                  vx: rand(-15, 15),
+                  vy: rand(-20, 20),
+                  color: Math.random() < 0.65 ? '#ffffff' : '#ffd700',
+                  alpha: 1.0,
+                  decay: rand(1.8, 3.2),
+                  size: rand(3.0, 5.0),
+                  gravity: 18,
+                  isGlint: true,
                   flicker: true,
                 })
               }
             } else {
-              // Sputter / dying embers
-              if (Math.random() < 0.6) {
+              // Sputter / dying embers & smoke
+              if (Math.random() < 0.5) {
                 sparks.push({
                   x: potX + rand(-3, 3),
-                  y: groundY - potH,
-                  vx: rand(-30, 30),
-                  vy: rand(-90, -40),
+                  y: potTopY,
+                  vx: rand(-25, 25),
+                  vy: rand(-80, -30),
                   color: '#ffd700',
-                  alpha: 0.95,
-                  decay: rand(1.8, 3.0),
-                  size: rand(1.2, 2.2),
-                  gravity: 220,
+                  alpha: 0.9,
+                  decay: rand(1.6, 2.8),
+                  size: rand(1.2, 2.0),
+                  gravity: 200,
+                  isStreak: true,
+                  streakLength: 10,
+                })
+              }
+              if (anaarProgress >= 0.94 && Math.random() < 0.25) {
+                sparks.push({
+                  x: potX + rand(-4, 4),
+                  y: potTopY - 6,
+                  vx: rand(-12, 12),
+                  vy: rand(-40, -18),
+                  color: '#9ca3af',
+                  alpha: 0.5,
+                  decay: 0.6,
+                  size: rand(4, 8),
+                  gravity: -10,
+                  isSmoke: true,
                 })
               }
             }
@@ -3699,9 +3910,6 @@ export function startFxCanvas(
       }
 
       // Keep spark and flash limits capped for smooth 60 FPS performance on kiosk tablets
-      const sparkLimit = diwali
-        ? (state.quality === 'high' ? 240 : state.quality === 'medium' ? 160 : 80)
-        : 130
       if (sparks.length > sparkLimit) {
         sparks.splice(0, sparks.length - sparkLimit)
       }
@@ -3771,6 +3979,45 @@ export function startFxCanvas(
           } else if (sp.isSmoke) {
             ctx.beginPath()
             ctx.arc(sp.x, sp.y, sp.size, 0, Math.PI * 2)
+            ctx.fill()
+          } else if (sp.isStreak) {
+            // High-speed oriented needle / zari streak along velocity vector!
+            const speed = Math.hypot(sp.vx, sp.vy)
+            const len = sp.vy > 20
+              ? Math.max(14, Math.min(38, sp.vy * 0.085))
+              : Math.max(10, Math.min(sp.streakLength ?? 32, speed * 0.065))
+            const inv = speed > 0.001 ? 1 / speed : 0
+            const tailX = sp.x - sp.vx * inv * len
+            const tailY = sp.y - sp.vy * inv * len
+
+            ctx.strokeStyle = sp.color
+            ctx.lineWidth = Math.max(1.4, sp.size * 0.9)
+            ctx.lineCap = 'round'
+            ctx.beginPath()
+            ctx.moveTo(sp.x, sp.y)
+            ctx.lineTo(tailX, tailY)
+            ctx.stroke()
+
+            // Incandescent hot tip
+            ctx.fillStyle = '#ffffff'
+            ctx.fillRect(sp.x - 1, sp.y - 1, 2, 2)
+          } else if (sp.isGlint) {
+            // 4-point diamond star sparkle ✨
+            const r = sp.size * (0.8 + 0.35 * Math.sin(t * 0.02 + sp.x))
+            ctx.fillStyle = sp.color
+            ctx.beginPath()
+            ctx.moveTo(sp.x, sp.y - r * 2.4)
+            ctx.quadraticCurveTo(sp.x, sp.y, sp.x + r * 2.4, sp.y)
+            ctx.quadraticCurveTo(sp.x, sp.y, sp.x, sp.y + r * 2.4)
+            ctx.quadraticCurveTo(sp.x, sp.y, sp.x - r * 2.4, sp.y)
+            ctx.quadraticCurveTo(sp.x, sp.y, sp.x, sp.y - r * 2.4)
+            ctx.closePath()
+            ctx.fill()
+
+            // Bright white star core
+            ctx.fillStyle = '#ffffff'
+            ctx.beginPath()
+            ctx.arc(sp.x, sp.y, Math.max(1, r * 0.4), 0, Math.PI * 2)
             ctx.fill()
           } else if (sp.size <= 2) {
             ctx.fillRect(sp.x - sp.size, sp.y - sp.size, sp.size * 2, sp.size * 2)
