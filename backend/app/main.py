@@ -9,6 +9,9 @@ os.environ["OAUTHLIB_RELAX_TOKEN_SCOPE"] = "1"
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+import httpx
+from starlette.requests import Request
+from starlette.responses import StreamingResponse
 
 from . import scheduler
 from .db import init_db
@@ -39,6 +42,9 @@ async def lifespan(app: FastAPI):
     asyncio.get_running_loop().run_in_executor(None, photos.sync_photos_dir_background, photos.SessionLocal)
     local_music_service.start_background_scan(only_if_empty=True)
     yield
+    global _scrypted_client
+    if _scrypted_client and not _scrypted_client.is_closed:
+        await _scrypted_client.aclose()
     player_engine.stop()
     scheduler.stop()
 
@@ -68,6 +74,51 @@ def health():
 PHOTOS_DIR = get_settings().photos_dir
 PHOTOS_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/api/photos/media", StaticFiles(directory=PHOTOS_DIR), name="photos_media")
+
+# --- Scrypted NVR Local Proxy (bypasses cross-origin iframe security in kiosk webviews) ---
+HA_SCRYPTED_BASE = "http://192.168.100.224:8123/api/scrypted"
+_scrypted_client: httpx.AsyncClient | None = None
+
+
+def get_scrypted_client() -> httpx.AsyncClient:
+    global _scrypted_client
+    if _scrypted_client is None or _scrypted_client.is_closed:
+        _scrypted_client = httpx.AsyncClient(timeout=60.0)
+    return _scrypted_client
+
+
+@app.api_route("/api/scrypted/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"])
+async def proxy_scrypted(path: str, request: Request):
+    client = get_scrypted_client()
+    url = f"{HA_SCRYPTED_BASE}/{path}"
+    if request.url.query:
+        url = f"{url}?{request.url.query}"
+
+    headers = {
+        k: v for k, v in request.headers.items()
+        if k.lower() not in ("host", "content-length", "connection")
+    }
+
+    body = await request.body()
+    req = client.build_request(
+        method=request.method,
+        url=url,
+        headers=headers,
+        content=body if body else None,
+    )
+    resp = await client.send(req, stream=True)
+
+    resp_headers = {
+        k: v for k, v in resp.headers.items()
+        if k.lower() not in ("content-length", "content-encoding", "transfer-encoding", "x-frame-options")
+    }
+    resp_headers["Content-Security-Policy"] = "frame-ancestors *"
+
+    return StreamingResponse(
+        resp.aiter_bytes(),
+        status_code=resp.status_code,
+        headers=resp_headers,
+    )
 
 # Serve the built frontend (present in the Docker image / after `npm run build`)
 if STATIC_DIR.exists():
