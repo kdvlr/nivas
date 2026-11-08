@@ -31,6 +31,7 @@ const Shopping = lazy(() => import('./views/Shopping'))
 const Recipes = lazy(() => import('./views/Recipes'))
 const Setup = lazy(() => import('./views/Setup'))
 const Photos = lazy(() => import('./views/Photos'))
+const Cameras = lazy(() => import('./views/Cameras'))
 const YTMusic = lazy(() => import('./views/YTMusic'))
 import MiniPlayerBar, { Track } from './components/ytmusic/MiniPlayerBar'
 import FloatingActionButton from './components/FloatingActionButton'
@@ -51,6 +52,7 @@ const NAV = [
   { id: 'shopping', label: 'Shopping', icon: 'shopping_cart', view: Shopping, active: 'bg-orange-200 text-orange-950 dark:bg-orange-900 dark:text-orange-100', activeText: 'text-orange-600 dark:text-orange-400' },
   { id: 'recipes', label: 'Recipes', icon: 'restaurant', view: Recipes, active: 'bg-pink-200 text-pink-950 dark:bg-pink-900 dark:text-pink-100', activeText: 'text-pink-600 dark:text-pink-400' },
   { id: 'photos', label: 'Photos', icon: 'photo_library', view: Photos, active: 'bg-indigo-200 text-indigo-950 dark:bg-indigo-900 dark:text-indigo-100', activeText: 'text-indigo-600 dark:text-indigo-400' },
+  { id: 'cameras', label: 'Cameras', icon: 'videocam', view: Cameras, active: 'bg-teal-200 text-teal-950 dark:bg-teal-900 dark:text-teal-100', activeText: 'text-teal-600 dark:text-teal-400' },
   { id: 'setup', label: 'Setup', icon: 'settings', view: Setup, active: 'bg-slate-300 text-slate-950 dark:bg-slate-700 dark:text-slate-100', activeText: 'text-slate-600 dark:text-slate-400' },
 ] as const
 
