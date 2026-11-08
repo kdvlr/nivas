@@ -132,7 +132,7 @@ function SongRow({
 }) {
   return (
     <div
-      className={`group flex min-h-[4.5rem] items-center gap-3 border-b border-[var(--outline-var)]/40 px-3 py-2 transition rounded-xl ${
+      className={`group flex min-h-[3.75rem] sm:min-h-[4.5rem] items-center gap-2 sm:gap-3 border-b border-[var(--outline-var)]/40 px-2 sm:px-3 py-1.5 sm:py-2 transition rounded-xl ${
         active ? 'bg-[var(--sc-high)]' : 'hover:bg-[var(--sc)]'
       }`}
     >
@@ -143,52 +143,52 @@ function SongRow({
       )}
       <button
         onClick={onPlay}
-        className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-[var(--sc-high)] border border-[var(--outline-var)] cursor-pointer"
+        className="relative h-11 w-11 sm:h-12 sm:w-12 shrink-0 overflow-hidden rounded-xl bg-[var(--sc-high)] border border-[var(--outline-var)] cursor-pointer"
       >
         {track.thumbnail ? (
           <img src={track.thumbnail} alt="" className="h-full w-full object-cover" />
         ) : (
-          <Icon name="music_note" className="text-2xl text-ink-soft" />
+          <Icon name="music_note" className="text-xl sm:text-2xl text-ink-soft" />
         )}
         <span className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 transition group-hover:opacity-100">
-          <Icon name="play_arrow" filled className="text-2xl text-white" />
+          <Icon name="play_arrow" filled className="text-xl sm:text-2xl text-white" />
         </span>
       </button>
       <button onClick={onPlay} className="min-w-0 flex-1 text-left cursor-pointer">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <MusicSourceIcon source={track.source} size={13} />
-          <p className="truncate text-[0.95rem] font-semibold text-ink">{track.title}</p>
+        <div className="flex items-center gap-1 sm:gap-1.5 min-w-0">
+          <MusicSourceIcon source={track.source} size={12} />
+          <p className="truncate text-xs sm:text-[0.95rem] font-semibold text-ink leading-tight">{track.title}</p>
           {track.isPureAudio === false && (
-            <span className="inline-flex items-center gap-1 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/30">
-              <Icon name="smart_display" className="text-xs" /> Video
+            <span className="inline-flex items-center gap-0.5 sm:gap-1 shrink-0 rounded px-1 sm:px-1.5 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/30">
+              <Icon name="smart_display" className="text-[10px] sm:text-xs" /> <span className="hidden xs:inline">Video</span>
             </span>
           )}
         </div>
-        <p className="truncate text-sm text-ink-soft">
+        <p className="truncate text-[11px] sm:text-sm text-ink-soft leading-tight mt-0.5">
           {track.artist}
           {track.album ? ` · ${track.album}` : ''}
         </p>
       </button>
       {track.duration ? (
-        <span className="hidden text-sm tabular-nums text-ink-soft sm:block">
+        <span className="hidden text-xs sm:text-sm tabular-nums text-ink-soft sm:block">
           {formatTime(track.duration)}
         </span>
       ) : null}
       {onQueue && (
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
           <button
             onClick={() => onQueue(true)}
             title="Play next"
-            className="flex h-10 w-10 items-center justify-center rounded-full text-ink-soft hover:text-ink hover:bg-[var(--sc-high)] cursor-pointer"
+            className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full text-ink-soft hover:text-ink hover:bg-[var(--sc-high)] cursor-pointer"
           >
-            <Icon name="playlist_play" className="text-2xl" />
+            <Icon name="playlist_play" className="text-xl sm:text-2xl" />
           </button>
           <button
             onClick={() => onQueue(false)}
             title="Add to queue"
-            className="flex h-10 w-10 items-center justify-center rounded-full text-ink-soft hover:text-ink hover:bg-[var(--sc-high)] cursor-pointer"
+            className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full text-ink-soft hover:text-ink hover:bg-[var(--sc-high)] cursor-pointer"
           >
-            <Icon name="queue_music" className="text-xl" />
+            <Icon name="queue_music" className="text-lg sm:text-xl" />
           </button>
         </div>
       )}
@@ -683,15 +683,15 @@ export default function YTMusicView({
       : (selectedAlbum.fileFormat || (selectedAlbum.source === 'local' ? 'Local' : 'Album'))
 
     return (
-      <div className="space-y-6 animate-fadeIn">
+      <div className="w-full max-w-full min-w-0 space-y-4 sm:space-y-6 animate-fadeIn">
         {/* Top Header with Back Navigation */}
-        <div className="flex shrink-0 items-center gap-4 mb-4">
+        <div className="flex shrink-0 items-center gap-4 mb-2 sm:mb-4">
           <button
             onClick={() => {
               setSelectedAlbum(null)
               setAlbumSongs([])
             }}
-            className="flex items-center gap-2 rounded-xl bg-[var(--sc)] hover:bg-[var(--sc-high)] border border-[var(--outline-var)] px-4 py-2 text-xs md:text-sm font-semibold text-ink transition active:scale-95 cursor-pointer shadow-sm"
+            className="flex items-center gap-2 rounded-xl bg-[var(--sc)] hover:bg-[var(--sc-high)] border border-[var(--outline-var)] px-3.5 sm:px-4 py-1.5 sm:py-2 text-xs md:text-sm font-semibold text-ink transition active:scale-95 cursor-pointer shadow-sm"
           >
             <Icon name="arrow_back" className="text-lg md:text-xl" />
             <span>Back</span>
@@ -699,8 +699,8 @@ export default function YTMusicView({
         </div>
 
         {/* Hero Album Card */}
-        <div className="rounded-3xl border border-[var(--outline-var)] glass p-6 sm:p-8 backdrop-blur-xl flex flex-col md:flex-row items-center md:items-start gap-6 sm:gap-8 shadow-xl">
-          <div className="relative aspect-square w-48 sm:w-56 md:w-60 shrink-0 overflow-hidden rounded-2xl bg-[var(--sc-high)] border border-[var(--outline-var)] shadow-2xl">
+        <div className="w-full max-w-full min-w-0 rounded-3xl border border-[var(--outline-var)] glass p-4 sm:p-6 md:p-8 backdrop-blur-xl flex flex-col md:flex-row items-center md:items-start gap-4 sm:gap-6 md:gap-8 shadow-xl">
+          <div className="relative aspect-square w-36 sm:w-52 md:w-60 shrink-0 overflow-hidden rounded-2xl bg-[var(--sc-high)] border border-[var(--outline-var)] shadow-2xl">
             {selectedAlbum.thumbnail ? (
               <img
                 src={highResolutionArtwork(selectedAlbum.thumbnail)}
@@ -709,15 +709,15 @@ export default function YTMusicView({
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center">
-                <Icon name="album" className="text-7xl text-ink-soft/30" />
+                <Icon name="album" className="text-6xl sm:text-7xl text-ink-soft/30" />
               </div>
             )}
           </div>
 
-          <div className="flex-1 min-w-0 flex flex-col justify-between h-full py-1 text-center md:text-left">
+          <div className="w-full max-w-full min-w-0 flex-1 flex flex-col justify-between h-full py-1 text-center md:text-left">
             <div>
               <div className="flex items-center justify-center md:justify-start gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--primary-container)] px-3 py-1 text-xs font-bold uppercase tracking-wider text-[var(--on-primary-container)] border border-[var(--primary)]/30">
+                <span className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--primary-container)] px-2.5 sm:px-3 py-1 text-xs font-bold uppercase tracking-wider text-[var(--on-primary-container)] border border-[var(--primary)]/30">
                   <MusicSourceIcon source={selectedAlbum.source} size={14} />
                   {selectedAlbum.source === 'local' ? `${formatLabel} Album` : 'Album'}
                 </span>
@@ -726,7 +726,7 @@ export default function YTMusicView({
                 )}
               </div>
 
-              <h1 className="mt-3 text-2xl sm:text-3xl lg:text-4xl font-extrabold text-ink tracking-tight line-clamp-2">
+              <h1 className="mt-2.5 sm:mt-3 text-xl sm:text-3xl lg:text-4xl font-extrabold text-ink tracking-tight line-clamp-2 leading-tight">
                 {selectedAlbum.title}
               </h1>
               <p
@@ -740,7 +740,7 @@ export default function YTMusicView({
                     loadLocalLibrary(selectedAlbum.artist, null)
                   }
                 }}
-                className={`mt-2 text-base sm:text-lg font-semibold text-ink-soft ${
+                className={`mt-1.5 sm:mt-2 text-sm sm:text-lg font-semibold text-ink-soft ${
                   selectedAlbum.source === 'local' ? 'cursor-pointer hover:text-[var(--primary)] hover:underline inline-block' : ''
                 }`}
                 title={selectedAlbum.source === 'local' ? `View all albums and songs by ${selectedAlbum.artist}` : undefined}
@@ -754,7 +754,7 @@ export default function YTMusicView({
             </div>
 
             {/* Action Buttons: Play All, Shuffle, Play Next, Add to Queue */}
-            <div className="mt-6 flex flex-wrap items-center justify-center md:justify-start gap-3">
+            <div className="mt-4 sm:mt-6 flex flex-wrap items-center justify-center md:justify-start gap-2 sm:gap-3">
               <button
                 disabled={tracks.length === 0 || albumLoading}
                 onClick={() => {
@@ -763,9 +763,9 @@ export default function YTMusicView({
                     onPlayTrack(tracks[0], tracks.slice(1))
                   }
                 }}
-                className="flex items-center gap-2 rounded-full bg-[var(--primary)] hover:brightness-110 px-6 py-2.5 text-sm font-bold text-[var(--on-primary)] transition active:scale-95 shadow-md disabled:opacity-40 cursor-pointer"
+                className="flex items-center gap-1.5 sm:gap-2 rounded-full bg-[var(--primary)] hover:brightness-110 px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-bold text-[var(--on-primary)] transition active:scale-95 shadow-md disabled:opacity-40 cursor-pointer"
               >
-                <Icon name="play_arrow" filled className="text-xl" />
+                <Icon name="play_arrow" filled className="text-lg sm:text-xl" />
                 Play All
               </button>
 
@@ -778,9 +778,9 @@ export default function YTMusicView({
                     onPlayTrack(shuffled[0], shuffled.slice(1))
                   }
                 }}
-                className="flex items-center gap-2 rounded-full border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] px-5 py-2.5 text-sm font-semibold text-ink transition active:scale-95 disabled:opacity-40 cursor-pointer shadow-sm"
+                className="flex items-center gap-1.5 sm:gap-2 rounded-full border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] px-3.5 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-ink transition active:scale-95 disabled:opacity-40 cursor-pointer shadow-sm"
               >
-                <Icon name="shuffle" className="text-xl" />
+                <Icon name="shuffle" className="text-lg sm:text-xl" />
                 Shuffle
               </button>
 
@@ -788,9 +788,9 @@ export default function YTMusicView({
                 disabled={tracks.length === 0 || albumLoading}
                 onClick={(e) => queueAlbum(selectedAlbum, true, e, tracks)}
                 title="Play album next"
-                className="flex items-center gap-1.5 rounded-full border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] px-4 py-2.5 text-sm font-semibold text-ink transition active:scale-95 disabled:opacity-40 cursor-pointer shadow-sm"
+                className="flex items-center gap-1 rounded-full border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-ink transition active:scale-95 disabled:opacity-40 cursor-pointer shadow-sm"
               >
-                <Icon name="playlist_play" className="text-xl" />
+                <Icon name="playlist_play" className="text-lg sm:text-xl" />
                 Play Next
               </button>
 
@@ -798,9 +798,9 @@ export default function YTMusicView({
                 disabled={tracks.length === 0 || albumLoading}
                 onClick={(e) => queueAlbum(selectedAlbum, false, e, tracks)}
                 title="Add album to queue"
-                className="flex items-center gap-1.5 rounded-full border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] px-4 py-2.5 text-sm font-semibold text-ink transition active:scale-95 disabled:opacity-40 cursor-pointer shadow-sm"
+                className="flex items-center gap-1 rounded-full border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-ink transition active:scale-95 disabled:opacity-40 cursor-pointer shadow-sm"
               >
-                <Icon name="playlist_add" className="text-xl" />
+                <Icon name="playlist_add" className="text-lg sm:text-xl" />
                 Add to Queue
               </button>
             </div>
@@ -808,7 +808,7 @@ export default function YTMusicView({
         </div>
 
         {/* Tracks List */}
-        <div className="rounded-2xl glass-inset border border-[var(--outline-var)] overflow-hidden">
+        <div className="w-full max-w-full min-w-0 rounded-2xl glass-inset border border-[var(--outline-var)] overflow-hidden">
           {albumLoading ? (
             <div className="flex items-center justify-center gap-3 py-16 text-ink-soft">
               <Icon name="progress_activity" className="animate-spin text-2xl text-[var(--primary)]" />
@@ -823,9 +823,9 @@ export default function YTMusicView({
               {tracks.map((track, idx) => (
                 <div
                   key={`${track.videoId}-${idx}`}
-                  className="group flex min-h-[4rem] items-center gap-3 px-4 py-2.5 transition hover:bg-[var(--sc-high)]"
+                  className="group flex min-h-[3.5rem] sm:min-h-[4rem] items-center gap-2 sm:gap-3 px-2.5 sm:px-4 py-2 sm:py-2.5 transition hover:bg-[var(--sc-high)]"
                 >
-                  <span className="w-6 shrink-0 text-center text-xs tabular-nums text-ink-soft font-medium">
+                  <span className="w-5 sm:w-6 shrink-0 text-center text-xs tabular-nums text-ink-soft font-medium">
                     {idx + 1}
                   </span>
 
@@ -834,7 +834,7 @@ export default function YTMusicView({
                       syncUrlSubView('now-playing')
                       onPlayTrack(track, tracks.slice(idx + 1))
                     }}
-                    className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-[var(--sc-high)] border border-[var(--outline-var)] cursor-pointer"
+                    className="relative h-9 w-9 sm:h-10 sm:w-10 shrink-0 overflow-hidden rounded-lg bg-[var(--sc-high)] border border-[var(--outline-var)] cursor-pointer"
                   >
                     {track.thumbnail || selectedAlbum.thumbnail ? (
                       <img
@@ -843,10 +843,10 @@ export default function YTMusicView({
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      <Icon name="music_note" className="text-xl text-ink-soft" />
+                      <Icon name="music_note" className="text-lg sm:text-xl text-ink-soft" />
                     )}
                     <span className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 transition group-hover:opacity-100">
-                      <Icon name="play_arrow" filled className="text-white text-lg" />
+                      <Icon name="play_arrow" filled className="text-white text-base sm:text-lg" />
                     </span>
                   </button>
 
@@ -858,42 +858,45 @@ export default function YTMusicView({
                           syncUrlSubView('now-playing')
                           onPlayTrack(track, tracks.slice(idx + 1))
                         }}
-                        className="truncate text-sm sm:text-base font-semibold text-ink hover:underline cursor-pointer"
+                        className="truncate text-xs sm:text-base font-semibold text-ink hover:underline cursor-pointer leading-tight"
                         title={track.title}
                       >
                         {track.title}
                       </p>
                       {track.fileFormat && track.source === 'local' && (
-                        <span className="shrink-0 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-[var(--sc-high)] text-ink-soft border border-[var(--outline-var)]">
+                        <span className="shrink-0 rounded px-1 sm:px-1.5 py-0.5 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider bg-[var(--sc-high)] text-ink-soft border border-[var(--outline-var)]">
                           {track.fileFormat}
                         </span>
                       )}
                     </div>
-                    <p className="truncate text-xs text-ink-soft">
+                    <p className="truncate text-[11px] sm:text-xs text-ink-soft leading-tight mt-0.5">
                       {track.artist}
+                      {Boolean(track.duration) && (
+                        <span className="sm:hidden text-ink-soft/80"> · {formatTime(track.duration)}</span>
+                      )}
                     </p>
                   </div>
 
                   {Boolean(track.duration) && (
-                    <span className="shrink-0 text-xs tabular-nums text-ink-soft font-medium">
+                    <span className="hidden sm:block shrink-0 text-xs tabular-nums text-ink-soft font-medium">
                       {formatTime(track.duration)}
                     </span>
                   )}
 
-                  <div className="flex shrink-0 items-center gap-1">
+                  <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
                     <button
                       onClick={() => onQueueTrack(track, true)}
                       title="Play next"
-                      className="flex h-8 w-8 items-center justify-center rounded-full text-ink-soft hover:bg-[var(--sc)] hover:text-ink cursor-pointer transition"
+                      className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full text-ink-soft hover:bg-[var(--sc)] hover:text-ink cursor-pointer transition"
                     >
-                      <Icon name="playlist_play" className="text-lg" />
+                      <Icon name="playlist_play" className="text-base sm:text-lg" />
                     </button>
                     <button
                       onClick={() => onQueueTrack(track, false)}
                       title="Add to queue"
-                      className="flex h-8 w-8 items-center justify-center rounded-full text-ink-soft hover:bg-[var(--sc)] hover:text-ink cursor-pointer transition"
+                      className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full text-ink-soft hover:bg-[var(--sc)] hover:text-ink cursor-pointer transition"
                     >
-                      <Icon name="playlist_add" className="text-lg" />
+                      <Icon name="playlist_add" className="text-base sm:text-lg" />
                     </button>
                   </div>
                 </div>
@@ -1075,30 +1078,30 @@ export default function YTMusicView({
                   </span>
                 )}
                 {/* Top-right quick queue buttons */}
-                <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+                <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 flex items-center gap-1 z-10">
                   <button
                     onClick={(e) => queuePlaylist(pl, true, e)}
                     title="Play playlist next"
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface)]/90 hover:bg-[var(--surface)] text-ink border border-[var(--outline-var)] transition shadow hover:scale-105 cursor-pointer"
+                    className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-[var(--surface)]/90 hover:bg-[var(--surface)] text-ink border border-[var(--outline-var)] transition shadow hover:scale-105 cursor-pointer"
                   >
-                    <Icon name="playlist_play" className="text-xl" />
+                    <Icon name="playlist_play" className="text-lg sm:text-xl" />
                   </button>
                   <button
                     onClick={(e) => queuePlaylist(pl, false, e)}
                     title="Add playlist to queue"
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface)]/90 hover:bg-[var(--surface)] text-ink border border-[var(--outline-var)] transition shadow hover:scale-105 cursor-pointer"
+                    className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-[var(--surface)]/90 hover:bg-[var(--surface)] text-ink border border-[var(--outline-var)] transition shadow hover:scale-105 cursor-pointer"
                   >
-                    <Icon name="playlist_add" className="text-lg" />
+                    <Icon name="playlist_add" className="text-base sm:text-lg" />
                   </button>
                 </div>
               </div>
               <p
                 onClick={() => playAnyPlaylist(pl)}
-                className="mt-2.5 truncate font-bold text-ink text-sm sm:text-base leading-snug cursor-pointer hover:underline"
+                className="mt-2 line-clamp-2 font-bold text-ink text-xs sm:text-base leading-snug cursor-pointer hover:underline"
               >
                 {pl.title}
               </p>
-              <p className="mt-0.5 truncate text-xs text-ink-soft">{pl.subtitle}</p>
+              <p className="mt-0.5 line-clamp-1 text-[11px] sm:text-xs text-ink-soft leading-tight">{pl.subtitle}</p>
             </div>
           ))}
         </div>
@@ -1107,7 +1110,7 @@ export default function YTMusicView({
   }
 
   return (
-    <div className={`text-ink flex min-w-0 max-w-full flex-col overflow-x-hidden px-3 sm:px-4 lg:px-8 pb-4 lg:pb-6 ${browseIsOpen ? 'min-h-full' : 'h-full flex-1 min-h-0 overflow-hidden'}`}>
+    <div className={`text-ink flex min-w-0 max-w-full flex-col overflow-x-hidden px-3 sm:px-4 lg:px-8 pb-20 lg:pb-6 ${browseIsOpen ? 'min-h-full' : 'h-full flex-1 min-h-0 overflow-hidden'}`}>
       {/* Top Header */}
       <header className="flex shrink-0 items-center justify-between gap-2 mb-3 lg:mb-4">
         <div className="flex min-w-0 flex-1 items-center gap-2 md:gap-4">
@@ -1192,7 +1195,7 @@ export default function YTMusicView({
 
       {/* Main Content Area */}
       {browseIsOpen ? (
-        <main className="mx-auto max-w-6xl px-4 py-7 md:px-8">
+        <main className="mx-auto w-full max-w-6xl min-w-0 px-2 sm:px-4 py-4 md:px-8 md:py-7">
           {selectedAlbum ? (
             renderAlbumDetailView()
           ) : searchIsOpen ? (
@@ -1207,10 +1210,10 @@ export default function YTMusicView({
 
                 {/* Category Filter Chips */}
                 {!loading && (searchTopResult || searchSongs.length > 0 || searchAlbums.length > 0 || searchVideos.length > 0) && (
-                  <div className="flex items-center gap-2 pt-1 overflow-x-auto">
+                  <div className="flex items-center gap-2 pt-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden w-full max-w-full">
                     <button
                       onClick={() => setSearchCategory('all')}
-                      className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs md:text-sm font-semibold transition cursor-pointer ${
+                      className={`flex items-center gap-1.5 rounded-xl px-3.5 sm:px-4 py-1.5 sm:py-2 text-xs md:text-sm font-semibold transition shrink-0 cursor-pointer ${
                         searchCategory === 'all'
                           ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-sm'
                           : 'bg-[var(--sc)] text-ink-soft hover:bg-[var(--sc-high)] hover:text-ink border border-[var(--outline-var)]'
@@ -1221,7 +1224,7 @@ export default function YTMusicView({
                     {searchSongs.length > 0 && (
                       <button
                         onClick={() => setSearchCategory('songs')}
-                        className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs md:text-sm font-semibold transition cursor-pointer ${
+                        className={`flex items-center gap-1.5 rounded-xl px-3.5 sm:px-4 py-1.5 sm:py-2 text-xs md:text-sm font-semibold transition shrink-0 cursor-pointer ${
                           searchCategory === 'songs'
                             ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-sm'
                             : 'bg-[var(--sc)] text-ink-soft hover:bg-[var(--sc-high)] hover:text-ink border border-[var(--outline-var)]'
@@ -1233,7 +1236,7 @@ export default function YTMusicView({
                     {searchAlbums.length > 0 && (
                       <button
                         onClick={() => setSearchCategory('albums')}
-                        className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs md:text-sm font-semibold transition cursor-pointer ${
+                        className={`flex items-center gap-1.5 rounded-xl px-3.5 sm:px-4 py-1.5 sm:py-2 text-xs md:text-sm font-semibold transition shrink-0 cursor-pointer ${
                           searchCategory === 'albums'
                             ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-sm'
                             : 'bg-[var(--sc)] text-ink-soft hover:bg-[var(--sc-high)] hover:text-ink border border-[var(--outline-var)]'
@@ -1245,7 +1248,7 @@ export default function YTMusicView({
                     {(searchSongs.some((t) => t.source === 'local') || searchAlbums.some((a) => a.source === 'local')) && (
                       <button
                         onClick={() => setSearchCategory('local')}
-                        className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs md:text-sm font-semibold transition cursor-pointer ${
+                        className={`flex items-center gap-1.5 rounded-xl px-3.5 sm:px-4 py-1.5 sm:py-2 text-xs md:text-sm font-semibold transition shrink-0 cursor-pointer ${
                           searchCategory === 'local'
                             ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-sm'
                             : 'bg-[var(--sc)] text-ink-soft hover:bg-[var(--sc-high)] hover:text-ink border border-[var(--outline-var)]'
@@ -1258,7 +1261,7 @@ export default function YTMusicView({
                     {searchVideos.length > 0 && (
                       <button
                         onClick={() => setSearchCategory('videos')}
-                        className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs md:text-sm font-semibold transition cursor-pointer ${
+                        className={`flex items-center gap-1.5 rounded-xl px-3.5 sm:px-4 py-1.5 sm:py-2 text-xs md:text-sm font-semibold transition shrink-0 cursor-pointer ${
                           searchCategory === 'videos'
                             ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-sm'
                             : 'bg-[var(--sc)] text-ink-soft hover:bg-[var(--sc-high)] hover:text-ink border border-[var(--outline-var)]'
@@ -1280,41 +1283,41 @@ export default function YTMusicView({
                   {/* Top Result Card */}
                   {(searchCategory === 'all' || (searchCategory === 'local' && searchTopResult?.source === 'local')) && searchTopResult && (
                     <section>
-                      <div className="group relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 rounded-2xl glass p-4 sm:p-5 border border-[var(--outline-var)] transition shadow-xl">
-                        <div className="flex items-center gap-4 sm:gap-5 min-w-0 flex-1">
+                      <div className="group relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-6 rounded-2xl glass p-3.5 sm:p-5 border border-[var(--outline-var)] transition shadow-xl w-full max-w-full min-w-0">
+                        <div className="flex items-center gap-3 sm:gap-5 min-w-0 flex-1">
                           <button
                             onClick={() => {
                               syncUrlSubView('now-playing', '')
                               onPlayTrack(searchTopResult)
                             }}
-                            className="relative h-20 w-20 sm:h-24 sm:w-24 shrink-0 overflow-hidden rounded-xl bg-[var(--sc-high)] border border-[var(--outline-var)] shadow-md group/art cursor-pointer"
+                            className="relative h-16 w-16 sm:h-24 sm:w-24 shrink-0 overflow-hidden rounded-xl bg-[var(--sc-high)] border border-[var(--outline-var)] shadow-md group/art cursor-pointer"
                           >
                             {searchTopResult.thumbnail ? (
                               <img src={searchTopResult.thumbnail} alt="" className="h-full w-full object-cover transition group-hover/art:scale-105" />
                             ) : (
                               <div className="flex h-full w-full items-center justify-center">
-                                <Icon name="music_note" className="text-3xl text-ink-soft" />
+                                <Icon name="music_note" className="text-2xl sm:text-3xl text-ink-soft" />
                               </div>
                             )}
                             <span className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover/art:opacity-100 transition">
-                              <Icon name="play_arrow" filled className="text-2xl text-white" />
+                              <Icon name="play_arrow" filled className="text-xl sm:text-2xl text-white" />
                             </span>
                           </button>
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <MusicSourceIcon source={searchTopResult.source} size={16} />
+                            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                              <MusicSourceIcon source={searchTopResult.source} size={15} />
                               <h2
                                 onClick={() => {
                                   syncUrlSubView('now-playing', '')
                                   onPlayTrack(searchTopResult)
                                 }}
-                                className="text-lg sm:text-xl md:text-2xl font-bold text-ink leading-snug line-clamp-1 cursor-pointer hover:underline"
+                                className="text-base sm:text-xl md:text-2xl font-bold text-ink leading-tight line-clamp-2 sm:line-clamp-1 cursor-pointer hover:underline"
                                 title={searchTopResult.title}
                               >
                                 {searchTopResult.title}
                               </h2>
                             </div>
-                            <p className="mt-1.5 text-sm sm:text-base text-ink-soft truncate flex items-center gap-1.5 flex-wrap">
+                            <p className="mt-1 text-xs sm:text-base text-ink-soft truncate flex items-center gap-1.5 flex-wrap">
                               <span className="font-medium text-ink">
                                 {searchTopResult.source === 'local' ? 'Local' : searchTopResult.isPureAudio === false ? 'Video' : 'Song'}
                               </span>
@@ -1331,31 +1334,31 @@ export default function YTMusicView({
                         </div>
 
                         {/* Top Result Action Buttons */}
-                        <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 w-full sm:w-auto justify-start sm:justify-end mt-1 sm:mt-0">
                           <button
                             onClick={() => {
                               syncUrlSubView('now-playing', '')
                               onPlayTrack(searchTopResult)
                             }}
-                            className="flex items-center gap-2 rounded-full bg-[var(--primary)] hover:brightness-110 px-5 py-2.5 text-sm font-semibold text-[var(--on-primary)] transition active:scale-95 shadow-md cursor-pointer"
+                            className="flex items-center gap-1.5 sm:gap-2 rounded-full bg-[var(--primary)] hover:brightness-110 px-4 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-[var(--on-primary)] transition active:scale-95 shadow-md cursor-pointer"
                           >
-                            <Icon name="play_arrow" filled className="text-xl" />
+                            <Icon name="play_arrow" filled className="text-lg sm:text-xl" />
                             Play
                           </button>
                           <button
                             onClick={() => onQueueTrack(searchTopResult, true)}
                             title="Play next"
-                            className="flex items-center gap-1.5 rounded-full border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] px-3.5 py-2 text-sm font-semibold text-ink transition active:scale-95 cursor-pointer"
+                            className="flex items-center gap-1 sm:gap-1.5 rounded-full border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-ink transition active:scale-95 cursor-pointer"
                           >
-                            <Icon name="playlist_play" className="text-xl" />
+                            <Icon name="playlist_play" className="text-lg sm:text-xl" />
                             Play next
                           </button>
                           <button
                             onClick={() => onQueueTrack(searchTopResult, false)}
                             title="Add to queue"
-                            className="flex items-center gap-1.5 rounded-full border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] px-3.5 py-2 text-sm font-semibold text-ink transition active:scale-95 cursor-pointer"
+                            className="flex items-center gap-1 sm:gap-1.5 rounded-full border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-ink transition active:scale-95 cursor-pointer"
                           >
-                            <Icon name="playlist_add" className="text-xl" />
+                            <Icon name="playlist_add" className="text-lg sm:text-xl" />
                             Save
                           </button>
                         </div>
@@ -1398,11 +1401,11 @@ export default function YTMusicView({
                           Albums
                         </h2>
                       </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
                         {searchAlbums.map((album) => (
                           <div
                             key={album.browseId}
-                            className="group relative flex flex-col rounded-2xl glass-inset p-3 text-left transition hover:bg-[var(--sc-high)] border border-[var(--outline-var)]"
+                            className="group relative flex flex-col rounded-2xl glass-inset p-2.5 sm:p-3 text-left transition hover:bg-[var(--sc-high)] border border-[var(--outline-var)]"
                           >
                             <div
                               onClick={() => openAlbum(album)}
@@ -1422,7 +1425,7 @@ export default function YTMusicView({
 
                               {/* Format Badge Tag on Top-Left */}
                               {album.fileFormat && (
-                                <div className="absolute top-2 left-2 z-10 pointer-events-none">
+                                <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 z-10 pointer-events-none">
                                   <span className="inline-flex items-center rounded-md bg-black/75 backdrop-blur-md px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-white shadow border border-white/15">
                                     {album.fileFormat}
                                   </span>
@@ -1433,7 +1436,7 @@ export default function YTMusicView({
                               <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition group-hover:opacity-100">
                                 <span
                                   onClick={(e) => playAlbum(album, e)}
-                                  className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--on-primary)] shadow-lg transition transform group-hover:scale-105"
+                                  className="flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--on-primary)] shadow-lg transition transform group-hover:scale-105"
                                 >
                                   {openingAlbumId === album.browseId || queueingAlbumId === album.browseId ? (
                                     <Icon name="progress_activity" className="animate-spin text-2xl" />
@@ -1444,31 +1447,31 @@ export default function YTMusicView({
                               </div>
 
                               {/* Top-Right Quick Queue Action Pills */}
-                              <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+                              <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 flex items-center gap-1 z-10">
                                 <button
                                   onClick={(e) => queueAlbum(album, true, e)}
                                   title="Play album next"
-                                  className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface)]/90 hover:bg-[var(--surface)] text-ink border border-[var(--outline-var)] transition shadow hover:scale-105 cursor-pointer"
+                                  className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-[var(--surface)]/90 hover:bg-[var(--surface)] text-ink border border-[var(--outline-var)] transition shadow hover:scale-105 cursor-pointer"
                                 >
-                                  <Icon name="playlist_play" className="text-xl" />
+                                  <Icon name="playlist_play" className="text-lg sm:text-xl" />
                                 </button>
                                 <button
                                   onClick={(e) => queueAlbum(album, false, e)}
                                   title="Add album to queue"
-                                  className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface)]/90 hover:bg-[var(--surface)] text-ink border border-[var(--outline-var)] transition shadow hover:scale-105 cursor-pointer"
+                                  className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-[var(--surface)]/90 hover:bg-[var(--surface)] text-ink border border-[var(--outline-var)] transition shadow hover:scale-105 cursor-pointer"
                                 >
-                                  <Icon name="playlist_add" className="text-lg" />
+                                  <Icon name="playlist_add" className="text-base sm:text-lg" />
                                 </button>
                               </div>
                             </div>
 
-                            <div className="mt-2.5 flex items-start justify-between gap-1">
+                            <div className="mt-2 flex items-start justify-between gap-1">
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-1.5 min-w-0">
                                   <MusicSourceIcon source={album.source} size={12} />
                                   <p
                                     onClick={() => openAlbum(album)}
-                                    className="line-clamp-1 text-sm font-semibold text-ink cursor-pointer hover:underline"
+                                    className="line-clamp-2 text-xs sm:text-sm font-semibold text-ink cursor-pointer hover:underline leading-snug"
                                     title={album.title}
                                   >
                                     {album.title}
@@ -1542,9 +1545,9 @@ export default function YTMusicView({
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2.5 flex-wrap">
+                <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap w-full sm:w-auto">
                   {/* Category Switcher: Albums / Artists / Genres */}
-                  <div className="flex rounded-xl bg-[var(--sc)] border border-[var(--outline-var)] p-1">
+                  <div className="flex rounded-xl bg-[var(--sc)] border border-[var(--outline-var)] p-1 overflow-x-auto max-w-full [scrollbar-width:none]">
                     <button
                       onClick={() => {
                         setSelectedArtist(null)
@@ -1552,7 +1555,7 @@ export default function YTMusicView({
                         setLocalTab('albums')
                         loadLocalLibrary(null, null)
                       }}
-                      className={`px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition cursor-pointer ${
+                      className={`px-3 sm:px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition whitespace-nowrap cursor-pointer ${
                         localTab === 'albums' && !selectedArtist && !selectedGenre
                           ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-sm'
                           : 'text-ink-soft hover:text-ink'
@@ -1562,7 +1565,7 @@ export default function YTMusicView({
                     </button>
                     <button
                       onClick={() => setLocalTab('artists')}
-                      className={`px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition cursor-pointer ${
+                      className={`px-3 sm:px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition whitespace-nowrap cursor-pointer ${
                         localTab === 'artists'
                           ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-sm'
                           : 'text-ink-soft hover:text-ink'
@@ -1572,7 +1575,7 @@ export default function YTMusicView({
                     </button>
                     <button
                       onClick={() => setLocalTab('genres')}
-                      className={`px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition cursor-pointer ${
+                      className={`px-3 sm:px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition whitespace-nowrap cursor-pointer ${
                         localTab === 'genres'
                           ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-sm'
                           : 'text-ink-soft hover:text-ink'
@@ -1587,7 +1590,7 @@ export default function YTMusicView({
                     onClick={triggerRescan}
                     disabled={scanningStatus}
                     title="Rescan /Media/Music directory"
-                    className="flex items-center gap-1.5 rounded-xl border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] px-3.5 py-1.5 text-xs sm:text-sm font-semibold text-ink transition active:scale-95 disabled:opacity-50 cursor-pointer"
+                    className="flex items-center gap-1.5 rounded-xl border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] px-3 sm:px-3.5 py-1.5 text-xs sm:text-sm font-semibold text-ink transition active:scale-95 disabled:opacity-50 cursor-pointer"
                   >
                     <Icon name="sync" className={`text-base ${scanningStatus ? 'animate-spin' : ''}`} />
                     {scanningStatus ? 'Scanning…' : 'Rescan'}
@@ -1673,7 +1676,7 @@ export default function YTMusicView({
                           loadLocalLibrary(null, selectedGenre)
                         }}
                         title="Show all albums"
-                        className="flex items-center gap-1 rounded-full border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] px-3 py-2 text-xs sm:text-sm font-semibold text-ink-soft hover:text-ink transition active:scale-95 cursor-pointer shadow-sm ml-auto sm:ml-0"
+                        className="flex items-center gap-1 rounded-full border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] px-3 py-2 text-xs sm:text-sm font-semibold text-ink-soft hover:text-ink transition active:scale-95 cursor-pointer shadow-sm ml-0"
                       >
                         <Icon name="close" className="text-base" />
                         <span>All Albums</span>
@@ -1761,7 +1764,7 @@ export default function YTMusicView({
                           loadLocalLibrary(selectedArtist, null)
                         }}
                         title="Show all albums"
-                        className="flex items-center gap-1 rounded-full border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] px-3 py-2 text-xs sm:text-sm font-semibold text-ink-soft hover:text-ink transition active:scale-95 cursor-pointer shadow-sm ml-auto sm:ml-0"
+                        className="flex items-center gap-1 rounded-full border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] px-3 py-2 text-xs sm:text-sm font-semibold text-ink-soft hover:text-ink transition active:scale-95 cursor-pointer shadow-sm ml-0"
                       >
                         <Icon name="close" className="text-base" />
                         <span>All Albums</span>
@@ -2029,14 +2032,14 @@ export default function YTMusicView({
               {/* Local Library Shelf (/Media/Music) */}
               {localAlbums.length > 0 && (
                 <section className="pt-2">
-                  <div className="mb-4 flex items-center justify-between border-b border-[var(--outline-var)]/40 pb-3">
+                  <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--outline-var)]/40 pb-3">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ink-soft flex items-center gap-1.5">
                         <MusicSourceIcon source="local" size={13} /> Local Library · /Media/Music
                       </p>
-                      <h3 className="text-2xl font-bold text-ink tracking-tight">Local Albums</h3>
+                      <h3 className="text-xl sm:text-2xl font-bold text-ink tracking-tight">Local Albums</h3>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
                       <button
                         onClick={() => setReshuffleKey((k) => k + 1)}
                         title="Shuffle albums"
@@ -2050,11 +2053,11 @@ export default function YTMusicView({
                       </span>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
                     {randomBrowseAlbums.map((album) => (
                       <div
                         key={album.browseId}
-                        className="group relative flex flex-col rounded-2xl glass-inset p-3 text-left transition hover:bg-[var(--sc-high)] border border-[var(--outline-var)]"
+                        className="group relative flex flex-col rounded-2xl glass-inset p-2.5 sm:p-3 text-left transition hover:bg-[var(--sc-high)] border border-[var(--outline-var)]"
                       >
                         <div
                           onClick={() => openAlbum(album)}
@@ -2074,7 +2077,7 @@ export default function YTMusicView({
 
                           {/* Format Badge Tag on Top-Left */}
                           {album.fileFormat && (
-                            <div className="absolute top-2 left-2 z-10 pointer-events-none">
+                            <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 z-10 pointer-events-none">
                               <span className="inline-flex items-center rounded-md bg-black/75 backdrop-blur-md px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-white shadow border border-white/15">
                                 {album.fileFormat}
                               </span>
@@ -2084,7 +2087,7 @@ export default function YTMusicView({
                           <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition group-hover:opacity-100">
                             <span
                               onClick={(e) => playAlbum(album, e)}
-                              className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--on-primary)] shadow-lg transition transform group-hover:scale-105"
+                              className="flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--on-primary)] shadow-lg transition transform group-hover:scale-105"
                             >
                               {openingAlbumId === album.browseId || queueingAlbumId === album.browseId ? (
                                 <Icon name="progress_activity" className="animate-spin text-2xl" />
@@ -2094,40 +2097,37 @@ export default function YTMusicView({
                             </span>
                           </div>
 
-                          <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+                          <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 flex items-center gap-1 z-10">
                             <button
                               onClick={(e) => queueAlbum(album, true, e)}
                               title="Play album next"
-                              className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface)]/90 hover:bg-[var(--surface)] text-ink border border-[var(--outline-var)] transition shadow hover:scale-105 cursor-pointer"
+                              className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-[var(--surface)]/90 hover:bg-[var(--surface)] text-ink border border-[var(--outline-var)] transition shadow hover:scale-105 cursor-pointer"
                             >
-                              <Icon name="playlist_play" className="text-xl" />
+                              <Icon name="playlist_play" className="text-lg sm:text-xl" />
                             </button>
                             <button
                               onClick={(e) => queueAlbum(album, false, e)}
                               title="Add album to queue"
-                              className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface)]/90 hover:bg-[var(--surface)] text-ink border border-[var(--outline-var)] transition shadow hover:scale-105 cursor-pointer"
+                              className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-[var(--surface)]/90 hover:bg-[var(--surface)] text-ink border border-[var(--outline-var)] transition shadow hover:scale-105 cursor-pointer"
                             >
-                              <Icon name="playlist_add" className="text-lg" />
+                              <Icon name="playlist_add" className="text-base sm:text-lg" />
                             </button>
                           </div>
                         </div>
 
-                        <div className="mt-2.5 flex items-start justify-between gap-1">
+                        <div className="mt-2 flex items-start justify-between gap-1">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5 min-w-0">
                               <MusicSourceIcon source="local" size={12} />
                               <p
                                 onClick={() => openAlbum(album)}
-                                className="line-clamp-1 text-sm font-semibold text-ink cursor-pointer hover:underline"
+                                className="line-clamp-2 text-xs sm:text-sm font-semibold text-ink cursor-pointer hover:underline leading-snug"
                                 title={album.title}
                               >
                                 {album.title}
                               </p>
                             </div>
-                            <p className="mt-0.5 line-clamp-1 text-xs text-ink-soft">
-                              {album.fileFormat && (
-                                <span className="font-semibold text-ink-soft/90 mr-1">{album.fileFormat} ·</span>
-                              )}
+                            <p className="mt-0.5 line-clamp-1 text-[11px] sm:text-xs text-ink-soft leading-tight">
                               {album.artist}
                               {album.year ? ` · ${album.year}` : ''}
                             </p>
@@ -2205,17 +2205,17 @@ export default function YTMusicView({
                       ) : (
                         /* Presentation B: Expanded Song List Grid */
                         <div className="space-y-4">
-                          <div className="flex items-center justify-between border-b border-[var(--outline-var)]/40 pb-3">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--outline-var)]/40 pb-3">
                             <div>
                               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ink-soft">
                                 Playlist Tracklist
                               </p>
-                              <h3 className="text-2xl font-bold text-ink tracking-tight">{pl.title}</h3>
+                              <h3 className="text-xl sm:text-2xl font-bold text-ink tracking-tight">{pl.title}</h3>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                               <button
                                 onClick={() => playAnyPlaylist(pl)}
-                                className="inline-flex items-center gap-1.5 rounded-full bg-[var(--primary)] text-[var(--on-primary)] hover:brightness-110 px-4 py-1.5 text-xs font-bold transition active:scale-95 shadow-sm cursor-pointer"
+                                className="inline-flex items-center gap-1.5 rounded-full bg-[var(--primary)] text-[var(--on-primary)] hover:brightness-110 px-3.5 sm:px-4 py-1.5 text-xs font-bold transition active:scale-95 shadow-sm cursor-pointer"
                               >
                                 <Icon name="play_arrow" filled className="text-base" />
                                 <span>Play All</span>
@@ -2298,7 +2298,7 @@ export default function YTMusicView({
             {currentTrack && (
               <>
                 <div className="flex items-center gap-3">
-                  <div className="h-14 w-14 md:h-16 md:w-16 shrink-0 overflow-hidden rounded-xl bg-[var(--sc-high)] border border-[var(--outline-var)] shadow-md">
+                  <div className="h-14 w-14 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded-xl bg-[var(--sc-high)] border border-[var(--outline-var)] shadow-md">
                     {currentTrack.thumbnail ? (
                       <img
                         src={highResolutionArtwork(currentTrack.thumbnail)}
@@ -2311,14 +2311,18 @@ export default function YTMusicView({
                       </div>
                     )}
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <h1 className="truncate text-base font-bold text-ink">{currentTrack.title}</h1>
-                    <p className="mt-0.5 truncate text-xs text-ink-soft">
+                  <div className="min-w-0 flex-1 pr-1">
+                    <h1 className="line-clamp-2 sm:truncate text-sm sm:text-base font-bold text-ink leading-tight">
+                      {currentTrack.title}
+                    </h1>
+                    <p className="mt-1 truncate text-xs text-ink-soft">
                       {currentTrack.artist}
                       {currentTrack.album ? ` · ${currentTrack.album}` : ''}
                     </p>
                   </div>
-                  <div className="flex shrink-0 items-center gap-1">
+
+                  {/* Tablet / Desktop Inline Controls (hidden on mobile < sm) */}
+                  <div className="hidden sm:flex shrink-0 items-center gap-1">
                     <button
                       onClick={onPrevTrack}
                       aria-label="Previous song"
@@ -2356,7 +2360,22 @@ export default function YTMusicView({
                       <Icon name="airplay" className="text-xl" />
                     </button>
                   </div>
+
+                  {/* Mobile-only AirPlay button on top-right */}
+                  <button
+                    onClick={(e) => {
+                      setAirPlayAnchorEl(e.currentTarget)
+                      setShowAirPlayModal(true)
+                    }}
+                    title="Choose AirPlay rooms"
+                    aria-label="Choose AirPlay rooms"
+                    className="flex sm:hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] text-ink-soft hover:text-ink cursor-pointer transition active:scale-95"
+                  >
+                    <Icon name="airplay" className="text-xl" />
+                  </button>
                 </div>
+
+                {/* Progress Bar */}
                 <div className="mt-2.5 flex items-center gap-2 text-[11px] tabular-nums text-ink-soft">
                   <span>{formatTime(elapsedSeconds)}</span>
                   <input
@@ -2369,6 +2388,35 @@ export default function YTMusicView({
                     className="h-1.5 flex-1 cursor-pointer accent-[var(--primary)]"
                   />
                   <span>{formatTime(effectiveDuration)}</span>
+                </div>
+
+                {/* Mobile Playback Controls Row (Centered, prominent touch targets) */}
+                <div className="mt-2.5 flex items-center justify-center gap-6 sm:hidden">
+                  <button
+                    onClick={onPrevTrack}
+                    aria-label="Previous song"
+                    className="flex h-11 w-11 items-center justify-center rounded-full text-ink-soft hover:bg-[var(--sc-high)] hover:text-ink transition active:scale-95 cursor-pointer"
+                  >
+                    <Icon name="skip_previous" className="text-3xl" />
+                  </button>
+                  <button
+                    onClick={onTogglePlay}
+                    aria-label={isPlaying ? (isBuffering ? 'Buffering' : 'Pause') : 'Play'}
+                    className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--primary)] hover:brightness-110 text-[var(--on-primary)] shadow-md transition hover:scale-105 active:scale-95 cursor-pointer"
+                  >
+                    {isPlaying && isBuffering ? (
+                      <Icon name="progress_activity" className="animate-spin text-2xl" />
+                    ) : (
+                      <Icon name={isPlaying ? 'pause' : 'play_arrow'} filled className="text-2xl" />
+                    )}
+                  </button>
+                  <button
+                    onClick={onNextTrack}
+                    aria-label="Next song"
+                    className="flex h-11 w-11 items-center justify-center rounded-full text-ink-soft hover:bg-[var(--sc-high)] hover:text-ink transition active:scale-95 cursor-pointer"
+                  >
+                    <Icon name="skip_next" className="text-3xl" />
+                  </button>
                 </div>
               </>
             )}
@@ -2479,9 +2527,9 @@ export default function YTMusicView({
                           onPointerCancel={handlePointerUp}
                           aria-label={`Move ${track.title}`}
                           title="Drag to reorder"
-                          className="flex h-[4.5rem] w-10 shrink-0 touch-none items-center justify-center text-ink-soft hover:text-ink cursor-grab active:cursor-grabbing"
+                          className="flex h-[3.75rem] sm:h-[4.5rem] w-7 sm:w-10 shrink-0 touch-none items-center justify-center text-ink-soft hover:text-ink cursor-grab active:cursor-grabbing"
                         >
-                          <Icon name="drag_indicator" className="text-2xl" />
+                          <Icon name="drag_indicator" className="text-xl sm:text-2xl" />
                         </button>
                         <div className="min-w-0 flex-1">
                           <SongRow
@@ -2498,17 +2546,17 @@ export default function YTMusicView({
                           }}
                           aria-label={`Play ${track.title} next`}
                           title={index === 0 ? 'Already playing next' : 'Play next (move to top of queue)'}
-                          className="flex h-[4.5rem] w-10 shrink-0 items-center justify-center text-ink-soft hover:text-[var(--primary)] disabled:opacity-20 disabled:pointer-events-none cursor-pointer transition"
+                          className="flex h-[3.75rem] sm:h-[4.5rem] w-8 sm:w-10 shrink-0 items-center justify-center text-ink-soft hover:text-[var(--primary)] disabled:opacity-20 disabled:pointer-events-none cursor-pointer transition"
                         >
-                          <Icon name="arrow_upward" className="text-xl" />
+                          <Icon name="arrow_upward" className="text-lg sm:text-xl" />
                         </button>
                         <button
                           onClick={() => removeQueueTrack(index)}
                           aria-label={`Remove ${track.title} from queue`}
                           title="Remove from queue"
-                          className="flex h-[4.5rem] w-11 shrink-0 items-center justify-center text-ink-soft hover:text-red-500 cursor-pointer"
+                          className="flex h-[3.75rem] sm:h-[4.5rem] w-8 sm:w-11 shrink-0 items-center justify-center text-ink-soft hover:text-red-500 cursor-pointer"
                         >
-                          <Icon name="close" className="text-xl" />
+                          <Icon name="close" className="text-lg sm:text-xl" />
                         </button>
                       </div>
                     ))
@@ -2521,13 +2569,13 @@ export default function YTMusicView({
               )}
 
               {playerTab === 'lyrics' && (
-                <div className="px-4 py-7">
+                <div className="px-3 sm:px-4 py-4 sm:py-7">
                   {loadingLyrics ? (
                     <div className="flex items-center gap-2 text-ink-soft">
                       <Icon name="progress_activity" className="animate-spin text-[var(--primary)]" /> Loading lyrics…
                     </div>
                   ) : lyrics ? (
-                    <p className="whitespace-pre-line text-lg md:text-xl font-medium leading-relaxed text-ink">
+                    <p className="whitespace-pre-line text-base sm:text-lg md:text-xl font-medium leading-relaxed text-ink">
                       {lyrics}
                     </p>
                   ) : (
