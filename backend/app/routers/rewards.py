@@ -1,5 +1,5 @@
 import logging
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -363,16 +363,24 @@ def _is_due_today(chore: Chore, today: date) -> bool:
 def check_missed_chores() -> None:
     """
     Check for recurring chores at end of day.
-    Reset recurring chores for their next occurrence and advance due date.
-    No points are docked if a chore is not completed.
+    Penalize assigned person by deducting the chore's coin value if not completed.
+    Then reset recurring chores for their next occurrence and advance due date.
     Called by the scheduler daily at 23:59.
     """
     db = SessionLocal()
     try:
-        today = date.today()
+        from zoneinfo import ZoneInfo
+        from ..config import get_settings
+
+        try:
+            tz = ZoneInfo(get_settings().tz)
+        except Exception:
+            tz = ZoneInfo("America/Chicago")
+        today = datetime.now(tz).date()
         today_iso = today.isoformat()
 
         chores = db.query(Chore).filter(Chore.recurrence != "").all()
+        penalized = False
 
         for chore in chores:
             orig_due = date.fromisoformat(chore.due_date) if chore.due_date else None
@@ -385,6 +393,33 @@ def check_missed_chores() -> None:
             if chore.last_reset_date == today_iso:
                 continue
 
+            # Not completed -> penalty (lost points for the day)
+            # Only deduct points for positive-reward chores
+            if not chore.completed and chore.assigned_to and chore.coins > 0:
+                occ_date = chore.due_date if (orig_due and orig_due <= today) else today_iso
+                already_recorded = (
+                    db.query(CoinTransaction.id)
+                    .filter(
+                        CoinTransaction.reason == "chore_missed",
+                        CoinTransaction.reference_id == chore.id,
+                        CoinTransaction.occurrence_date == occ_date,
+                    )
+                    .first()
+                )
+                if already_recorded is None:
+                    db.add(
+                        CoinTransaction(
+                            person_name=chore.assigned_to,
+                            amount=-chore.coins,
+                            reason="chore_missed",
+                            reference_id=chore.id,
+                            occurrence_date=occ_date,
+                            created_at=utcnow(),
+                        )
+                    )
+                    penalized = True
+                    log.info("Missed chore penalty: %s lost %d coin(s) for '%s'", chore.assigned_to, chore.coins, chore.title)
+
             # Reset recurring chore for next occurrence and advance due date
             chore.completed = False
             chore.completed_at = None
@@ -394,6 +429,8 @@ def check_missed_chores() -> None:
 
         db.commit()
         manager.broadcast_threadsafe("chores")
+        if penalized:
+            manager.broadcast_threadsafe("rewards")
     except Exception:
         log.exception("Error checking missed chores")
         db.rollback()

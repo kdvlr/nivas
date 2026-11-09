@@ -1,3 +1,4 @@
+import logging
 from datetime import date, datetime, timezone
 from zoneinfo import ZoneInfo
 
@@ -10,6 +11,8 @@ from ..config import get_settings
 from ..models import Chore, CoinTransaction
 from ..utils import next_due_date
 from ..ws import manager
+
+log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/chores", tags=["chores"])
 
@@ -74,6 +77,7 @@ def list_chores(
     # Automatically advance past-due recurring chores so they roll over to their next occurrence
     recurring = db.query(Chore).filter(Chore.recurrence != "").all()
     has_changes = False
+    penalized = False
     for c in recurring:
         orig_due = date.fromisoformat(c.due_date) if c.due_date else None
         completed_on_past_day = False
@@ -84,15 +88,44 @@ def list_chores(
             completed_on_past_day = dt.astimezone(ZoneInfo(tz_name)).date() < today
 
         if (orig_due and orig_due < today) or completed_on_past_day:
+            # If the recurring chore was past due and NOT completed, penalize for missed occurrence
+            if orig_due and orig_due < today and not c.completed and c.assigned_to and c.coins > 0:
+                occ_date = orig_due.isoformat()
+                already_recorded = (
+                    db.query(CoinTransaction.id)
+                    .filter(
+                        CoinTransaction.reason == "chore_missed",
+                        CoinTransaction.reference_id == c.id,
+                        CoinTransaction.occurrence_date == occ_date,
+                    )
+                    .first()
+                )
+                if already_recorded is None:
+                    db.add(
+                        CoinTransaction(
+                            person_name=c.assigned_to,
+                            amount=-c.coins,
+                            reason="chore_missed",
+                            reference_id=c.id,
+                            occurrence_date=occ_date,
+                            created_at=datetime.now(timezone.utc),
+                        )
+                    )
+                    penalized = True
+                    log.info("Missed chore penalty: %s lost %d coin(s) for '%s' (due %s)", c.assigned_to, c.coins, c.title, occ_date)
+
             new_due = next_due_date(today, c.recurrence, ref_date=orig_due)
             c.due_date = new_due.isoformat()
             c.completed = False
             c.completed_at = None
+            c.last_reset_date = today_iso
             has_changes = True
 
     if has_changes:
         db.commit()
         manager.broadcast_threadsafe("chores")
+        if penalized:
+            manager.broadcast_threadsafe("rewards")
 
     q = db.query(Chore)
     if completed is not None:
@@ -157,6 +190,14 @@ async def patch_chore(chore_id: int, body: ChorePatch, db: Session = Depends(get
             # Record coin earning
             if row.assigned_to:
                 occurrence_date = _occurrence_date(row)
+                # If there was a chore_missed penalty recorded for this occurrence, remove it
+                db.query(CoinTransaction).filter(
+                    CoinTransaction.person_name == row.assigned_to,
+                    CoinTransaction.reason == "chore_missed",
+                    CoinTransaction.reference_id == row.id,
+                    CoinTransaction.occurrence_date.in_([occurrence_date, row.due_date]),
+                ).delete()
+
                 existing = (
                     db.query(CoinTransaction.id)
                     .filter(
@@ -189,6 +230,7 @@ async def patch_chore(chore_id: int, body: ChorePatch, db: Session = Depends(get
                 ).delete()
     db.commit()
     await manager.broadcast("chores")
+    await manager.broadcast("rewards")
     return _chore_dict(row)
 
 
