@@ -5,7 +5,6 @@ import { api, ApiError } from '../lib/api'
 import { useData, useVoiceCommands } from '../lib/hooks'
 import type { Recipe } from '../lib/types'
 import Modal from '../components/Modal'
-import ConfirmModal from '../components/ConfirmModal'
 import PageHeader from '../components/PageHeader'
 import NutritionLabel from '../components/recipes/NutritionLabel'
 import { PRESS_SPRING } from '../lib/motion'
@@ -14,6 +13,14 @@ import { parseBaseServings, scaleIngredient } from '../lib/recipeScaler'
 function detailIdFromHash() {
   const m = location.hash.match(/^#\/recipes\/(\d+)/)
   return m ? Number(m[1]) : null
+}
+
+function safeHostname(rawUrl: string): string {
+  try {
+    return new URL(rawUrl).hostname
+  } catch {
+    return rawUrl
+  }
 }
 
 function RecipeDetail({ id, onBack }: { id: number; onBack: () => void }) {
@@ -159,7 +166,7 @@ function RecipeDetail({ id, onBack }: { id: number; onBack: () => void }) {
             onUpdated={() => reload()}
           />
           {r.source_url && (
-            <p className="mt-4 truncate text-sm text-ink-soft">from {new URL(r.source_url).hostname}</p>
+            <p className="mt-4 truncate text-sm text-ink-soft">from {safeHostname(r.source_url)}</p>
           )}
           <button
             onClick={() => setShowDeleteConfirm(true)}
@@ -633,7 +640,7 @@ export default function Recipes() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className="text-xs font-medium text-ink-soft mb-1 block">Servings</label>
                     <input
@@ -644,24 +651,44 @@ export default function Recipes() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-ink-soft mb-1 block">Prep / Cook Time</label>
+                    <label className="text-xs font-medium text-ink-soft mb-1 block">Prep Time</label>
                     <input
                       value={manualPrepTime}
                       onChange={(e) => setManualPrepTime(e.target.value)}
-                      placeholder="e.g. 15m prep, 30m cook"
+                      placeholder="e.g. 15m"
+                      className="input-glass w-full px-3 py-2 text-sm focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-ink-soft mb-1 block">Cook Time</label>
+                    <input
+                      value={manualCookTime}
+                      onChange={(e) => setManualCookTime(e.target.value)}
+                      placeholder="e.g. 30m"
                       className="input-glass w-full px-3 py-2 text-sm focus:outline-none"
                     />
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-xs font-medium text-ink-soft mb-1 block">Image URL (optional)</label>
-                  <input
-                    value={manualImageUrl}
-                    onChange={(e) => setManualImageUrl(e.target.value)}
-                    placeholder="https://..."
-                    className="input-glass w-full px-3 py-2 text-sm focus:outline-none"
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-ink-soft mb-1 block">Tags (comma-separated)</label>
+                    <input
+                      value={manualTags}
+                      onChange={(e) => setManualTags(e.target.value)}
+                      placeholder="e.g. dinner, vegetarian"
+                      className="input-glass w-full px-3 py-2 text-sm focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-ink-soft mb-1 block">Image URL (optional)</label>
+                    <input
+                      value={manualImageUrl}
+                      onChange={(e) => setManualImageUrl(e.target.value)}
+                      placeholder="https://..."
+                      className="input-glass w-full px-3 py-2 text-sm focus:outline-none"
+                    />
+                  </div>
                 </div>
 
                 <div>

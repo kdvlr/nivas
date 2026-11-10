@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from ..admin_auth import require_admin
 from ..config import get_settings
 from ..db import get_db
 from ..services.sync import get_setting, set_setting
@@ -68,7 +69,7 @@ def _location(db: Session) -> dict | None:
 
 
 @router.put("/location")
-async def put_location(body: LocationPut, db: Session = Depends(get_db)):
+async def put_location(body: LocationPut, _: None = Depends(require_admin), db: Session = Depends(get_db)):
     set_setting(db, "weather_location", {"lat": body.lat, "lon": body.lon, "unit": body.unit})
     _cache["at"] = 0.0  # force refresh
     return {"ok": True}

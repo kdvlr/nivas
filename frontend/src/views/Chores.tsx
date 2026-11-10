@@ -5,6 +5,7 @@ import Avatar from '../components/Avatar'
 import CoinIcon from '../components/CoinIcon'
 import Icon from '../components/Icon'
 import { api } from '../lib/api'
+import { isChoreActionableToday, isPenaltyChore, sortTodayChores } from '../lib/chores'
 import { useData, todayISO, fmtDate } from '../lib/hooks'
 import type { ChoreItem, CoinBalance } from '../lib/types'
 import { useCelebration } from '../components/celebrations/CelebrationContext'
@@ -56,7 +57,7 @@ const emptyDraft = (): Draft => ({
   people: [],
   coins: 1,
   due: todayISO(),
-  recurrence: '',
+  recurrence: 'daily',
   weekDays: [],
 })
 
@@ -627,15 +628,17 @@ export default function Chores() {
       if (!map.has(key)) {
         map.set(key, { todayList: [], upcomingList: [] })
       }
-      if (!c.due_date || c.due_date <= today) {
+      if (isChoreActionableToday(c, today)) {
         map.get(key)!.todayList.push(c)
       } else {
         map.get(key)!.upcomingList.push(c)
       }
     }
 
-    // Sort each member's upcoming chores chronologically by due date (earliest first), then title
+    // Order each member's Today list (positive same-day chores first, manual penalties below)
+    // and sort Upcoming chores chronologically by due date (earliest first), then title
     for (const group of map.values()) {
+      group.todayList = sortTodayChores(group.todayList)
       group.upcomingList.sort((a, b) => {
         if (a.due_date !== b.due_date) {
           return a.due_date.localeCompare(b.due_date)
@@ -800,6 +803,9 @@ export default function Chores() {
                     else if (tier === 2) medal = '🥉'
                   }
 
+                  const positiveToday = todayList.filter((c) => !isPenaltyChore(c))
+                  const openPositiveCount = positiveToday.filter((c) => !c.completed).length
+
                   return (
                     <section key={person} className="flex flex-col min-w-0">
                       <div className="mb-2.5 flex items-center justify-between">
@@ -838,9 +844,17 @@ export default function Chores() {
                             </span>
                           )}
                         </button>
-                        <span className="text-xs lg:text-sm font-semibold px-2.5 py-0.5 rounded-full bg-surface-variant text-ink-soft">
-                          {todayList.filter((c) => !c.completed).length} left
-                        </span>
+                        {positiveToday.length > 0 && (
+                          <span
+                            className={`text-xs lg:text-sm font-semibold px-2.5 py-0.5 rounded-full ${
+                              openPositiveCount === 0
+                                ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300'
+                                : 'bg-surface-variant text-ink-soft'
+                            }`}
+                          >
+                            {openPositiveCount === 0 ? 'All done! 🎉' : `${openPositiveCount} left`}
+                          </span>
+                        )}
                       </div>
                       {todayList.length === 0 ? (
                         <div className="rounded-xl glass-inset p-4 text-center text-base text-ink-soft">
@@ -915,7 +929,7 @@ export default function Chores() {
                   { title: 'Take out trash', coins: 10, recurrence: 'weekly', weekDays: [2], isPenalty: false }, // Wed
                   { title: 'Clean room', coins: 15, recurrence: 'weekly', weekDays: [5], isPenalty: false }, // Sat
                   { title: 'Feed pets', coins: 5, recurrence: 'daily', isPenalty: false },
-                  { title: 'Room Not Clean', coins: -10, recurrence: '', isPenalty: true },
+                  { title: 'Room Not Clean', coins: -10, recurrence: 'daily', isPenalty: true },
                 ].map((tpl) => (
                   <button
                     key={tpl.title}

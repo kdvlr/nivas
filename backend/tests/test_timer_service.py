@@ -5,13 +5,19 @@ from app.main import app
 from app.services.timer_service import timer_service
 
 
+@pytest.fixture(autouse=True)
+def isolate_timer_state(tmp_path, monkeypatch):
+    test_file = tmp_path / "active_timer.json"
+    monkeypatch.setattr(timer_service, "_state_file", lambda: test_file)
+    orig_state = dict(timer_service._state) if timer_service._state else None
+    timer_service._state = None
+    yield
+    timer_service._state = orig_state
+
+
 @pytest.fixture
 def client():
-    # Clear any active timer before each test
-    timer_service.cancel_timer()
-    with TestClient(app) as c:
-        yield c
-    timer_service.cancel_timer()
+    return TestClient(app)
 
 
 def test_timer_service_lifecycle():

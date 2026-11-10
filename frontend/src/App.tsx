@@ -41,7 +41,6 @@ import CreateTimerModal from './components/timer/CreateTimerModal'
 import FullScreenTimer from './components/timer/FullScreenTimer'
 import MiniTimerCapsule from './components/timer/MiniTimerCapsule'
 import MorningKidsBanner from './components/kids/MorningKidsBanner'
-import Modal from './components/Modal'
 
 const NAV = [
   { id: 'home', label: 'Home', icon: 'home', view: Home, active: 'bg-sky-200 text-sky-950 dark:bg-sky-900 dark:text-sky-100', activeText: 'text-sky-600 dark:text-sky-400' },
@@ -131,31 +130,13 @@ function SegmentedRow<T extends string>({
   )
 }
 
-const getTzDateString = (date: Date, timeZone: string) => {
-  try {
-    const formatter = new Intl.DateTimeFormat('en-US', {
-      timeZone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    })
-    const parts = formatter.formatToParts(date)
-    const year = parts.find((p) => p.type === 'year')?.value
-    const month = parts.find((p) => p.type === 'month')?.value
-    const day = parts.find((p) => p.type === 'day')?.value
-    return `${year}-${month}-${day}`
-  } catch (e) {
-    return ''
-  }
-}
-
 import { playChime } from './lib/useAudioChime'
 import TopClockHeader from './components/TopClockHeader'
 import AmbientCalendarOverlay, { type ReminderPayload } from './components/AmbientCalendarOverlay'
 import BirthdayFanfareOverlay from './components/BirthdayFanfareOverlay'
 
 function AppContent() {
-  const { isTimerActive, timer } = useTimer()
+  const { isTimerActive } = useTimer()
   const isTimerActiveRef = useRef(isTimerActive)
   isTimerActiveRef.current = isTimerActive
 
@@ -321,6 +302,11 @@ function AppContent() {
   }
 
   const seekDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    return () => {
+      if (seekDebounceRef.current) clearTimeout(seekDebounceRef.current)
+    }
+  }, [])
   const handleSeek = (secs: number) => {
     setElapsedSeconds(secs)
     if (seekDebounceRef.current) {
@@ -346,11 +332,6 @@ function AppContent() {
     })
   }
 
-  const handleMute = () => {
-    api.post('/api/ytmusic/airplay/volume/master', { volume: 0 }).catch(() => {})
-  }
-
-
   const handleQueueTrack = (track: Track, playNext: boolean) => {
     api.post<any>(playNext ? '/api/ytmusic/player/queue/next' : '/api/ytmusic/player/queue', track)
       .then((res) => setPlayQueue(Array.isArray(res?.queue) ? res.queue : []))
@@ -364,9 +345,8 @@ function AppContent() {
       .catch(() => syncPlayerState())
   }
 
-  // Touch gestures for swipe-to-navigate and pull-to-refresh
-  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null)
-  const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(null)
+  // Touch gestures for pull-to-refresh (using ref for touchStart to avoid 60fps state re-renders on touchmove)
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
   const mainRef = useRef<HTMLElement>(null)
   const [pullY, setPullY] = useState(0)
   const [isPulling, setIsPulling] = useState(false)
@@ -385,8 +365,6 @@ function AppContent() {
     '/api/setup/config',
     ['setup'],
   )
-  const configRef = useRef(config)
-  configRef.current = config
 
   useEffect(() => {
     if (config?.appearance) {
@@ -688,17 +666,15 @@ function AppContent() {
   const activeNav = route === 'rewards' ? 'chores' : route
 
   const now = useClock()
-  const isHome = route === 'home'
 
   const onTouchStart = (e: React.TouchEvent) => {
-    setTouchEnd(null)
-    setTouchStart({ x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY })
+    touchStartRef.current = { x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY }
   }
 
   const onTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd({ x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY })
-    if (touchStart && mainRef.current && mainRef.current.scrollTop <= 0) {
-      const yDiff = e.targetTouches[0].clientY - touchStart.y
+    const start = touchStartRef.current
+    if (start && mainRef.current && mainRef.current.scrollTop <= 0) {
+      const yDiff = e.targetTouches[0].clientY - start.y
       if (yDiff > 0 && yDiff < 200) { // Limit max pull
         setPullY(Math.min(yDiff * 0.4, 80))
       }
@@ -711,10 +687,9 @@ function AppContent() {
       window.location.reload()
       return
     }
-    setPullY(0)
-    setTouchStart(null)
-    setTouchEnd(null)
-    setIsPulling(false)
+    if (pullY !== 0) setPullY(0)
+    touchStartRef.current = null
+    if (isPulling) setIsPulling(false)
   }
 
 
@@ -981,7 +956,7 @@ function AppContent() {
                 pillId="sheet-appearance-pill"
                 options={APPEARANCE_OPTIONS}
                 value={appearance}
-                onSelect={setAppearanceState}
+                onSelect={chooseAppearance}
                 inline
               />
               <SegmentedRow

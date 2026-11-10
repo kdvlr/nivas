@@ -2,10 +2,12 @@ import logging
 from datetime import date, datetime, timedelta
 from typing import Tuple
 from zoneinfo import ZoneInfo
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from ..config import get_settings
 from ..models import CalendarEvent, CalendarSelection
+from . import sync
 
 log = logging.getLogger(__name__)
 
@@ -21,10 +23,37 @@ NO_SCHOOL_KEYWORDS = (
 )
 
 
+def get_default_school_names() -> list[str]:
+    raw = get_settings().school_calendar_names or ""
+    return [name.strip() for name in raw.split(",") if name.strip()]
+
+
+def get_school_calendar_names(db: Session) -> list[str]:
+    saved = sync.get_setting(db, "school_calendar_names")
+    if isinstance(saved, list):
+        return [str(n).strip() for n in saved if str(n).strip()]
+    if isinstance(saved, str):
+        return [n.strip() for n in saved.split(",") if n.strip()]
+    return get_default_school_names()
+
+
+def get_school_calendar_ids(db: Session) -> list[int] | None:
+    saved = sync.get_setting(db, "school_calendar_ids")
+    if isinstance(saved, list):
+        ids: list[int] = []
+        for item in saved:
+            try:
+                ids.append(int(item))
+            except (TypeError, ValueError):
+                continue
+        return ids
+    return None
+
+
 def is_school_day(db: Session, target_date: date | None = None) -> Tuple[bool, str]:
     """
-    Evaluates whether target_date is a scheduled school day using Swara and Dhruv's
-    synced Google Calendar events (Frisco ISD schedule).
+    Evaluates whether target_date is a scheduled school day using the configured
+    Google Calendar selections or student/calendar name filters.
 
     Returns:
         (is_school_day: bool, reason: str)
@@ -38,23 +67,37 @@ def is_school_day(db: Session, target_date: date | None = None) -> Tuple[bool, s
         day_name = target_date.strftime("%A")
         return False, f"Weekend ({day_name})"
 
-    # 2. Look up calendar selections for Swara and Dhruv
-    selections = (
-        db.query(CalendarSelection)
-        .filter(
-            CalendarSelection.enabled == True,
-            (
-                CalendarSelection.person_name.ilike("%Swara%")
-                | CalendarSelection.person_name.ilike("%Dhruv%")
-                | CalendarSelection.name.ilike("%Swara%")
-                | CalendarSelection.name.ilike("%Dhruv%")
-            ),
+    # 2. Look up configured school calendar selections:
+    #    (a) Explicit calendar selection IDs chosen in Setup, if set
+    #    (b) Otherwise, calendar/person name filters (from DB setting or SCHOOL_CALENDAR_NAMES)
+    selections: list[CalendarSelection] = []
+    configured_ids = get_school_calendar_ids(db)
+    if configured_ids:
+        selections = (
+            db.query(CalendarSelection)
+            .filter(
+                CalendarSelection.enabled == True,
+                CalendarSelection.id.in_(configured_ids),
+            )
+            .all()
         )
-        .all()
-    )
 
     if not selections:
-        # Fallback: if no specific selections found, query all enabled selections
+        names = get_school_calendar_names(db)
+        if names:
+            clauses = []
+            for name in names:
+                pattern = f"%{name}%"
+                clauses.append(CalendarSelection.person_name.ilike(pattern))
+                clauses.append(CalendarSelection.name.ilike(pattern))
+            selections = (
+                db.query(CalendarSelection)
+                .filter(CalendarSelection.enabled == True, or_(*clauses))
+                .all()
+            )
+
+    if not selections:
+        # Fallback: if no specific selections matched, query all enabled selections
         selections = db.query(CalendarSelection).filter(CalendarSelection.enabled == True).all()
 
     sel_ids = [s.id for s in selections]

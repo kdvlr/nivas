@@ -10,6 +10,26 @@ from app.services.kids_daily_service import (
     kids_daily_service,
 )
 
+@pytest.fixture(autouse=True)
+def isolate_kids_daily_state(tmp_path, monkeypatch):
+    test_file = tmp_path / "kids_daily.json"
+    monkeypatch.setattr("app.services.kids_daily_service._get_kids_daily_file", lambda: test_file)
+    monkeypatch.setattr(kids_daily_service, "_generate_with_gemini", lambda *args, **kwargs: None)
+    orig_cache = dict(kids_daily_service._cache)
+    orig_settings = dict(kids_daily_service._settings)
+    kids_daily_service._cache = {}
+    kids_daily_service._settings = {
+        "force_banner_active": False,
+        "gemini_api_key": "",
+        "gemini_model": "gemini-3.7-flash",
+        "age_groups": [5, 9],
+        "interests": [],
+    }
+    yield
+    kids_daily_service._cache = orig_cache
+    kids_daily_service._settings = orig_settings
+
+
 @pytest.fixture
 def client():
     return TestClient(app)

@@ -197,7 +197,7 @@ function SongRow({
 }
 
 export default function YTMusicView({
-  now: initialNow,
+  now = new Date(),
   config,
   currentTrack,
   isPlaying,
@@ -281,7 +281,6 @@ export default function YTMusicView({
   const [playerTab, setPlayerTab] = useState<PlayerTab>('queue')
   const [lyrics, setLyrics] = useState<string>('')
   const [loadingLyrics, setLoadingLyrics] = useState(false)
-  const [now, setNow] = useState(new Date())
 
   // Queue state for drag-and-drop
   const [editableQueue, setEditableQueue] = useState<Track[]>(queue)
@@ -317,11 +316,6 @@ export default function YTMusicView({
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
   }, [getSubViewFromHash])
-
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 1000)
-    return () => clearInterval(timer)
-  }, [])
 
   useEffect(() => {
     if (activePointerIdRef.current === null) {
@@ -913,8 +907,11 @@ export default function YTMusicView({
     if (e) e.stopPropagation()
     setOpeningPlaylistId(playlist.id)
     try {
-      const res = await api.get<any>(`/api/ytmusic/playlist/${playlist.id}`)
-      const tracks = (Array.isArray(res?.tracks) ? res.tracks : []).map(toTrack).filter((t: Track | null): t is Track => Boolean(t))
+      let tracks = playlist.tracks
+      if (!tracks || !tracks.length) {
+        const res = await api.get<any>(`/api/ytmusic/playlist/${playlist.id}/songs?limit=25`)
+        tracks = (Array.isArray(res?.tracks) ? res.tracks : []).map(toTrack).filter((t: Track | null): t is Track => Boolean(t))
+      }
       if (tracks && tracks.length) {
         if (!currentTrack) {
           syncUrlSubView('now-playing')
@@ -1012,6 +1009,7 @@ export default function YTMusicView({
   }, [currentTrack?.videoId, playerTab])
 
   // Compute daily randomized layout presentation
+  const dailyDateKey = now.toDateString()
   const dailyLayout = useMemo(() => {
     const rnd = getDateRandom(now)
 
@@ -1031,7 +1029,7 @@ export default function YTMusicView({
       targetPresentations,
       showHomeTop,
     }
-  }, [targetPlaylists, now])
+  }, [targetPlaylists, dailyDateKey])
 
   const searchIsOpen = Boolean(searchQuery.trim())
   const browseIsOpen = searchIsOpen || activeView === 'browse' || activeView === 'local' || !currentTrack

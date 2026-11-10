@@ -289,11 +289,18 @@ class YTMusicService:
                 return results
 
             else:
-                # "all" search: fetch raw unfiltered search (for Top Result), plus songs, albums, and videos
-                raw_all = self._ytmusic.search(query, limit=20)
-                song_results = self._ytmusic.search(query, filter="songs", limit=20)
-                album_results = self._ytmusic.search(query, filter="albums", limit=10)
-                video_results = self._ytmusic.search(query, filter="videos", limit=15)
+                # "all" search: fetch raw unfiltered search (for Top Result), plus songs, albums, and videos concurrently
+                from concurrent.futures import ThreadPoolExecutor
+
+                with ThreadPoolExecutor(max_workers=4) as pool:
+                    f_all = pool.submit(self._ytmusic.search, query, limit=20)
+                    f_songs = pool.submit(self._ytmusic.search, query, filter="songs", limit=20)
+                    f_albums = pool.submit(self._ytmusic.search, query, filter="albums", limit=10)
+                    f_videos = pool.submit(self._ytmusic.search, query, filter="videos", limit=15)
+                    raw_all = f_all.result()
+                    song_results = f_songs.result()
+                    album_results = f_albums.result()
+                    video_results = f_videos.result()
 
                 # Extract Top Result
                 top_raw = next((r for r in raw_all if r.get("category") == "Top result"), raw_all[0] if raw_all else None)

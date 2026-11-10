@@ -22,13 +22,14 @@ def get_setting(db: Session, key: str, default=None):
     return row.value if row is not None else default
 
 
-def set_setting(db: Session, key: str, value) -> None:
+def set_setting(db: Session, key: str, value, *, commit: bool = True) -> None:
     row = db.get(Setting, key)
     if row is None:
         db.add(Setting(key=key, value=value))
     else:
         row.value = value
-    db.commit()
+    if commit:
+        db.commit()
 
 
 def _shopping_list_name(db: Session) -> str:
@@ -277,14 +278,7 @@ def cleanup_old_completed() -> int:
             SHOPPING_COMPLETED_RETENTION_DAYS,
         )
     if shopping_removed:
-        try:
-            import asyncio
-            loop = asyncio.get_running_loop()
-            loop.create_task(manager.broadcast("shopping"))
-        except RuntimeError:
-            pass
-        except Exception:
-            pass
+        manager.broadcast_threadsafe("shopping")
     return removed
 
 

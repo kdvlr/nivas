@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useId, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import confetti from 'canvas-confetti'
 import { autumnVisits, autumnProgress } from '../lib/autumnAmbience'
 import { playBalloonPopSound } from '../lib/useAudioChime'
 import Icon from './Icon'
@@ -150,12 +149,6 @@ const SKY_GRADIENTS: Record<SkyPhase, { clear: string; overcast: string }> = {
     overcast: 'linear-gradient(180deg, #05070f 0%, #0b0f1e 50%, #141a2e 100%)',
   },
 }
-
-// A third of a real family library is video, averaging ~23MB and reaching
-// 90MB. Streaming one of those for a 9-second slide swamps a kiosk tablet's
-// network and media pipeline, so only short/small clips animate; anything
-// bigger shows a still frame and stays tap-to-play.
-const AUTOPLAY_MAX_BYTES = 5 * 1024 * 1024
 
 const BALLOON_COLORS = ['#f87171', '#fb923c', '#facc15', '#4ade80', '#38bdf8', '#c084fc', '#f472b6']
 
@@ -6808,6 +6801,9 @@ export default function Slideshow({
     return () => {
       clearInterval(poll)
       clearTimeout(bail)
+      v.pause()
+      v.removeAttribute('src')
+      v.load()
     }
   }, [selectedVideo])
 
@@ -6856,7 +6852,8 @@ export default function Slideshow({
     console.info(
       `[Nivas Telemetry] Slide ${slides.length ? currentIdx + 1 : 0}/${slides.length} | FPS: ${fps} (${frameTimeMs}ms) | Quality: ${quality}${memoryMb !== null ? ` | Heap: ${memoryMb}MB` : ''}`
     )
-  }, [currentIdx, slides.length, fps, frameTimeMs, quality])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIdx, slides.length, quality])
 
   // Advance every 9 seconds, paused while a full video is being watched.
   // When wrapping around at the end of the deck, re-shuffle so the next loop

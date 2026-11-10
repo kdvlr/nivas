@@ -121,10 +121,10 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   const timerRef = useRef<ActiveTimer | null>(timer)
   timerRef.current = timer
 
-  // Ensure full-screen is always active when a timer is on, and false when no timer exists
+  // Open full-screen when a new timer starts, and close when no timer exists
   useEffect(() => {
-    setIsFullScreen(Boolean(timer))
-  }, [timer])
+    setIsFullScreen(Boolean(timer?.id))
+  }, [timer?.id])
 
   // Keep localStorage synchronized
   useEffect(() => {
@@ -168,6 +168,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
       } else {
         setTimer((prev) => {
           if (!prev || prev.status !== 'running') return prev
+          if (prev.remainingSeconds === remaining && prev.stage === stage) return prev
           return {
             ...prev,
             remainingSeconds: remaining,
@@ -244,6 +245,8 @@ export function TimerProvider({ children }: { children: ReactNode }) {
       .then((res) => {
         if (res?.active && res.timer) {
           applyServerTimer(res.timer)
+        } else if (res && res.active === false) {
+          applyServerTimer(null)
         }
       })
       .catch(() => {})

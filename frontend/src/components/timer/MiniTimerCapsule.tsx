@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Icon from '../Icon'
 import { useTimer } from '../../context/TimerContext'

@@ -99,6 +99,8 @@ export interface SetupStatus {
     list_person_map: Record<string, string>
     secondary_tz?: string
     secondary_tz_emoji?: string
+    school_calendar_ids?: number[] | null
+    school_calendar_names?: string[]
   }
 }
 

@@ -68,6 +68,12 @@ const MediaTile = ({ item, onClick }: { item: MediaItem; onClick: () => void }) 
     return () => {
       if (currentRef) observer.unobserve(currentRef)
       if (activeGalleryLiveVideo === videoRef.current) activeGalleryLiveVideo = null
+      const v = videoRef.current
+      if (v) {
+        v.pause()
+        v.removeAttribute('src')
+        v.load()
+      }
     }
   }, [item.type, item.videoUrl])
 
@@ -179,6 +185,14 @@ const LightboxLivePhoto = ({ item }: { item: MediaItem }) => {
     // Autoplay live photo in lightbox
     setIsPlaying(true)
     videoRef.current?.play().catch((err) => console.log('Lightbox Live Photo autoplay failed:', err))
+    return () => {
+      const v = videoRef.current
+      if (v) {
+        v.pause()
+        v.removeAttribute('src')
+        v.load()
+      }
+    }
   }, [item.url])
 
   return (
@@ -278,6 +292,18 @@ export default function Photos({ onStartSlideshow }: { onStartSlideshow?: () => 
   }
 
   const currentMedia = lightboxIdx !== null && media ? media[lightboxIdx] : null
+  const lightboxVideoRef = useRef<HTMLVideoElement>(null)
+
+  useEffect(() => {
+    return () => {
+      const v = lightboxVideoRef.current
+      if (v) {
+        v.pause()
+        v.removeAttribute('src')
+        v.load()
+      }
+    }
+  }, [currentMedia?.url])
 
   return (
     <div className="h-full flex flex-col p-4 sm:p-6 overflow-y-auto">
@@ -414,6 +440,7 @@ export default function Photos({ onStartSlideshow }: { onStartSlideshow?: () => 
 
                   {currentMedia.type === 'video' && (
                     <video
+                      ref={lightboxVideoRef}
                       src={currentMedia.playbackUrl || currentMedia.url}
                       controls
                       autoPlay

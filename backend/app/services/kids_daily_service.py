@@ -1266,7 +1266,8 @@ class KidsDailyService:
 
     def get_today_payload(self, date_str: Optional[str] = None, force_regenerate: bool = False) -> Dict[str, Any]:
         try:
-            today_key = (date.fromisoformat(date_str) if date_str else date.today()).isoformat()
+            default_today = datetime.now(ZoneInfo(get_settings().tz)).date()
+            today_key = (date.fromisoformat(date_str) if date_str else default_today).isoformat()
         except (TypeError, ValueError):
             raise ValueError("date must be ISO-8601 (YYYY-MM-DD)")
         with self._lock:
@@ -1343,7 +1344,7 @@ class KidsDailyService:
         try:
             curr_d = date.fromisoformat(current_date_str)
         except Exception:
-            curr_d = date.today()
+            curr_d = datetime.now(ZoneInfo(get_settings().tz)).date()
 
         for d_str, day_data in self._cache.items():
             if d_str == current_date_str:

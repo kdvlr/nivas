@@ -25,14 +25,23 @@ class Settings(BaseSettings):
 
     data_dir: Path = Path("/data") if Path("/data").is_dir() else Path("./data")
     base_url: str = "http://localhost:8000"
+    music_dir: Path = Path("/media/music")
+    static_dir: Path | None = None
+    ha_scrypted_base: str = "http://192.168.100.224:8123/api/scrypted"
 
     # PIN required to open the Setup screen ("" = no PIN). Reset by editing .env.
     setup_pin: str = ""
+
+    # Default comma-separated calendar/person names used for school-day detection
+    # when not overridden in Setup -> Integrations -> Google Calendar.
+    school_calendar_names: str = "Swara,Dhruv"
 
     # Render timestamps ahead of send time so receivers can repair occasional
     # UDP loss before audio becomes audible. Two seconds matches the classic
     # AirPlay sender lead and yields the canonical 77175-frame PT=87 anchor gap.
     airplay_render_delay_ms: int = 2000
+    airplay_pause_timeout_seconds: int = 900
+    airplay_log_path: str = "/tmp/nivas-airplay.log"
 
     @property
     def photos_dir(self) -> Path:

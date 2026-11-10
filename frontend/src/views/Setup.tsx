@@ -6,7 +6,7 @@ import CoinIcon from '../components/CoinIcon'
 import Icon from '../components/Icon'
 import TopClockHeader from '../components/TopClockHeader'
 import { api } from '../lib/api'
-import { useData } from '../lib/hooks'
+import { useClock, useData } from '../lib/hooks'
 import type { CalendarStatus, SetupStatus, RewardStoreItem, WeatherData, KidsDailyAdminResponse } from '../lib/types'
 import { useCelebration } from '../components/celebrations/CelebrationContext'
 import {
@@ -269,7 +269,7 @@ function SetupInner() {
   const [calendarColorEditing, setCalendarColorEditing] = useState<number | null>(null)
   const [section, setSection] = useState<SectionId>('integrations')
   const [colorEditing, setColorEditing] = useState<number | null>(null)
-  const [accentColor, setAccentColorState] = useState(localStorage.getItem('accentColor') || '')
+  const now = useClock()
   const [celebrationSound, setCelebrationSound] = useState(
     () => localStorage.getItem('nivas_celebration_sound') === 'true',
   )
@@ -368,6 +368,59 @@ function SetupInner() {
     reloadCal()
   }
 
+  const allSelections = (cal?.accounts ?? []).flatMap((a) => a.selections)
+  const configuredSchoolIds = status?.settings.school_calendar_ids ?? null
+  const configuredSchoolNames = status?.settings.school_calendar_names ?? []
+  const [schoolNamesInput, setSchoolNamesInput] = useState('')
+  const [schoolNamesDirty, setSchoolNamesDirty] = useState(false)
+
+  useEffect(() => {
+    if (!schoolNamesDirty && status?.settings.school_calendar_names) {
+      setSchoolNamesInput(status.settings.school_calendar_names.join(', '))
+    }
+  }, [status?.settings.school_calendar_names, schoolNamesDirty])
+
+  const matchesSchoolName = (sel: { name: string; person_name: string }) =>
+    configuredSchoolNames.some((n) => {
+      const needle = n.toLowerCase()
+      return (
+        Boolean(needle) &&
+        (sel.person_name.toLowerCase().includes(needle) || sel.name.toLowerCase().includes(needle))
+      )
+    })
+
+  const isSchoolSelection = (sel: { id: number; name: string; person_name: string }) => {
+    if (configuredSchoolIds && configuredSchoolIds.length > 0) {
+      return configuredSchoolIds.includes(sel.id)
+    }
+    return matchesSchoolName(sel)
+  }
+
+  const toggleSchoolSelection = async (selId: number) => {
+    const baseIds =
+      configuredSchoolIds && configuredSchoolIds.length > 0
+        ? configuredSchoolIds
+        : allSelections.filter((s) => s.enabled && matchesSchoolName(s)).map((s) => s.id)
+    const nextIds = baseIds.includes(selId)
+      ? baseIds.filter((id) => id !== selId)
+      : [...baseIds, selId]
+    await api.put('/api/setup/settings', { school_calendar_ids: nextIds })
+    reload()
+  }
+
+  const saveSchoolNames = async () => {
+    const names = schoolNamesInput
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+    await api.put('/api/setup/settings', {
+      school_calendar_names: names,
+      school_calendar_ids: [],
+    })
+    setSchoolNamesDirty(false)
+    reload()
+  }
+
   const savePeople = async (list: Person[]) => {
     await api.put(
       '/api/setup/people',
@@ -413,7 +466,7 @@ function SetupInner() {
           >
             <Icon name="sync" /> Sync everything now
           </button>
-          <TopClockHeader now={new Date()} />
+          <TopClockHeader now={now} />
         </div>
       </div>
 
@@ -660,6 +713,18 @@ function SetupInner() {
                                   </option>
                                 ))}
                               </select>
+                              <button
+                                type="button"
+                                onClick={() => toggleSchoolSelection(s.id)}
+                                title="Use this calendar to detect school days & holidays for the 6:15 AM School Morning Timer"
+                                className={`shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition cursor-pointer ${
+                                  isSchoolSelection(s)
+                                    ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40'
+                                    : 'glass-inset text-ink-soft hover:text-ink'
+                                }`}
+                              >
+                                🎓 School
+                              </button>
                             </div>
                           )
                         })}
@@ -680,6 +745,40 @@ function SetupInner() {
               >
                 <Icon name="add" className="text-base" /> Connect Google Account
               </a>
+
+              <div className="mt-4 rounded-xl glass-inset p-3.5 flex flex-col gap-2">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-xs font-semibold text-ink flex items-center gap-1.5">
+                    <span>🎓</span> School Schedule Filter (6:15 AM Morning Timer)
+                  </span>
+                  {configuredSchoolIds && configuredSchoolIds.length > 0 && (
+                    <span className="text-[11px] font-medium text-amber-700 dark:text-amber-300">
+                      {configuredSchoolIds.length} calendar{configuredSchoolIds.length === 1 ? '' : 's'} pinned
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-ink-soft">
+                  Toggle <strong>🎓 School</strong> on individual calendars above, or match enabled calendars by student/calendar name keywords:
+                </p>
+                <div className="flex items-center gap-2">
+                  <input
+                    value={schoolNamesInput}
+                    onChange={(e) => {
+                      setSchoolNamesInput(e.target.value)
+                      setSchoolNamesDirty(true)
+                    }}
+                    placeholder="e.g. Swara, Dhruv, School"
+                    className="input-glass flex-1 px-3 py-1.5 text-xs focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={saveSchoolNames}
+                    className="btn-primary px-3 py-1.5 text-xs font-semibold cursor-pointer"
+                  >
+                    Save Filter
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* iCloud */}
@@ -1801,7 +1900,7 @@ function KidsDailyCard() {
               <button
                 onClick={handleSaveGeminiKey}
                 disabled={savingKey || !geminiKeyInput.trim()}
-                className="btn-accent px-3 py-1.5 text-xs font-semibold disabled:opacity-50 cursor-pointer"
+                className="btn-primary px-3 py-1.5 text-xs font-semibold disabled:opacity-50 cursor-pointer"
               >
                 {savingKey ? 'Saving...' : 'Save & Enable'}
               </button>
@@ -2223,7 +2322,7 @@ function PwaSettingsCard() {
                 <p className="font-semibold text-ink">Option 1: Chrome Flag (For Local IP / Offline LAN)</p>
                 <ol className="list-decimal list-inside space-y-1 pl-1 pt-0.5">
                   <li>In Chrome on Apolosign, visit <code className="font-mono bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded">chrome://flags/#unsafely-treat-insecure-origin-as-secure</code></li>
-                  <li>Enable the flag and add: <code className="font-mono bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded">http://192.168.100.231:8000</code></li>
+                  <li>Enable the flag and add: <code className="font-mono bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded">{currentOrigin}</code></li>
                   <li>Tap <strong>Relaunch</strong>. Open Nivas and tap Chrome menu (⋮) → <strong>Install app</strong>.</li>
                 </ol>
               </div>
@@ -2233,7 +2332,7 @@ function PwaSettingsCard() {
               </div>
               <div>
                 <p className="font-semibold text-ink">Option 3: Fully Kiosk Browser</p>
-                <p className="pl-1 pt-0.5">If running Fully Kiosk Browser, configure Start URL to <code className="font-mono bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded">http://192.168.100.231:8000</code> and enable Kiosk Mode.</p>
+                <p className="pl-1 pt-0.5">If running Fully Kiosk Browser, configure Start URL to <code className="font-mono bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded">{currentOrigin}</code> and enable Kiosk Mode.</p>
               </div>
             </div>
           </div>

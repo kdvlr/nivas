@@ -66,6 +66,7 @@ export default function MiniPlayerBar({
   }
 
   useEffect(() => {
+    if (!currentTrack) return
     checkAirPlayStatus()
     const interval = setInterval(checkAirPlayStatus, 5000)
     const unsub = onWsMessage((msg) => {
@@ -79,7 +80,7 @@ export default function MiniPlayerBar({
       clearInterval(interval)
       unsub()
     }
-  }, [])
+  }, [Boolean(currentTrack)])
 
   if (!currentTrack) return null
 

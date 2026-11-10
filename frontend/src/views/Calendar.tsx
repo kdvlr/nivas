@@ -6,7 +6,6 @@ import multiMonthPlugin from '@fullcalendar/multimonth'
 import interactionPlugin from '@fullcalendar/interaction'
 import type { DateSelectArg, EventClickArg, EventDropArg, DatesSetArg } from '@fullcalendar/core'
 import type { EventResizeDoneArg } from '@fullcalendar/interaction'
-import listPlugin from '@fullcalendar/list'
 import { api } from '../lib/api'
 import { useClock, useData } from '../lib/hooks'
 import { onRefresh } from '../lib/ws'
@@ -66,7 +65,7 @@ type YearSubMode = 'calendar' | 'rolling-12'
 export default function Calendar() {
   const { data: status } = useData<CalendarStatus>('/api/calendar/status', ['calendar'])
   const { data: weather } = useData<WeatherData>('/api/weather', [], 15 * 60 * 1000)
-  const now = useClock(10000)
+  const now = useClock(60000)
   const calRef = useRef<FullCalendar>(null)
   const [draft, setDraft] = useState<Draft | null>(null)
   const [busy, setBusy] = useState(false)
@@ -1283,7 +1282,7 @@ export default function Calendar() {
             <FullCalendar
               key={isMobile ? 'fc-mobile' : 'fc-desktop'}
               ref={calRef}
-              plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin, listPlugin, multiMonthPlugin]}
+              plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin, multiMonthPlugin]}
               initialView={
                 currentViewMode === 'day'
                   ? 'timeGridDay'

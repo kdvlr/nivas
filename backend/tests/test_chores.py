@@ -415,4 +415,102 @@ async def test_completing_missed_chore_removes_penalty(db, monkeypatch):
     assert completed_txns[0].amount == 4
 
 
+def test_one_off_same_day_chores_settle_and_expire_without_overdue(db, monkeypatch):
+    from datetime import timedelta
+    from zoneinfo import ZoneInfo
+    from app.config import get_settings
+    from app.routers.rewards import check_missed_chores, _get_balance_breakdown
+
+    tz = ZoneInfo(get_settings().tz)
+    today_date = datetime.now(tz).date()
+    today = today_date.isoformat()
+    tomorrow = (today_date + timedelta(days=1)).isoformat()
+
+    missed_today = Chore(
+        title="Clean backpack",
+        assigned_to="Swara",
+        coins=6,
+        recurrence="",
+        due_date=today,
+        completed=False,
+    )
+    future_one_off = Chore(
+        title="Pack camp bag",
+        assigned_to="Swara",
+        coins=8,
+        recurrence="",
+        due_date=tomorrow,
+        completed=False,
+    )
+    db.add_all([missed_today, future_one_off])
+    db.commit()
+
+    test_session_maker = sessionmaker(bind=db.bind, expire_on_commit=False)
+    monkeypatch.setattr("app.routers.rewards.SessionLocal", test_session_maker)
+    monkeypatch.setattr("app.routers.rewards.manager.broadcast_threadsafe", lambda *args, **kwargs: None)
+
+    check_missed_chores()
+    db.expire_all()
+
+    # Missed same-day one-off chore docked 6 coins today and expired (no overdue carryover)
+    breakdown = _get_balance_breakdown(db, "Swara")
+    assert breakdown["lost"] == -6
+    assert breakdown["balance"] == -6
+
+    remaining = db.query(Chore).all()
+    assert len(remaining) == 1
+    assert remaining[0].id == future_one_off.id
+    assert remaining[0].due_date == tomorrow
+
+
+async def test_penalty_chore_resets_next_day_preserving_ledger_and_no_auto_deduct(db, monkeypatch):
+    from datetime import timedelta
+    from zoneinfo import ZoneInfo
+    from app.config import get_settings
+    from app.routers.chores import patch_chore, list_chores, ChorePatch
+    from app.routers.rewards import check_missed_chores, _get_balance_breakdown
+
+    async def mock_broadcast(*args, **kwargs):
+        pass
+
+    monkeypatch.setattr("app.routers.chores.manager.broadcast", mock_broadcast)
+    monkeypatch.setattr("app.routers.chores.manager.broadcast_threadsafe", lambda *args, **kwargs: None)
+    monkeypatch.setattr("app.routers.rewards.manager.broadcast_threadsafe", lambda *args, **kwargs: None)
+    test_session_maker = sessionmaker(bind=db.bind, expire_on_commit=False)
+    monkeypatch.setattr("app.routers.rewards.SessionLocal", test_session_maker)
+
+    tz = ZoneInfo(get_settings().tz)
+    today_date = datetime.now(tz).date()
+    yesterday = (today_date - timedelta(days=1)).isoformat()
+
+    # Parent tapped a -10 penalty yesterday (even if created with empty recurrence)
+    penalty_card = Chore(
+        title="Room Not Clean",
+        assigned_to="Dhruv",
+        coins=-10,
+        recurrence="",
+        due_date=yesterday,
+        completed=False,
+    )
+    db.add(penalty_card)
+    db.commit()
+
+    await patch_chore(penalty_card.id, ChorePatch(completed=True), db=db)
+    assert _get_balance_breakdown(db, "Dhruv")["balance"] == -10
+
+    # Next day arrives: list_chores resets penalty card for today while preserving yesterday's -10 ledger entry
+    rows = list_chores(db=db)
+    assert len(rows) == 1
+    assert rows[0]["completed"] is False
+    assert rows[0]["due_date"] == today_date.isoformat()
+    assert _get_balance_breakdown(db, "Dhruv")["balance"] == -10
+
+    # End of day without tapping the penalty card does NOT change Dhruv's score
+    check_missed_chores()
+    db.expire_all()
+    assert _get_balance_breakdown(db, "Dhruv")["balance"] == -10
+    assert db.get(Chore, penalty_card.id) is not None
+
+
+
 

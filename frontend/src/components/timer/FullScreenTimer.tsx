@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Icon from '../Icon'
 import { useTimer } from '../../context/TimerContext'
@@ -34,6 +33,7 @@ export default function FullScreenTimer({
   const {
     timer,
     isFullScreen,
+    closeFullScreen,
     pauseTimer,
     resumeTimer,
     resetTimer,
@@ -48,8 +48,8 @@ export default function FullScreenTimer({
   const isPaused = timer.status === 'paused'
   const isRunning = timer.status === 'running'
 
-  const styles = useMemo(() => getStageStyles(timer.stage), [timer.stage])
-  const timeInfo = useMemo(() => formatTimerDisplay(timer.remainingSeconds), [timer.remainingSeconds])
+  const styles = getStageStyles(timer.stage)
+  const timeInfo = formatTimerDisplay(timer.remainingSeconds)
 
   // Progress computation (1.0 at start down to 0.0 at completion)
   const progress = timer.totalSeconds > 0 ? Math.max(0, Math.min(1, timer.remainingSeconds / timer.totalSeconds)) : 0
@@ -110,6 +110,16 @@ export default function FullScreenTimer({
                   title="Add 5 minutes"
                 >
                   +5m
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.08 }}
+                  whileTap={{ scale: 0.92 }}
+                  transition={PRESS_SPRING}
+                  onClick={closeFullScreen}
+                  className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white/80 flex items-center justify-center transition-colors cursor-pointer"
+                  title="Minimize timer"
+                >
+                  <Icon name="close_fullscreen" className="text-xl" />
                 </motion.button>
               </>
             )}

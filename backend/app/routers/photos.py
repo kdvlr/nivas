@@ -1,8 +1,10 @@
+import os
 import random
 import urllib.parse
 import struct
 import threading
 import time
+from collections import defaultdict
 from pathlib import Path
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException
@@ -303,7 +305,7 @@ def fetch_location_name(lat: float, lon: float) -> str | None:
 
     # 2. Fallback to OpenStreetMap / Nominatim if Google Maps fails
     url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lon}&zoom=10&addressdetails=1"
-    headers = {"User-Agent": "NivasFamilyDashboard/1.0 (d.kiran@yahoo.com)"}
+    headers = {"User-Agent": "NivasFamilyDashboard/1.0 (kdvlr@users.noreply.github.com)"}
     try:
         with httpx.Client(timeout=3.0) as client:
             r = client.get(url, headers=headers)
@@ -552,6 +554,7 @@ def _resized_variant(decoded_path: str, orig_path: Path, cache_dir: Path, max_px
     out_path = cache_dir / f"{h}.jpg"
 
     if not out_path.exists():
+        tmp_path = cache_dir / f".{h}.{os.getpid()}.{threading.get_ident()}.tmp.jpg"
         try:
             with Image.open(orig_path) as img:
                 try:
@@ -561,8 +564,10 @@ def _resized_variant(decoded_path: str, orig_path: Path, cache_dir: Path, max_px
                 img.thumbnail((max_px, max_px))
                 if img.mode != "RGB":
                     img = img.convert("RGB")
-                img.save(out_path, "JPEG", quality=quality)
+                img.save(tmp_path, "JPEG", quality=quality)
+            os.replace(tmp_path, out_path)
         except Exception as e:
+            tmp_path.unlink(missing_ok=True)
             print(f"Failed to generate {max_px}px variant for {decoded_path}: {e}")
             return FileResponse(orig_path)
 
@@ -649,7 +654,11 @@ def get_photos(db: Session = Depends(get_db)):
     media_items = []
     paired_images = set()
     paired_videos = set()
-    
+
+    images_by_dir: dict[Path, list[tuple[str, dict]]] = defaultdict(list)
+    for k, img_data in image_map.items():
+        images_by_dir[img_data["rel_path"].parent].append((k, img_data))
+
     # 1. Pair Live Photos (Apple Live Photos are .mov motion clips or clips with _hevc/_h264/_live)
     for vid_rel_str, vid_rec in video_map.items():
         vid_rel_path = Path(vid_rec.file_path)
@@ -678,14 +687,12 @@ def get_photos(db: Session = Depends(get_db)):
                         
         # (b) Collision prefix: base_candidate-<number> (e.g. IMG_0209-1137641.JPG)
         base_prefix = base_candidate.lower() + "-"
-        for k, img_data in image_map.items():
+        for k, img_data in images_by_dir.get(vid_dir, ()):
             if k in paired_images:
                 continue
-            kp = Path(img_data["rel_path"])
-            if kp.parent == vid_dir:
-                k_stem = kp.stem.lower()
-                if k_stem.startswith(base_prefix) and img_data not in candidates:
-                    candidates.append(img_data)
+            k_stem = img_data["rel_path"].stem.lower()
+            if k_stem.startswith(base_prefix) and img_data not in candidates:
+                candidates.append(img_data)
                     
         if not candidates:
             # Check if this video is an alternate motion clip of an already-paired image

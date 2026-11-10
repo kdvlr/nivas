@@ -24,17 +24,17 @@ ENV PYTHONUNBUFFERED=1 \
     AIRPLAY_IDENTITY_DIR=/data/airplay-identities \
     STATIC_DIR=/app/static
 
-# Install runtime dependencies and build essentials for packages requiring compilation
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg libasound2 gcc g++ curl unzip \
-    && curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh \
-    && apt-get purge -y curl unzip \
-    && apt-get autoremove -y \
-    && rm -rf /var/lib/apt/lists/*
-
+# Install runtime dependencies and build Python wheels, then purge compiler toolchain
 COPY backend/pyproject.toml ./
 COPY backend/app ./app
-RUN --mount=type=cache,target=/root/.cache/pip pip install --no-cache-dir .
+RUN --mount=type=cache,target=/root/.cache/pip \
+    apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg libasound2 gcc g++ curl unzip \
+    && curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh \
+    && pip install --no-cache-dir . \
+    && apt-get purge -y gcc g++ curl unzip \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY --from=frontend /build/dist ./static
 COPY --from=airplay2-builder /build/play_audio /usr/local/bin/airplay-play-audio

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from ..services.kids_daily_service import kids_daily_service
@@ -19,7 +19,10 @@ def get_today_content(date: Optional[str] = None):
     Public endpoint for Kid's Brain Nuggets banner & popup answers.
     Returns today's word, fun fact, and STEM questions with answers and explanations.
     """
-    payload = kids_daily_service.get_today_payload(date_str=date)
+    try:
+        payload = kids_daily_service.get_today_payload(date_str=date)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
     content = payload.get("content", {})
     
     stem_5yo = {
@@ -54,7 +57,10 @@ def get_admin_content(date: Optional[str] = None, _: None = Depends(require_admi
     Admin endpoint for Setup view (protected behind PIN on frontend).
     Returns full content including answers and parent explanations.
     """
-    payload = kids_daily_service.get_today_payload(date_str=date)
+    try:
+        payload = kids_daily_service.get_today_payload(date_str=date)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
     return {
         **payload,
         "settings": kids_daily_service.get_settings(),
@@ -66,7 +72,10 @@ def regenerate_content(date: Optional[str] = None, _: None = Depends(require_adm
     """
     Force re-generation of today's content with Gemini AI.
     """
-    payload = kids_daily_service.get_today_payload(date_str=date, force_regenerate=True)
+    try:
+        payload = kids_daily_service.get_today_payload(date_str=date, force_regenerate=True)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
     return {
         **payload,
         "settings": kids_daily_service.get_settings(),

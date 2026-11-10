@@ -11,6 +11,7 @@ import { useClock, useData, todayISO, addDaysISO } from '../lib/hooks'
 import { useSwipeNavigation } from '../lib/useSwipeNavigation'
 import type { CalendarStatus, CalEvent, ChoreItem, CoinBalance, ShoppingItem, Task, WeatherData } from '../lib/types'
 import { isEventComplete } from '../lib/calendar'
+import { isDailyProgressChore } from '../lib/chores'
 
 const fmtTime = (iso: string) =>
   new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
@@ -180,60 +181,11 @@ export default function Home() {
     return active.slice(0, 5)
   }, [shoppingOpen, removedIds])
 
-  // chores relevant today (one-offs due/overdue + recurring scheduled today)
-  const choreDueToday = (c: ChoreItem) => {
-    const rec = c.recurrence
-    if (!rec) {
-      return !c.due_date || c.due_date <= today
-    }
-    if (rec === 'daily') return true
-
-    const refDateStr = c.due_date || c.created_at.slice(0, 10)
-    const refDate = new Date(refDateStr + 'T12:00:00')
-    const checkDate = new Date(today + 'T12:00:00')
-
-    if (rec.startsWith('weekly:')) {
-      const dow = (checkDate.getDay() + 6) % 7 // Monday = 0
-      return rec.slice(7).split(',').map(Number).includes(dow)
-    }
-
-    if (rec.startsWith('biweekly:')) {
-      const refMonday = new Date(refDate)
-      refMonday.setDate(refMonday.getDate() - ((refDate.getDay() + 6) % 7))
-      refMonday.setHours(12, 0, 0, 0)
-
-      const checkMonday = new Date(checkDate)
-      checkMonday.setDate(checkMonday.getDate() - ((checkDate.getDay() + 6) % 7))
-      checkMonday.setHours(12, 0, 0, 0)
-
-      const diffMs = checkMonday.getTime() - refMonday.getTime()
-      const weeksDiff = Math.round(diffMs / (1000 * 60 * 60 * 24 * 7))
-
-      if (weeksDiff % 2 !== 0) return false
-
-      const dow = (checkDate.getDay() + 6) % 7 // Monday = 0
-      return rec.slice(9).split(',').map(Number).includes(dow)
-    }
-
-    if (rec === 'monthly:day') {
-      const lastDay = new Date(checkDate.getFullYear(), checkDate.getMonth() + 1, 0).getDate()
-      const targetDay = refDate.getDate()
-      if (targetDay >= lastDay) {
-        return checkDate.getDate() === lastDay
-      } else {
-        return checkDate.getDate() === targetDay
-      }
-    }
-
-    if (rec === 'monthly:weekday') {
-      const refOccurrence = Math.floor((refDate.getDate() - 1) / 7) + 1
-      const checkOccurrence = Math.floor((checkDate.getDate() - 1) / 7) + 1
-      return checkDate.getDay() === refDate.getDay() && checkOccurrence === refOccurrence
-    }
-
-    return false
-  }
-  const todayChores = useMemo(() => (chores ?? []).filter(choreDueToday), [chores, today])
+  // Same-day positive chores scheduled for today (manual penalty buttons excluded from daily progress)
+  const todayChores = useMemo(
+    () => (chores ?? []).filter((c) => isDailyProgressChore(c, today)),
+    [chores, today],
+  )
   const openChores = useMemo(() => {
     const list = todayChores.filter((c) => !c.completed)
     return list.filter((c) => !removedIds.includes(`chore-${c.id}`))
@@ -426,7 +378,11 @@ export default function Home() {
           style={{ fontFamily: FAMILY_TITLE_FONT }}
           className="text-2xl sm:text-3xl lg:text-5xl font-normal text-[var(--primary)] tracking-wide select-none drop-shadow-sm inline-block leading-tight group-hover/title:text-ink transition-colors"
         >
-          The Davuluri Family
+          {config?.family_name
+            ? /^the\s+/i.test(config.family_name) || /\s+family$/i.test(config.family_name)
+              ? config.family_name
+              : `The ${config.family_name} Family`
+            : 'The Davuluri Family'}
         </span>
       </button>
 
@@ -526,7 +482,6 @@ export default function Home() {
             <div className="mt-2 grid grid-cols-3 gap-4" style={{ marginLeft: AXIS_GUTTER }}>
               {daysList.map((dayIso) => {
                 const allDay = timeline.allDayByDay.get(dayIso) ?? []
-                const single = allDay.length === 1
                 return (
                   <div key={dayIso} className="flex w-full items-center gap-1.5">
                     {allDay.map((e) => {
@@ -856,7 +811,7 @@ export default function Home() {
                     </span>
                     {t.due_date && (
                       <span className="text-xs font-medium text-ink-soft">
-                        {new Date(t.due_date).toLocaleDateString(undefined, {
+                        {new Date(t.due_date.length === 10 ? `${t.due_date}T00:00:00` : t.due_date).toLocaleDateString(undefined, {
                           month: 'short',
                           day: 'numeric',
                         })}

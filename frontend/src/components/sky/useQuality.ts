@@ -71,8 +71,9 @@ export function useQuality(active: boolean): QualityMetrics {
         const sorted = [...samples].sort((a, b) => a - b)
         const median = sorted[Math.floor(sorted.length / 2)]
         const calculatedFps = Math.round(1000 / (median || 16.7))
-        setFps(calculatedFps)
-        setFrameTimeMs(Math.round(median * 10) / 10)
+        const roundedFrameTime = Math.round(median * 10) / 10
+        setFps((prev) => (Math.abs(prev - calculatedFps) >= 5 ? calculatedFps : prev))
+        setFrameTimeMs((prev) => (Math.abs(prev - roundedFrameTime) >= 2 ? roundedFrameTime : prev))
         samples = []
 
         // If median frame time > 33ms (<30fps) and forced is null, drop tier to keep slideshow smooth

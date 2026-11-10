@@ -112,11 +112,12 @@ async def patch_task(
         if row.source in ("icloud", "alexa"):
             bg.add_task(sync.write_task_completion, row, body.completed)
         elif body.completed and row.recurrence:
-            ref_str = row.due_date[:10] if row.due_date else date.today().isoformat()
+            today_local = datetime.now(ZoneInfo(get_settings().tz)).date()
+            ref_str = row.due_date[:10] if row.due_date else today_local.isoformat()
             try:
                 ref_date = date.fromisoformat(ref_str)
             except Exception:
-                ref_date = date.today()
+                ref_date = today_local
             next_due = ref_date + timedelta(days=1)
             found = False
             for _ in range(365):

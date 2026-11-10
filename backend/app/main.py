@@ -10,6 +10,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 import httpx
+from starlette.background import BackgroundTask
 from starlette.requests import Request
 from starlette.responses import StreamingResponse
 
@@ -23,7 +24,7 @@ from .config import get_settings
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 
-STATIC_DIR = Path(
+STATIC_DIR = get_settings().static_dir or Path(
     os.getenv(
         "STATIC_DIR",
         str(Path(__file__).resolve().parent.parent / "static"),
@@ -37,9 +38,6 @@ async def lifespan(app: FastAPI):
     manager.set_loop(asyncio.get_running_loop())
     scheduler.start()
     player_engine.start()
-    # Initial indexing is controlled and coalesced; normal photo API requests
-    # remain read-only.
-    asyncio.get_running_loop().run_in_executor(None, photos.sync_photos_dir_background, photos.SessionLocal)
     local_music_service.start_background_scan(only_if_empty=True)
     yield
     global _scrypted_client
@@ -76,7 +74,6 @@ PHOTOS_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/api/photos/media", StaticFiles(directory=PHOTOS_DIR), name="photos_media")
 
 # --- Scrypted NVR Local Proxy (bypasses cross-origin iframe security in kiosk webviews) ---
-HA_SCRYPTED_BASE = "http://192.168.100.224:8123/api/scrypted"
 _scrypted_client: httpx.AsyncClient | None = None
 
 
@@ -90,7 +87,8 @@ def get_scrypted_client() -> httpx.AsyncClient:
 @app.api_route("/api/scrypted/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"])
 async def proxy_scrypted(path: str, request: Request):
     client = get_scrypted_client()
-    url = f"{HA_SCRYPTED_BASE}/{path}"
+    base = get_settings().ha_scrypted_base.rstrip("/")
+    url = f"{base}/{path}"
     if request.url.query:
         url = f"{url}?{request.url.query}"
 
@@ -118,6 +116,7 @@ async def proxy_scrypted(path: str, request: Request):
         resp.aiter_bytes(),
         status_code=resp.status_code,
         headers=resp_headers,
+        background=BackgroundTask(resp.aclose),
     )
 
 # Serve the built frontend (present in the Docker image / after `npm run build`)

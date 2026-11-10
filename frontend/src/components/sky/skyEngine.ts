@@ -26,10 +26,7 @@ import {
   isSwaraBirthday,
   isNovember,
   isDiwaliSeason,
-  isDecember,
-  isElfSeason,
   isChristmasDay,
-  isNewYearsDay,
   isNewYearSeason,
 } from './queryParam'
 

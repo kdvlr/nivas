@@ -49,7 +49,8 @@ def list_items(db: Session = Depends(get_db)):
 async def clear_completed(bg: BackgroundTasks, db: Session = Depends(get_db)):
     rows = db.query(ShoppingItem).filter(ShoppingItem.completed).all()
     for row in rows:
-        bg.add_task(sync.write_shopping_completion, row, True)
+        snapshot = ShoppingItem(title=row.title, sources=list(row.sources or []))
+        bg.add_task(sync.write_shopping_completion, snapshot, True)
         db.delete(row)
     db.commit()
     await manager.broadcast("shopping")
@@ -103,7 +104,8 @@ async def delete_item(item_id: int, bg: BackgroundTasks, db: Session = Depends(g
     row = db.get(ShoppingItem, item_id)
     if row is None:
         raise HTTPException(404)
-    bg.add_task(sync.write_shopping_completion, row, True)
+    snapshot = ShoppingItem(title=row.title, sources=list(row.sources or []))
+    bg.add_task(sync.write_shopping_completion, snapshot, True)
     db.delete(row)
     db.commit()
     await manager.broadcast("shopping")

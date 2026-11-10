@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useId } from 'react'
 
 interface MusicSourceIconProps {
   source?: 'local' | 'youtube' | string
@@ -11,6 +11,7 @@ export default function MusicSourceIcon({
   size = 14,
   className = '',
 }: MusicSourceIconProps) {
+  const gradId = useId()
   const isLocal = source === 'local'
 
   if (isLocal) {
@@ -29,13 +30,13 @@ export default function MusicSourceIcon({
           className="drop-shadow-sm shrink-0"
           fill="none"
         >
-          <circle cx="12" cy="12" r="11" fill="url(#itunes-badge-gradient)" />
+          <circle cx="12" cy="12" r="11" fill={`url(#${gradId})`} />
           <path
             d="M16.5 6.2v8.5a2.6 2.6 0 0 1-2.1-.4 2.6 2.6 0 0 1-1.2-2.1c0-1.4 1.1-2.6 2.6-2.6.3 0 .5 0 .7.1V7.5l-5.8 1.3v7.4a2.6 2.6 0 0 1-2.1-.4 2.6 2.6 0 0 1-1.2-2.1c0-1.4 1.1-2.6 2.6-2.6.3 0 .5 0 .7.1v-5.6l6.4-1.4z"
             fill="white"
           />
           <defs>
-            <linearGradient id="itunes-badge-gradient" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+            <linearGradient id={gradId} x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
               <stop stopColor="#FA2D48" />
               <stop offset="0.5" stopColor="#D2249E" />
               <stop offset="1" stopColor="#6C5CE7" />

@@ -61,12 +61,12 @@ NUTRITION_SCHEMA = {
 
 import ipaddress
 import socket
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 def is_safe_url(url: str) -> bool:
     try:
         parsed = urlparse(url)
-        if not parsed.hostname:
+        if parsed.scheme not in ("http", "https") or not parsed.hostname:
             return False
         port = parsed.port or (443 if parsed.scheme == "https" else 80)
         # Resolve hostname to all associated IP addresses
@@ -83,13 +83,18 @@ def is_safe_url(url: str) -> bool:
 
 
 def fetch_html(url: str) -> str:
-    if not is_safe_url(url):
-        raise ValueError("URL points to an unsafe target location (private/local network)")
-    resp = httpx.get(
-        url, headers={"User-Agent": USER_AGENT}, follow_redirects=True, timeout=30
-    )
-    resp.raise_for_status()
-    return resp.text
+    current_url = url
+    with httpx.Client(headers={"User-Agent": USER_AGENT}, follow_redirects=False, timeout=30) as client:
+        for _ in range(6):
+            if not is_safe_url(current_url):
+                raise ValueError("URL points to an unsafe target location (private/local network)")
+            resp = client.get(current_url)
+            if resp.is_redirect and "location" in resp.headers:
+                current_url = urljoin(str(resp.url), resp.headers["location"])
+                continue
+            resp.raise_for_status()
+            return resp.text
+    raise ValueError("Too many redirects while fetching recipe URL")
 
 
 def _minutes(value) -> str:
@@ -403,15 +408,13 @@ def _page_text(html: str) -> str:
     from bs4 import BeautifulSoup
 
     soup = BeautifulSoup(html, "html.parser")
-    for tag in soup(["script", "style", "nav", "footer", "header", "aside", "form", "iframe"]):
-        tag.decompose()
     # keep ld+json recipe blobs — often the cleanest data on the page
     blobs = []
-    from bs4 import BeautifulSoup as _BS  # re-parse original for ld+json
-
-    for s in _BS(html, "html.parser").find_all("script", type="application/ld+json"):
+    for s in soup.find_all("script", type="application/ld+json"):
         if s.string and "recipe" in s.string.lower():
             blobs.append(s.string[:8000])
+    for tag in soup(["script", "style", "nav", "footer", "header", "aside", "form", "iframe"]):
+        tag.decompose()
     text = re.sub(r"\n{3,}", "\n\n", soup.get_text("\n", strip=True))
     return ("\n\n".join(blobs) + "\n\n" + text)[:60000]
 

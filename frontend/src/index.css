@@ -55,8 +55,9 @@
 }
 
 /* font choice via html[data-font] */
-:root {
-  --app-font: 'Inter', 'Plus Jakarta Sans', 'Outfit', 'Roboto', system-ui, -apple-system, sans-serif;
+:root,
+[data-font='outfit'] {
+  --app-font: 'Outfit', 'Inter', 'Plus Jakarta Sans', 'Roboto', system-ui, -apple-system, sans-serif;
 }
 [data-font='roboto'] {
   --app-font: 'Roboto', system-ui, -apple-system, 'Segoe UI', sans-serif;

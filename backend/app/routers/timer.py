@@ -1,10 +1,12 @@
 import logging
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
+from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from ..config import get_settings
 from ..db import get_db
 from ..services.school_calendar import is_school_day
 from ..services.timer_service import timer_service
@@ -73,7 +75,7 @@ def check_school_day(
 ):
     """
     Evaluates whether a given date (or today if omitted) is a scheduled school day
-    based on Swara and Dhruv's calendar events.
+    based on configured school calendar events.
     """
     d: Optional[date] = None
     if target_date:
@@ -83,8 +85,9 @@ def check_school_day(
             return {"error": "Invalid date format, expected YYYY-MM-DD", "date": target_date}
 
     school_day, reason = is_school_day(db, d)
+    default_today = datetime.now(ZoneInfo(get_settings().tz)).date()
     return {
-        "date": (d or date.today()).isoformat(),
+        "date": (d or default_today).isoformat(),
         "is_school_day": school_day,
         "reason": reason,
     }

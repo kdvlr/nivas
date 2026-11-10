@@ -39,6 +39,8 @@ class SettingsPut(BaseModel):
     family_name: str | None = None
     secondary_tz: str | None = None
     secondary_tz_emoji: str | None = None
+    school_calendar_ids: list[int] | None = None
+    school_calendar_names: list[str] | None = None
 
 
 class ThemePut(BaseModel):
@@ -75,11 +77,12 @@ async def update_kiosk_schedule(
     db: Session = Depends(get_db),
     _: None = Depends(require_admin),
 ):
-    sync.set_setting(db, "kiosk_sleep_enabled", body.kiosk_sleep_enabled)
-    sync.set_setting(db, "kiosk_sleep_start", body.kiosk_sleep_start)
-    sync.set_setting(db, "kiosk_sleep_end", body.kiosk_sleep_end)
-    sync.set_setting(db, "kiosk_daytime_screen_off_mins", body.kiosk_daytime_screen_off_mins)
-    sync.set_setting(db, "kiosk_suppress_night_motion", body.kiosk_suppress_night_motion)
+    sync.set_setting(db, "kiosk_sleep_enabled", body.kiosk_sleep_enabled, commit=False)
+    sync.set_setting(db, "kiosk_sleep_start", body.kiosk_sleep_start, commit=False)
+    sync.set_setting(db, "kiosk_sleep_end", body.kiosk_sleep_end, commit=False)
+    sync.set_setting(db, "kiosk_daytime_screen_off_mins", body.kiosk_daytime_screen_off_mins, commit=False)
+    sync.set_setting(db, "kiosk_suppress_night_motion", body.kiosk_suppress_night_motion, commit=False)
+    db.commit()
 
     await manager.broadcast("setup")
     await manager.broadcast_custom({
@@ -146,6 +149,8 @@ def pin_verify(body: PinVerify, request: Request, response: Response):
 
 @router.get("/status")
 async def status(db: Session = Depends(get_db)):
+    from ..services.school_calendar import get_school_calendar_ids, get_school_calendar_names
+
     s = get_settings()
     return {
         "sync": sync_status.snapshot(),
@@ -163,6 +168,8 @@ async def status(db: Session = Depends(get_db)):
             "list_person_map": sync.get_setting(db, "list_person_map", {}),
             "secondary_tz": sync.get_setting(db, "secondary_tz", "Asia/Kolkata"),
             "secondary_tz_emoji": sync.get_setting(db, "secondary_tz_emoji", "🇮🇳"),
+            "school_calendar_ids": get_school_calendar_ids(db),
+            "school_calendar_names": get_school_calendar_names(db),
         },
     }
 
@@ -208,17 +215,24 @@ async def put_settings(
     _: None = Depends(require_admin),
 ):
     if body.icloud_shopping_list is not None:
-        sync.set_setting(db, "icloud_shopping_list", body.icloud_shopping_list)
+        sync.set_setting(db, "icloud_shopping_list", body.icloud_shopping_list, commit=False)
     if body.icloud_task_lists is not None:
-        sync.set_setting(db, "icloud_task_lists", body.icloud_task_lists)
+        sync.set_setting(db, "icloud_task_lists", body.icloud_task_lists, commit=False)
     if body.list_person_map is not None:
-        sync.set_setting(db, "list_person_map", body.list_person_map)
+        sync.set_setting(db, "list_person_map", body.list_person_map, commit=False)
     if body.family_name is not None:
-        sync.set_setting(db, "family_name", body.family_name.strip())
+        sync.set_setting(db, "family_name", body.family_name.strip(), commit=False)
     if body.secondary_tz is not None:
-        sync.set_setting(db, "secondary_tz", body.secondary_tz.strip())
+        sync.set_setting(db, "secondary_tz", body.secondary_tz.strip(), commit=False)
     if body.secondary_tz_emoji is not None:
-        sync.set_setting(db, "secondary_tz_emoji", body.secondary_tz_emoji.strip())
+        sync.set_setting(db, "secondary_tz_emoji", body.secondary_tz_emoji.strip(), commit=False)
+    if body.school_calendar_ids is not None:
+        clean_ids = [int(i) for i in body.school_calendar_ids]
+        sync.set_setting(db, "school_calendar_ids", clean_ids, commit=False)
+    if body.school_calendar_names is not None:
+        clean_names = [n.strip() for n in body.school_calendar_names if n.strip()]
+        sync.set_setting(db, "school_calendar_names", clean_names, commit=False)
+    db.commit()
     await manager.broadcast("setup")
     return {"ok": True}
 

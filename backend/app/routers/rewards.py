@@ -138,10 +138,70 @@ def get_balances(db: Session = Depends(get_db)):
         .order_by(Person.name)
         .all()
     )
+    if not people:
+        return []
     avatars = person_avatars(db)
+    names = [p.name for p in people]
+    rows = (
+        db.query(
+            CoinTransaction.person_name.label("person_name"),
+            func.coalesce(
+                func.sum(
+                    case(
+                        (
+                            (CoinTransaction.reason == "chore_completed") & (CoinTransaction.amount > 0),
+                            CoinTransaction.amount,
+                        ),
+                        else_=0,
+                    )
+                ),
+                0,
+            ).label("earned"),
+            func.coalesce(
+                func.sum(
+                    case(
+                        (CoinTransaction.reason == "chore_missed", CoinTransaction.amount),
+                        (
+                            (CoinTransaction.reason == "chore_completed") & (CoinTransaction.amount < 0),
+                            CoinTransaction.amount,
+                        ),
+                        else_=0,
+                    )
+                ),
+                0,
+            ).label("lost"),
+            func.coalesce(
+                func.sum(case((CoinTransaction.reason == "reward_redeemed", CoinTransaction.amount), else_=0)), 0
+            ).label("spent"),
+            func.coalesce(
+                func.sum(
+                    case(
+                        (CoinTransaction.reason.in_(MANUAL_REASONS), CoinTransaction.amount),
+                        else_=0,
+                    )
+                ),
+                0,
+            ).label("adjusted"),
+            func.coalesce(func.sum(CoinTransaction.amount), 0).label("balance"),
+        )
+        .filter(CoinTransaction.person_name.in_(names))
+        .group_by(CoinTransaction.person_name)
+        .all()
+    )
+    breakdown_map = {
+        r.person_name: {
+            "earned": int(r.earned),
+            "lost": int(r.lost),
+            "spent": int(r.spent),
+            "adjusted": int(r.adjusted),
+            "balance": int(r.balance),
+        }
+        for r in rows
+    }
+    default_breakdown = {"earned": 0, "lost": 0, "spent": 0, "adjusted": 0, "balance": 0}
     result = []
     for p in people:
-        breakdown = _get_balance_breakdown(db, p.name)
+        breakdown = breakdown_map.get(p.name, default_breakdown)
         result.append(
             {
                 "person_name": p.name,
@@ -354,18 +414,29 @@ def redemption_history(db: Session = Depends(get_db)):
 # ── Missed chores check (called by scheduler) ────────────────────────
 
 
+def _parse_iso_date(val: str | None) -> date | None:
+    if not val:
+        return None
+    try:
+        return date.fromisoformat(val[:10])
+    except ValueError:
+        return None
+
+
 def _is_due_today(chore: Chore, today: date) -> bool:
     """Check if a recurring chore is due today based on its recurrence pattern."""
-    ref_date = date.fromisoformat(chore.due_date) if chore.due_date else chore.created_at.date()
+    parsed = _parse_iso_date(chore.due_date)
+    ref_date = parsed if parsed is not None else (chore.created_at.date() if chore.created_at else today)
     return is_due_on(today, ref_date, chore.recurrence)
 
 
 def check_missed_chores() -> None:
     """
-    Check for recurring chores at end of day.
-    Penalize assigned person by deducting the chore's coin value if not completed.
-    Then reset recurring chores for their next occurrence and advance due date.
-    Called by the scheduler daily at 23:59.
+    Settle same-day chores at end of day (23:59):
+    - Positive chores due today (recurring or one-time) lose their coin value if not completed.
+    - Recurring chores reset and advance to their next scheduled occurrence.
+    - One-time chores due today or earlier are removed after settlement (no overdue carryover).
+    - Negative-coin penalty items never change score when unselected and reset cleanly for the next day.
     """
     db = SessionLocal()
     try:
@@ -378,59 +449,88 @@ def check_missed_chores() -> None:
             tz = ZoneInfo("America/Chicago")
         today = datetime.now(tz).date()
         today_iso = today.isoformat()
+        tomorrow = today + timedelta(days=1)
 
-        chores = db.query(Chore).filter(Chore.recurrence != "").all()
+        chores = db.query(Chore).all()
+        has_changes = False
         penalized = False
 
-        for chore in chores:
-            orig_due = date.fromisoformat(chore.due_date) if chore.due_date else None
-            is_past = orig_due is not None and orig_due < today
-            due_today = _is_due_today(chore, today) or (chore.due_date == today_iso)
-
-            if not (is_past or due_today):
-                continue
-            # Already processed today (reset already happened)
-            if chore.last_reset_date == today_iso:
-                continue
-
-            # Not completed -> penalty (lost points for the day)
-            # Only deduct points for positive-reward chores
-            if not chore.completed and chore.assigned_to and chore.coins > 0:
-                occ_date = chore.due_date if (orig_due and orig_due <= today) else today_iso
-                already_recorded = (
-                    db.query(CoinTransaction.id)
-                    .filter(
-                        CoinTransaction.reason == "chore_missed",
-                        CoinTransaction.reference_id == chore.id,
-                        CoinTransaction.occurrence_date == occ_date,
-                    )
-                    .first()
+        def record_missed(chore: Chore, occ_date: str) -> None:
+            nonlocal penalized
+            if chore.completed or not chore.assigned_to or chore.coins <= 0:
+                return
+            already_recorded = (
+                db.query(CoinTransaction.id)
+                .filter(
+                    CoinTransaction.reason == "chore_missed",
+                    CoinTransaction.reference_id == chore.id,
+                    CoinTransaction.occurrence_date == occ_date,
                 )
-                if already_recorded is None:
-                    db.add(
-                        CoinTransaction(
-                            person_name=chore.assigned_to,
-                            amount=-chore.coins,
-                            reason="chore_missed",
-                            reference_id=chore.id,
-                            occurrence_date=occ_date,
-                            created_at=utcnow(),
-                        )
+                .first()
+            )
+            if already_recorded is None:
+                db.add(
+                    CoinTransaction(
+                        person_name=chore.assigned_to,
+                        amount=-chore.coins,
+                        reason="chore_missed",
+                        reference_id=chore.id,
+                        occurrence_date=occ_date,
+                        created_at=utcnow(),
                     )
-                    penalized = True
-                    log.info("Missed chore penalty: %s lost %d coin(s) for '%s'", chore.assigned_to, chore.coins, chore.title)
+                )
+                penalized = True
+                log.info(
+                    "Missed chore penalty: %s lost %d coin(s) for '%s'",
+                    chore.assigned_to,
+                    chore.coins,
+                    chore.title,
+                )
 
-            # Reset recurring chore for next occurrence and advance due date
-            chore.completed = False
-            chore.completed_at = None
-            chore.last_reset_date = today_iso
-            tomorrow = today + timedelta(days=1)
-            chore.due_date = next_due_date(tomorrow, chore.recurrence, ref_date=orig_due).isoformat()
+        for chore in chores:
+            orig_due = _parse_iso_date(chore.due_date)
 
-        db.commit()
-        manager.broadcast_threadsafe("chores")
-        if penalized:
-            manager.broadcast_threadsafe("rewards")
+            if chore.coins < 0:
+                # Penalty items: untouched penalties do not change total score; reset for next day
+                if (orig_due is None or orig_due <= today) and chore.last_reset_date != today_iso:
+                    chore.completed = False
+                    chore.completed_at = None
+                    chore.last_reset_date = today_iso
+                    if chore.recurrence:
+                        chore.due_date = next_due_date(tomorrow, chore.recurrence, ref_date=orig_due).isoformat()
+                    elif orig_due is not None:
+                        chore.due_date = tomorrow.isoformat()
+                    has_changes = True
+                continue
+
+            if chore.recurrence:
+                is_past = orig_due is not None and orig_due < today
+                due_today = _is_due_today(chore, today) or (chore.due_date == today_iso)
+                if not (is_past or due_today) or chore.last_reset_date == today_iso:
+                    continue
+
+                occ_date = orig_due.isoformat() if (orig_due and orig_due <= today) else today_iso
+                record_missed(chore, occ_date)
+
+                chore.completed = False
+                chore.completed_at = None
+                chore.last_reset_date = today_iso
+                chore.due_date = next_due_date(tomorrow, chore.recurrence, ref_date=orig_due).isoformat()
+                has_changes = True
+            else:
+                # One-time chore: if scheduled for a future day, keep in Upcoming
+                if orig_due is not None and orig_due > today:
+                    continue
+                occ_date = orig_due.isoformat() if orig_due is not None else today_iso
+                record_missed(chore, occ_date)
+                db.delete(chore)
+                has_changes = True
+
+        if has_changes:
+            db.commit()
+            manager.broadcast_threadsafe("chores")
+            if penalized:
+                manager.broadcast_threadsafe("rewards")
     except Exception:
         log.exception("Error checking missed chores")
         db.rollback()

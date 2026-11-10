@@ -1,7 +1,7 @@
 import { ReactNode, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { api } from '../../lib/api'
-import { useData } from '../../lib/hooks'
+import { todayISO, useData } from '../../lib/hooks'
 import Icon from '../Icon'
 import ConfirmModal from '../ConfirmModal'
 import CoinIcon from '../CoinIcon'
@@ -394,7 +394,7 @@ export function ChoresAdminCard() {
   const [includeOneOff, setIncludeOneOff] = useState(true)
   const [resultMsg, setResultMsg] = useState<string | null>(null)
 
-  const todayStr = new Date().toISOString().slice(0, 10)
+  const todayStr = todayISO()
   const allChores = chores ?? []
   const pastDueCount = allChores.filter((c) => c.due_date && c.due_date < todayStr).length
 
@@ -419,7 +419,7 @@ export function ChoresAdminCard() {
   return (
     <Card title={<><Icon name="checklist" /> Chore Dates & Scheduling</>}>
       <p className="mb-4 text-sm text-ink-soft">
-        Advance past due dates for recurring and overdue chores to today and upcoming dates according to each chore's recurrence pattern (daily, weekly, bi-weekly, or monthly).
+        Chores are settled same-day at 11:59 PM. Use this tool if you ever need to manually resync scheduled chore dates to today and upcoming occurrences.
       </p>
 
       <div className="glass-inset mb-4 flex flex-col gap-2.5 rounded-2xl p-4">
@@ -428,7 +428,7 @@ export function ChoresAdminCard() {
           <span className="text-sm font-semibold text-ink">{allChores.length}</span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-ink">Chores with Past Due Dates</span>
+          <span className="text-sm font-medium text-ink">Chores with Past Dates</span>
           <span className={`text-sm font-semibold ${pastDueCount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
             {pastDueCount}
           </span>
@@ -452,7 +452,7 @@ export function ChoresAdminCard() {
             onChange={(e) => setIncludeOneOff(e.target.checked)}
             className="rounded border-[var(--outline)]"
           />
-          <span>Advance overdue one-off chores to today</span>
+          <span>Align any past-dated one-time chores to today</span>
         </label>
       </div>
 
@@ -478,7 +478,7 @@ export function ChoresAdminCard() {
             message={
               <div className="flex flex-col gap-2 text-sm">
                 <p>
-                  This will update all chore due dates that are in the past. Daily chores will be set to today, weekly and bi-weekly chores will advance to their next scheduled occurrence, and overdue one-off chores will be brought forward.
+                  This will resync chore due dates to today or their next scheduled occurrence (daily, weekly, bi-weekly, or monthly).
                 </p>
                 {resetCompleted && (
                   <p className="text-amber-600 dark:text-amber-400">

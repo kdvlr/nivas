@@ -22,7 +22,7 @@ export default defineConfig({
             '@fullcalendar/core',
             '@fullcalendar/daygrid',
             '@fullcalendar/timegrid',
-            '@fullcalendar/list',
+            '@fullcalendar/multimonth',
             '@fullcalendar/interaction',
             '@fullcalendar/react',
           ],

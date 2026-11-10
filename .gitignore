@@ -10,12 +10,16 @@ __pycache__/
 target/
 **/target/
 
-# Node
+# Node & Frontend build artifacts
 node_modules/
 frontend/dist/
+backend/static/
 .vite/
 *.tsbuildinfo
 **/*.tsbuildinfo
+
+# Local checkpoints & backups
+checkpoints/
 
 # Runtime data & secrets
 data/

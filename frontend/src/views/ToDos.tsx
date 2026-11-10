@@ -259,12 +259,10 @@ export default function ToDos() {
   const [draft, setDraft] = useState<Draft | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<{ id: number, title: string } | null>(null)
   const [filterPerson, setFilterPerson] = useState('')
-  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
   const [isShortScreen, setIsShortScreen] = useState(() => typeof window !== 'undefined' && window.innerHeight < 900)
 
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth < 768)
       setIsShortScreen(window.innerHeight < 900)
     }
     window.addEventListener('resize', handleResize)

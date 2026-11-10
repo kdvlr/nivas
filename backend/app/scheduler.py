@@ -70,19 +70,33 @@ def start() -> None:
     except Exception:
         app_tz = ZoneInfo("America/Chicago")
 
-    scheduler.add_job(sync.job_calendar, "interval", minutes=2, id="calendar", coalesce=True)
-    scheduler.add_job(sync.job_icloud, "interval", minutes=5, id="icloud", coalesce=True)
-    scheduler.add_job(sync.job_alexa, "interval", minutes=5, id="alexa", coalesce=True)
+    scheduler.add_job(sync.job_calendar, "interval", minutes=2, id="calendar", coalesce=True, replace_existing=True)
+    scheduler.add_job(sync.job_icloud, "interval", minutes=5, id="icloud", coalesce=True, replace_existing=True)
+    scheduler.add_job(sync.job_alexa, "interval", minutes=5, id="alexa", coalesce=True, replace_existing=True)
     scheduler.add_job(
-        _check_missed_chores, "cron", hour=23, minute=59, id="missed_chores", coalesce=True
+        _check_missed_chores,
+        "cron",
+        hour=23,
+        minute=59,
+        timezone=app_tz,
+        id="missed_chores",
+        coalesce=True,
+        replace_existing=True,
     )
     scheduler.add_job(
-        sync.cleanup_old_completed, "cron", hour=3, minute=30, id="cleanup", coalesce=True
+        sync.cleanup_old_completed,
+        "cron",
+        hour=3,
+        minute=30,
+        timezone=app_tz,
+        id="cleanup",
+        coalesce=True,
+        replace_existing=True,
     )
     # Re-scan hourly so clips icloudpd adds later get converted too. The worker
     # skips anything already cached, so a repeat pass is cheap.
-    scheduler.add_job(_kick_derivatives, "interval", hours=1, id="derivatives", coalesce=True)
-    scheduler.add_job(_scan_photos, "interval", minutes=30, id="photo_index", coalesce=True)
+    scheduler.add_job(_kick_derivatives, "interval", hours=1, id="derivatives", coalesce=True, replace_existing=True)
+    scheduler.add_job(_scan_photos, "interval", minutes=30, id="photo_index", coalesce=True, replace_existing=True)
     scheduler.add_job(
         check_and_trigger_school_timer,
         "cron",
@@ -91,14 +105,17 @@ def start() -> None:
         timezone=app_tz,
         id="school_timer",
         coalesce=True,
+        replace_existing=True,
     )
-    scheduler.start()
+    if not scheduler.running:
+        scheduler.start()
+    now_tz = datetime.now(app_tz)
     # kick off an initial pull shortly after boot (staggered)
     for i, job_id in enumerate(("calendar", "icloud", "alexa")):
-        scheduler.modify_job(job_id, next_run_time=datetime.now() + timedelta(seconds=5 + i * 10))
+        scheduler.modify_job(job_id, next_run_time=now_tz + timedelta(seconds=5 + i * 10))
     # Start the transcode backfill after the syncs, so first paint isn't slowed.
-    scheduler.modify_job("derivatives", next_run_time=datetime.now() + timedelta(seconds=45))
-    scheduler.modify_job("photo_index", next_run_time=datetime.now() + timedelta(seconds=20))
+    scheduler.modify_job("derivatives", next_run_time=now_tz + timedelta(seconds=45))
+    scheduler.modify_job("photo_index", next_run_time=now_tz + timedelta(seconds=5))
     log.info("scheduler started")
 
 

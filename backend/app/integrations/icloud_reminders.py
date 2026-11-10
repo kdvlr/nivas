@@ -37,7 +37,7 @@ class ICloudReminders:
             session_files = list(cookie_dir.glob("*.session"))
             if not session_files:
                 return {"connected": False, "needs_2fa": False, "error": "no credentials configured"}
-            # Extract username from session filename (e.g. "dkiranyahoocom.session")
+            # Extract username from session filename (e.g. "userexamplecom.session")
             username = session_files[0].stem  # best-effort
         try:
             self._api = PyiCloudService(

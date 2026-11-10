@@ -84,10 +84,12 @@ export default function FloatingActionButton({
 
   const handleSpeedDialClick = (item: SpeedDialItem) => {
     setOpen(false)
-    window.dispatchEvent(
-      new CustomEvent('nivas:create-item', { detail: { type: item.type } })
-    )
     window.location.hash = item.hash
+    setTimeout(() => {
+      window.dispatchEvent(
+        new CustomEvent('nivas:create-item', { detail: { type: item.type } })
+      )
+    }, 60)
   }
 
   const handleMainButtonClick = () => {

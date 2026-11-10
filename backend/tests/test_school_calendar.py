@@ -227,3 +227,64 @@ def test_school_timer_cron_scheduled_at_6_15(monkeypatch):
     assert call.args[1] == "cron"
 
 
+def test_configurable_school_calendar_names_and_ids(db_session):
+    from app.services import sync
+
+    account = db_session.query(CalendarAccount).first()
+    sel_parent = CalendarSelection(
+        account_id=account.id,
+        calendar_id="parent@gmail.com",
+        name="Parent Work",
+        person_name="Parent",
+        enabled=True,
+    )
+    sel_custom = CalendarSelection(
+        account_id=account.id,
+        calendar_id="aria_school@gmail.com",
+        name="Aria District Schedule",
+        person_name="Aria",
+        enabled=True,
+    )
+    db_session.add_all([sel_parent, sel_custom])
+    db_session.flush()
+
+    db_session.add_all([
+        CalendarEvent(
+            selection_id=sel_parent.id,
+            external_id="ev_parent_pto",
+            title="Parent Holiday",
+            start="2026-10-14",
+            end="2026-10-15",
+            all_day=True,
+        ),
+        CalendarEvent(
+            selection_id=sel_custom.id,
+            external_id="ev_aria_holiday",
+            title="Student Holiday",
+            start="2026-10-15",
+            end="2026-10-16",
+            all_day=True,
+        ),
+    ])
+    db_session.commit()
+
+    # Default names ("Swara,Dhruv") ignore Aria's calendar and Parent's PTO
+    assert is_school_day(db_session, date(2026, 10, 14))[0] is True
+    assert is_school_day(db_session, date(2026, 10, 15))[0] is True
+
+    # Configuring school_calendar_names=["Aria"] picks up Aria's Student Holiday, still ignores Parent
+    sync.set_setting(db_session, "school_calendar_names", ["Aria"])
+    assert is_school_day(db_session, date(2026, 10, 14))[0] is True
+    is_school, reason = is_school_day(db_session, date(2026, 10, 15))
+    assert not is_school
+    assert "Student Holiday" in reason
+
+    # Explicit school_calendar_ids takes precedence over school_calendar_names
+    sync.set_setting(db_session, "school_calendar_ids", [sel_parent.id])
+    is_school_p, reason_p = is_school_day(db_session, date(2026, 10, 14))
+    assert not is_school_p
+    assert "Parent Holiday" in reason_p
+    assert is_school_day(db_session, date(2026, 10, 15))[0] is True
+
+
+

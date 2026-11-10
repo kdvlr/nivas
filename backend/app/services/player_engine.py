@@ -110,7 +110,7 @@ class PlayerEngine:
         self._audio_channel_cache: Dict[str, tuple[int, int, Optional[int]]] = {}
         self._paused_session_timeout = max(
             1,
-            int(os.getenv("AIRPLAY_PAUSE_TIMEOUT_SECONDS", DEFAULT_PAUSED_SESSION_TIMEOUT_SECONDS)),
+            int(os.getenv("AIRPLAY_PAUSE_TIMEOUT_SECONDS", get_settings().airplay_pause_timeout_seconds)),
         )
         self._save_pref_lock = threading.Lock()
         self._save_pref_timer: Optional[threading.Timer] = None
@@ -118,7 +118,6 @@ class PlayerEngine:
         self._membership_revision = 0
         self._last_stream_stopped_at: Optional[float] = None
         self._establishing_stream: bool = False
-        self._reap_orphaned_airplay_processes()
 
     @staticmethod
     def _reap_orphaned_airplay_processes(tracked_pids: Optional[set[int]] = None):
@@ -209,6 +208,7 @@ class PlayerEngine:
             logger.error("Failed to save AirPlay preferences: %s", e)
 
     def start(self):
+        self._reap_orphaned_airplay_processes()
         loop = asyncio.get_event_loop()
         self._event_loop = loop
         if self._scanner_task is None or self._scanner_task.done():
@@ -1616,7 +1616,7 @@ class PlayerEngine:
     ) -> bool:
         try:
             cmd = self._build_airplay_command(devices, audio_path, track_info, artwork_path)
-            log_path = os.getenv("AIRPLAY_LOG_PATH", "/tmp/nivas-airplay.log")
+            log_path = os.getenv("AIRPLAY_LOG_PATH", get_settings().airplay_log_path)
             log_handle = open(log_path, "a", encoding="utf-8", buffering=1)
             proc = subprocess.Popen(
                 cmd,

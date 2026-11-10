@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { api } from '../lib/api'
+import { isDailyProgressChore } from '../lib/chores'
 import Icon from './Icon'
 
 export interface ReminderPayload {
@@ -25,7 +26,10 @@ interface AgendaEvent {
 interface AgendaChore {
   id: number
   title: string
+  coins: number
+  due_date?: string
   completed: boolean
+  assigned_to?: string
   person_name?: string
 }
 
@@ -61,8 +65,9 @@ export default function AmbientCalendarOverlay({
     setLoading(true)
 
     const now = new Date()
+    const tom = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-    const endStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate() + 1).padStart(2, '0')}`
+    const endStr = `${tom.getFullYear()}-${String(tom.getMonth() + 1).padStart(2, '0')}-${String(tom.getDate()).padStart(2, '0')}`
 
     Promise.all([
       api.get<AgendaEvent[]>(`/api/calendar/events?start=${todayStr}T00:00:00&end=${endStr}T23:59:59`).catch(() => []),
@@ -78,7 +83,11 @@ export default function AmbientCalendarOverlay({
         .slice(0, 4)
 
       setEvents(validEvs)
-      setChores((choreRes || []).filter((c) => !c.completed).slice(0, 3))
+      setChores(
+        (choreRes || [])
+          .filter((c) => isDailyProgressChore(c, todayStr) && !c.completed)
+          .slice(0, 3),
+      )
       setLoading(false)
     })
 
@@ -202,8 +211,8 @@ export default function AmbientCalendarOverlay({
                         <div key={c.id} className="flex items-center gap-2 text-xs text-white/80 px-1 py-0.5">
                           <Icon name="check_box_outline_blank" className="text-sm text-white/40 shrink-0" />
                           <span className="truncate">{c.title}</span>
-                          {c.person_name && (
-                            <span className="ml-auto text-[10px] text-white/50 shrink-0">({c.person_name})</span>
+                          {(c.assigned_to || c.person_name) && (
+                            <span className="ml-auto text-[10px] text-white/50 shrink-0">({c.assigned_to || c.person_name})</span>
                           )}
                         </div>
                       ))}
