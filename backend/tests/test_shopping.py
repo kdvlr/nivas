@@ -12,7 +12,7 @@ from app.services import sync
 
 
 @pytest.fixture
-def client_and_db():
+def client_and_db(monkeypatch):
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
@@ -21,6 +21,8 @@ def client_and_db():
     Base.metadata.create_all(engine)
     TestingSessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
     db = TestingSessionLocal()
+
+    monkeypatch.setattr(sync, "SessionLocal", TestingSessionLocal)
 
     def override_get_db():
         try:
