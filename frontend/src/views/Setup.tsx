@@ -1794,17 +1794,35 @@ function TimezoneCard({ status, reload }: { status: SetupStatus; reload: () => v
 }
 
 function KidsDailyCard() {
-  const { data, reload, loading } = useData<KidsDailyAdminResponse>('/api/kids-daily/admin', [])
+  const { data, reload, loading } = useData<KidsDailyAdminResponse>('/api/kids-daily/admin', ['kids_daily'])
   const [regenerating, setRegenerating] = useState(false)
   const [toggling, setToggling] = useState(false)
   const [geminiKeyInput, setGeminiKeyInput] = useState('')
   const [savingKey, setSavingKey] = useState(false)
   const [showKeyInput, setShowKeyInput] = useState(false)
+  const [savingAges, setSavingAges] = useState(false)
+  const [age1Input, setAge1Input] = useState<string>('')
+  const [age2Input, setAge2Input] = useState<string>('')
+  const [bday1Input, setBday1Input] = useState<string>('')
+  const [bday2Input, setBday2Input] = useState<string>('')
 
   const content = data?.content
   const settings = data?.settings
   const isForceActive = Boolean(settings?.force_banner_active)
   const hasGeminiKey = Boolean(settings?.has_gemini_api_key)
+  const ageYounger = settings?.age_groups?.[0] ?? data?.age_groups?.[0] ?? 5
+  const ageOlder = settings?.age_groups?.[1] ?? data?.age_groups?.[1] ?? 9
+  const stats = settings?.stats
+
+  useEffect(() => {
+    if (settings) {
+      const cfgAges = settings.configured_age_groups ?? settings.age_groups ?? [5, 9]
+      setAge1Input(String(cfgAges[0] ?? 5))
+      setAge2Input(String(cfgAges[1] ?? 9))
+      setBday1Input(settings.kid_birthdays?.[0] ?? '')
+      setBday2Input(settings.kid_birthdays?.[1] ?? '')
+    }
+  }, [settings?.configured_age_groups?.[0], settings?.configured_age_groups?.[1], settings?.kid_birthdays?.[0], settings?.kid_birthdays?.[1]])
 
   const handleToggleForce = async () => {
     setToggling(true)
@@ -1832,6 +1850,21 @@ function KidsDailyCard() {
     }
   }
 
+  const handleSaveAges = async () => {
+    setSavingAges(true)
+    try {
+      const a1 = Math.max(3, Math.min(18, parseInt(age1Input, 10) || 5))
+      const a2 = Math.max(3, Math.min(18, parseInt(age2Input, 10) || 9))
+      await api.post('/api/kids-daily/settings', {
+        age_groups: [a1, a2],
+        kid_birthdays: [bday1Input.trim(), bday2Input.trim()],
+      })
+      reload()
+    } finally {
+      setSavingAges(false)
+    }
+  }
+
   const handleRegenerate = async () => {
     setRegenerating(true)
     try {
@@ -1856,33 +1889,40 @@ function KidsDailyCard() {
           ok={Boolean(content)}
           label={
             isGemini
-              ? 'Gemini AI'
-              : '31-Day Rotating Catalog'
+              ? settings?.is_litellm
+                ? `LiteLLM (${settings.gemini_model || 'gemini-3.8-flash'})`
+                : 'Gemini AI'
+              : 'Ephemeral Offline Fallback'
           }
         />
       }
     >
       <div className="flex flex-col gap-5">
-        {/* Gemini API Key Configuration Row */}
+        {/* Gemini / LiteLLM & Perpetual Novelty Status Row */}
         <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-4 flex flex-col gap-2.5">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Icon name="psychology" className="text-indigo-500 text-lg" />
               <div>
-                <span className="text-xs font-bold text-ink flex items-center gap-2">
-                  Gemini AI Generation
+                <span className="text-xs font-bold text-ink flex flex-wrap items-center gap-2">
+                  Perpetual Novelty AI Engine
                   {hasGeminiKey ? (
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
-                      Key Active ({settings?.gemini_api_key_masked})
+                      {settings?.is_litellm ? 'LiteLLM Active' : 'Key Active'} ({settings?.gemini_api_key_masked})
                     </span>
                   ) : (
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-600 dark:text-amber-400">
-                      Offline 31-Day Catalog Active
+                      Offline Fallback Mode
+                    </span>
+                  )}
+                  {stats && (stats.unique_words > 0 || stats.unique_concepts > 0) && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-500/15 text-indigo-700 dark:text-indigo-300">
+                      {stats.unique_words} words · {stats.unique_concepts} concepts learned
                     </span>
                   )}
                 </span>
                 <p className="text-[11px] text-ink-soft">
-                  Generates fresh, unique vocabulary, fun facts, and STEM challenges every single morning.
+                  160-domain curriculum deck + lifetime word, stem & semantic vector deduplication (pre-generated nightly at 8:30 PM).
                 </p>
               </div>
             </div>
@@ -1890,7 +1930,7 @@ function KidsDailyCard() {
               onClick={() => setShowKeyInput(!showKeyInput)}
               className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold hover:underline cursor-pointer"
             >
-              {showKeyInput ? 'Cancel' : hasGeminiKey ? 'Change Key' : 'Add API Key'}
+              {showKeyInput ? 'Cancel' : hasGeminiKey ? 'Override Key' : 'Add API Key'}
             </button>
           </div>
 
@@ -1898,7 +1938,7 @@ function KidsDailyCard() {
             <div className="flex items-center gap-2 mt-1 pt-2 border-t border-indigo-500/10">
               <input
                 type="password"
-                placeholder="Paste Gemini API Key (e.g., AIzaSy...)"
+                placeholder={settings?.is_litellm ? 'Paste LiteLLM virtual key (sk-...)' : 'Paste Gemini API Key (AIzaSy...)'}
                 value={geminiKeyInput}
                 onChange={(e) => setGeminiKeyInput(e.target.value)}
                 className="flex-1 rounded-xl bg-white/80 dark:bg-black/40 border border-black/10 dark:border-white/10 px-3 py-1.5 text-xs text-ink focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
@@ -1914,14 +1954,69 @@ function KidsDailyCard() {
           )}
         </div>
 
+        {/* Kid Challenge Ages & Optional Auto-Birthday Row */}
+        <div className="rounded-2xl border border-[var(--outline-var)] bg-slate-50/50 dark:bg-slate-900/30 p-4 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 flex-1">
+            <label className="flex flex-col gap-1">
+              <span className="text-[11px] font-semibold text-ink-soft">🎈 Kid 1 Age (Now: {ageYounger})</span>
+              <input
+                type="number"
+                min={3}
+                max={18}
+                value={age1Input}
+                onChange={(e) => setAge1Input(e.target.value)}
+                disabled={Boolean(bday1Input)}
+                className="rounded-xl bg-white/80 dark:bg-black/40 border border-black/10 dark:border-white/10 px-2.5 py-1.5 text-xs text-ink disabled:opacity-60"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-[11px] font-semibold text-ink-soft">Birth Month (Auto-Age)</span>
+              <input
+                type="month"
+                value={bday1Input}
+                onChange={(e) => setBday1Input(e.target.value)}
+                className="rounded-xl bg-white/80 dark:bg-black/40 border border-black/10 dark:border-white/10 px-2.5 py-1.5 text-xs text-ink"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-[11px] font-semibold text-ink-soft">🚀 Kid 2 Age (Now: {ageOlder})</span>
+              <input
+                type="number"
+                min={3}
+                max={18}
+                value={age2Input}
+                onChange={(e) => setAge2Input(e.target.value)}
+                disabled={Boolean(bday2Input)}
+                className="rounded-xl bg-white/80 dark:bg-black/40 border border-black/10 dark:border-white/10 px-2.5 py-1.5 text-xs text-ink disabled:opacity-60"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-[11px] font-semibold text-ink-soft">Birth Month (Auto-Age)</span>
+              <input
+                type="month"
+                value={bday2Input}
+                onChange={(e) => setBday2Input(e.target.value)}
+                className="rounded-xl bg-white/80 dark:bg-black/40 border border-black/10 dark:border-white/10 px-2.5 py-1.5 text-xs text-ink"
+              />
+            </label>
+          </div>
+          <button
+            onClick={handleSaveAges}
+            disabled={savingAges || loading}
+            className="btn-glass px-3.5 py-2 text-xs font-semibold shrink-0 cursor-pointer disabled:opacity-50"
+          >
+            {savingAges ? 'Saving...' : 'Save Ages'}
+          </button>
+        </div>
+
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl bg-amber-500/10 p-4 border border-amber-500/20">
           <div>
             <h3 className="text-base font-semibold text-ink flex items-center gap-2">
               <Icon name="schedule" className="text-amber-600 dark:text-amber-400" />
-              Morning Floating Schedule
+              Morning & After-School Display Schedule
             </h3>
             <p className="text-xs text-ink-soft mt-0.5">
-              Active on Weekdays from <strong>6:00 AM – 8:00 AM</strong> and Weekends from <strong>9:00 AM – 11:00 AM</strong>.
+              Active Weekdays <strong>6:00–8:00 AM</strong>, Weekends <strong>9:00–11:00 AM</strong>, and Daily <strong>3:15–7:00 PM</strong>.
             </p>
           </div>
 
@@ -2000,11 +2095,11 @@ function KidsDailyCard() {
                 <span className="text-[11px] text-ink-faint">Answers kept private from Home view</span>
               </div>
 
-              {/* 5-Year Old Question & Answer */}
+              {/* Younger Kid Question & Answer */}
               <div className="rounded-xl bg-white/40 dark:bg-black/20 p-3.5 border border-purple-500/15">
                 <div className="flex items-center justify-between gap-2 mb-1.5">
                   <span className="text-xs font-bold text-purple-700 dark:text-purple-300">
-                    🎈 5-Year-Old Challenge: {content.stem_5yo.topic}
+                    🎈 {ageYounger}-Year-Old Challenge: {content.stem_5yo.topic}
                   </span>
                   {content.stem_5yo.hint && (
                     <span className="text-[11px] text-ink-soft italic">Hint: {content.stem_5yo.hint}</span>
@@ -2022,11 +2117,11 @@ function KidsDailyCard() {
                 )}
               </div>
 
-              {/* 9-Year Old Question & Answer */}
+              {/* Older Kid Question & Answer */}
               <div className="rounded-xl bg-white/40 dark:bg-black/20 p-3.5 border border-indigo-500/15">
                 <div className="flex items-center justify-between gap-2 mb-1.5">
                   <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300">
-                    🚀 9-Year-Old Challenge: {content.stem_9yo.topic}
+                    🚀 {ageOlder}-Year-Old Challenge: {content.stem_9yo.topic}
                   </span>
                   {content.stem_9yo.hint && (
                     <span className="text-[11px] text-ink-soft italic">Hint: {content.stem_9yo.hint}</span>

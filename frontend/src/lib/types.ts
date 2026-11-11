@@ -216,6 +216,8 @@ export interface KidsDailyPublicResponse {
   is_active_window: boolean
   active_window?: string
   force_active: boolean
+  age_groups?: number[]
+  generated_by?: string
   word_of_the_day: KidsWordOfTheDay
   fun_fact: KidsFunFact
   stem_5yo: KidsSTEMQuestion
@@ -235,12 +237,23 @@ export interface KidsDailyAdminResponse {
   is_active_window: boolean
   active_window?: string
   force_active: boolean
+  age_groups?: number[]
   content: KidsDailyAdminContent
   settings: {
     force_banner_active: boolean
     has_gemini_api_key?: boolean
     gemini_api_key_masked?: string
+    key_source?: string
+    is_litellm?: boolean
     gemini_model?: string
+    age_groups?: number[]
+    configured_age_groups?: number[]
+    kid_birthdays?: string[]
+    stats?: {
+      total_editions: number
+      unique_words: number
+      unique_concepts: number
+    }
   }
 }
 

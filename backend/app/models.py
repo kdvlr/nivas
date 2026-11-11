@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, LargeBinary, String, Text, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -205,3 +205,35 @@ class PhotoMetadata(Base):
     file_size: Mapped[int] = mapped_column(Integer, default=0)
     last_modified: Mapped[float] = mapped_column(JSON, default=0.0)
     metadata_version: Mapped[str] = mapped_column(String, default="")
+
+
+class KidsDailyEdition(Base):
+    """Persisted AI-generated daily Brain Nuggets bundle (one per YYYY-MM-DD)."""
+
+    __tablename__ = "kids_daily_editions"
+
+    date_str: Mapped[str] = mapped_column(String, primary_key=True)  # ISO YYYY-MM-DD
+    content: Mapped[dict] = mapped_column(JSON)
+    generated_by: Mapped[str] = mapped_column(String, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class KidsConceptLedger(Base):
+    """Permanent lifetime ledger of every vocabulary word, stem, concept, and embedding ever shown."""
+
+    __tablename__ = "kids_concept_ledger"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    date_str: Mapped[str] = mapped_column(String, index=True)
+    section: Mapped[str] = mapped_column(String)  # "word" | "fact" | "stem_5yo" | "stem_9yo"
+    word_norm: Mapped[str] = mapped_column(String, default="", index=True)
+    word_stem: Mapped[str] = mapped_column(String, default="", index=True)
+    subject_key: Mapped[str] = mapped_column(String, default="", index=True)
+    entity_tokens: Mapped[list] = mapped_column(JSON, default=list)
+    pillar: Mapped[str] = mapped_column(String, default="")
+    subdomain: Mapped[str] = mapped_column(String, default="", index=True)
+    lens: Mapped[str] = mapped_column(String, default="")
+    summary_text: Mapped[str] = mapped_column(Text, default="")
+    embedding: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True, default=None)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)

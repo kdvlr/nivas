@@ -31,6 +31,20 @@ def _scan_photos() -> None:
     sync_photos_dir_background(SessionLocal)
 
 
+def _heal_kids_daily() -> None:
+    """Ensure today's (and post-8 PM tomorrow's) Kids' Brain Nuggets edition is pre-generated in SQLite."""
+    from .services.kids_daily_service import kids_daily_service
+
+    kids_daily_service.ensure_upcoming_editions(include_tomorrow=False)
+
+
+def _prewarm_kids_daily_tomorrow() -> None:
+    """Overnight T+1 lookahead pre-generation at 8:30 PM for zero-latency morning rollovers."""
+    from .services.kids_daily_service import kids_daily_service
+
+    kids_daily_service.ensure_upcoming_editions(include_tomorrow=True)
+
+
 def check_and_trigger_school_timer() -> None:
     """Every school day at 6:15 AM, automatically start a 45-minute timer (ends at 7:00 AM)."""
     from zoneinfo import ZoneInfo
@@ -107,6 +121,34 @@ def start() -> None:
         coalesce=True,
         replace_existing=True,
     )
+    scheduler.add_job(
+        _heal_kids_daily,
+        "cron",
+        hour=5,
+        minute=30,
+        timezone=app_tz,
+        id="kids_daily_morning",
+        coalesce=True,
+        replace_existing=True,
+    )
+    scheduler.add_job(
+        _prewarm_kids_daily_tomorrow,
+        "cron",
+        hour=20,
+        minute=30,
+        timezone=app_tz,
+        id="kids_daily_tomorrow",
+        coalesce=True,
+        replace_existing=True,
+    )
+    scheduler.add_job(
+        _heal_kids_daily,
+        "interval",
+        minutes=15,
+        id="kids_daily_heal",
+        coalesce=True,
+        replace_existing=True,
+    )
     if not scheduler.running:
         scheduler.start()
     now_tz = datetime.now(app_tz)
@@ -116,6 +158,7 @@ def start() -> None:
     # Start the transcode backfill after the syncs, so first paint isn't slowed.
     scheduler.modify_job("derivatives", next_run_time=now_tz + timedelta(seconds=45))
     scheduler.modify_job("photo_index", next_run_time=now_tz + timedelta(seconds=5))
+    scheduler.modify_job("kids_daily_heal", next_run_time=now_tz + timedelta(seconds=12))
     log.info("scheduler started")
 
 

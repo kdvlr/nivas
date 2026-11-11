@@ -1,8 +1,34 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { api } from '../../lib/api'
+import { onRefresh } from '../../lib/ws'
 import Icon from '../Icon'
 import type { KidsDailyPublicResponse } from '../../lib/types'
+
+/** Compute milliseconds until the next local Kids' Brain Nuggets window transition or midnight rollover (+1.5s buffer). */
+function msUntilNextWindowBoundary(): number {
+  const now = new Date()
+  const boundaries = [
+    [0, 0, 2],
+    [6, 0, 1],
+    [8, 0, 1],
+    [9, 0, 1],
+    [11, 0, 1],
+    [15, 15, 1],
+    [19, 0, 1],
+  ]
+  for (const [h, m, s] of boundaries) {
+    const candidate = new Date(now)
+    candidate.setHours(h, m, s, 500)
+    if (candidate.getTime() > now.getTime() + 1000) {
+      return candidate.getTime() - now.getTime()
+    }
+  }
+  const tomorrowMidnight = new Date(now)
+  tomorrowMidnight.setDate(now.getDate() + 1)
+  tomorrowMidnight.setHours(0, 0, 2, 500)
+  return tomorrowMidnight.getTime() - now.getTime()
+}
 
 interface MorningKidsBannerProps {
   now?: Date
@@ -53,8 +79,34 @@ export default function MorningKidsBanner({
     if (storedDismissed) {
       setDismissedSession(storedDismissed)
     }
-    const interval = setInterval(loadDailyContent, 60000)
-    return () => clearInterval(interval)
+
+    let boundaryTimer: ReturnType<typeof setTimeout> | null = null
+    const armBoundaryTimer = () => {
+      if (boundaryTimer) clearTimeout(boundaryTimer)
+      boundaryTimer = setTimeout(() => {
+        loadDailyContent()
+        armBoundaryTimer()
+      }, msUntilNextWindowBoundary())
+    }
+    armBoundaryTimer()
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        loadDailyContent()
+        armBoundaryTimer()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    const unsubWs = onRefresh('kids_daily', loadDailyContent)
+    // Gentle 15-minute fallback sync (replaces 60s polling flood; WS + boundary timer handle real-time updates)
+    const interval = setInterval(loadDailyContent, 15 * 60 * 1000)
+
+    return () => {
+      if (boundaryTimer) clearTimeout(boundaryTimer)
+      document.removeEventListener('visibilitychange', handleVisibility)
+      unsubWs()
+      clearInterval(interval)
+    }
   }, [])
 
   // When forceOpen is triggered (e.g. user clicked date in header), reset manuallyDismissed
@@ -68,6 +120,8 @@ export default function MorningKidsBanner({
   const sessionKey = data?.date ? `${data.date}_${activeWindow}` : null
   const isDismissedSession = sessionKey ? dismissedSession === sessionKey : false
   const isForceActive = Boolean(data?.force_active)
+  const ageYounger = data?.age_groups?.[0] ?? 5
+  const ageOlder = data?.age_groups?.[1] ?? 9
 
   const shouldDisplay = Boolean(
     data &&
@@ -464,7 +518,7 @@ export default function MorningKidsBanner({
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <span className="inline-flex items-center gap-1.5 rounded-lg border border-purple-500/30 bg-purple-500/15 px-2 py-0.5 text-[0.7rem] sm:text-xs font-black uppercase tracking-wider text-purple-700 dark:text-purple-200 lg:text-xs xl:text-sm">
-                      <Icon name="psychology" className="text-xs lg:text-base" /> 🎈 Age 5 Challenge
+                      <Icon name="psychology" className="text-xs lg:text-base" /> 🎈 Age {ageYounger} Challenge
                     </span>
                   </div>
                   {data.stem_5yo.hint && (
@@ -497,7 +551,7 @@ export default function MorningKidsBanner({
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <span className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-500/30 bg-indigo-500/15 px-2 py-0.5 text-[0.7rem] sm:text-xs font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-200 lg:text-xs xl:text-sm">
-                      <Icon name="psychology" className="text-xs lg:text-base" /> 🚀 Age 9 Challenge
+                      <Icon name="psychology" className="text-xs lg:text-base" /> 🚀 Age {ageOlder} Challenge
                     </span>
                   </div>
                   {data.stem_9yo.hint && (
@@ -582,7 +636,7 @@ export default function MorningKidsBanner({
                     <section data-testid="kids-age-5-answer" data-answer-fit-card className={`flex min-h-0 flex-col gap-3 rounded-2xl border border-purple-500/35 bg-[var(--sc)] p-4 ${answerTypeScale.card}`}>
                       <div className="flex items-center justify-between">
                         <span data-answer-fit-content className={`flex min-w-0 flex-wrap items-center gap-2 text-sm font-bold text-purple-700 dark:text-purple-300 sm:text-base ${answerTypeScale.sectionTitle}`}>
-                          <span>🎈 Age 5 Challenge</span>
+                          <span>🎈 Age {ageYounger} Challenge</span>
                         </span>
                       </div>
                       <p data-answer-fit-content className={`break-words text-sm font-medium italic leading-snug text-ink-soft [overflow-wrap:anywhere] sm:text-base ${answerTypeScale.question}`}>
@@ -608,7 +662,7 @@ export default function MorningKidsBanner({
                     <section data-testid="kids-age-9-answer" data-answer-fit-card className={`flex min-h-0 flex-col gap-3 rounded-2xl border border-indigo-500/35 bg-[var(--sc)] p-4 ${answerTypeScale.card}`}>
                       <div className="flex items-center justify-between">
                         <span data-answer-fit-content className={`flex min-w-0 flex-wrap items-center gap-2 text-sm font-bold text-indigo-700 dark:text-indigo-300 sm:text-base ${answerTypeScale.sectionTitle}`}>
-                          <span>🚀 Age 9 Challenge</span>
+                          <span>🚀 Age {ageOlder} Challenge</span>
                         </span>
                       </div>
                       <p data-answer-fit-content className={`break-words text-sm font-medium italic leading-snug text-ink-soft [overflow-wrap:anywhere] sm:text-base ${answerTypeScale.question}`}>

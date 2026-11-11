@@ -11,6 +11,7 @@ class SettingsUpdateRequest(BaseModel):
     gemini_api_key: Optional[str] = None
     gemini_model: Optional[str] = None
     age_groups: Optional[list[int]] = None
+    kid_birthdays: Optional[list[str]] = None
     interests: Optional[list[str]] = None
 
 @router.get("/today")
@@ -45,6 +46,8 @@ def get_today_content(date: Optional[str] = None):
         "is_active_window": payload.get("is_active_window"),
         "active_window": payload.get("active_window", ""),
         "force_active": payload.get("force_active"),
+        "age_groups": payload.get("age_groups", [5, 9]),
+        "generated_by": content.get("generated_by", ""),
         "word_of_the_day": content.get("word_of_the_day", {}),
         "fun_fact": content.get("fun_fact", {}),
         "stem_5yo": stem_5yo,
@@ -96,6 +99,8 @@ def update_settings(body: SettingsUpdateRequest, _: None = Depends(require_admin
         updates["gemini_model"] = body.gemini_model
     if body.age_groups is not None:
         updates["age_groups"] = body.age_groups
+    if body.kid_birthdays is not None:
+        updates["kid_birthdays"] = body.kid_birthdays
     if body.interests is not None:
         updates["interests"] = body.interests
     return kids_daily_service.update_settings(updates)

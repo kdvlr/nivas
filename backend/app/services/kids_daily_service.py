@@ -1,26 +1,41 @@
+import copy
 import json
 import logging
 import os
 import re
 import threading
-from datetime import date, datetime
+import time
+from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Callable, Dict, List, Optional, Set
 from zoneinfo import ZoneInfo
+
+import httpx
+
 from ..config import get_settings
+from ..db import SessionLocal
+from ..models import Base, KidsConceptLedger, KidsDailyEdition, Setting
+from ..ws import manager
+from .kids_curriculum import (
+    CLICHE_BLOCKLIST_PROMPT,
+    CURRICULUM_PILLARS,
+    MYTH_BLOCKER_PROMPT,
+    age_to_grade_label,
+    build_idf_weights,
+    compute_word_stem,
+    cosine_packed,
+    draw_daily_curriculum,
+    extract_entity_tokens,
+    lexical_concept_similarity,
+    normalize_subject_key,
+    pack_embedding,
+    sanitize_and_validate_word,
+    unpack_embedding,
+)
 
 logger = logging.getLogger(__name__)
 
-DOMAINS = (
-    "history_civilizations",
-    "science_nature",
-    "everyday_curiosities",
-    "pop_culture_entertainment",
-    "inventions_engineering",
-    "art_music_literature",
-    "global_cultures_geography",
-    "language_storytelling",
-)
+DOMAINS = tuple(CURRICULUM_PILLARS.keys())
 
 
 def _tokens(value: str) -> set[str]:
@@ -84,6 +99,7 @@ def content_fits_display_limits(content: Dict[str, Any]) -> bool:
                 return False
     return True
 
+
 KIDS_DAILY_SCHEMA = {
     "type": "OBJECT",
     "properties": {
@@ -96,7 +112,7 @@ KIDS_DAILY_SCHEMA = {
                 "definition": {"type": "STRING", "maxLength": KIDS_DAILY_DISPLAY_LIMITS["word_of_the_day"]["definition"]},
                 "example": {"type": "STRING", "maxLength": KIDS_DAILY_DISPLAY_LIMITS["word_of_the_day"]["example"]},
             },
-            "required": ["word", "pronunciation", "definition", "example"],
+            "required": ["word", "pronunciation", "part_of_speech", "definition", "example"],
         },
         "fun_fact": {
             "type": "OBJECT",
@@ -106,7 +122,7 @@ KIDS_DAILY_SCHEMA = {
                 "emoji": {"type": "STRING", "maxLength": KIDS_DAILY_DISPLAY_LIMITS["fun_fact"]["emoji"]},
                 "did_you_know": {"type": "STRING", "maxLength": KIDS_DAILY_DISPLAY_LIMITS["fun_fact"]["did_you_know"]},
             },
-            "required": ["fact", "emoji", "did_you_know"],
+            "required": ["fact", "category", "emoji", "did_you_know"],
         },
         "stem_5yo": {
             "type": "OBJECT",
@@ -117,7 +133,7 @@ KIDS_DAILY_SCHEMA = {
                 "answer": {"type": "STRING", "maxLength": KIDS_DAILY_DISPLAY_LIMITS["stem_5yo"]["answer"]},
                 "parent_explanation": {"type": "STRING", "maxLength": KIDS_DAILY_DISPLAY_LIMITS["stem_5yo"]["parent_explanation"]},
             },
-            "required": ["topic", "question", "answer", "parent_explanation"],
+            "required": ["topic", "question", "hint", "answer", "parent_explanation"],
         },
         "stem_9yo": {
             "type": "OBJECT",
@@ -128,11 +144,36 @@ KIDS_DAILY_SCHEMA = {
                 "answer": {"type": "STRING", "maxLength": KIDS_DAILY_DISPLAY_LIMITS["stem_9yo"]["answer"]},
                 "parent_explanation": {"type": "STRING", "maxLength": KIDS_DAILY_DISPLAY_LIMITS["stem_9yo"]["parent_explanation"]},
             },
-            "required": ["topic", "question", "answer", "parent_explanation"],
+            "required": ["topic", "question", "hint", "answer", "parent_explanation"],
         },
     },
     "required": ["word_of_the_day", "fun_fact", "stem_5yo", "stem_9yo"],
 }
+
+
+def _build_generation_schema(section_names: Optional[List[str]] = None) -> Dict[str, Any]:
+    """Build Gemini JSON schema including canonical `subject_key` slugs for concept deduplication."""
+    wanted = section_names or ["word_of_the_day", "fun_fact", "stem_5yo", "stem_9yo"]
+    props: Dict[str, Any] = {}
+    for name in wanted:
+        sec_schema = copy.deepcopy(KIDS_DAILY_SCHEMA["properties"][name])
+        if name in ("fun_fact", "stem_5yo", "stem_9yo"):
+            sec_schema["properties"]["subject_key"] = {
+                "type": "STRING",
+                "maxLength": 48,
+                "description": "Canonical 2-4 word snake_case identifier of the specific object, species, or mechanism (e.g. 'fresnel_lighthouse_lens')",
+            }
+            if "subject_key" not in sec_schema["required"]:
+                sec_schema["required"].append("subject_key")
+        props[name] = sec_schema
+    return {
+        "type": "OBJECT",
+        "properties": props,
+        "required": list(wanted),
+    }
+
+
+KIDS_GENERATION_SCHEMA = _build_generation_schema()
 
 # Rich 31-day rotating offline fallback catalog (1 unique bundle for every day of the month)
 FALLBACK_CATALOG: List[Dict[str, Any]] = [
@@ -1068,140 +1109,199 @@ FALLBACK_CATALOG: List[Dict[str, Any]] = [
     },
 ]
 
-HISTORY_CATEGORIES = [
-    "Ancient Egypt, Pyramids & Hieroglyphics",
-    "Medieval Castles, Knights & Siege Engines",
-    "The Silk Road, Camels & Ancient Trade",
-    "Ancient Rome, Aqueducts & The Colosseum",
-    "Samurai, Ninjas & Feudal Japanese History",
-    "Ancient Greece, The First Olympics & Myths",
-    "Archaeology, King Tut & Lost Cities",
-    "The Renaissance, Leonardo da Vinci & Inventions",
-    "Age of Exploration, Caravels & Mapmaking",
-    "Viking Longships, Navigation & Runes",
-    "Ancient Chinese Inventions, Paper & Fireworks",
-    "Maya & Inca Empires, Step Pyramids & Roads",
-    "Pioneers, Steam Trains & The Transcontinental Rail",
-    "The First Flights, Wright Brothers & Early Airplanes",
-    "Tall Ships, Lighthouses & Maritime Sea Lore",
-    "Ancient Wonders, Hanging Gardens & Colossus",
-    "Colonial Era, Town Criers & Printing Presses",
-    "Ancient Games, Senet, Mancala & Early Board Games",
-    "Architecture, Suspension Bridges & Arches",
+KIDS_CATEGORIES: List[str] = [
+    subdomain
+    for subdomains in CURRICULUM_PILLARS.values()
+    for subdomain in subdomains
 ]
 
-EVERYDAY_CATEGORIES = [
-    "Kitchen Chemistry, How Popcorn Pops & Yeast",
-    "Accidental Inventions, Popsicles, Post-its & Velcro",
-    "Everyday Mysteries, Why We Yawn, Dream & Hiccup",
-    "Invention of Writing, Pencils, Erasers & Crayons",
-    "How Cities Work, Traffic Lights, Bridges & Subways",
-    "Home Wonders, How Refrigerators & Microwaves Work",
-    "History of Money, Ancient Coins & Piggy Banks",
-    "Bicycles, Skateboards & How Balance Works",
-    "Ice Cream, Chocolate & Sweet Confectionery History",
-    "The Science of Sleep, Dreams & Biological Clocks",
-    "Clothing Inventions, Zippers, Buttons & Fabrics",
-    "Shoe Inventions, Sneakers & Why Shoelaces Untie",
-    "Libraries, Paper Scrolls & Gutenberg's Printing Press",
-    "How Clocks, Sundials & Pendulums Keep Time",
-    "Breakfast Science, How Bread Toasts & Syrup Flows",
-    "Mirrors, Reflection & How Glass Is Made",
-    "Why Soap Cleans, Bubbles & Surface Tension",
-    "Plumbing, Water Towers & How Faucets Work",
+SETTINGS_DB_KEY = "kids_daily_settings"
+DECK_DB_KEY = "kids_nugget_deck_state"
+MIGRATED_DB_KEY = "kids_daily_json_migrated_v2"
+
+# Models actually served by the local LiteLLM gateway (in priority order; flash-lite is absolute last resort)
+LITELLM_MODELS_PRIORITY = [
+    "gemini-3.8-flash",
+    "gemini-flash",
+    "gemini-2.5-flash",
+    "gemini-3.5-flash-lite",
 ]
 
-POP_CULTURE_CATEGORIES = [
-    "Animation History, Disney, Pixar & Hand-Drawn Cartoons",
-    "Video Game History, 8-Bit Pixels, Arcades & Nintendo",
-    "Movie Magic, Foley Sound Effects & Behind-the-Scenes",
-    "Toy Inventions, LEGO Bricks, Slinkies & Play-Doh",
-    "Comic Strips, Superhero Origins & Graphic Art",
-    "Theme Parks, Roller Coaster Physics & Dark Rides",
-    "Puppetry, Jim Henson, The Muppets & Marionettes",
-    "Musical Instruments, How Pianos & Guitars Make Sound",
-    "Magic Tricks, Optical Illusions & Sleight of Hand",
-    "Children's Books, Classic Fairy Tales & Illustrators",
-    "Stop-Motion Animation, Claymation & Armatures",
-    "Board Game Inventions, Monopoly, Scrabble & Chess",
-    "Origins of Cartoons, Flipbooks & Zoetropes",
-    "Circus Arts, Trapeze, Juggling & Center Ring Lore",
-    "Orchestra Families, Violins, Trumpets & Percussion",
+DIRECT_GEMINI_MODELS_PRIORITY = [
+    "gemini-2.5-flash",
+    "gemini-flash-latest",
 ]
 
-SCIENCE_NATURE_CATEGORIES = [
-    "Astrophysics, Nebulae, Stars & Astronomy",
-    "Deep Ocean Trenches, Abyssal Fish & Glowing Squids",
-    "Volcanoes, Magma Chambers & Geysers",
-    "Dinosaurs, Fossils & Prehistoric Earth",
-    "Animal Biomimicry & Nature's Inventions",
-    "Extreme Weather, Tornadoes, Rainbows & Lightning",
-    "Rainforest Wildlife, Sloths & Tree-Canopy Secrets",
-    "Insect Superpowers, Ant Colonies & Bee Dances",
-    "Robotics, Mars Rovers & Space Probes",
-    "Bioluminescence & Glow-in-the-Dark Sea Life",
-    "Desert Survival, Cacti & Camouflage Adaptations",
-    "Whale Songs, Marine Mammals & Echolocation",
-    "Caves, Stalactites & Underground Rivers",
-    "Earth's Magnetic Field, Auroras & Northern Lights",
-    "Coral Reefs, Sea Turtles & Ocean Ecosystems",
-    "Flight Physics, Bird Wings & Aerodynamics",
-    "Plant Superpowers, Carnivorous Plants & Seeds",
-    "The Solar System, Mars Exploration & Saturn's Rings",
-]
+EPHEMERAL_FALLBACK_TTL_SECONDS = 300.0
+SEMANTIC_SIMILARITY_THRESHOLD = 0.78
+LEXICAL_SIMILARITY_THRESHOLD = 0.34
+SAME_DAY_LEXICAL_THRESHOLD = 0.30
+SAME_DAY_SEMANTIC_THRESHOLD = 0.72
 
-KIDS_CATEGORIES = (
-    HISTORY_CATEGORIES
-    + EVERYDAY_CATEGORIES
-    + POP_CULTURE_CATEGORIES
-    + SCIENCE_NATURE_CATEGORIES
-)
+
+def _section_summary(section_name: str, sec: Dict[str, Any]) -> str:
+    if section_name == "word_of_the_day":
+        return " ".join(str(sec.get(k, "")).strip() for k in ("word", "definition", "example") if sec.get(k))
+    if section_name == "fun_fact":
+        return " ".join(str(sec.get(k, "")).strip() for k in ("category", "fact", "did_you_know") if sec.get(k))
+    return " ".join(str(sec.get(k, "")).strip() for k in ("topic", "question", "answer") if sec.get(k))
+
+
+def _strip_internal_fields(bundle: Dict[str, Any]) -> Dict[str, Any]:
+    """Return a clean display copy while keeping canonical `subject_key` metadata inside stored JSON."""
+    cleaned: Dict[str, Any] = {}
+    for sec_name, limits in KIDS_DAILY_DISPLAY_LIMITS.items():
+        raw_sec = bundle.get(sec_name) or {}
+        cleaned_sec: Dict[str, Any] = {}
+        for k in limits:
+            if k in raw_sec and raw_sec[k] is not None:
+                cleaned_sec[k] = str(raw_sec[k]).strip()
+        if "subject_key" in raw_sec and raw_sec["subject_key"]:
+            cleaned_sec["subject_key"] = str(raw_sec["subject_key"]).strip()[:48]
+        cleaned[sec_name] = cleaned_sec
+    if "generated_by" in bundle:
+        cleaned["generated_by"] = bundle["generated_by"]
+    return cleaned
+
 
 class KidsDailyService:
-    def __init__(self):
+    def __init__(self, session_factory: Optional[Callable[[], Any]] = None):
+        self._session_factory = session_factory or SessionLocal
         self._cache: Dict[str, Any] = {}
-        self._settings: Dict[str, Any] = {
+        self._ephemeral_fallback: Dict[str, tuple[float, Dict[str, Any]]] = {}
+        self._settings: Dict[str, Any] = self._default_settings()
+        self._lock = threading.RLock()
+        self._initialized = False
+        self._backfill_started = False
+
+    @staticmethod
+    def _default_settings() -> Dict[str, Any]:
+        return {
             "force_banner_active": False,
             "gemini_api_key": "",
-            "gemini_model": "gemini-3.7-flash",
+            "gemini_model": "",
             "age_groups": [5, 9],
+            "kid_birthdays": ["", ""],  # Optional ["YYYY-MM", "YYYY-MM"] for automatic birthday aging
             "interests": [],
         }
-        self._lock = threading.RLock()
-        self._load_cache()
 
-    def _load_cache(self):
+    def set_session_factory(self, session_factory: Callable[[], Any]) -> None:
+        with self._lock:
+            self._session_factory = session_factory
+            self._initialized = False
+            self._ephemeral_fallback.clear()
+
+    def _ensure_initialized(self) -> None:
+        if self._initialized:
+            return
+        with self._lock:
+            if self._initialized:
+                return
+            try:
+                with self._session_factory() as db:
+                    bind = db.get_bind()
+                    Base.metadata.create_all(bind)
+
+                    saved_settings = db.get(Setting, SETTINGS_DB_KEY)
+                    if saved_settings and isinstance(saved_settings.value, dict):
+                        self._settings = {**self._default_settings(), **saved_settings.value}
+
+                    migrated_flag = db.get(Setting, MIGRATED_DB_KEY)
+                    if not migrated_flag or migrated_flag.value != "1":
+                        self._migrate_json_history(db)
+                        db.merge(Setting(key=MIGRATED_DB_KEY, value="1"))
+                        db.commit()
+
+                self._initialized = True
+                self._maybe_start_embedding_backfill()
+            except Exception as e:
+                logger.warning("Failed to initialize kids daily SQLite store: %s", e)
+                self._initialized = True
+
+    def _migrate_json_history(self, db: Any) -> None:
+        """One-time import of legacy kids_daily.json into SQLite lifetime ledger and editions."""
+        target_file = _get_kids_daily_file()
+        if not target_file.exists():
+            return
         try:
-            target_file = _get_kids_daily_file()
-            if target_file.exists():
-                with open(target_file, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    self._cache = data.get("days", {})
-                    self._settings = {**self._settings, **data.get("settings", {})}
+            raw = json.loads(target_file.read_text(encoding="utf-8"))
         except Exception as e:
-            logger.warning(f"Failed to load kids daily cache: {e}")
+            logger.warning("Could not parse legacy kids_daily.json during migration: %s", e)
+            return
 
-    def _save_cache(self):
+        legacy_settings = raw.get("settings")
+        if isinstance(legacy_settings, dict):
+            merged = {**self._default_settings(), **legacy_settings, **{k: v for k, v in self._settings.items() if v}}
+            # Preserve explicit boolean force_banner_active from legacy file if DB settings didn't exist yet
+            if db.get(Setting, SETTINGS_DB_KEY) is None:
+                merged["force_banner_active"] = bool(legacy_settings.get("force_banner_active", False))
+                merged["gemini_api_key"] = str(legacy_settings.get("gemini_api_key", "")).strip()
+                merged["gemini_model"] = str(legacy_settings.get("gemini_model", "")).strip()
+                if isinstance(legacy_settings.get("age_groups"), list) and len(legacy_settings["age_groups"]) >= 2:
+                    merged["age_groups"] = [int(x) for x in legacy_settings["age_groups"][:2]]
+                if isinstance(legacy_settings.get("interests"), list):
+                    merged["interests"] = list(legacy_settings["interests"])
+            self._settings = merged
+            db.merge(Setting(key=SETTINGS_DB_KEY, value=self._settings))
+
+        days_map = raw.get("days")
+        if not isinstance(days_map, dict):
+            return
+
+        imported_editions = 0
+        imported_ledger = 0
+        for d_str, bundle in sorted(days_map.items()):
+            if not isinstance(bundle, dict):
+                continue
+            try:
+                date.fromisoformat(d_str)
+            except ValueError:
+                continue
+
+            # Record EVERY historical day (both AI and offline_catalog) into KidsConceptLedger
+            # so words/facts/questions already seen by the family are retired permanently.
+            existing_ledger = (
+                db.query(KidsConceptLedger.id)
+                .filter(KidsConceptLedger.date_str == d_str)
+                .first()
+            )
+            if not existing_ledger:
+                self._append_ledger_rows(db, d_str, bundle, assignment=None, embeddings={})
+                imported_ledger += 1
+
+            # Only persist genuine AI bundles into KidsDailyEdition; leave `offline_catalog`
+            # days out of KidsDailyEdition so today automatically upgrades to AI on startup!
+            gen_by = str(bundle.get("generated_by", ""))
+            if gen_by.startswith("gemini_ai") and content_fits_display_limits(bundle):
+                if db.get(KidsDailyEdition, d_str) is None:
+                    db.add(
+                        KidsDailyEdition(
+                            date_str=d_str,
+                            content=_strip_internal_fields(bundle),
+                            generated_by=gen_by,
+                        )
+                    )
+                    imported_editions += 1
+
+        if imported_editions or imported_ledger:
+            logger.info(
+                "Migrated kids_daily.json history into SQLite: %d AI editions, %d days indexed in concept ledger",
+                imported_editions,
+                imported_ledger,
+            )
+
+    def _save_settings(self) -> None:
+        self._ensure_initialized()
         try:
-            target_file = _get_kids_daily_file()
-            target_file.parent.mkdir(parents=True, exist_ok=True)
-            temporary_file = target_file.with_suffix(".tmp")
-            with open(temporary_file, "w", encoding="utf-8") as f:
-                json.dump(
-                    {
-                        "days": self._cache,
-                        "settings": self._settings,
-                    },
-                    f,
-                    indent=2,
-                    ensure_ascii=False,
-                )
-                f.flush()
-                os.fsync(f.fileno())
-            os.replace(temporary_file, target_file)
+            with self._session_factory() as db:
+                db.merge(Setting(key=SETTINGS_DB_KEY, value=dict(self._settings)))
+                db.commit()
         except Exception as e:
-            logger.error(f"Failed to save kids daily cache: {e}")
+            logger.error("Failed to save kids daily settings to SQLite: %s", e)
 
+    # ------------------------------------------------------------------
+    # Active Display Windows & Dynamic Kid Ages
+    # ------------------------------------------------------------------
     def get_active_window_name(self, now: Optional[datetime] = None) -> str:
         """
         Return the name of the active display window ('morning' or 'afternoon'),
@@ -1209,6 +1309,7 @@ class KidsDailyService:
         - Weekdays (Mon-Fri): 6:00 AM - 8:00 AM (morning), 3:15 PM - 7:00 PM (afternoon)
         - Weekends (Sat-Sun): 9:00 AM - 11:00 AM (morning), 3:15 PM - 7:00 PM (afternoon)
         """
+        self._ensure_initialized()
         if self._settings.get("force_banner_active", False):
             return "forced"
 
@@ -1231,53 +1332,220 @@ class KidsDailyService:
         return ""
 
     def is_active_morning_window(self, now: Optional[datetime] = None) -> bool:
-        """
-        Active hours:
-        - Weekdays (Mon-Fri, weekday 0-4): 6:00 AM - 8:00 AM, 3:15 PM - 7:00 PM
-        - Weekends (Sat-Sun, weekday 5-6): 9:00 AM - 11:00 AM, 3:15 PM - 7:00 PM
-        """
         return bool(self.get_active_window_name(now))
 
-    def get_settings(self) -> Dict[str, Any]:
+    def get_effective_ages(self, ref_date: Optional[date] = None) -> List[int]:
+        """Compute current [younger_age, older_age], auto-incrementing on birthdays when `kid_birthdays` ('YYYY-MM') is set."""
+        self._ensure_initialized()
+        target_d = ref_date or datetime.now(ZoneInfo(get_settings().tz)).date()
+        configured = self._settings.get("age_groups") or [5, 9]
+        base_ages = [
+            int(configured[0]) if len(configured) >= 1 else 5,
+            int(configured[1]) if len(configured) >= 2 else 9,
+        ]
+        birthdays = self._settings.get("kid_birthdays") or ["", ""]
+        computed: List[int] = []
+        for idx in range(2):
+            bday = str(birthdays[idx]).strip() if idx < len(birthdays) and birthdays[idx] else ""
+            m = re.fullmatch(r"(\d{4})-(0[1-9]|1[0-2])", bday)
+            if m:
+                byear, bmonth = int(m.group(1)), int(m.group(2))
+                age = target_d.year - byear - (1 if target_d.month < bmonth else 0)
+                computed.append(max(3, min(18, age)))
+            else:
+                computed.append(max(3, min(18, base_ages[idx])))
+        return computed
+
+    # ------------------------------------------------------------------
+    # LiteLLM / Gemini Credential & Model Resolution
+    # ------------------------------------------------------------------
+    def _resolve_ai_config(self) -> Dict[str, Any]:
+        """
+        Resolve effective base_url, ordered API keys, and ordered model names.
+        Prevents stale pre-LiteLLM UI keys (e.g. 'AQ.Ab8...') or unserved legacy
+        model names ('gemini-3.5-flash') from breaking LiteLLM gateway calls.
+        """
         s = get_settings()
-        effective_key = self._settings.get("gemini_api_key") or s.gemini_api_key
+        base_url = (
+            s.gemini_base_url
+            or os.environ.get("GEMINI_BASE_URL")
+            or os.environ.get("LITELLM_BASE_URL")
+            or ""
+        ).strip()
+        custom_key = str(self._settings.get("gemini_api_key") or "").strip()
+        env_key = str(s.gemini_api_key or os.environ.get("GEMINI_API_KEY") or "").strip()
+        custom_model = str(self._settings.get("gemini_model") or "").strip()
+        env_model = str(s.gemini_model or os.environ.get("GEMINI_MODEL") or "").strip()
+
+        if base_url:
+            # LiteLLM virtual keys start with 'sk-'. Ignore legacy direct Google keys ('AIza...', 'AQ....').
+            keys: List[str] = []
+            key_source = "none"
+            if custom_key and custom_key.startswith("sk-"):
+                keys.append(custom_key)
+                key_source = "custom_litellm"
+            if env_key and env_key not in keys:
+                keys.append(env_key)
+                if key_source == "none":
+                    key_source = "litellm_env"
+
+            raw_models: List[str] = []
+            if custom_model in LITELLM_MODELS_PRIORITY:
+                raw_models.append(custom_model)
+            # Always lead with gemini-3.8-flash (strongest Flash model on LiteLLM) unless overridden above
+            for m in LITELLM_MODELS_PRIORITY:
+                if m not in raw_models:
+                    raw_models.append(m)
+            if env_model and env_model in LITELLM_MODELS_PRIORITY and env_model not in raw_models:
+                raw_models.insert(1, env_model)
+
+            return {
+                "base_url": base_url.rstrip("/"),
+                "api_keys": keys,
+                "models": raw_models,
+                "key_source": key_source,
+                "is_litellm": True,
+            }
+
+        keys = [k for k in dict.fromkeys([custom_key, env_key]) if k]
+        key_source = "custom_key" if custom_key else ("env_key" if env_key else "none")
+        models = [
+            m
+            for m in dict.fromkeys([custom_model, env_model, *DIRECT_GEMINI_MODELS_PRIORITY])
+            if m and not m.startswith("gemini-3.7") and not m.startswith("gemini-3.6")
+        ]
+        return {
+            "base_url": "",
+            "api_keys": keys,
+            "models": models or ["gemini-2.5-flash"],
+            "key_source": key_source,
+            "is_litellm": False,
+        }
+
+    def get_stats(self) -> Dict[str, int]:
+        self._ensure_initialized()
+        try:
+            with self._session_factory() as db:
+                total_editions = db.query(KidsDailyEdition).count()
+                unique_words = (
+                    db.query(KidsConceptLedger.word_norm)
+                    .filter(KidsConceptLedger.word_norm != "")
+                    .distinct()
+                    .count()
+                )
+                unique_concepts = (
+                    db.query(KidsConceptLedger.subject_key)
+                    .filter(KidsConceptLedger.subject_key != "")
+                    .distinct()
+                    .count()
+                )
+                return {
+                    "total_editions": total_editions,
+                    "unique_words": unique_words,
+                    "unique_concepts": unique_concepts,
+                }
+        except Exception:
+            return {"total_editions": 0, "unique_words": 0, "unique_concepts": 0}
+
+    def get_settings(self) -> Dict[str, Any]:
+        self._ensure_initialized()
+        ai_cfg = self._resolve_ai_config()
+        effective_key = ai_cfg["api_keys"][0] if ai_cfg["api_keys"] else ""
+        masked = (
+            f"{effective_key[:5]}...{effective_key[-4:]}"
+            if effective_key and len(effective_key) > 10
+            else ("Configured" if effective_key else "")
+        )
         return {
             "force_banner_active": bool(self._settings.get("force_banner_active", False)),
             "has_gemini_api_key": bool(effective_key),
-            "gemini_api_key_masked": f"{effective_key[:6]}...{effective_key[-4:]}" if effective_key and len(effective_key) > 10 else "",
-            "gemini_model": self._settings.get("gemini_model") or s.gemini_model or "gemini-3.7-flash",
-            "age_groups": self._settings.get("age_groups", [5, 9]),
-            "interests": self._settings.get("interests", []),
+            "gemini_api_key_masked": masked,
+            "key_source": ai_cfg["key_source"],
+            "is_litellm": ai_cfg["is_litellm"],
+            "gemini_model": ai_cfg["models"][0] if ai_cfg["models"] else "gemini-3.8-flash",
+            "age_groups": self.get_effective_ages(),
+            "configured_age_groups": list(self._settings.get("age_groups") or [5, 9]),
+            "kid_birthdays": list(self._settings.get("kid_birthdays") or ["", ""]),
+            "interests": list(self._settings.get("interests") or []),
+            "stats": self.get_stats(),
         }
 
     def update_settings(self, new_settings: Dict[str, Any]) -> Dict[str, Any]:
-        if "force_banner_active" in new_settings:
-            self._settings["force_banner_active"] = bool(new_settings["force_banner_active"])
-        if "gemini_api_key" in new_settings and new_settings["gemini_api_key"] is not None:
-            self._settings["gemini_api_key"] = str(new_settings["gemini_api_key"]).strip()
-        if "gemini_model" in new_settings and new_settings["gemini_model"]:
-            self._settings["gemini_model"] = str(new_settings["gemini_model"]).strip()
-        if "age_groups" in new_settings and isinstance(new_settings["age_groups"], list):
-            self._settings["age_groups"] = sorted({max(3, min(18, int(age))) for age in new_settings["age_groups"]})
-        if "interests" in new_settings and isinstance(new_settings["interests"], list):
-            self._settings["interests"] = [str(item).strip()[:40] for item in new_settings["interests"] if str(item).strip()][:12]
-        self._save_cache()
+        self._ensure_initialized()
+        with self._lock:
+            if "force_banner_active" in new_settings and new_settings["force_banner_active"] is not None:
+                self._settings["force_banner_active"] = bool(new_settings["force_banner_active"])
+            if "gemini_api_key" in new_settings and new_settings["gemini_api_key"] is not None:
+                self._settings["gemini_api_key"] = str(new_settings["gemini_api_key"]).strip()
+            if "gemini_model" in new_settings and new_settings["gemini_model"] is not None:
+                self._settings["gemini_model"] = str(new_settings["gemini_model"]).strip()
+            if "age_groups" in new_settings and isinstance(new_settings["age_groups"], list):
+                cleaned_ages = [max(3, min(18, int(age))) for age in new_settings["age_groups"][:2]]
+                if len(cleaned_ages) == 1:
+                    cleaned_ages.append(max(cleaned_ages[0] + 1, 9))
+                if len(cleaned_ages) >= 2:
+                    self._settings["age_groups"] = cleaned_ages[:2]
+            if "kid_birthdays" in new_settings and isinstance(new_settings["kid_birthdays"], list):
+                bdays: List[str] = []
+                for item in (new_settings["kid_birthdays"] + ["", ""])[:2]:
+                    s_val = str(item or "").strip()
+                    bdays.append(s_val if re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", s_val) else "")
+                self._settings["kid_birthdays"] = bdays
+            if "interests" in new_settings and isinstance(new_settings["interests"], list):
+                self._settings["interests"] = [
+                    str(item).strip()[:40] for item in new_settings["interests"] if str(item).strip()
+                ][:12]
+            self._save_settings()
+
+        manager.broadcast_threadsafe("kids_daily")
         return self.get_settings()
 
+    # ------------------------------------------------------------------
+    # Public Retrieval & Scheduled Pre-Generation
+    # ------------------------------------------------------------------
     def get_today_payload(self, date_str: Optional[str] = None, force_regenerate: bool = False) -> Dict[str, Any]:
+        self._ensure_initialized()
         try:
             default_today = datetime.now(ZoneInfo(get_settings().tz)).date()
-            today_key = (date.fromisoformat(date_str) if date_str else default_today).isoformat()
+            target_date = date.fromisoformat(date_str) if date_str else default_today
+            today_key = target_date.isoformat()
         except (TypeError, ValueError):
             raise ValueError("date must be ISO-8601 (YYYY-MM-DD)")
+
+        broadcast_needed = False
         with self._lock:
-            cached_content = self._cache.get(today_key)
-            if not force_regenerate and cached_content and content_fits_display_limits(cached_content):
-                content = cached_content
-            else:
-                content = self._generate_daily_content(today_key)
-                self._cache[today_key] = content
-                self._save_cache()
+            content = None
+            if not force_regenerate:
+                # 1. Check persisted SQLite edition first
+                content = self._load_persisted_edition(today_key)
+                # 2. Check in-memory mirror cache (only if AI-generated)
+                if not content:
+                    mem = self._cache.get(today_key)
+                    if mem and str(mem.get("generated_by", "")).startswith("gemini_ai") and content_fits_display_limits(mem):
+                        content = mem
+                # 3. Check short-lived ephemeral fallback cooldown so we don't hammer an unreachable server
+                if not content:
+                    eph = self._ephemeral_fallback.get(today_key)
+                    if eph and time.monotonic() < eph[0]:
+                        content = eph[1]
+
+            if not content:
+                content = self._generate_daily_content(today_key, force_advance_deck=force_regenerate)
+                if str(content.get("generated_by", "")).startswith("gemini_ai"):
+                    self._persist_ai_edition(today_key, content)
+                    self._cache[today_key] = content
+                    self._ephemeral_fallback.pop(today_key, None)
+                    broadcast_needed = True
+                else:
+                    # Ephemeral fallback ONLY — never lock offline_catalog into SQLite!
+                    self._ephemeral_fallback[today_key] = (
+                        time.monotonic() + EPHEMERAL_FALLBACK_TTL_SECONDS,
+                        content,
+                    )
+                    self._cache[today_key] = content
+
+        if broadcast_needed:
+            manager.broadcast_threadsafe("kids_daily")
 
         is_active = self.is_active_morning_window()
         active_window = self.get_active_window_name()
@@ -1286,245 +1554,775 @@ class KidsDailyService:
             "is_active_window": is_active,
             "active_window": active_window,
             "force_active": bool(self._settings.get("force_banner_active", False)),
+            "age_groups": self.get_effective_ages(target_date),
             "content": content,
         }
 
-    def _validate_candidate(self, candidate: Dict[str, Any], current_date_str: str) -> tuple[bool, list[str]]:
-        """Deterministic local duplicate/overlap checks; no model judgement required."""
-        if not content_fits_display_limits(candidate):
-            return False, ["display limits"]
-        try:
-            today = date.fromisoformat(current_date_str)
-        except ValueError:
-            return False, ["invalid date"]
-        word = str(candidate.get("word_of_the_day", {}).get("word", "")).strip().lower()
-        sections = {
-            "word": " ".join(str(candidate.get("word_of_the_day", {}).get(k, "")) for k in ("word", "definition", "example")),
-            "fact": " ".join(str(candidate.get("fun_fact", {}).get(k, "")) for k in ("category", "fact")),
-            "stem5": " ".join(str(candidate.get("stem_5yo", {}).get(k, "")) for k in ("topic", "question", "answer")),
-            "stem9": " ".join(str(candidate.get("stem_9yo", {}).get(k, "")) for k in ("topic", "question", "answer")),
-        }
-        rejected: list[str] = []
-        if not word:
-            rejected.append("missing vocabulary word")
-        for prior_date, prior in sorted(self._cache.items()):
-            try:
-                age = (today - date.fromisoformat(prior_date)).days
-            except ValueError:
-                continue
-            if age <= 0:
-                continue
-            prior_word = str(prior.get("word_of_the_day", {}).get("word", "")).strip().lower()
-            if age <= 180 and word and word == prior_word:
-                rejected.append(f"vocabulary word {word}")
-            if age <= 60:
-                prior_sections = {
-                    "fact": " ".join(str(prior.get("fun_fact", {}).get(k, "")) for k in ("category", "fact")),
-                    "stem5": " ".join(str(prior.get("stem_5yo", {}).get(k, "")) for k in ("topic", "question", "answer")),
-                    "stem9": " ".join(str(prior.get("stem_9yo", {}).get(k, "")) for k in ("topic", "question", "answer")),
-                }
-                for name in ("fact", "stem5", "stem9"):
-                    if _similarity(sections[name], prior_sections[name]) >= 0.45:
-                        rejected.append(f"recent {name} concept")
-        names = list(sections)
-        for i, name in enumerate(names):
-            for other in names[i + 1:]:
-                if _similarity(sections[name], sections[other]) >= 0.55:
-                    rejected.append(f"same-day overlap: {name}/{other}")
-        return not rejected, rejected
+    def ensure_upcoming_editions(self, include_tomorrow: bool = False) -> None:
+        """Background pre-warm / self-healing pass invoked by APScheduler."""
+        self._ensure_initialized()
+        tz = ZoneInfo(get_settings().tz)
+        now_local = datetime.now(tz)
+        targets = [now_local.date()]
+        if include_tomorrow or now_local.hour >= 20:
+            targets.append(now_local.date() + timedelta(days=1))
 
-    def _get_recent_history(self, current_date_str: str, days_back: int = 60) -> Dict[str, Any]:
-        """Collect recent words, categories, facts, and stem topics from past cache to prevent repetition."""
-        used_words: Set[str] = set()
-        used_word_list: List[str] = []
-        recent_categories: Set[str] = set()
-        recent_fact_snippets: List[str] = []
-        recent_stem_topics: List[str] = []
-
-        try:
-            curr_d = date.fromisoformat(current_date_str)
-        except Exception:
-            curr_d = datetime.now(ZoneInfo(get_settings().tz)).date()
-
-        for d_str, day_data in self._cache.items():
-            if d_str == current_date_str:
+        for target_d in targets:
+            d_key = target_d.isoformat()
+            if self._load_persisted_edition(d_key) is not None:
                 continue
             try:
-                d = date.fromisoformat(d_str)
-                delta = (curr_d - d).days
-                if 0 <= delta <= days_back:
-                    # Word of the day
-                    word_obj = day_data.get("word_of_the_day", {})
-                    w = word_obj.get("word", "").strip()
-                    if w:
-                        used_words.add(w.lower())
-                        used_word_list.append(w)
+                # Bypass ephemeral cooldown during scheduled heal if AI is configured
+                with self._lock:
+                    self._ephemeral_fallback.pop(d_key, None)
+                payload = self.get_today_payload(date_str=d_key, force_regenerate=False)
+                gen_by = payload.get("content", {}).get("generated_by", "")
+                logger.info("Scheduled kids daily ensure for %s completed (%s)", d_key, gen_by)
+            except Exception as e:
+                logger.warning("Scheduled kids daily pre-warm failed for %s: %s", d_key, e)
 
-                    # Fun fact
-                    fact_obj = day_data.get("fun_fact", {})
-                    cat = fact_obj.get("category", "").strip()
-                    fact = fact_obj.get("fact", "").strip()
-                    if cat:
-                        recent_categories.add(cat.lower())
-                    if fact:
-                        recent_fact_snippets.append(fact[:60])
+    # ------------------------------------------------------------------
+    # SQLite Edition & Ledger Persistence + Embeddings
+    # ------------------------------------------------------------------
+    def _load_persisted_edition(self, date_str: str) -> Optional[Dict[str, Any]]:
+        try:
+            with self._session_factory() as db:
+                row = db.get(KidsDailyEdition, date_str)
+                if row and isinstance(row.content, dict) and content_fits_display_limits(row.content):
+                    out = dict(row.content)
+                    out.setdefault("generated_by", row.generated_by or "gemini_ai")
+                    return out
+        except Exception as e:
+            logger.warning("Failed reading KidsDailyEdition(%s): %s", date_str, e)
+        return None
 
-                    # STEM topics
-                    s5 = day_data.get("stem_5yo", {})
-                    s9 = day_data.get("stem_9yo", {})
-                    top5 = s5.get("topic", "").strip()
-                    top9 = s9.get("topic", "").strip()
-                    if top5:
-                        recent_stem_topics.append(top5)
-                    if top9:
-                        recent_stem_topics.append(top9)
+    def _persist_ai_edition(self, date_str: str, content: Dict[str, Any]) -> None:
+        assignment = content.pop("_curriculum_assignment", None)
+        embeddings: Dict[str, bytes] = content.pop("_computed_embeddings", None) or {}
+        clean_content = _strip_internal_fields(content)
+        gen_by = str(clean_content.get("generated_by", "gemini_ai"))
+        try:
+            with self._session_factory() as db:
+                existing = db.get(KidsDailyEdition, date_str)
+                if existing:
+                    existing.content = clean_content
+                    existing.generated_by = gen_by
+                else:
+                    db.add(
+                        KidsDailyEdition(
+                            date_str=date_str,
+                            content=clean_content,
+                            generated_by=gen_by,
+                        )
+                    )
+                self._append_ledger_rows(db, date_str, clean_content, assignment=assignment, embeddings=embeddings)
+                db.commit()
+        except Exception as e:
+            logger.error("Failed persisting KidsDailyEdition(%s): %s", date_str, e)
+
+    def _append_ledger_rows(
+        self,
+        db: Any,
+        date_str: str,
+        bundle: Dict[str, Any],
+        assignment: Optional[Dict[str, Any]],
+        embeddings: Dict[str, bytes],
+    ) -> None:
+        word_sec = bundle.get("word_of_the_day") or {}
+        raw_word = str(word_sec.get("word", "")).strip()
+        if raw_word:
+            w_norm = raw_word.lower()
+            w_stem = compute_word_stem(raw_word)
+            exists_word = (
+                db.query(KidsConceptLedger.id)
+                .filter(KidsConceptLedger.date_str == date_str, KidsConceptLedger.section == "word", KidsConceptLedger.word_norm == w_norm)
+                .first()
+            )
+            if not exists_word:
+                db.add(
+                    KidsConceptLedger(
+                        date_str=date_str,
+                        section="word",
+                        word_norm=w_norm,
+                        word_stem=w_stem,
+                        subject_key=w_norm,
+                        entity_tokens=extract_entity_tokens(_section_summary("word_of_the_day", word_sec)),
+                        pillar="vocabulary",
+                        subdomain=str((assignment or {}).get("vocab_archetype", ""))[:80],
+                        summary_text=_section_summary("word_of_the_day", word_sec),
+                        embedding=embeddings.get("word_of_the_day"),
+                    )
+                )
+
+        for sec_name, db_sec in (("fun_fact", "fact"), ("stem_5yo", "stem_5yo"), ("stem_9yo", "stem_9yo")):
+            sec_obj = bundle.get(sec_name) or {}
+            summary = _section_summary(sec_name, sec_obj)
+            if not summary:
+                continue
+            subj = normalize_subject_key(str(sec_obj.get("subject_key", "")), summary)
+            card_assign = (assignment or {}).get(sec_name) or {}
+            exists_sec = (
+                db.query(KidsConceptLedger.id)
+                .filter(KidsConceptLedger.date_str == date_str, KidsConceptLedger.section == db_sec, KidsConceptLedger.subject_key == subj)
+                .first()
+            )
+            if not exists_sec:
+                db.add(
+                    KidsConceptLedger(
+                        date_str=date_str,
+                        section=db_sec,
+                        subject_key=subj,
+                        entity_tokens=extract_entity_tokens(summary)[:12],
+                        pillar=str(card_assign.get("pillar", "")),
+                        subdomain=str(card_assign.get("subdomain", "")),
+                        lens=str(card_assign.get("lens", ""))[:120],
+                        summary_text=summary,
+                        embedding=embeddings.get(sec_name),
+                    )
+                )
+
+    def _fetch_embedding(self, text: str) -> Optional[bytes]:
+        """Fetch a 512-d normalized Matryoshka float32 vector via LiteLLM /v1/embeddings (non-fatal on error)."""
+        if not text.strip():
+            return None
+        ai_cfg = self._resolve_ai_config()
+        if not ai_cfg["is_litellm"] or not ai_cfg["base_url"] or not ai_cfg["api_keys"]:
+            return None
+        url = f"{ai_cfg['base_url']}/v1/embeddings"
+        for key in ai_cfg["api_keys"]:
+            try:
+                resp = httpx.post(
+                    url,
+                    headers={"Authorization": f"Bearer {key}"},
+                    json={"model": "text-embedding", "input": text[:600]},
+                    timeout=3.5,
+                )
+                if resp.status_code == 200:
+                    data = resp.json().get("data") or []
+                    if data and data[0].get("embedding"):
+                        packed = pack_embedding(data[0]["embedding"])
+                        return packed if packed else None
             except Exception:
                 continue
+        return None
 
+    def _maybe_start_embedding_backfill(self) -> None:
+        if self._backfill_started:
+            return
+        ai_cfg = self._resolve_ai_config()
+        if not ai_cfg["is_litellm"] or not ai_cfg["api_keys"]:
+            return
+        self._backfill_started = True
+
+        def _worker() -> None:
+            try:
+                with self._session_factory() as db:
+                    missing = (
+                        db.query(KidsConceptLedger)
+                        .filter(KidsConceptLedger.embedding.is_(None), KidsConceptLedger.section != "word")
+                        .order_by(KidsConceptLedger.id.desc())
+                        .limit(300)
+                        .all()
+                    )
+                    updated = 0
+                    for row in missing:
+                        blob = self._fetch_embedding(row.summary_text)
+                        if blob:
+                            row.embedding = blob
+                            updated += 1
+                            if updated % 15 == 0:
+                                db.commit()
+                        time.sleep(0.05)
+                    if updated:
+                        db.commit()
+                        logger.info("Backfilled %d semantic embeddings into kids_concept_ledger", updated)
+            except Exception as e:
+                logger.debug("Kids ledger embedding backfill skipped: %s", e)
+
+        threading.Thread(target=_worker, name="kids-embedding-backfill", daemon=True).start()
+
+    # ------------------------------------------------------------------
+    # History Snapshot & 4-Gate Candidate Validation
+    # ------------------------------------------------------------------
+    def _load_ledger_snapshot(self, exclude_date_str: str) -> Dict[str, Any]:
+        """Load lifetime words, stems, subject keys, and semantic vectors from SQLite + any in-memory test overlay."""
+        used_words: Set[str] = set()
+        used_word_list: List[str] = []
+        used_stems: Dict[str, str] = {}  # stem -> example prior word
+        concept_records: List[Dict[str, Any]] = []
+        subdomain_subjects: Dict[str, List[str]] = {}
+        recent_categories: Set[str] = set()
+
+        try:
+            with self._session_factory() as db:
+                rows = db.query(KidsConceptLedger).order_by(KidsConceptLedger.date_str.asc(), KidsConceptLedger.id.asc()).all()
+                for r in rows:
+                    if r.date_str == exclude_date_str:
+                        continue
+                    if r.word_norm:
+                        used_words.add(r.word_norm)
+                        used_word_list.append(r.word_norm)
+                        st = r.word_stem or compute_word_stem(r.word_norm)
+                        if st and len(st) >= 4:
+                            used_stems.setdefault(st, r.word_norm)
+                    if r.section != "word" and r.summary_text:
+                        concept_records.append(
+                            {
+                                "date_str": r.date_str,
+                                "section": r.section,
+                                "subject_key": r.subject_key or normalize_subject_key("", r.summary_text),
+                                "entity_tokens": set(r.entity_tokens or extract_entity_tokens(r.summary_text)),
+                                "subdomain": r.subdomain or "",
+                                "summary_text": r.summary_text,
+                                "vec": unpack_embedding(r.embedding),
+                            }
+                        )
+                        if r.subdomain and r.subject_key:
+                            subdomain_subjects.setdefault(r.subdomain, []).append(r.subject_key)
+        except Exception as e:
+            logger.warning("Failed reading kids_concept_ledger snapshot: %s", e)
+
+        # Also fold in any direct in-memory `self._cache` entries (used by unit tests)
+        for d_str, day_data in sorted(self._cache.items()):
+            if d_str == exclude_date_str or not isinstance(day_data, dict):
+                continue
+            w = str(day_data.get("word_of_the_day", {}).get("word", "")).strip()
+            if w:
+                wl = w.lower()
+                if wl not in used_words:
+                    used_words.add(wl)
+                    used_word_list.append(w)
+                st = compute_word_stem(wl)
+                if st and len(st) >= 4:
+                    used_stems.setdefault(st, wl)
+            cat = str(day_data.get("fun_fact", {}).get("category", "")).strip().lower()
+            if cat:
+                recent_categories.add(cat)
+            for sec_name, db_sec in (("fun_fact", "fact"), ("stem_5yo", "stem_5yo"), ("stem_9yo", "stem_9yo")):
+                sec_obj = day_data.get(sec_name) or {}
+                summary = _section_summary(sec_name, sec_obj)
+                if summary:
+                    subj = normalize_subject_key(str(sec_obj.get("subject_key", "")), summary)
+                    concept_records.append(
+                        {
+                            "date_str": d_str,
+                            "section": db_sec,
+                            "subject_key": subj,
+                            "entity_tokens": set(extract_entity_tokens(summary)),
+                            "subdomain": "",
+                            "summary_text": summary,
+                            "vec": None,
+                        }
+                    )
+
+        idf = build_idf_weights([c["summary_text"] for c in concept_records])
         return {
             "used_words": used_words,
-            "used_word_list": sorted(list(set(used_word_list))),
+            "used_word_list": used_word_list,
+            "used_stems": used_stems,
+            "concept_records": concept_records,
+            "subdomain_subjects": subdomain_subjects,
             "recent_categories": recent_categories,
-            "recent_fact_snippets": recent_fact_snippets[-20:],
-            "recent_stem_topics": list(set(recent_stem_topics))[-25:],
+            "idf": idf,
         }
 
-    def _generate_daily_content(self, date_str: str) -> Dict[str, Any]:
-        s = get_settings()
-        api_key = self._settings.get("gemini_api_key") or s.gemini_api_key
-        model_name = self._settings.get("gemini_model") or s.gemini_model or "gemini-3.7-flash"
+    def _get_recent_history(self, current_date_str: str, days_back: int = 3650) -> Dict[str, Any]:
+        """Backward-compatible history helper preserving chronological ordering (never alphabetically truncated)."""
+        self._ensure_initialized()
+        snap = self._load_ledger_snapshot(exclude_date_str=current_date_str)
+        # Preserve original casing from _cache where present for legacy callers
+        cased_words: List[str] = []
+        seen_lower: Set[str] = set()
+        for d_str, day_data in sorted(self._cache.items()):
+            if d_str == current_date_str or not isinstance(day_data, dict):
+                continue
+            w = str(day_data.get("word_of_the_day", {}).get("word", "")).strip()
+            if w and w.lower() not in seen_lower:
+                seen_lower.add(w.lower())
+                cased_words.append(w)
+        for w in snap["used_word_list"]:
+            if w.lower() not in seen_lower:
+                seen_lower.add(w.lower())
+                cased_words.append(w.capitalize())
 
-        if api_key:
-            try:
-                ai_content = self._generate_with_gemini(date_str, api_key, model_name)
-                if ai_content:
-                    return ai_content
-            except Exception as e:
-                logger.error(f"Gemini generation failed for kids daily ({date_str}): {e}")
+        recent_subjects = [c["subject_key"] for c in snap["concept_records"] if c["subject_key"]]
+        recent_facts = [c["summary_text"][:80] for c in snap["concept_records"] if c["section"] == "fact"]
+        return {
+            "used_words": snap["used_words"],
+            "used_word_list": cased_words,
+            "recent_categories": snap["recent_categories"],
+            "recent_fact_snippets": recent_facts[-60:],
+            "recent_stem_topics": list(dict.fromkeys(recent_subjects))[-150:],
+            "subdomain_subjects": snap["subdomain_subjects"],
+        }
 
-        # Sequential day-of-year rotation across all 31 comprehensive catalog items
+    def _validate_candidate_detailed(
+        self,
+        candidate: Dict[str, Any],
+        current_date_str: str,
+        snapshot: Optional[Dict[str, Any]] = None,
+        use_embeddings: bool = True,
+    ) -> tuple[bool, Dict[str, List[str]], Dict[str, bytes]]:
+        """
+        4-Gate deterministic + semantic validation across ALL historical records.
+        Returns (all_valid, failed_by_section, computed_embeddings).
+        """
+        try:
+            date.fromisoformat(current_date_str)
+        except ValueError:
+            return False, {"word_of_the_day": ["invalid date"]}, {}
+
+        snap = snapshot or self._load_ledger_snapshot(exclude_date_str=current_date_str)
+        failed: Dict[str, List[str]] = {}
+        embeddings: Dict[str, bytes] = {}
+
+        def _fail(sec: str, msg: str) -> None:
+            failed.setdefault(sec, []).append(msg)
+
+        # Gate 0: Section structure & 1920x1080 character limits per section
+        for sec_name, limits in KIDS_DAILY_DISPLAY_LIMITS.items():
+            sec_obj = candidate.get(sec_name)
+            if not isinstance(sec_obj, dict):
+                _fail(sec_name, f"missing section {sec_name}")
+                continue
+            for field_name in KIDS_DAILY_SCHEMA["properties"][sec_name]["required"]:
+                val = sec_obj.get(field_name)
+                if not isinstance(val, str) or not val.strip():
+                    _fail(sec_name, f"missing required {sec_name}.{field_name}")
+            for field_name, max_len in limits.items():
+                val = sec_obj.get(field_name)
+                if val is not None and (not isinstance(val, str) or len(val.strip()) > max_len):
+                    actual_len = len(val.strip()) if isinstance(val, str) else -1
+                    _fail(sec_name, f"{sec_name}.{field_name} length {actual_len} exceeds limit {max_len}")
+
+        # Gate 1: Lifetime Vocabulary Word, Casing/Tier-2 Jargon, and Morphological Stem Check
+        word_sec = candidate.get("word_of_the_day")
+        if isinstance(word_sec, dict):
+            clean_word, word_err = sanitize_and_validate_word(str(word_sec.get("word", "")))
+            if word_err:
+                _fail("word_of_the_day", f"vocabulary word rejected: {word_err}")
+            else:
+                word_sec["word"] = clean_word
+                w_lower = clean_word.lower()
+                w_stem = compute_word_stem(w_lower)
+                if w_lower in snap["used_words"]:
+                    _fail("word_of_the_day", f"vocabulary word '{w_lower}' already used")
+                elif w_stem and len(w_stem) >= 4 and w_stem in snap["used_stems"]:
+                    prior_w = snap["used_stems"][w_stem]
+                    _fail("word_of_the_day", f"vocabulary word '{w_lower}' shares root with prior word '{prior_w}'")
+
+        # Gate 2 & Gate 3: Lifetime Cross-Section Subject Key, Entity Overlap, IDF Lexical & Semantic Embedding Cosine
+        section_summaries: Dict[str, str] = {}
+        section_vecs: Dict[str, Any] = {}
+        section_subjects: Dict[str, str] = {}
+
+        for sec_name in ("fun_fact", "stem_5yo", "stem_9yo"):
+            sec_obj = candidate.get(sec_name)
+            if not isinstance(sec_obj, dict) or sec_name in failed:
+                continue
+            summary = _section_summary(sec_name, sec_obj)
+            section_summaries[sec_name] = summary
+            subj = normalize_subject_key(str(sec_obj.get("subject_key", "")), summary)
+            sec_obj["subject_key"] = subj
+            section_subjects[sec_name] = subj
+            subj_tokens = {t for t in subj.split("_") if len(t) > 3}
+
+            cand_vec = None
+            if use_embeddings:
+                blob = self._fetch_embedding(summary)
+                if blob:
+                    embeddings[sec_name] = blob
+                    cand_vec = unpack_embedding(blob)
+            section_vecs[sec_name] = cand_vec
+
+            for hist in snap["concept_records"]:
+                hist_subj = hist["subject_key"]
+                hist_subj_tokens = {t for t in hist_subj.split("_") if len(t) > 3}
+                if subj and hist_subj and subj == hist_subj:
+                    _fail(sec_name, f"recent {sec_name} concept duplicate subject '{subj}' (seen {hist['date_str']})")
+                    break
+                if len(subj_tokens) >= 2 and len(subj_tokens & hist_subj_tokens) >= 2:
+                    _fail(
+                        sec_name,
+                        f"recent {sec_name} concept overlaps '{hist_subj}' (seen {hist['date_str']})",
+                    )
+                    break
+                lex_sim = lexical_concept_similarity(summary, hist["summary_text"], snap["idf"])
+                if lex_sim >= LEXICAL_SIMILARITY_THRESHOLD or _similarity(summary, hist["summary_text"]) >= 0.42:
+                    _fail(
+                        sec_name,
+                        f"recent {sec_name} concept too close to '{hist_subj or hist['summary_text'][:40]}' ({hist['date_str']})",
+                    )
+                    break
+                if cand_vec is not None and hist["vec"] is not None:
+                    sem_sim = cosine_packed(cand_vec, hist["vec"])
+                    if sem_sim >= SEMANTIC_SIMILARITY_THRESHOLD:
+                        _fail(
+                            sec_name,
+                            f"semantic duplicate ({sem_sim:.2f}) of '{hist_subj or hist['summary_text'][:40]}' ({hist['date_str']})",
+                        )
+                        break
+
+        # Gate 4: Same-Day Cross-Card Independence across all 4 cards
+        if isinstance(word_sec, dict) and "word_of_the_day" not in failed:
+            section_summaries["word_of_the_day"] = _section_summary("word_of_the_day", word_sec)
+
+        ordered_names = [n for n in ("word_of_the_day", "fun_fact", "stem_5yo", "stem_9yo") if n in section_summaries]
+        for i, left_name in enumerate(ordered_names):
+            for right_name in ordered_names[i + 1 :]:
+                if right_name in failed:
+                    continue
+                left_s, right_s = section_summaries[left_name], section_summaries[right_name]
+                if (
+                    _similarity(left_s, right_s) >= 0.40
+                    or lexical_concept_similarity(left_s, right_s, snap["idf"]) >= SAME_DAY_LEXICAL_THRESHOLD
+                ):
+                    _fail(right_name, f"same-day overlap between {left_name} and {right_name}")
+                    continue
+                lv, rv = section_vecs.get(left_name), section_vecs.get(right_name)
+                if lv is not None and rv is not None and cosine_packed(lv, rv) >= SAME_DAY_SEMANTIC_THRESHOLD:
+                    _fail(right_name, f"same-day semantic overlap between {left_name} and {right_name}")
+
+        return (len(failed) == 0), failed, embeddings
+
+    def _validate_candidate(self, candidate: Dict[str, Any], current_date_str: str) -> tuple[bool, list[str]]:
+        """Public/test-compatible tuple wrapper around the 4-Gate validator."""
+        self._ensure_initialized()
+        if not content_fits_display_limits(candidate):
+            return False, ["display limits"]
+        valid, failed_map, _ = self._validate_candidate_detailed(
+            copy.deepcopy(candidate),
+            current_date_str,
+            use_embeddings=False,
+        )
+        reasons = [msg for msgs in failed_map.values() for msg in msgs]
+        return valid, reasons
+
+    # ------------------------------------------------------------------
+    # Curriculum Deck State Helpers
+    # ------------------------------------------------------------------
+    def _draw_curriculum_for_date(self, date_str: str, force_advance: bool = False) -> Dict[str, Any]:
+        try:
+            with self._session_factory() as db:
+                row = db.get(Setting, DECK_DB_KEY)
+                cur_state = dict(row.value) if row and isinstance(row.value, dict) else {}
+                if force_advance:
+                    cur_state["last_drawn_date"] = ""
+                new_state, assignment = draw_daily_curriculum(cur_state, date_str)
+                db.merge(Setting(key=DECK_DB_KEY, value=new_state))
+                db.commit()
+                return assignment
+        except Exception as e:
+            logger.warning("Curriculum deck fallback draw for %s: %s", date_str, e)
+            _, assignment = draw_daily_curriculum({}, date_str)
+            return assignment
+
+    # ------------------------------------------------------------------
+    # Generation & Surgical Single-Card Repair
+    # ------------------------------------------------------------------
+    def _generate_daily_content(self, date_str: str, force_advance_deck: bool = False) -> Dict[str, Any]:
+        ai_cfg = self._resolve_ai_config()
+        primary_key = ai_cfg["api_keys"][0] if ai_cfg["api_keys"] else ""
+        primary_model = ai_cfg["models"][0] if ai_cfg["models"] else "gemini-3.8-flash"
+
+        if primary_key:
+            for key in ai_cfg["api_keys"]:
+                try:
+                    ai_content = self._generate_with_gemini(
+                        date_str,
+                        key,
+                        primary_model,
+                        force_advance_deck=force_advance_deck,
+                    )
+                    if ai_content:
+                        return ai_content
+                except Exception as e:
+                    logger.error("Gemini generation failed for kids daily (%s): %s", date_str, e)
+
+        return self._pick_unseen_fallback(date_str)
+
+    def _pick_unseen_fallback(self, date_str: str) -> Dict[str, Any]:
+        """Select an unseen bundle from FALLBACK_CATALOG rather than repeating recently seen words/concepts."""
         try:
             d = date.fromisoformat(date_str)
-            day_index = (d.timetuple().tm_yday - 1) % len(FALLBACK_CATALOG)
+            start_idx = (d.timetuple().tm_yday - 1) % len(FALLBACK_CATALOG)
         except Exception:
-            day_index = hash(date_str) % len(FALLBACK_CATALOG)
+            start_idx = hash(date_str) % len(FALLBACK_CATALOG)
 
-        fallback = FALLBACK_CATALOG[day_index].copy()
+        snap = self._load_ledger_snapshot(exclude_date_str=date_str)
+        n = len(FALLBACK_CATALOG)
+        for offset in range(n):
+            cand = copy.deepcopy(FALLBACK_CATALOG[(start_idx + offset) % n])
+            w_lower = str(cand.get("word_of_the_day", {}).get("word", "")).strip().lower()
+            w_stem = compute_word_stem(w_lower)
+            if w_lower in snap["used_words"] or (w_stem and w_stem in snap["used_stems"]):
+                continue
+            hist_subjs = {c["subject_key"] for c in snap["concept_records"] if c["subject_key"]}
+            cand_subjs = {
+                normalize_subject_key("", _section_summary(sec, cand.get(sec) or {}))
+                for sec in ("fun_fact", "stem_5yo", "stem_9yo")
+            }
+            if cand_subjs & hist_subjs:
+                continue
+            cand["generated_by"] = "offline_catalog"
+            return cand
+
+        fallback = copy.deepcopy(FALLBACK_CATALOG[start_idx])
         fallback["generated_by"] = "offline_catalog"
         return fallback
 
-    def _generate_with_gemini(self, date_str: str, api_key: str, model_name: str) -> Optional[Dict[str, Any]]:
-        from google import genai
-        from google.genai import types
-        from ..config import get_settings
-        import random
-        import uuid
-        import os
+    def _build_bundle_prompt(
+        self,
+        date_str: str,
+        assignment: Dict[str, Any],
+        snapshot: Dict[str, Any],
+        ages: List[int],
+        nonce: str,
+    ) -> str:
+        age_younger, age_older = ages[0], ages[1]
+        grade_younger = age_to_grade_label(age_younger)
+        grade_older = age_to_grade_label(age_older)
 
-        s = get_settings()
-        base_url = s.gemini_base_url or os.environ.get("GEMINI_BASE_URL") or os.environ.get("LITELLM_BASE_URL")
-        http_opts = {"api_version": "v1beta"}
-        if base_url:
-            http_opts["base_url"] = base_url.rstrip("/")
-        client = genai.Client(api_key=api_key, http_options=http_opts)
-        history = self._get_recent_history(date_str, days_back=60)
-        forbidden_words = history["used_words"]
-        forbidden_word_list = history["used_word_list"]
-        recent_cats = history["recent_categories"]
-        recent_stem_topics = history["recent_stem_topics"]
+        all_words = snapshot["used_word_list"]
+        forbidden_words_str = ", ".join(all_words[-600:]) if all_words else "None yet"
 
-        # Ensure balanced variety across all 4 pillars: History, Everyday Curiosities, Pop Culture, and Science/Nature
-        def _pick_fresh(pool: List[str]) -> str:
-            fresh = [c for c in pool if not any(rc in c.lower() or c.lower().startswith(rc) for rc in recent_cats)]
-            return random.choice(fresh if fresh else pool)
+        # Combine ALL-TIME subjects from today's 3 drawn subdomains + last 150 concepts chronologically
+        domain_subjects: List[str] = []
+        for slot_key in ("fun_fact", "stem_5yo", "stem_9yo"):
+            sub_name = assignment[slot_key]["subdomain"]
+            domain_subjects.extend(snapshot["subdomain_subjects"].get(sub_name, []))
+        recent_subjects = [c["subject_key"] for c in snapshot["concept_records"][-180:] if c["subject_key"]]
+        combined_subjects = list(dict.fromkeys([*domain_subjects, *recent_subjects]))
+        forbidden_subjects_str = ", ".join(combined_subjects[-180:]) if combined_subjects else "None yet"
 
-        pillar_cats = [
-            _pick_fresh(HISTORY_CATEGORIES),
-            _pick_fresh(EVERYDAY_CATEGORIES),
-            _pick_fresh(POP_CULTURE_CATEGORIES),
-            _pick_fresh(SCIENCE_NATURE_CATEGORIES),
-        ]
-        random.shuffle(pillar_cats)
-        sample_cats = pillar_cats
-        nonce = uuid.uuid4().hex[:8]
-
-        forbidden_words_display = ", ".join(forbidden_word_list[-40:]) if forbidden_word_list else "None yet"
-        forbidden_topics_display = ", ".join(recent_stem_topics[-20:]) if recent_stem_topics else "None yet"
-
-        prompt = (
-            f"Generate a completely fresh, creative, and inspiring daily morning educational kids bundle for {date_str} (Nonce: {nonce}).\n\n"
-            f"STRICT DEDUPLICATION RULES (CRITICAL):\n"
-            f"The following words and topics have ALREADY been featured recently and are STRICTLY FORBIDDEN:\n"
-            f"- FORBIDDEN RECENT WORDS: {forbidden_words_display}\n"
-            f"- FORBIDDEN RECENT TOPICS: {forbidden_topics_display}\n"
-            f"DO NOT use any of the above forbidden words or any common variations/synonyms. You MUST select an entirely fresh, exciting vocabulary word and distinct engaging concepts.\n\n"
-            f"Category inspiration themes for today:\n"
-            f"- Word of the Day focus: {sample_cats[0]}\n"
-            f"- Fun Fact focus: {sample_cats[1]}\n"
-            f"- 5-Year-Old challenge: {sample_cats[2]}\n"
-            f"- 9-Year-Old challenge: {sample_cats[3]}\n\n"
-            "Requirements:\n"
-            "1. word_of_the_day: A wonderful, expressive, kid-friendly vocabulary word. It must NOT be dry technical scientific jargon (never use words like 'Periapsis', 'Barycenter', or 'Chemosynthesis'). "
-            "Draw widely from literature, storytelling, history, character virtues, everyday curiosities, arts, and exploration (e.g. 'Courageous', 'Whimsical', 'Artifact', 'Serendipity', 'Ingenious', 'Monumental', 'Ponder', 'Enchanting', 'Pioneer', 'Conundrum', 'Vibrant', 'Tenacious', 'Marvel', 'Jovial', 'Audacious', 'Effervescent', 'Splendid', 'Epic', 'Labyrinth', 'Chronicle'). "
-            "Include phonetic pronunciation, part of speech, a clear kid-friendly definition (under 140 characters), and an engaging kid-friendly example sentence (under 140 characters) featuring relatable daily scenarios, historical moments, storytelling, or fun references.\n"
-            "2. fun_fact: An astonishing, kid-friendly true fact. Ensure variety by drawing from history & ancient civilizations, pop culture & entertainment (animation, video games, toys, movies, music), everyday occurrences & household wonders (why popcorn pops, how popsicles were invented, sneakers, food origins), alongside nature and animal wonders! Include a fitting emoji, specific category (under 32 characters), and a short 1-sentence 'did_you_know' extension (under 180 characters).\n"
-            "3. stem_5yo: A curious, playful question or riddle for a 5-year-old (kindergarten level) about physical observations in daily life, nature, history, or toys (e.g. how wheels roll, why toast crunches, how cartoon flipbooks work, why ducks float, how magnets stick). Include a helpful hint, a simple clear answer, and an engaging 'parent_explanation' for parents to discuss.\n"
-            "4. stem_9yo: A thought-provoking challenge for a 9-year-old (4th grade level) involving real science, historical engineering (pyramids, castles, aqueducts), everyday mechanics (rollercoasters, animation frames, microwave ovens, bicycles), or nature. Include a hint, a clear factual answer, and a deep conceptual 'parent_explanation'.\n\n"
-            "Wall-display length limits (characters, including spaces): word 24, pronunciation 32, part of speech 16, definition 140, example 140; fun fact 180, category 32, did-you-know 180; each topic 40, question 160, hint 140, answer 200, and parent explanation 220. Write complete concise sentences within every limit—never use ellipses or incomplete phrases.\n\n"
-            "CRITICAL: All 4 sections (Word, Fun Fact, 5yo Challenge, 9yo Challenge) MUST be completely fresh, unique, varied, kid-friendly, and specific to the designated themes."
+        interests = self._settings.get("interests") or []
+        interests_note = (
+            f"Optional family curiosity threads (weave in lightly only if natural): {', '.join(interests)}.\n\n"
+            if interests
+            else ""
         )
 
-        if base_url:
-            candidate_models = [model_name, "gemini-flash", "gemini-2.5-flash"]
-        else:
-            candidate_models = [model_name, "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-flash-latest"]
-        unique_models = list(dict.fromkeys(candidate_models))
+        f_card = assignment["fun_fact"]
+        s5_card = assignment["stem_5yo"]
+        s9_card = assignment["stem_9yo"]
 
-        # Validation feedback is supplied verbatim to the next attempt, so the
-        # model learns from concrete rejected concepts rather than vague prompts.
-        rejected_concepts: list[str] = []
+        return (
+            f"Generate a 100% brand-new, factually rigorous, captivating daily educational bundle for {date_str} (Session: {nonce}).\n\n"
+            f"TODAY'S DISTINCT CURRICULUM ASSIGNMENTS (drawn without replacement—stay faithful to each card's domain & lens):\n"
+            f"1. Word of the Day style: {assignment['vocab_archetype']}\n"
+            f"2. Fun Fact domain: [{f_card['subdomain']}] — {f_card['lens']}\n"
+            f"3. Age {age_younger} ({grade_younger}) Challenge domain: [{s5_card['subdomain']}] — {s5_card['lens']}\n"
+            f"4. Age {age_older} ({grade_older}) Challenge domain: [{s9_card['subdomain']}] — {s9_card['lens']}\n\n"
+            f"{interests_note}"
+            f"PERMANENT ANTI-REPETITION LEDGER (CRITICAL):\n"
+            f"- RETIRED VOCABULARY WORDS (never reuse any of these or words sharing their root/stem): {forbidden_words_str}\n"
+            f"- RETIRED CONCEPTS & SUBJECTS (never revisit these objects, species, people, or mechanisms in ANY card): {forbidden_subjects_str}\n\n"
+            f"{CLICHE_BLOCKLIST_PROMPT}\n\n"
+            f"{MYTH_BLOCKER_PROMPT}\n\n"
+            f"CARD QUALITY & FORMAT REQUIREMENTS:\n"
+            f"1. word_of_the_day: Choose a real, standard-dictionary Tier-2 English word that a {age_younger}-to-{age_older}-year-old can genuinely say at dinner or use in school writing. "
+            f"Capitalize the first letter. NEVER choose obscure Latin/Greek scientific taxonomy, medical/chemical terms, or internet neologisms. "
+            f"Provide phonetic pronunciation, lowercase part_of_speech, a crystal-clear kid-friendly definition (<=140 chars), and a vivid everyday or story example sentence (<=140 chars).\n"
+            f"2. fun_fact: A true, specific, mind-expanding discovery inside [{f_card['subdomain']}]. Include a fitting single emoji, concise category (<=32 chars), "
+            f"1-2 sentence fact (<=180 chars), a 1-sentence 'did_you_know' follow-up (<=180 chars), and a canonical snake_case `subject_key` naming the exact subject.\n"
+            f"3. stem_5yo: A playful, deducible 'Why / How / What happens if' physical or observational puzzle for an Age {age_younger} ({grade_younger}) child inside [{s5_card['subdomain']}]. "
+            f"Include topic (<=40 chars), question (<=160 chars), a concrete mechanism hint (<=140 chars) that helps them guess it, clear answer (<=200 chars), parent_explanation (<=220 chars), and `subject_key`.\n"
+            f"4. stem_9yo: A deeper conceptual 'Why / How' engineering, historical, or scientific challenge for an Age {age_older} ({grade_older}) child inside [{s9_card['subdomain']}]. "
+            f"Include topic (<=40 chars), question (<=160 chars), deducible hint (<=140 chars), precise answer (<=200 chars), conceptual parent_explanation (<=220 chars), and `subject_key`.\n\n"
+            f"STRICT 1920x1080 WALL-DISPLAY BUDGET: Every single field MUST be a complete, natural sentence comfortably under its maxLength—never truncate or end with ellipses."
+        )
+
+    def _call_gemini_json(
+        self,
+        client: Any,
+        model_name: str,
+        prompt: str,
+        schema: Dict[str, Any],
+        temperature: float = 0.95,
+    ) -> Dict[str, Any]:
+        from google.genai import types
+
+        gen_config = types.GenerateContentConfig(
+            response_mime_type="application/json",
+            response_json_schema=schema,
+            temperature=temperature,
+        )
+        # Enable lightweight reasoning on Gemini 2.5 / 3.8 Flash for spelling & factual precision,
+        # falling back cleanly if a proxy route rejects thinking_config.
+        if any(tag in model_name for tag in ("3.8", "3.7", "2.5")):
+            try:
+                cfg_with_thinking = types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_json_schema=schema,
+                    temperature=temperature,
+                    thinking_config=types.ThinkingConfig(thinking_budget=512),
+                )
+                resp = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                    config=cfg_with_thinking,
+                )
+                return json.loads(resp.text)
+            except Exception as think_err:
+                if "thinking" not in str(think_err).lower() and "400" not in str(think_err):
+                    raise
+
+        resp = client.models.generate_content(
+            model=model_name,
+            contents=prompt,
+            config=gen_config,
+        )
+        return json.loads(resp.text)
+
+    def _repair_failed_sections(
+        self,
+        client: Any,
+        model_name: str,
+        date_str: str,
+        candidate: Dict[str, Any],
+        failed_map: Dict[str, List[str]],
+        assignment: Dict[str, Any],
+        snapshot: Dict[str, Any],
+        ages: List[int],
+    ) -> Optional[Dict[str, Any]]:
+        """Surgically regenerate ONLY the 1-2 failed sections while keeping valid sibling cards intact."""
+        failed_keys = list(failed_map.keys())
+        kept_summaries = [
+            f"- {sec}: {_section_summary(sec, candidate[sec])}"
+            for sec in ("word_of_the_day", "fun_fact", "stem_5yo", "stem_9yo")
+            if sec not in failed_map and isinstance(candidate.get(sec), dict)
+        ]
+        # Draw a fresh backup curriculum assignment if a card collided on concept
+        fresh_assign = self._draw_curriculum_for_date(date_str, force_advance=True)
+        failure_lines = []
+        for sec, reasons in failed_map.items():
+            target_domain = (
+                fresh_assign["vocab_archetype"]
+                if sec == "word_of_the_day"
+                else f"[{fresh_assign[sec]['subdomain']}] — {fresh_assign[sec]['lens']}"
+            )
+            failure_lines.append(
+                f"- Regenerate `{sec}` using fresh focus {target_domain}. Previous attempt failed because: {'; '.join(reasons)}"
+            )
+
+        repair_prompt = (
+            f"Repair ONLY the following rejected card(s) for the {date_str} Kids' Brain Nuggets bundle:\n"
+            + "\n".join(failure_lines)
+            + "\n\nAlready-accepted sibling cards for today (DO NOT overlap with these topics or words):\n"
+            + ("\n".join(kept_summaries) if kept_summaries else "None")
+            + f"\n\nTarget ages: younger = Age {ages[0]} ({age_to_grade_label(ages[0])}), older = Age {ages[1]} ({age_to_grade_label(ages[1])}).\n"
+            + f"{CLICHE_BLOCKLIST_PROMPT}\n\n{MYTH_BLOCKER_PROMPT}\n"
+            + "Respect all character maxLength limits strictly with complete, concise sentences (no ellipses)."
+        )
+        repair_schema = _build_generation_schema(failed_keys)
+        patched_parts = self._call_gemini_json(
+            client=client,
+            model_name=model_name,
+            prompt=repair_prompt,
+            schema=repair_schema,
+            temperature=1.05,
+        )
+        merged = copy.deepcopy(candidate)
+        for sec in failed_keys:
+            if sec in patched_parts and isinstance(patched_parts[sec], dict):
+                merged[sec] = patched_parts[sec]
+                if sec != "word_of_the_day":
+                    assignment[sec] = fresh_assign[sec]
+                else:
+                    assignment["vocab_archetype"] = fresh_assign["vocab_archetype"]
+        return merged
+
+    def _generate_with_gemini(
+        self,
+        date_str: str,
+        api_key: str,
+        model_name: str,
+        force_advance_deck: bool = False,
+    ) -> Optional[Dict[str, Any]]:
+        import uuid
+        from google import genai
+
+        ai_cfg = self._resolve_ai_config()
+        http_opts: Dict[str, Any] = {"api_version": "v1beta"}
+        if ai_cfg["base_url"]:
+            http_opts["base_url"] = ai_cfg["base_url"]
+        client = genai.Client(api_key=api_key, http_options=http_opts)
+
+        try:
+            ref_d = date.fromisoformat(date_str)
+        except ValueError:
+            ref_d = None
+        ages = self.get_effective_ages(ref_d)
+        snapshot = self._load_ledger_snapshot(exclude_date_str=date_str)
+        assignment = self._draw_curriculum_for_date(date_str, force_advance=force_advance_deck)
+
+        unique_models = list(dict.fromkeys([model_name, *ai_cfg["models"]]))
+        if ai_cfg["is_litellm"]:
+            unique_models = [m for m in unique_models if m in LITELLM_MODELS_PRIORITY] or list(LITELLM_MODELS_PRIORITY)
+
+        rejected_reasons: List[str] = []
         for attempt in range(3):
+            if attempt > 0:
+                assignment = self._draw_curriculum_for_date(date_str, force_advance=True)
+            nonce = uuid.uuid4().hex[:8]
+            base_prompt = self._build_bundle_prompt(date_str, assignment, snapshot, ages, nonce)
+            if rejected_reasons:
+                base_prompt += "\n\nPREVIOUS REJECTED ATTEMPTS — AVOID THESE EXACT ISSUES:\n- " + "\n- ".join(
+                    rejected_reasons[-12:]
+                )
+
             for m in unique_models:
                 try:
-                    attempt_prompt = prompt
-                    if rejected_concepts:
-                        attempt_prompt += "\nRejected candidate concepts to avoid: " + "; ".join(rejected_concepts[-16:])
-                    gen_config = types.GenerateContentConfig(
-                        response_mime_type="application/json",
-                        response_json_schema=KIDS_DAILY_SCHEMA,
-                        temperature=1.0 if attempt == 0 else 1.2,
+                    data = self._call_gemini_json(
+                        client=client,
+                        model_name=m,
+                        prompt=base_prompt,
+                        schema=KIDS_GENERATION_SCHEMA,
+                        temperature=0.95 if attempt == 0 else 1.05,
                     )
-                    if "3.7" in m:
-                        gen_config.thinking_config = types.ThinkingConfig(thinking_budget=512)
-
-                    resp = client.models.generate_content(
-                        model=m,
-                        contents=attempt_prompt,
-                        config=gen_config,
+                    valid, failed_map, embeddings = self._validate_candidate_detailed(
+                        data, date_str, snapshot=snapshot, use_embeddings=True
                     )
-                    data = json.loads(resp.text)
-                    if not (
-                        data.get("word_of_the_day")
-                        and data.get("fun_fact")
-                        and data.get("stem_5yo")
-                        and data.get("stem_9yo")
-                        and content_fits_display_limits(data)
-                    ):
-                        logger.warning("Generated kids daily content exceeded the wall-display limits")
-                        continue
+                    if not valid and 1 <= len(failed_map) <= 2:
+                        try:
+                            repaired = self._repair_failed_sections(
+                                client=client,
+                                model_name=m,
+                                date_str=date_str,
+                                candidate=data,
+                                failed_map=failed_map,
+                                assignment=assignment,
+                                snapshot=snapshot,
+                                ages=ages,
+                            )
+                            if repaired:
+                                valid, failed_map, embeddings = self._validate_candidate_detailed(
+                                    repaired, date_str, snapshot=snapshot, use_embeddings=True
+                                )
+                                if valid:
+                                    data = repaired
+                        except Exception as rep_err:
+                            logger.warning("Surgical kids card repair failed on %s: %s", m, rep_err)
 
-                    valid, reasons = self._validate_candidate(data, date_str)
                     if not valid:
-                        rejected_concepts.extend(reasons)
-                        logger.warning("Candidate rejected by deterministic kids-content validation: %s", reasons)
+                        flat_reasons = [msg for msgs in failed_map.values() for msg in msgs]
+                        rejected_reasons.extend(flat_reasons)
+                        logger.warning("Candidate rejected by 4-gate kids validation (%s): %s", m, flat_reasons)
                         continue
 
                     data["generated_by"] = f"gemini_ai ({m})"
+                    data["_curriculum_assignment"] = assignment
+                    data["_computed_embeddings"] = embeddings
                     return data
                 except Exception as e:
-                    logger.warning(f"Failed generation with model {m} (attempt {attempt + 1}): {e}")
+                    logger.warning("Failed kids daily generation with model %s (attempt %d): %s", m, attempt + 1, e)
+                    # If auth failed on this API key, bail out to let outer caller try fallback key immediately
+                    err_s = str(e).lower()
+                    if "401" in err_s or "403" in err_s or "authentication" in err_s or "invalid api key" in err_s:
+                        return None
                     continue
 
         return None
+
 
 kids_daily_service = KidsDailyService()
