@@ -93,7 +93,7 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
       }
       stop()
       const now = Date.now()
-      const penaltyPool: SadAnimationName[] = ['icecream', 'balance-beam', 'bicycle-rain', 'trick-or-treat']
+      const penaltyPool: SadAnimationName[] = ['icecream', 'balance-beam', 'bicycle-rain', 'trick-or-treat', 'banana-monkey']
       let chosenAnim = options?.animation
 
       if (!chosenAnim) {
@@ -154,7 +154,8 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
     const isBeam = sadOptions.animation === 'balance-beam'
     const isBike = sadOptions.animation === 'bicycle-rain'
     const isHalloween = sadOptions.animation === 'trick-or-treat'
-    const duration = isStorm ? 4400 : isBeam ? 9400 : isBike ? 13000 : isHalloween ? 19000 : 9800
+    const isBanana = sadOptions.animation === 'banana-monkey'
+    const duration = isStorm ? 4400 : isBeam ? 9400 : isBike ? 13000 : isHalloween ? 19000 : isBanana ? 12000 : 9800
 
     if (isStorm && canvasRef.current) {
       const runner = runSadAnimation(canvasRef.current, sadOptions)
@@ -197,9 +198,7 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
           ) : sadOptions && sadOptions.animation === 'balance-beam' ? (
             <iframe
               key={`sad-beam-${Date.now()}`}
-              src={`/celebrations/balance_beam_oops.html?embed=1&title=${encodeURIComponent(
-                sadOptions.title || 'Room Not Clean',
-              )}&points=${Math.abs(sadOptions.coinsLost ?? 10)}&sound=${
+              src={`/celebrations/balance_beam_oops.html?embed=1&points=${Math.abs(sadOptions.coinsLost ?? 10)}&sound=${
                 typeof window !== 'undefined' && localStorage.getItem('nivas_celebration_sound') === 'true' ? '1' : '0'
               }`}
               title="Balance Beam Oops"
@@ -208,9 +207,7 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
           ) : sadOptions && sadOptions.animation === 'bicycle-rain' ? (
             <iframe
               key={`sad-bike-${Date.now()}`}
-              src={`/celebrations/bicycle_park_rain.html?embed=1&title=${encodeURIComponent(
-                sadOptions.title || 'Room Not Clean',
-              )}&points=${Math.abs(sadOptions.coinsLost ?? 10)}&sound=${
+              src={`/celebrations/bicycle_park_rain.html?embed=1&points=${Math.abs(sadOptions.coinsLost ?? 10)}&sound=${
                 typeof window !== 'undefined' && localStorage.getItem('nivas_celebration_sound') === 'true' ? '1' : '0'
               }`}
               title="Bicycle Rain Tragedy"
@@ -219,20 +216,25 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
           ) : sadOptions && sadOptions.animation === 'trick-or-treat' ? (
             <iframe
               key={`sad-halloween-${Date.now()}`}
-              src={`/celebrations/trick_or_treat_penalty.html?embed=1&title=${encodeURIComponent(
-                sadOptions.title || 'Room Not Clean',
-              )}&coins=${Math.abs(sadOptions.coinsLost ?? 25)}&points=${Math.abs(sadOptions.coinsLost ?? 25)}&sound=${
+              src={`/celebrations/trick_or_treat_penalty.html?embed=1&coins=${Math.abs(sadOptions.coinsLost ?? 25)}&points=${Math.abs(sadOptions.coinsLost ?? 25)}&sound=${
                 typeof window !== 'undefined' && localStorage.getItem('nivas_celebration_sound') === 'true' ? '1' : '0'
               }`}
               title="Trick or Treat Fright"
               className="pointer-events-none h-full w-full border-0"
             />
+          ) : sadOptions && sadOptions.animation === 'banana-monkey' ? (
+            <iframe
+              key={`sad-banana-${Date.now()}`}
+              src={`/celebrations/banana_peel_monkey.html?embed=1&points=${Math.abs(sadOptions.coinsLost ?? 10)}&sound=${
+                typeof window !== 'undefined' && localStorage.getItem('nivas_celebration_sound') === 'true' ? '1' : '0'
+              }`}
+              title="Banana Peel & Cheeky Monkey"
+              className="pointer-events-none h-full w-full border-0"
+            />
           ) : sadOptions && sadOptions.animation !== 'storm' ? (
             <iframe
               key={`sad-icecream-${Date.now()}`}
-              src={`/celebrations/ice_cream_tragedy.html?embed=1&title=${encodeURIComponent(
-                sadOptions.title || 'Room Not Clean',
-              )}&points=${Math.abs(sadOptions.coinsLost ?? 10)}&sound=${
+              src={`/celebrations/ice_cream_tragedy.html?embed=1&points=${Math.abs(sadOptions.coinsLost ?? 10)}&sound=${
                 typeof window !== 'undefined' && localStorage.getItem('nivas_celebration_sound') === 'true' ? '1' : '0'
               }`}
               title="Ice Cream Tragedy"

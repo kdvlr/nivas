@@ -681,7 +681,6 @@
     const isEmbed = urlParams.has('embed') || window.location.hash.includes('embed');
     if (isEmbed) document.body.classList.add('embed');
 
-    let choreTitle = urlParams.get('title') || 'Room Not Clean';
     let pointsLost = Math.abs(parseInt(urlParams.get('points'), 10) || 10);
     let soundEnabled = urlParams.get('sound') !== '0' && localStorage.getItem('nivas_celebration_sound') !== 'false';
 

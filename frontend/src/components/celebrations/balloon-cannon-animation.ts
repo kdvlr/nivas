@@ -50,8 +50,6 @@ const MUZZLE_Y = CANNON_PIVOT_Y + Math.sin(CANNON_ANGLE) * CANNON_LENGTH
 
 interface ChoreData {
   id: number
-  title: string
-  icon: string
   fireTime: number
   impactTime: number
   x: number
@@ -66,8 +64,6 @@ interface ChoreData {
 const CHORES: ChoreData[] = [
   {
     id: 0,
-    title: 'Make Bed',
-    icon: '🛏️',
     fireTime: 0.9,
     impactTime: 1.45,
     x: 690,
@@ -80,8 +76,6 @@ const CHORES: ChoreData[] = [
   },
   {
     id: 1,
-    title: 'Homework',
-    icon: '📚',
     fireTime: 1.5,
     impactTime: 2.05,
     x: 820,
@@ -94,8 +88,6 @@ const CHORES: ChoreData[] = [
   },
   {
     id: 2,
-    title: 'Wash Dishes',
-    icon: '🍽️',
     fireTime: 2.1,
     impactTime: 2.65,
     x: 950,
@@ -108,8 +100,6 @@ const CHORES: ChoreData[] = [
   },
   {
     id: 3,
-    title: 'Clean Room',
-    icon: '🧹',
     fireTime: 2.7,
     impactTime: 3.25,
     x: 1080,
@@ -612,14 +602,8 @@ function drawChorePaper(ctx: CanvasRenderingContext2D, ch: ChoreData, t: number)
   ctx.lineTo(-26, 60)
   ctx.stroke()
 
-  // Icon & Chore text
-  ctx.font = '28px serif'
-  ctx.textAlign = 'center'
-  ctx.fillText(ch.icon, 0, -18)
-
-  ctx.fillStyle = '#1e293b'
-  ctx.font = 'bold 12px ui-rounded, sans-serif'
-  ctx.fillText(ch.title, 0, 15)
+  // Generic handwritten "scribble" lines instead of chore text
+  drawSquiggles(ctx, -18, 58, [-26, -11, 4], '#475569', ch.id, 2)
 
   // Unchecked square checkbox on the chore paper
   ctx.strokeStyle = '#64748b'
@@ -630,6 +614,39 @@ function drawChorePaper(ctx: CanvasRenderingContext2D, ch: ChoreData, t: number)
   ctx.fill()
   ctx.stroke()
 
+  ctx.restore()
+}
+
+/**
+ * Draws a few short wavy "handwriting" lines so chore cards read as generic
+ * to-do items rather than specific named chores.
+ */
+function drawSquiggles(
+  ctx: CanvasRenderingContext2D,
+  left: number,
+  width: number,
+  rows: number[],
+  color: string,
+  seed: number,
+  lineWidth: number,
+) {
+  ctx.save()
+  ctx.strokeStyle = color
+  ctx.lineWidth = lineWidth
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+  rows.forEach((y, row) => {
+    // Vary line length per row/chore so cards don't look identical
+    const len = width * (row === rows.length - 1 ? 0.6 : 0.85 + ((seed + row) % 3) * 0.075)
+    const amp = 3
+    const wavelength = 9
+    ctx.beginPath()
+    ctx.moveTo(left, y)
+    for (let x = 0; x <= len; x += 1.5) {
+      ctx.lineTo(left + x, y + Math.sin((x / wavelength) * Math.PI * 2 + seed + row) * amp)
+    }
+    ctx.stroke()
+  })
   ctx.restore()
 }
 
@@ -721,18 +738,8 @@ function drawBalloonChore(ctx: CanvasRenderingContext2D, ch: ChoreData, t: numbe
   ctx.ellipse(26, 20, 8, 16, 0.5, 0, Math.PI * 2)
   ctx.fill()
 
-  // Chore icon
-  ctx.font = '26px serif'
-  ctx.textAlign = 'center'
-  ctx.fillText(ch.icon, 0, -8)
-
-  // Chore title
-  ctx.fillStyle = '#ffffff'
-  ctx.font = '900 13px ui-rounded, sans-serif'
-  ctx.shadowColor = 'rgba(0,0,0,0.5)'
-  ctx.shadowBlur = 4
-  ctx.fillText(ch.title, 0, 14)
-  ctx.shadowBlur = 0
+  // Generic white scribble lines (no chore-specific text)
+  drawSquiggles(ctx, -26, 52, [-22, -8, 6], 'rgba(255, 255, 255, 0.92)', ch.id, 3)
 
   // Square checkbox stamped into a green checkmark [✔]
   ctx.save()

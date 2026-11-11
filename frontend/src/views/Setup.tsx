@@ -1135,34 +1135,40 @@ function SetupInner() {
                 🎂 Test Birthday Fanfare & Tune
               </button>
               <button
-                onClick={() => celebrateSad({ title: 'Room Not Clean', coinsLost: 10, animation: 'icecream' })}
+                onClick={() => celebrateSad({ coinsLost: 10, animation: 'icecream' })}
                 className="btn-glass px-4 py-2 text-sm border-rose-500/30 text-rose-500 hover:bg-rose-500/10 active:scale-95 transition-all"
               >
-                🍦 Ice Cream Tragedy: Room Not Clean (-10)
+                🍦 Ice Cream Tragedy (-10)
               </button>
               <button
-                onClick={() => celebrateSad({ title: 'Room Not Clean', coinsLost: 10, animation: 'balance-beam' })}
+                onClick={() => celebrateSad({ coinsLost: 10, animation: 'balance-beam' })}
                 className="btn-glass px-4 py-2 text-sm border-rose-500/30 text-rose-500 hover:bg-rose-500/10 active:scale-95 transition-all"
               >
-                🤸‍♀️ Balance Beam Oops: Room Not Clean (-10)
+                🤸‍♀️ Balance Beam Oops (-10)
               </button>
               <button
-                onClick={() => celebrateSad({ title: 'Room Not Clean', coinsLost: 10, animation: 'bicycle-rain' })}
+                onClick={() => celebrateSad({ coinsLost: 10, animation: 'bicycle-rain' })}
                 className="btn-glass px-4 py-2 text-sm border-rose-500/30 text-rose-500 hover:bg-rose-500/10 active:scale-95 transition-all"
               >
-                🚲 Bicycle Park Rain: Room Not Clean (-10)
+                🚲 Bicycle Park Rain (-10)
               </button>
               <button
-                onClick={() => celebrateSad({ title: 'Room Not Clean', coinsLost: 10, animation: 'storm' })}
+                onClick={() => celebrateSad({ coinsLost: 10, animation: 'storm' })}
                 className="btn-glass px-4 py-2 text-sm border-rose-500/30 text-rose-500 hover:bg-rose-500/10 active:scale-95 transition-all"
               >
-                🌧️ Sad Storm: Room Not Clean (-10)
+                🌧️ Sad Storm (-10)
               </button>
               <button
-                onClick={() => celebrateSad({ title: 'Room Not Clean', coinsLost: 25, animation: 'trick-or-treat' })}
+                onClick={() => celebrateSad({ coinsLost: 25, animation: 'trick-or-treat' })}
                 className="btn-glass px-4 py-2 text-sm border-rose-500/30 text-rose-500 hover:bg-rose-500/10 active:scale-95 transition-all"
               >
-                🎃 Trick-or-Treat Fright: Room Not Clean (-25)
+                🎃 Trick-or-Treat Fright (-25)
+              </button>
+              <button
+                onClick={() => celebrateSad({ coinsLost: 10, animation: 'banana-monkey' })}
+                className="btn-glass px-4 py-2 text-sm border-rose-500/30 text-rose-500 hover:bg-rose-500/10 active:scale-95 transition-all"
+              >
+                🍌 Banana Peel &amp; Cheeky Monkey (-10)
               </button>
             </div>
           </div>

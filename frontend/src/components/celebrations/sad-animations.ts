@@ -1,6 +1,6 @@
 /**
  * Sad chore / penalty animations: high-production, cinematic visual storytelling
- * for when a negative chore (like "Room Not Clean") is completed.
+ * for when a negative (penalty) chore is completed.
  *
  * Performance standards:
  * - Avoids layout thrashing (cached dimensions, resize listener).
@@ -8,7 +8,13 @@
  * - Pauses background frame loops on document.visibilitychange.
  */
 
-export type SadAnimationName = 'icecream' | 'balance-beam' | 'bicycle-rain' | 'trick-or-treat' | 'storm'
+export type SadAnimationName =
+  | 'icecream'
+  | 'balance-beam'
+  | 'bicycle-rain'
+  | 'trick-or-treat'
+  | 'banana-monkey'
+  | 'storm'
 
 export interface SadAnimationOptions {
   title?: string
@@ -97,7 +103,7 @@ export function runSadStormAnimation(
   window.addEventListener('resize', handleResize)
 
   const coinsLost = Math.abs(options.coinsLost ?? 10)
-  const choreTitle = options.title || 'Room Not Clean'
+  const choreTitle = options.title || ''
 
   // Play cartoon sad trombone
   playSadTrombone()
@@ -431,7 +437,7 @@ export function runSadStormAnimation(
       ctx.shadowColor = 'rgba(0, 0, 0, 0.7)'
       ctx.shadowBlur = 18
       ctx.shadowOffsetY = 3
-      ctx.fillText(choreTitle.toUpperCase(), cx, Math.max(cy - 120, 60))
+      if (choreTitle) ctx.fillText(choreTitle.toUpperCase(), cx, Math.max(cy - 120, 60))
 
       // Removed points text
       ctx.font = '700 22px Outfit, sans-serif'
@@ -441,7 +447,7 @@ export function runSadStormAnimation(
       // Encouragement Subtitle at bottom
       ctx.font = '600 16px Outfit, sans-serif'
       ctx.fillStyle = '#cbd5e1'
-      ctx.fillText('Clean it up next time to earn coins back! 💪', cx, height - 38)
+      ctx.fillText('Try again tomorrow to earn coins back! 💪', cx, height - 38)
 
       ctx.restore()
     }
