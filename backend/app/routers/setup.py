@@ -118,6 +118,52 @@ async def update_theme(
     return {"ok": True, "appearance": appearance, "reload": should_reload}
 
 
+class GratitudeNote(BaseModel):
+    text: str
+    author: str = ""
+
+
+class GratitudePut(BaseModel):
+    notes: list[GratitudeNote]
+
+
+GRATITUDE_MAX_NOTES = 40
+GRATITUDE_MAX_LEN = 120
+
+
+def _clean_gratitude(raw) -> list[dict]:
+    notes: list[dict] = []
+    for item in raw or []:
+        if isinstance(item, str):
+            item = {"text": item, "author": ""}
+        if not isinstance(item, dict):
+            continue
+        text = str(item.get("text", "")).strip()[:GRATITUDE_MAX_LEN]
+        if not text:
+            continue
+        author = str(item.get("author", "")).strip()[:30]
+        notes.append({"text": text, "author": author})
+    return notes[:GRATITUDE_MAX_NOTES]
+
+
+@router.get("/gratitude")
+def get_gratitude(db: Session = Depends(get_db)):
+    """Parent-written "thankful for" notes shown as leaves on the November slideshow."""
+    return {"notes": _clean_gratitude(sync.get_setting(db, "gratitude_notes", []))}
+
+
+@router.put("/gratitude")
+async def put_gratitude(
+    body: GratitudePut,
+    db: Session = Depends(get_db),
+    _: None = Depends(require_admin),
+):
+    notes = _clean_gratitude([n.model_dump() for n in body.notes])
+    sync.set_setting(db, "gratitude_notes", notes)
+    await manager.broadcast("gratitude")
+    return {"ok": True, "notes": notes}
+
+
 @router.get("/family-name")
 def family_name(db: Session = Depends(get_db)):
     return {"name": sync.get_setting(db, "family_name", "")}

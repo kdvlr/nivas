@@ -5,6 +5,11 @@ import { playBalloonPopSound } from '../lib/useAudioChime'
 import Icon from './Icon'
 import { AutumnLeafTopper, DiyaTopper, ThanksgivingTopper } from './SeasonalPhotoToppers'
 import { FallSceneDetails } from './SeasonalSceneDetails'
+import { FallHorizonExtras } from './fall/FallHorizonExtras'
+import { FallSkyLayer } from './fall/FallSkyLayer'
+import { FallOverlay, GratitudeNote } from './fall/FallOverlay'
+import { Clothespin, CornHuskTopper, MiniPumpkinTopper, PineConeTopper, ThanksgivingRibbon } from './fall/FallToppers'
+import { isAutumnScene, thanksgivingPhotoYear } from './fall/fallDates'
 import { DiwaliHorizon } from './DiwaliHorizon'
 import { DiwaliMarigoldBanner } from './DiwaliMarigoldBanner'
 import { Peacock } from './Peacock'
@@ -1113,13 +1118,17 @@ function CandyCane({ seed = 0 }: { seed?: number }) {
 function AutumnHarvestHorizon({
   seasonalDate,
   phase,
+  kind = 'clear',
   quality,
   paused,
+  gratitudeCount = 0,
 }: {
   seasonalDate?: Date
   phase: SkyPhase
+  kind?: SkyKind
   quality: Quality
   paused: boolean
+  gratitudeCount?: number
 }) {
   const isNightOrDusk = phase === 'night' || phase === 'dusk'
   const isDiwali = isDiwaliSeason(seasonalDate)
@@ -1755,6 +1764,13 @@ function AutumnHarvestHorizon({
           </g>
         )}
         <FallSceneDetails phase={phase} thanksgiving={thanksgiving} />
+        <FallHorizonExtras
+          phase={phase}
+          kind={kind}
+          date={seasonalDate ?? new Date()}
+          thanksgiving={thanksgiving}
+          gratitudeCount={gratitudeCount}
+        />
       </svg>
     </div>
   )
@@ -6186,9 +6202,11 @@ function CloudLayer({ phase, kind, quality }: SkyState) {
   )
 }
 
-function CelestialGlow({ phase, kind }: SkyState) {
+function CelestialGlow({ phase, kind, hideMoon = false }: SkyState & { hideMoon?: boolean }) {
   const dim = kind === 'clear' ? 1 : kind === 'cloudy' ? 0.45 : 0.2
   if (phase === 'night') {
+    // November swaps in the amber harvest moon (FallSkyLayer).
+    if (hideMoon) return null
     return (
       <div className="absolute inset-0 pointer-events-none" style={{ opacity: dim }}>
         <div
@@ -6416,6 +6434,8 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
   const elfPosition = pair ? (pairIdx === 0 ? 'left' : 'right') : 'right'
   const elfFlip = pair ? pairIdx === 0 : false
   const bowPosition = pair ? (pairIdx === 0 ? 'right' : 'left') : 'right'
+  const autumnCard = isAutumnScene(seasonalNow)
+  const tgPhotoYear = autumnCard ? thanksgivingPhotoYear(item.date_taken, seasonalNow) : null
 
   const card = (
     <div
@@ -6449,6 +6469,12 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
           <BirthdayBow seed={seedOffset} />
         </div>
       )}
+      {autumnCard && (
+        <div className="absolute -top-5 left-1/2 -translate-x-1/2 pointer-events-none z-20 select-none">
+          <Clothespin />
+        </div>
+      )}
+      {autumnCard && tgPhotoYear !== null && <ThanksgivingRibbon year={tgPhotoYear} />}
       {media}
       {caption}
     </div>
@@ -6493,9 +6519,12 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
         </div>
       )
     } else {
+      // Rotate between four rustic toppers so consecutive photos differ.
+      const toppers = [AutumnLeafTopper, PineConeTopper, MiniPumpkinTopper, CornHuskTopper]
+      const Topper = toppers[Math.abs(seedOffset) % toppers.length]
       topElement = (
         <div className="absolute bottom-[calc(100%-12px)] pointer-events-none select-none z-10">
-          <AutumnLeafTopper seed={seedOffset} />
+          <Topper seed={seedOffset} />
         </div>
       )
     }
@@ -6667,6 +6696,9 @@ export default function Slideshow({
 
   // Overrides are cached by getHolidayOverride; real dates can still advance overnight.
   const seasonalDate = useMemo(() => getSeasonalDate(now), [now])
+  const autumnScene = isAutumnScene(seasonalDate)
+  const { data: gratitudeData } = useData<{ notes: GratitudeNote[] }>('/api/setup/gratitude', ['gratitude'])
+  const gratitudeNotes = useMemo(() => (autumnScene ? gratitudeData?.notes ?? [] : []), [autumnScene, gratitudeData])
   const [isOverlayOpen, setIsOverlayOpen] = useState(false)
 
   useEffect(() => {
@@ -6748,6 +6780,21 @@ export default function Slideshow({
     for (let i = list.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [list[i], list[j]] = [list[j], list[i]]
+    }
+
+    // Thanksgiving week: bring past Thanksgiving photos forward, one in every
+    // three slots, so the family's own memories surface during the holiday.
+    const seasonalNow = getSeasonalDate()
+    if (isThanksgivingWeek(seasonalNow)) {
+      const tg = list.filter((p) => thanksgivingPhotoYear(p.date_taken, seasonalNow) !== null)
+      if (tg.length) {
+        const rest = list.filter((p) => thanksgivingPhotoYear(p.date_taken, seasonalNow) === null)
+        list.length = 0
+        while (tg.length || rest.length) {
+          if (tg.length) list.push(tg.shift()!)
+          list.push(...rest.splice(0, 2))
+        }
+      }
     }
 
     const result: Slide[] = []
@@ -7058,12 +7105,23 @@ export default function Slideshow({
         style={{ background: 'radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.26) 100%)' }}
       />
 
-      <MemoCelestialGlow phase={phase} kind={kind} />
+      <MemoCelestialGlow phase={phase} kind={kind} hideMoon={autumnScene} />
 
       {/* Stars + shooting stars (behind photos) */}
       <canvas ref={starRef} className="absolute inset-0 w-full h-full pointer-events-none" />
 
       <MemoCloudLayer phase={phase} kind={kind} quality={quality} />
+
+      {/* November: harvest moon, dusk stars, Thanksgiving parade balloon */}
+      {autumnScene && (
+        <FallSkyLayer
+          phase={phase}
+          kind={kind}
+          quality={quality}
+          paused={!!skyState.paused}
+          thanksgivingWeek={isThanksgivingWeek(seasonalDate)}
+        />
+      )}
 
       {/* String lights along the top sky background (behind photos & decorations, Dec 1-25) */}
       {isChristmasSeason(seasonalDate) && <MemoStringLights />}
@@ -7118,7 +7176,14 @@ export default function Slideshow({
 
       {/* November autumn harvest & Thanksgiving / Diwali horizon in FOREGROUND (photos float up from behind) */}
       {(isNovember(seasonalDate) || isDiwaliSeason(seasonalDate) || isThanksgivingWeek(seasonalDate)) && (
-        <MemoAutumnHarvestHorizon seasonalDate={seasonalDate} phase={phase} quality={quality} paused={!!skyState.paused || photoEntering} />
+        <MemoAutumnHarvestHorizon
+          seasonalDate={seasonalDate}
+          phase={phase}
+          kind={kind}
+          quality={quality}
+          paused={!!skyState.paused || photoEntering}
+          gratitudeCount={gratitudeNotes.length}
+        />
       )}
 
       {/* Swara's Birthday daytime delights: party streamers & sunglasses-wearing acrobatic spiders */}
@@ -7154,6 +7219,20 @@ export default function Slideshow({
 
       {/* Thanksgiving Week: Strutting Cartoon Turkey */}
       {!skyState.paused && isThanksgivingWeek(seasonalDate) && <MemoStruttingTurkey />}
+
+      {/* November scene: visitors, hidden acorn, turkey spotting, gratitude cards, leaf wipe */}
+      {!skyState.paused && autumnScene && (
+        <FallOverlay
+          phase={phase}
+          kind={kind}
+          date={seasonalDate}
+          quality={quality}
+          thanksgivingWeek={isThanksgivingWeek(seasonalDate)}
+          slideKey={currentIdx}
+          onPop={handleBalloonPop}
+          notes={gratitudeNotes}
+        />
+      )}
 
       {/* Indian Festive & Diwali Delights: Regal Strutting & Displaying Peacock */}
       {!skyState.paused && (isDiwaliSeason(seasonalDate) || getQueryParam('peacock') !== null) && (

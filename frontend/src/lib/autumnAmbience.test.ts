@@ -27,6 +27,15 @@ test('photo entrances defer new visitors without shortening an existing quiet in
   assert.equal(gate.claim(55_500, 8_500), true)
 })
 
+test('summoning skips the quiet interval but never overlaps an active visitor', () => {
+  const gate = createAutumnVisitGate(() => 0)
+  assert.equal(gate.claim(0, 10_000), true)
+  assert.equal(gate.force(5_000, 8_000), false)
+  assert.equal(gate.force(10_000, 8_000), true)
+  assert.equal(gate.claim(20_000, 8_000), false)
+  assert.equal(gate.force(18_000, 8_000), true)
+})
+
 test('November canopy thins steadily from the first to the last day', () => {
   assert.equal(autumnProgress(new Date(2026, 10, 1)), 0)
   assert.ok(autumnProgress(new Date(2026, 10, 15)) > 0.4)

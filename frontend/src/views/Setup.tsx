@@ -1088,6 +1088,8 @@ function SetupInner() {
 
         {section === 'looks' && <AppearanceCard />}
 
+        {section === 'looks' && <GratitudeCard />}
+
         {section === 'looks' && (
         <Card title={<><Icon name="celebration" /> Celebration preview</>}>
           <p className="mb-2 text-sm text-ink-soft">
@@ -1462,6 +1464,88 @@ function AppearanceCard() {
             ))}
           </div>
         </div>
+      </div>
+    </Card>
+  )
+}
+
+type GratitudeNote = { text: string; author: string }
+
+/** Notes shown as gratitude leaves on the November slideshow tree and cards. */
+function GratitudeCard() {
+  const { data, reload } = useData<{ notes: { text: string; author?: string }[] }>('/api/setup/gratitude', ['gratitude'])
+  const [notes, setNotes] = useState<GratitudeNote[] | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const list: GratitudeNote[] = notes ?? (data?.notes ?? []).map((n) => ({ text: n.text, author: n.author ?? '' }))
+  const dirty = notes !== null
+
+  const update = (next: GratitudeNote[]) => {
+    setSaved(false)
+    setNotes(next)
+  }
+  const save = async () => {
+    setSaving(true)
+    try {
+      await api.put('/api/setup/gratitude', {
+        notes: list.map((n) => ({ text: n.text.trim(), author: n.author.trim() })).filter((n) => n.text),
+      })
+      setNotes(null)
+      setSaved(true)
+      reload()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Card
+      title={<><Icon name="eco" /> Gratitude leaves</>}
+      badge={<Badge ok={list.length > 0} label={`${list.length} note${list.length === 1 ? '' : 's'}`} />}
+    >
+      <p className="mb-3 text-base text-ink-soft">
+        What is your family thankful for? Each note becomes a leaf on the little tree in the November slideshow, and
+        every few minutes one floats down as a big card. Up to 40 notes.
+      </p>
+      <div className="flex flex-col gap-2">
+        {list.map((n, i) => (
+          <div key={i} className="flex flex-wrap items-center gap-2">
+            <input
+              value={n.text}
+              maxLength={120}
+              onChange={(e) => update(list.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))}
+              placeholder="Grandma's apple pie"
+              className="input-glass min-w-[14rem] flex-1 px-4 py-3 text-base"
+            />
+            <input
+              value={n.author}
+              maxLength={30}
+              onChange={(e) => update(list.map((x, j) => (j === i ? { ...x, author: e.target.value } : x)))}
+              placeholder="From (optional)"
+              className="input-glass w-44 px-4 py-3 text-base"
+            />
+            <button
+              onClick={() => update(list.filter((_, j) => j !== i))}
+              className="btn-glass px-3 py-3 text-base"
+              aria-label="Remove note"
+            >
+              <Icon name="delete" />
+            </button>
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <button
+          onClick={() => update([...list, { text: '', author: '' }])}
+          disabled={list.length >= 40}
+          className="btn-glass px-4 py-3 text-base"
+        >
+          <Icon name="add" /> Add note
+        </button>
+        <button onClick={save} disabled={saving || !dirty} className="btn-primary px-6 py-3 text-base">
+          {saving ? 'Saving…' : 'Save'}
+        </button>
+        {saved && !dirty && <span className="text-sm text-ink-soft">Saved — the slideshow updates right away.</span>}
       </div>
     </Card>
   )
