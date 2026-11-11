@@ -2295,6 +2295,16 @@ export function startFxCanvas(
     ctx.restore()
   }
 
+  let seasonCheckedAt = 0
+  let season: {
+    swaraBirthday: boolean
+    october: boolean
+    november: boolean
+    diwali: boolean
+    christmasDay: boolean
+    newYearSeason: boolean
+  } | null = null
+
   const frame = (t: number) => {
     raf = requestAnimationFrame(frame)
     const state = get()
@@ -2312,13 +2322,21 @@ export function startFxCanvas(
     const daylight = phase === 'day' || phase === 'dawn'
     const calm = kind === 'clear' || kind === 'cloudy'
 
-    const seasonalDate = getSeasonalDate()
-    const swaraBirthday = isSwaraBirthday(seasonalDate)
-    const october = isOctober(seasonalDate)
-    const november = isNovember(seasonalDate)
-    const diwali = isDiwaliSeason(seasonalDate)
-    const christmasDay = isChristmasDay(seasonalDate)
-    const newYearSeason = isNewYearSeason(seasonalDate)
+    // Calendar flags change at most a few times a day; refresh them once a
+    // second instead of re-deriving them on every frame.
+    if (t - seasonCheckedAt > 1000 || !season) {
+      seasonCheckedAt = t
+      const seasonalDate = getSeasonalDate()
+      season = {
+        swaraBirthday: isSwaraBirthday(seasonalDate),
+        october: isOctober(seasonalDate),
+        november: isNovember(seasonalDate),
+        diwali: isDiwaliSeason(seasonalDate),
+        christmasDay: isChristmasDay(seasonalDate),
+        newYearSeason: isNewYearSeason(seasonalDate),
+      }
+    }
+    const { swaraBirthday, october, november, diwali, christmasDay, newYearSeason } = season
 
     // Decide whether this layer has anything to render at all. A clear day has
     // no weather and no fireflies, so the canvas would otherwise clear and

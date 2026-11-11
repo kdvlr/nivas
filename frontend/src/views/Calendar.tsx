@@ -65,7 +65,7 @@ type YearSubMode = 'calendar' | 'rolling-12'
 export default function Calendar() {
   const { data: status } = useData<CalendarStatus>('/api/calendar/status', ['calendar'])
   const { data: weather } = useData<WeatherData>('/api/weather', [], 15 * 60 * 1000)
-  const now = useClock(60000)
+  const now = useClock()
   const calRef = useRef<FullCalendar>(null)
   const [draft, setDraft] = useState<Draft | null>(null)
   const [busy, setBusy] = useState(false)

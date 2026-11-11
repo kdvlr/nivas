@@ -160,12 +160,34 @@ export function useVoiceCommands(
   return listening
 }
 
-export function useClock(intervalMs = 1000) {
-  const [now, setNow] = useState(new Date())
+/**
+ * Wall clock that ticks once per minute, aligned to the minute boundary.
+ *
+ * Every clock in the UI shows hours:minutes only, so a 1s tick just
+ * re-rendered whole views 60x more often than needed (noticeable on the
+ * kiosk tablet). Re-syncs immediately when the screen wakes.
+ */
+export function useClock() {
+  const [now, setNow] = useState(() => new Date())
   useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), intervalMs)
-    return () => clearInterval(t)
-  }, [intervalMs])
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const tick = () => {
+      const d = new Date()
+      setNow(d)
+      timer = setTimeout(tick, 60_000 - (d.getTime() % 60_000) + 25)
+    }
+    timer = setTimeout(tick, 60_000 - (Date.now() % 60_000) + 25)
+    const onVis = () => {
+      if (document.visibilityState !== 'visible') return
+      if (timer) clearTimeout(timer)
+      tick()
+    }
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      if (timer) clearTimeout(timer)
+      document.removeEventListener('visibilitychange', onVis)
+    }
+  }, [])
   return now
 }
 

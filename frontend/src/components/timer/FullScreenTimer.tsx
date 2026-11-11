@@ -9,7 +9,6 @@ interface FullScreenTimerProps {
   currentTrack?: Track | null
   isPlaying?: boolean
   isBuffering?: boolean
-  elapsedSeconds?: number
   durationSeconds?: number
   onTogglePlay?: () => void
   onNextTrack?: () => void
@@ -22,7 +21,6 @@ export default function FullScreenTimer({
   currentTrack,
   isPlaying = false,
   isBuffering = false,
-  elapsedSeconds = 0,
   durationSeconds = 0,
   onTogglePlay,
   onNextTrack,
@@ -286,7 +284,6 @@ export default function FullScreenTimer({
               currentTrack={currentTrack}
               isPlaying={Boolean(isPlaying)}
               isBuffering={Boolean(isBuffering)}
-              elapsedSeconds={elapsedSeconds}
               durationSeconds={durationSeconds}
               onTogglePlay={onTogglePlay ?? (() => {})}
               onNextTrack={onNextTrack ?? (() => {})}

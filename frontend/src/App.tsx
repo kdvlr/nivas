@@ -35,8 +35,12 @@ const Cameras = lazy(() => import('./views/Cameras'))
 const YTMusic = lazy(() => import('./views/YTMusic'))
 import MiniPlayerBar, { Track } from './components/ytmusic/MiniPlayerBar'
 import FloatingActionButton from './components/FloatingActionButton'
-import Slideshow, { hasSkyOverride, getQueryParam } from './components/Slideshow'
-import { TimerProvider, useTimer } from './context/TimerContext'
+// The screensaver is ~7k lines of seasonal scenery that only appears after
+// 3 idle minutes; keep it out of the startup bundle the tablet must parse.
+const Slideshow = lazy(() => import('./components/Slideshow'))
+import { hasSkyOverride } from './components/sky/overrides'
+import { getQueryParam } from './components/sky/queryParam'
+import { TimerProvider, useIsTimerActive } from './context/TimerContext'
 import CreateTimerModal from './components/timer/CreateTimerModal'
 import FullScreenTimer from './components/timer/FullScreenTimer'
 import MiniTimerCapsule from './components/timer/MiniTimerCapsule'
@@ -134,9 +138,21 @@ import { playChime } from './lib/useAudioChime'
 import TopClockHeader from './components/TopClockHeader'
 import AmbientCalendarOverlay, { type ReminderPayload } from './components/AmbientCalendarOverlay'
 import BirthdayFanfareOverlay from './components/BirthdayFanfareOverlay'
+import { setPlayerElapsed } from './lib/playerProgress'
+
+/** Structural equality for small JSON payloads (track, queue). */
+function sameJson(a: unknown, b: unknown): boolean {
+  if (a === b) return true
+  if (a == null || b == null) return false
+  try {
+    return JSON.stringify(a) === JSON.stringify(b)
+  } catch {
+    return false
+  }
+}
 
 function AppContent() {
-  const { isTimerActive } = useTimer()
+  const isTimerActive = useIsTimerActive()
   const isTimerActiveRef = useRef(isTimerActive)
   isTimerActiveRef.current = isTimerActive
 
@@ -213,43 +229,43 @@ function AppContent() {
   // YouTube Music Pure Server-Side Synchronized Player State
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null)
   const [isPlaying, setIsPlaying] = useState<boolean>(false)
-  const [elapsedSeconds, setElapsedSeconds] = useState<number>(0)
+  // elapsedSeconds is deliberately NOT App state: see lib/playerProgress.ts.
   const [durationSeconds, setDurationSeconds] = useState<number>(0)
   const [isBuffering, setIsBuffering] = useState<boolean>(false)
   const [playbackError, setPlaybackError] = useState<string | null>(null)
   const [playQueue, setPlayQueue] = useState<Track[]>([])
 
-  const syncPlayerState = async () => {
-    try {
-      const state = await api.get<any>('/api/ytmusic/player/state')
-      if (state) {
-        setIsPlaying(state.isPlaying)
-        setIsBuffering(Boolean(state.isBuffering))
-        setPlaybackError(state.playbackError || null)
-        setCurrentTrack(state.currentTrack)
-        setElapsedSeconds(state.elapsedSeconds || 0)
-        setDurationSeconds(state.durationSeconds || 0)
-        setPlayQueue(Array.isArray(state.queue) ? state.queue : [])
-      }
-    } catch (e) {
-      // Ignore
-    }
-  }
+  // The server re-sends the full player state every second while playing.
+  // Keep the previous track/queue objects when their content is unchanged so
+  // React can bail out instead of re-rendering the whole app each tick.
+  const applyPlayerState = useCallback((state: any) => {
+    setIsPlaying(Boolean(state.isPlaying))
+    setIsBuffering(Boolean(state.isBuffering))
+    setPlaybackError(state.playbackError || null)
+    const nextTrack: Track | null = state.currentTrack ?? null
+    setCurrentTrack((prev) => (sameJson(prev, nextTrack) ? prev : nextTrack))
+    setPlayerElapsed(state.elapsedSeconds || 0)
+    setDurationSeconds(state.durationSeconds || 0)
+    const nextQueue: Track[] = Array.isArray(state.queue) ? state.queue : []
+    setPlayQueue((prev) => (sameJson(prev, nextQueue) ? prev : nextQueue))
+  }, [])
+
+  const syncPlayerState = useCallback(() => {
+    api
+      .get<any>('/api/ytmusic/player/state')
+      .then((state) => {
+        if (state) applyPlayerState(state)
+      })
+      .catch(() => {})
+  }, [applyPlayerState])
 
   useEffect(() => {
     syncPlayerState()
     return onWsMessage((message) => {
       if (message.type !== 'player_state' || !message.payload) return
-      const state = message.payload
-      setIsPlaying(Boolean(state.isPlaying))
-      setIsBuffering(Boolean(state.isBuffering))
-      setPlaybackError(state.playbackError || null)
-      setCurrentTrack(state.currentTrack ?? null)
-      setElapsedSeconds(state.elapsedSeconds || 0)
-      setDurationSeconds(state.durationSeconds || 0)
-      setPlayQueue(Array.isArray(state.queue) ? state.queue : [])
+      applyPlayerState(message.payload)
     })
-  }, [])
+  }, [applyPlayerState, syncPlayerState])
 
   const handleDismissPlaybackError = useCallback(async () => {
     setPlaybackError(null)
@@ -308,7 +324,7 @@ function AppContent() {
     }
   }, [])
   const handleSeek = (secs: number) => {
-    setElapsedSeconds(secs)
+    setPlayerElapsed(secs)
     if (seekDebounceRef.current) {
       clearTimeout(seekDebounceRef.current)
     }
@@ -322,7 +338,7 @@ function AppContent() {
       if (res) {
         setIsPlaying(false)
         setCurrentTrack(null)
-        setElapsedSeconds(0)
+        setPlayerElapsed(0)
         setDurationSeconds(0)
         setPlayQueue([])
       }
@@ -857,7 +873,6 @@ function AppContent() {
                     isPlaying={isPlaying}
                     isBuffering={isBuffering}
                     queue={playQueue}
-                    elapsedSeconds={elapsedSeconds}
                     durationSeconds={durationSeconds}
                     onPlayTrack={handlePlayTrack}
                     onTogglePlay={handleTogglePlay}
@@ -884,7 +899,6 @@ function AppContent() {
                 currentTrack={currentTrack}
                 isPlaying={isPlaying}
                 isBuffering={isBuffering}
-                elapsedSeconds={elapsedSeconds}
                 durationSeconds={durationSeconds}
                 onTogglePlay={handleTogglePlay}
                 onNextTrack={handleNextTrack}
@@ -983,13 +997,13 @@ function AppContent() {
           </div>
         </motion.div>
         {slideshowActive && (photosList.length > 0 || hasSkyOverride() || getQueryParam('slideshow') === '1' || getQueryParam('peacock') !== null) && !isTimerActive && !kidsNuggetsDisplayed && (
+          <Suspense fallback={null}>
           <Slideshow
             photos={photosList}
             onDismiss={() => setSlideshowActive(false)}
             currentTrack={currentTrack}
             queue={playQueue}
             isPlaying={isPlaying}
-            elapsedSeconds={elapsedSeconds}
             durationSeconds={durationSeconds}
             onTogglePlay={handleTogglePlay}
             onNextTrack={handleNextTrack}
@@ -1001,6 +1015,7 @@ function AppContent() {
             }}
             onClose={handleStopPlayer}
           />
+          </Suspense>
         )}
         {/* Swara's Birthday Hourly Celebration & Interactive Fanfare */}
         <BirthdayFanfareOverlay />
@@ -1015,7 +1030,6 @@ function AppContent() {
           currentTrack={currentTrack}
           isPlaying={isPlaying}
           isBuffering={isBuffering}
-          elapsedSeconds={elapsedSeconds}
           durationSeconds={durationSeconds}
           onTogglePlay={handleTogglePlay}
           onNextTrack={handleNextTrack}

@@ -5,6 +5,7 @@ import { Track } from '../components/ytmusic/MiniPlayerBar'
 import AirPlaySelectorModal from '../components/ytmusic/AirPlaySelectorModal'
 import TopClockHeader from '../components/TopClockHeader'
 import MusicSourceIcon from '../components/ytmusic/MusicSourceIcon'
+import { usePlayerElapsed } from '../lib/playerProgress'
 
 interface YTMusicViewProps {
   now?: Date
@@ -13,7 +14,6 @@ interface YTMusicViewProps {
   isPlaying: boolean
   isBuffering?: boolean
   queue: Track[]
-  elapsedSeconds: number
   durationSeconds: number
   onPlayTrack: (track: Track, queue?: Track[]) => void
   onTogglePlay: () => void
@@ -104,6 +104,35 @@ const highResolutionArtwork = (url?: string) => {
 }
 
 // Daily pseudo-random generator seeded by date
+/** Position readout + seek bar. Subscribes to the progress store so the
+ * per-second tick re-renders only this row, not the whole music view. */
+function PlaybackProgress({
+  className,
+  duration,
+  onSeek,
+}: {
+  className: string
+  duration: number
+  onSeek: (seconds: number) => void
+}) {
+  const elapsedSeconds = usePlayerElapsed()
+  return (
+    <div className={className}>
+      <span>{formatTime(elapsedSeconds)}</span>
+      <input
+        type="range"
+        min={0}
+        max={duration || 100}
+        value={Math.min(elapsedSeconds, duration || 100)}
+        onChange={(e) => onSeek(Number(e.target.value))}
+        aria-label="Playback position"
+        className="h-1.5 flex-1 cursor-pointer accent-[var(--primary)]"
+      />
+      <span>{formatTime(duration)}</span>
+    </div>
+  )
+}
+
 function getDateRandom(date: Date) {
   const dateString = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`
   let h = 0
@@ -203,7 +232,6 @@ export default function YTMusicView({
   isPlaying,
   isBuffering = false,
   queue,
-  elapsedSeconds,
   durationSeconds,
   onPlayTrack,
   onTogglePlay,
@@ -2374,19 +2402,7 @@ export default function YTMusicView({
                 </div>
 
                 {/* Progress Bar */}
-                <div className="mt-2.5 flex items-center gap-2 text-[11px] tabular-nums text-ink-soft">
-                  <span>{formatTime(elapsedSeconds)}</span>
-                  <input
-                    type="range"
-                    min={0}
-                    max={effectiveDuration || 100}
-                    value={Math.min(elapsedSeconds, effectiveDuration || 100)}
-                    onChange={(e) => onSeek(Number(e.target.value))}
-                    aria-label="Playback position"
-                    className="h-1.5 flex-1 cursor-pointer accent-[var(--primary)]"
-                  />
-                  <span>{formatTime(effectiveDuration)}</span>
-                </div>
+                <PlaybackProgress className="mt-2.5 flex items-center gap-2 text-[11px] tabular-nums text-ink-soft" duration={effectiveDuration} onSeek={onSeek} />
 
                 {/* Mobile Playback Controls Row (Centered, prominent touch targets) */}
                 <div className="mt-2.5 flex items-center justify-center gap-6 sm:hidden">
@@ -2472,19 +2488,7 @@ export default function YTMusicView({
                     </button>
                   </div>
                 </div>
-                <div className="mt-4 flex items-center gap-3 text-xs tabular-nums text-ink-soft">
-                  <span>{formatTime(elapsedSeconds)}</span>
-                  <input
-                    type="range"
-                    min={0}
-                    max={effectiveDuration || 100}
-                    value={Math.min(elapsedSeconds, effectiveDuration || 100)}
-                    onChange={(e) => onSeek(Number(e.target.value))}
-                    aria-label="Playback position"
-                    className="h-1.5 flex-1 cursor-pointer accent-[var(--primary)]"
-                  />
-                  <span>{formatTime(effectiveDuration)}</span>
-                </div>
+                <PlaybackProgress className="mt-4 flex items-center gap-3 text-xs tabular-nums text-ink-soft" duration={effectiveDuration} onSeek={onSeek} />
               </div>
             )}
 

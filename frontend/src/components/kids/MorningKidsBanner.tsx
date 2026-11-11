@@ -35,9 +35,12 @@ export default function MorningKidsBanner({
   // Fetch daily bundle
   const loadDailyContent = async () => {
     try {
+      if (document.visibilityState === 'hidden') return
       const res = await api.get<KidsDailyPublicResponse>('/api/kids-daily/today')
       if (res) {
-        setData(res)
+        // Polled every minute; keep the old object when nothing changed so the
+        // banner (and its layout-measuring effects) don't re-run needlessly.
+        setData((prev) => (prev && JSON.stringify(prev) === JSON.stringify(res) ? prev : res))
       }
     } catch (e) {
       // Ignore network errors

@@ -1,3 +1,9 @@
+// The sky engine asks for overrides many times per animation frame. Parsing
+// up to three URLSearchParams per call added up on the tablet, so results are
+// memoized per URL; any navigation (new href) invalidates the cache.
+let cachedHref: string | null = null
+let cachedParams = new Map<string, string | null>()
+
 /**
  * Read a query param from anywhere in the URL.
  *
@@ -7,6 +13,18 @@
  */
 export const getQueryParam = (key: string): string | null => {
   if (typeof window === 'undefined') return null
+  const href = window.location.href
+  if (href !== cachedHref) {
+    cachedHref = href
+    cachedParams = new Map()
+  }
+  if (cachedParams.has(key)) return cachedParams.get(key) ?? null
+  const value = readQueryParam(key)
+  cachedParams.set(key, value)
+  return value
+}
+
+const readQueryParam = (key: string): string | null => {
   const searchQP = new URLSearchParams(window.location.search)
   if (searchQP.has(key)) return searchQP.get(key)
   const hash = window.location.hash

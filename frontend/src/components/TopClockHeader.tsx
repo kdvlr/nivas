@@ -11,15 +11,30 @@ interface TopClockHeaderProps {
   className?: string
 }
 
+// Intl.DateTimeFormat construction is expensive on Android WebView; build
+// each distinct formatter once and reuse it across renders.
+const formatterCache = new Map<string, Intl.DateTimeFormat>()
+
+export function cachedFormatter(locale: string | undefined, options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const key = `${locale ?? ''}|${JSON.stringify(options)}`
+  let fmt = formatterCache.get(key)
+  if (!fmt) {
+    fmt = new Intl.DateTimeFormat(locale, options)
+    formatterCache.set(key, fmt)
+  }
+  return fmt
+}
+
+const LOCAL_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone
+
 export function getTzDateString(d: Date, tzName: string): string {
   try {
-    const formatter = new Intl.DateTimeFormat('en-US', {
+    return cachedFormatter('en-US', {
       timeZone: tzName,
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
-    })
-    return formatter.format(d)
+    }).format(d)
   } catch (e) {
     return ''
   }
@@ -35,15 +50,14 @@ export default function TopClockHeader({ now, config, className = '' }: TopClock
 
   const secondaryTz = config?.secondary_tz || 'Asia/Kolkata'
   const secondaryEmoji = config?.secondary_tz_emoji || '🇮🇳'
-  const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone
-  const localDateStr = getTzDateString(now, localTz)
+  const localDateStr = getTzDateString(now, LOCAL_TZ)
   const secondaryDateStr = getTzDateString(now, secondaryTz)
   const hasDateDiff = localDateStr !== secondaryDateStr && secondaryDateStr !== ''
 
   let secondaryDateFormatted = ''
   if (hasDateDiff) {
     try {
-      secondaryDateFormatted = new Intl.DateTimeFormat('en-US', {
+      secondaryDateFormatted = cachedFormatter('en-US', {
         timeZone: secondaryTz,
         month: 'short',
         day: 'numeric',
@@ -53,11 +67,11 @@ export default function TopClockHeader({ now, config, className = '' }: TopClock
 
   let secondaryTimeFormatted = ''
   try {
-    secondaryTimeFormatted = now.toLocaleTimeString(undefined, {
+    secondaryTimeFormatted = cachedFormatter(undefined, {
       timeZone: secondaryTz,
       hour: 'numeric',
       minute: '2-digit',
-    })
+    }).format(now)
   } catch (e) {
     secondaryTimeFormatted = now.toLocaleTimeString()
   }
@@ -87,12 +101,12 @@ export default function TopClockHeader({ now, config, className = '' }: TopClock
           </span>
         )}
         <div className="text-lg sm:text-4xl lg:text-5xl font-bold tabular-nums tracking-tight text-[var(--primary)] leading-none group-hover/clock:opacity-90">
-          {now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+          {cachedFormatter(undefined, { hour: 'numeric', minute: '2-digit' }).format(now)}
         </div>
       </button>
 
       <div className="mt-0.5 sm:mt-1 flex items-center justify-end gap-1 sm:gap-2 text-[10px] sm:text-sm lg:text-base font-medium sm:font-semibold text-ink-soft whitespace-nowrap">
-        <span>{now.toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' })}</span>
+        <span>{cachedFormatter(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' }).format(now)}</span>
         <span className="opacity-40">•</span>
         <span>
           {secondaryEmoji} {secondaryTimeFormatted}

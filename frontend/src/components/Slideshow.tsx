@@ -10,9 +10,11 @@ import { DiwaliMarigoldBanner } from './DiwaliMarigoldBanner'
 import { Peacock } from './Peacock'
 import { diwaliTheme } from '../lib/diwaliTheme'
 import { api } from '../lib/api'
-import { useData } from '../lib/hooks'
+import { useClock, useData } from '../lib/hooks'
+import { cachedFormatter, getTzDateString } from './TopClockHeader'
 import { startStarCanvas, startFxCanvas, SkyPhase, SkyKind, SkyState } from './sky/skyEngine'
 import { useQuality, Quality } from './sky/useQuality'
+import { KINDS, getKindOverride, getPhaseOverride, hasSkyOverride } from './sky/overrides'
 import {
   getQueryParam,
   getSeasonalDate,
@@ -60,7 +62,6 @@ interface SlideshowProps {
   currentTrack?: Track | null
   queue?: Track[]
   isPlaying?: boolean
-  elapsedSeconds?: number
   durationSeconds?: number
   onTogglePlay?: () => void
   onNextTrack?: () => void
@@ -97,22 +98,9 @@ const hashStr = (s: string) => s.split('').reduce((a, c) => ((a * 31 + c.charCod
 // Dev/test override: append ?sky=night&skyfx=rainy anywhere in the URL to preview any sky state.
 export { getQueryParam }
 
-const PHASES: SkyPhase[] = ['dawn', 'day', 'dusk', 'night']
-const KINDS: SkyKind[] = ['clear', 'cloudy', 'rainy', 'snowy', 'stormy']
-const getPhaseOverride = () => {
-  const p = PHASES.find((x) => x === getQueryParam('sky') || x === getQueryParam('phase'))
-  if (p) return p
-  const h = getHolidayOverride()?.toLowerCase()
-  if (h === 'spooky') return 'night'
-  return null
-}
-const getKindOverride = () => KINDS.find((k) => k === getQueryParam('skyfx')) ?? null
-
-/** True when the URL carries a valid sky/skyfx/holiday preview override. */
-export const hasSkyOverride = () =>
-  getPhaseOverride() !== null ||
-  getKindOverride() !== null ||
-  getHolidayOverride() !== null
+// Override parsing lives in sky/overrides so the app shell can check it
+// without pulling this (lazy-loaded) module into the main bundle.
+export { hasSkyOverride }
 
 const toKind = (k?: string | null): SkyKind => {
   if (k === 'sunny') return 'clear'
@@ -6591,13 +6579,32 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
   )
 }
 
+// The screensaver re-renders on slide changes and clock minutes; these scene
+// layers only depend on their (primitive) props, so skip re-rendering them.
+const MemoCelestialGlow = React.memo(CelestialGlow)
+const MemoCloudLayer = React.memo(CloudLayer)
+const MemoStringLights = React.memo(StringLights)
+const MemoDiwaliMarigoldBanner = React.memo(DiwaliMarigoldBanner)
+const MemoPhotoRig = React.memo(PhotoRig)
+const MemoDaytimePumpkinPatch = React.memo(DaytimePumpkinPatch)
+const MemoSpookyGraveyard = React.memo(SpookyGraveyard)
+const MemoAutumnHarvestHorizon = React.memo(AutumnHarvestHorizon)
+const MemoDaytimePartyBuntingAndSpiders = React.memo(DaytimePartyBuntingAndSpiders)
+const MemoSpookyWebsAndSpiders = React.memo(SpookyWebsAndSpiders)
+const MemoDancingSkeleton = React.memo(DancingSkeleton)
+const MemoFloatingBirthdayBalloons = React.memo(FloatingBirthdayBalloons)
+const MemoBirthdayParade = React.memo(BirthdayParade)
+const MemoRunningElf = React.memo(RunningElf)
+const MemoRunningSquirrel = React.memo(RunningSquirrel)
+const MemoStruttingTurkey = React.memo(StruttingTurkey)
+const MemoPeacock = React.memo(Peacock)
+
 export default function Slideshow({
   photos,
   onDismiss,
   currentTrack,
   queue,
   isPlaying,
-  elapsedSeconds,
   durationSeconds,
   onTogglePlay,
   onNextTrack,
@@ -6625,12 +6632,13 @@ export default function Slideshow({
   const [override] = useState(() => ({ phase: getPhaseOverride(), kind: getKindOverride() }))
   const [kind, setKind] = useState<SkyKind>(override.kind ?? 'clear')
   const [sun, setSun] = useState<{ sunrise: Date | null; sunset: Date | null }>({ sunrise: null, sunset: null })
-  const [now, setNow] = useState(() => new Date())
+  // Minute-aligned: the overlay shows hh:mm and phase changes are minutes apart.
+  const now = useClock()
 
   const [hidden, setHidden] = useState(() => document.visibilityState === 'hidden')
-  const { quality, fps, frameTimeMs } = useQuality(!hidden)
-  const { data: config } = useData<{ secondary_tz: string; secondary_tz_emoji: string }>('/api/setup/config', ['setup'])
   const [showDebug, setShowDebug] = useState(() => getQueryParam('debug') === '1')
+  const { quality, fps, frameTimeMs } = useQuality(!hidden, showDebug)
+  const { data: config } = useData<{ secondary_tz: string; secondary_tz_emoji: string }>('/api/setup/config', ['setup'])
 
   const [overlayVisible, setOverlayVisible] = useState(false)
   const [reminderPayload, setReminderPayload] = useState<ReminderPayload | null>(null)
@@ -6658,7 +6666,7 @@ export default function Slideshow({
   }, [])
 
   // Overrides are cached by getHolidayOverride; real dates can still advance overnight.
-  const seasonalDate = getSeasonalDate(now)
+  const seasonalDate = useMemo(() => getSeasonalDate(now), [now])
   const [isOverlayOpen, setIsOverlayOpen] = useState(false)
 
   useEffect(() => {
@@ -6714,11 +6722,9 @@ export default function Slideshow({
     }
     load()
     const weatherTimer = setInterval(load, 15 * 60 * 1000)
-    const clockTimer = setInterval(() => setNow(new Date()), 1000)
     return () => {
       alive = false
       clearInterval(weatherTimer)
-      clearInterval(clockTimer)
     }
   }, [])
 
@@ -6885,13 +6891,12 @@ export default function Slideshow({
   const secondaryEmoji = config?.secondary_tz_emoji || '🇮🇳'
   let secondaryFormatted = ''
   try {
-    const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone
-    const localDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: localTz }).format(now)
-    const secondaryDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: secondaryTz }).format(now)
+    const localDateStr = getTzDateString(now, Intl.DateTimeFormat().resolvedOptions().timeZone)
+    const secondaryDateStr = getTzDateString(now, secondaryTz)
     const hasDateDiff = localDateStr !== secondaryDateStr
-    const tStr = now.toLocaleTimeString(undefined, { timeZone: secondaryTz, hour: 'numeric', minute: '2-digit' })
+    const tStr = cachedFormatter(undefined, { timeZone: secondaryTz, hour: 'numeric', minute: '2-digit' }).format(now)
     if (hasDateDiff) {
-      const dStr = new Intl.DateTimeFormat('en-US', { timeZone: secondaryTz, month: 'short', day: 'numeric' }).format(now)
+      const dStr = cachedFormatter('en-US', { timeZone: secondaryTz, month: 'short', day: 'numeric' }).format(now)
       secondaryFormatted = `${tStr} (${dStr})`
     } else {
       secondaryFormatted = tStr
@@ -6899,6 +6904,9 @@ export default function Slideshow({
   } catch {}
 
   const lastBalloonPopTimeRef = useRef<number>(0)
+  const handleBalloonPop = useCallback(() => {
+    lastBalloonPopTimeRef.current = Date.now()
+  }, [])
 
   const handleRootClick = (e: React.MouseEvent) => {
     // If a balloon was just popped (within the last 800ms), ignore this click
@@ -6957,10 +6965,10 @@ export default function Slideshow({
             className="text-3xl sm:text-4xl lg:text-5xl font-normal tabular-nums tracking-tight text-white leading-none drop-shadow-md cursor-pointer hover:opacity-85 active:scale-95 transition-all text-right"
             title="Click to set a timer"
           >
-            {now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+            {cachedFormatter(undefined, { hour: 'numeric', minute: '2-digit' }).format(now)}
           </button>
           <div className="text-sm sm:text-base font-medium text-white/80 mt-2 leading-none drop-shadow-sm pointer-events-none">
-            {now.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+            {cachedFormatter(undefined, { weekday: 'long', month: 'short', day: 'numeric' }).format(now)}
           </div>
           {secondaryFormatted && (
             <div className="text-xs sm:text-sm text-white/70 mt-2 leading-none flex items-center gap-1.5 font-light">
@@ -7050,19 +7058,19 @@ export default function Slideshow({
         style={{ background: 'radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.26) 100%)' }}
       />
 
-      <CelestialGlow phase={phase} kind={kind} />
+      <MemoCelestialGlow phase={phase} kind={kind} />
 
       {/* Stars + shooting stars (behind photos) */}
       <canvas ref={starRef} className="absolute inset-0 w-full h-full pointer-events-none" />
 
-      <CloudLayer phase={phase} kind={kind} quality={quality} />
+      <MemoCloudLayer phase={phase} kind={kind} quality={quality} />
 
       {/* String lights along the top sky background (behind photos & decorations, Dec 1-25) */}
-      {isChristmasSeason(seasonalDate) && <StringLights />}
+      {isChristmasSeason(seasonalDate) && <MemoStringLights />}
 
       {/* Diwali Marigold & Mango Leaf Toran banner along the top (starts Nov 6 6pm through Nov 8 or ?holiday=diwali) */}
       {isDiwaliSeason(seasonalDate) && (
-        <DiwaliMarigoldBanner phase={phase} quality={quality} paused={skyState.paused} />
+        <MemoDiwaliMarigoldBanner phase={phase} quality={quality} paused={skyState.paused} />
       )}
 
       {/* Background delights & distant bats (flying behind photos) */}
@@ -7079,7 +7087,7 @@ export default function Slideshow({
           exit={{ zIndex: 5 }}
         >
           {items.map((item, idx) => (
-            <PhotoRig
+            <MemoPhotoRig
               key={item.url}
               item={item}
               phase={phase}
@@ -7100,56 +7108,56 @@ export default function Slideshow({
 
       {/* October daytime seasonal delights: pumpkin patch & sunflowers in FOREGROUND */}
       {isOctober(seasonalDate) && (phase === 'day' || phase === 'dawn') && (
-        <DaytimePumpkinPatch isBirthday={isSwaraBirthday(seasonalDate)} />
+        <MemoDaytimePumpkinPatch isBirthday={isSwaraBirthday(seasonalDate)} />
       )}
 
       {/* October dusk/night spooky delights: graveyard & skeletons in FOREGROUND (photos float up from behind) */}
       {isOctober(seasonalDate) && (phase === 'dusk' || phase === 'night') && (
-        <SpookyGraveyard isBirthday={isSwaraBirthday(seasonalDate)} />
+        <MemoSpookyGraveyard isBirthday={isSwaraBirthday(seasonalDate)} />
       )}
 
       {/* November autumn harvest & Thanksgiving / Diwali horizon in FOREGROUND (photos float up from behind) */}
       {(isNovember(seasonalDate) || isDiwaliSeason(seasonalDate) || isThanksgivingWeek(seasonalDate)) && (
-        <AutumnHarvestHorizon seasonalDate={seasonalDate} phase={phase} quality={quality} paused={!!skyState.paused || photoEntering} />
+        <MemoAutumnHarvestHorizon seasonalDate={seasonalDate} phase={phase} quality={quality} paused={!!skyState.paused || photoEntering} />
       )}
 
       {/* Swara's Birthday daytime delights: party streamers & sunglasses-wearing acrobatic spiders */}
       {isSwaraBirthday(seasonalDate) && (phase === 'day' || phase === 'dawn') && (
-        <DaytimePartyBuntingAndSpiders isBirthday={true} />
+        <MemoDaytimePartyBuntingAndSpiders isBirthday={true} />
       )}
 
       {/* October dusk/night spooky delights: webs & spiders dangling in FRONT of photos */}
       {isOctober(seasonalDate) && (phase === 'dusk' || phase === 'night') && (
-        <SpookyWebsAndSpiders isBirthday={isSwaraBirthday(seasonalDate)} />
+        <MemoSpookyWebsAndSpiders isBirthday={isSwaraBirthday(seasonalDate)} />
       )}
 
       {/* October Spooky Delight: Dancing and running away skeleton */}
-      {isOctober(seasonalDate) && <DancingSkeleton seasonalDate={seasonalDate} />}
+      {isOctober(seasonalDate) && <MemoDancingSkeleton seasonalDate={seasonalDate} />}
 
       {/* Swara's Birthday Delights (Oct 31): Interactive Tap-to-Pop Floating Birthday Balloons */}
       {(isSwaraBirthday(seasonalDate) || Boolean(getQueryParam('balloons'))) && (
-        <FloatingBirthdayBalloons onPop={() => { lastBalloonPopTimeRef.current = Date.now() }} />
+        <MemoFloatingBirthdayBalloons onPop={handleBalloonPop} />
       )}
 
       {/* Swara's Birthday Parade (Oct 31 or ?parade=1): Puppy & Kitten Birthday Parade */}
-      {(isSwaraBirthday(seasonalDate) || Boolean(getQueryParam('parade'))) && <BirthdayParade />}
+      {(isSwaraBirthday(seasonalDate) || Boolean(getQueryParam('parade'))) && <MemoBirthdayParade />}
 
       {/* Swara's Grand Birthday Fanfare & Confetti Blast is handled globally in App.tsx */}
 
       {/* Holiday Delights (Running Elf across bottom bezel, Dec 1-24) */}
-      {isElfSeason(seasonalDate) && !isNewYearSeason(seasonalDate) && <RunningElf />}
+      {isElfSeason(seasonalDate) && !isNewYearSeason(seasonalDate) && <MemoRunningElf />}
 
       {/* November Autumn Delights: Burying Nut Squirrel (when not Thanksgiving week, or with query override) */}
       {!skyState.paused && ((isNovember(seasonalDate) && !isThanksgivingWeek(seasonalDate) && !isDiwaliSeason(seasonalDate)) || Boolean(getQueryParam('squirrel'))) && (
-        <RunningSquirrel />
+        <MemoRunningSquirrel />
       )}
 
       {/* Thanksgiving Week: Strutting Cartoon Turkey */}
-      {!skyState.paused && isThanksgivingWeek(seasonalDate) && <StruttingTurkey />}
+      {!skyState.paused && isThanksgivingWeek(seasonalDate) && <MemoStruttingTurkey />}
 
       {/* Indian Festive & Diwali Delights: Regal Strutting & Displaying Peacock */}
       {!skyState.paused && (isDiwaliSeason(seasonalDate) || getQueryParam('peacock') !== null) && (
-        <Peacock quality={quality} paused={!!skyState.paused || photoEntering} />
+        <MemoPeacock quality={quality} paused={!!skyState.paused || photoEntering} />
       )}
 
       {/* Bottom right controls & Now Playing dock */}
@@ -7199,7 +7207,6 @@ export default function Slideshow({
             docked
             currentTrack={currentTrack}
             isPlaying={Boolean(isPlaying)}
-            elapsedSeconds={elapsedSeconds ?? 0}
             durationSeconds={durationSeconds ?? 0}
             onTogglePlay={onTogglePlay ?? (() => {})}
             onNextTrack={onNextTrack ?? (() => {})}

@@ -54,6 +54,14 @@ export interface TimerContextValue {
 const STORAGE_KEY = 'nivas_active_timer_v1'
 
 const TimerContext = createContext<TimerContextValue | null>(null)
+// Separate, rarely-changing context so components that only need to know
+// whether a timer is active (e.g. the app shell) don't re-render every second
+// while the countdown ticks.
+const TimerActiveContext = createContext<boolean>(false)
+
+export function useIsTimerActive(): boolean {
+  return useContext(TimerActiveContext)
+}
 
 export function useTimer(): TimerContextValue {
   const ctx = useContext(TimerContext)
@@ -434,5 +442,9 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     dismissAlarm,
   }
 
-  return <TimerContext.Provider value={value}>{children}</TimerContext.Provider>
+  return (
+    <TimerActiveContext.Provider value={isTimerActive}>
+      <TimerContext.Provider value={value}>{children}</TimerContext.Provider>
+    </TimerActiveContext.Provider>
+  )
 }

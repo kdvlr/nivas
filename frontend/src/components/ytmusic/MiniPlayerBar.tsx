@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import Icon from '../Icon'
 import { api } from '../../lib/api'
 import { onWsMessage } from '../../lib/ws'
+import { usePlayerElapsed } from '../../lib/playerProgress'
 import AirPlaySelectorModal from './AirPlaySelectorModal'
 import MusicSourceIcon from './MusicSourceIcon'
 
@@ -22,7 +23,6 @@ interface MiniPlayerBarProps {
   currentTrack: Track | null
   isPlaying: boolean
   isBuffering?: boolean
-  elapsedSeconds: number
   durationSeconds: number
   onTogglePlay: () => void
   onNextTrack: () => void
@@ -39,7 +39,6 @@ export default function MiniPlayerBar({
   currentTrack,
   isPlaying,
   isBuffering = false,
-  elapsedSeconds,
   durationSeconds,
   onTogglePlay,
   onNextTrack,
@@ -67,8 +66,9 @@ export default function MiniPlayerBar({
 
   useEffect(() => {
     if (!currentTrack) return
+    // One fetch for the initial state; the server pushes every device change
+    // over the WebSocket, so a 5s HTTP poll on top of it was redundant work.
     checkAirPlayStatus()
-    const interval = setInterval(checkAirPlayStatus, 5000)
     const unsub = onWsMessage((msg) => {
       if (msg.type === 'player_state' && msg.payload) {
         if (Array.isArray(msg.payload.devices)) {
@@ -77,16 +77,11 @@ export default function MiniPlayerBar({
       }
     })
     return () => {
-      clearInterval(interval)
       unsub()
     }
   }, [Boolean(currentTrack)])
 
   if (!currentTrack) return null
-
-  const progressPercent = durationSeconds > 0
-    ? Math.min(100, Math.max(0, (elapsedSeconds / durationSeconds) * 100))
-    : 0
 
   return (
     <>
@@ -170,10 +165,7 @@ export default function MiniPlayerBar({
 
         {/* Slim Progress Bar */}
         <div className="w-full h-1 bg-[var(--outline-var)]/40 rounded-full overflow-hidden my-2.5">
-          <div
-            className="h-full bg-[var(--primary)] rounded-full transition-all duration-300"
-            style={{ width: `${progressPercent}%` }}
-          />
+          <MiniProgressFill durationSeconds={durationSeconds} />
         </div>
 
         {/* Action Controls: AirPlay, Play/Pause, Next, Full Player */}
@@ -236,5 +228,19 @@ export default function MiniPlayerBar({
         anchorRef={airPlayButtonRef}
       />
     </>
+  )
+}
+
+/** Only this bar re-renders on the per-second progress tick. */
+function MiniProgressFill({ durationSeconds }: { durationSeconds: number }) {
+  const elapsedSeconds = usePlayerElapsed()
+  const progressPercent = durationSeconds > 0
+    ? Math.min(100, Math.max(0, (elapsedSeconds / durationSeconds) * 100))
+    : 0
+  return (
+    <div
+      className="h-full bg-[var(--primary)] rounded-full transition-all duration-300"
+      style={{ width: `${progressPercent}%` }}
+    />
   )
 }
