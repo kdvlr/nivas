@@ -1041,7 +1041,7 @@ export const WoodlandStage = React.memo(function WoodlandStage({
           }}
         >
           <div className="text-[11px] uppercase tracking-[0.22em] font-semibold text-[#854d0e] mb-1">
-            🍂 Family Gratitude Leaf 🍂
+            🍂 I am thankful for 🍂
           </div>
           <div
             className="text-[1.85rem] leading-snug text-[#3b2110]"
