@@ -7,14 +7,16 @@ export type WoodlandVignette =
   | 'peck'
   | 'acorn_drop'
   | 'fireflies'
+  | 'owl_flight'
 
 export const VIGNETTE_DURATIONS_MS: Record<WoodlandVignette, number> = {
   chase: 10_600,
   sortie: 9_400,
   bunny: 8_200,
-  peck: 4_500,
+  peck: 6_200,
   acorn_drop: 4_200,
   fireflies: 9_600,
+  owl_flight: 8_800,
 }
 
 /** Returns which occasional woodland animations make sense for the current time & weather. */
@@ -27,13 +29,12 @@ export function eligibleWoodlandVignettes(
   if (wet || snowy) return []
 
   if (phase === 'night') {
-    return ['fireflies']
+    return ['fireflies', 'owl_flight']
   }
   if (phase === 'dusk') {
-    return ['fireflies', 'sortie', 'acorn_drop']
+    return ['fireflies', 'owl_flight', 'sortie', 'acorn_drop']
   }
   // Dawn & clear/cloudy day: full woodland cast is active!
-  // Weight 'chase' and 'sortie' higher so kids see the squirrel & fox antics often.
   return ['chase', 'sortie', 'bunny', 'peck', 'acorn_drop']
 }
 

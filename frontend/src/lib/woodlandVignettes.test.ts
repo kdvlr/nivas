@@ -16,9 +16,10 @@ test('daytime clear weather enables fox chase, squirrel sortie, bunny, woodpecke
   assert.ok(!day.includes('fireflies'))
 })
 
-test('night and dusk feature fireflies while rainy and snowy weather pause outdoor vignettes', () => {
-  assert.deepEqual(eligibleWoodlandVignettes('night', 'clear'), ['fireflies'])
+test('night and dusk feature fireflies and owl flight while rainy and snowy weather pause outdoor vignettes', () => {
+  assert.deepEqual(eligibleWoodlandVignettes('night', 'clear'), ['fireflies', 'owl_flight'])
   assert.ok(eligibleWoodlandVignettes('dusk', 'cloudy').includes('fireflies'))
+  assert.ok(eligibleWoodlandVignettes('dusk', 'cloudy').includes('owl_flight'))
   assert.deepEqual(eligibleWoodlandVignettes('day', 'rainy'), [])
   assert.deepEqual(eligibleWoodlandVignettes('day', 'snowy'), [])
   assert.deepEqual(eligibleWoodlandVignettes('night', 'stormy'), [])

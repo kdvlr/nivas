@@ -25,6 +25,7 @@ import {
   GouacheOakLeaf,
   HarvestStumpFeast,
   HollowScene,
+  OwlNightFlight,
   PeekingWoodlandTurkey,
   ScamperingSquirrel,
   SquirrelTreeSortie,
@@ -113,6 +114,44 @@ const WOODLAND_CSS = `
   0%, 100% { transform: rotate(0deg); }
   20%, 60% { transform: rotate(-18deg); }
   40%, 80% { transform: rotate(4deg); }
+}
+@keyframes wdWoodpeckerFlight {
+  0% { transform: translate(1985px, 310px) rotate(-14deg); opacity: 0; }
+  8% { opacity: 1; }
+  22% { transform: translate(1772px, 468px) rotate(0deg); opacity: 1; }
+  76% { transform: translate(1772px, 468px) rotate(0deg); opacity: 1; }
+  92% { transform: translate(1930px, 340px) scale(-1, 1) rotate(-18deg); opacity: 1; }
+  100% { transform: translate(2010px, 270px) scale(-1, 1) rotate(-22deg); opacity: 0; }
+}
+@keyframes wdPeckerWings {
+  0%, 24%, 75%, 100% { transform: scaleY(0.25); }
+  6%, 12%, 18%, 81%, 87%, 93% { transform: scaleY(1.1); }
+  9%, 15%, 84%, 90%, 96% { transform: scaleY(-0.65); }
+}
+@keyframes wdPeckSparks {
+  0%, 24%, 76%, 100% { opacity: 0; }
+  28%, 40%, 52%, 64% { opacity: 0.9; }
+  34%, 46%, 58%, 70% { opacity: 0.2; }
+}
+@keyframes wdOwlFlight {
+  0% { transform: translate(238px, 174px) scale(1); }
+  12% { transform: translate(420px, 128px) rotate(-8deg) scale(1.04); }
+  30% { transform: translate(860px, 168px) rotate(4deg) scale(1.08); }
+  48% { transform: translate(1240px, 124px) rotate(-6deg) scale(0.95); }
+  62% { transform: translate(1160px, 210px) scale(-0.95, 0.95) rotate(-8deg); }
+  82% { transform: translate(580px, 152px) scale(-1.02, 1.02) rotate(4deg); }
+  95% { transform: translate(265px, 168px) scale(1) rotate(-4deg); }
+  100% { transform: translate(238px, 174px) scale(1) rotate(0deg); }
+}
+@keyframes wdOwlWingL {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(22deg); }
+  75% { transform: rotate(-16deg); }
+}
+@keyframes wdOwlWingR {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-22deg); }
+  75% { transform: rotate(16deg); }
 }
 @keyframes wdHopBob {
   0%, 100% { transform: translateY(0px) rotate(0deg); }
@@ -270,7 +309,13 @@ const WOODLAND_CSS = `
 .wd-garland { transform-origin: 205px 880px; animation: wdGarlandSway 5.5s ease-in-out infinite; }
 .wd-garland-windy { transform-origin: 205px 880px; animation: wdGarlandWindy 2.1s ease-in-out infinite; }
 .wd-climber { animation: wdClimb 8.4s ease-in-out both; }
-.wd-peck { animation: wdPeck 0.45s ease-in-out 8; }
+.wd-peck { animation: wdPeck 0.4s ease-in-out 1.45s 8; }
+.wd-woodpecker-flight { animation: wdWoodpeckerFlight 6.2s ease-in-out both; }
+.wd-pecker-wings { animation: wdPeckerWings 6.2s ease-in-out both; }
+.wd-peck-sparks { animation: wdPeckSparks 6.2s linear both; }
+.wd-owl-flight { animation: wdOwlFlight 8.8s ease-in-out both; }
+.wd-owl-wing-l { animation: wdOwlWingL 0.68s ease-in-out infinite; }
+.wd-owl-wing-r { animation: wdOwlWingR 0.68s ease-in-out infinite; }
 .wd-breath { animation: wdBreath 4.2s ease-out infinite; }
 .wd-hop-bob { animation: wdHopBob 0.38s ease-in-out infinite; }
 .wd-sortie-squirrel { animation: wdSortieSquirrel 9.4s ease-in-out both; }
@@ -424,7 +469,8 @@ export const WoodlandStage = React.memo(function WoodlandStage({
       forced === 'bunny' ||
       forced === 'peck' ||
       forced === 'acorn_drop' ||
-      forced === 'fireflies'
+      forced === 'fireflies' ||
+      forced === 'owl_flight'
     ) {
       forcedTimer = setTimeout(() => launchVignette(forced), 600)
     }
@@ -705,7 +751,12 @@ export const WoodlandStage = React.memo(function WoodlandStage({
               strokeLinecap="round"
             />
           )}
-          <WoodlandOwl mode={mood.owl} snowy={snowy} hoot={hoot} />
+          <WoodlandOwl
+            mode={mood.owl}
+            snowy={snowy}
+            hoot={hoot}
+            hideOwl={activeVignette?.kind === 'owl_flight'}
+          />
 
           {/* Glowing Acorn Stash Hollow + Squirrel Routine */}
           <HollowScene
@@ -714,6 +765,11 @@ export const WoodlandStage = React.memo(function WoodlandStage({
             frosty={frosty}
             windy={windy}
             excited={squirrelExcited}
+            hideSquirrel={
+              activeVignette?.kind === 'sortie' ||
+              activeVignette?.kind === 'chase' ||
+              climberRun !== null
+            }
           />
 
           {/* Periodic Trunk-Scampering Squirrel */}
@@ -750,12 +806,13 @@ export const WoodlandStage = React.memo(function WoodlandStage({
             hideAdult={activeVignette?.kind === 'chase'}
           />
 
-          {/* Occasional Woodland Vignettes (Squirrel Sortie, Fox-Squirrel Chase, Bunny, Acorn Drop, Fireflies) */}
+          {/* Occasional Woodland Vignettes (Squirrel Sortie, Fox-Squirrel Chase, Bunny, Acorn Drop, Fireflies, Owl Flight) */}
           {activeVignette?.kind === 'sortie' && <SquirrelTreeSortie key={activeVignette.id} />}
           {activeVignette?.kind === 'chase' && <FoxSquirrelChase key={activeVignette.id} />}
           {activeVignette?.kind === 'bunny' && <CottontailBunny key={activeVignette.id} />}
           {activeVignette?.kind === 'acorn_drop' && <AcornDropCameo key={activeVignette.id} />}
           {activeVignette?.kind === 'fireflies' && <FireflyDance key={activeVignette.id} />}
+          {activeVignette?.kind === 'owl_flight' && <OwlNightFlight key={activeVignette.id} />}
 
           {/* 5. Acorn-Cap String Lanterns Across Left Roots */}
           <g className={windy ? 'wd-garland-windy' : 'wd-garland'}>
@@ -895,6 +952,9 @@ export const WoodlandStage = React.memo(function WoodlandStage({
             handleCritterTap(e, () => {
               setHoot(true)
               setTimeout(() => setHoot(false), 950)
+              if (!isStatic && !mood.wet && !snowy && mood.owl === 'awake' && activeVignetteRef.current === null) {
+                launchVignette('owl_flight')
+              }
               popToast(mood.owl === 'sleeping' ? '🦉 *sleepy hoo-hoo...*' : '🦉 Hoo-hoo!')
             })
           }

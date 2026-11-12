@@ -78,11 +78,14 @@ export function WoodlandOwl({
   mode,
   snowy,
   hoot,
+  hideOwl = false,
 }: {
   mode: 'sleeping' | 'awake'
   snowy: boolean
   hoot: boolean
+  hideOwl?: boolean
 }) {
+  if (hideOwl) return null
   const awake = mode === 'awake' || hoot
   return (
     <g transform="translate(238, 174)">
@@ -160,12 +163,14 @@ export function HollowScene({
   frosty,
   windy,
   excited,
+  hideSquirrel = false,
 }: {
   mode: 'sleeping' | 'umbrella' | 'cozy' | 'foraging'
   acornCount: number
   frosty: boolean
   windy: boolean
   excited: boolean
+  hideSquirrel?: boolean
 }) {
   const visibleAcorns = ACORN_SLOTS.slice(0, Math.max(4, Math.min(ACORN_SLOTS.length, acornCount)))
 
@@ -188,8 +193,8 @@ export function HollowScene({
         ))}
       </g>
 
-      {/* Squirrel state */}
-      {mode === 'sleeping' ? (
+      {/* Squirrel state (hidden while squirrel is out foraging or being chased) */}
+      {hideSquirrel ? null : mode === 'sleeping' ? (
         <g transform="translate(0, 6)">
           <g className="wd-breathe" style={{ transformOrigin: '0px 10px' }}>
             {/* Two squirrels curled cozy inside the hollow */}
@@ -279,12 +284,19 @@ export function ScamperingSquirrel() {
   )
 }
 
-/** Red-crested woodpecker cameo on the right oak trunk during dry daytime/dawn. */
+/** Red-crested woodpecker that flies in to the right oak trunk, pecks, and flies back out. */
 export function WoodpeckerCameo() {
   return (
-    <g transform="translate(1772, 468)">
+    <g className="wd-woodpecker-flight">
       <g className="wd-peck" style={{ transformOrigin: '8px 18px' }}>
         <path d="M12,18 L24,34 L16,34 L6,18 Z" fill="#1e293b" />
+        {/* Flapping wing during flight */}
+        <path
+          d="M6,-2 C22,-18 32,-12 20,8 Z"
+          fill="#334155"
+          className="wd-pecker-wings"
+          style={{ transformOrigin: '8px 2px' }}
+        />
         <ellipse cx="6" cy="4" rx="10" ry="16" fill="#1e293b" />
         <ellipse cx="2" cy="6" rx="6" ry="11" fill="#f8fafc" />
         <circle cx="3" cy="-12" r="8" fill="#1e293b" />
@@ -292,8 +304,8 @@ export function WoodpeckerCameo() {
         <polygon points="-4,-13 -15,-11 -4,-9" fill="#94a3b8" />
         <circle cx="1" cy="-13" r="1.8" fill="#fef08a" />
       </g>
-      {/* Tiny bark tap lines */}
-      <g stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round" opacity="0.8">
+      {/* Tiny bark tap lines (visible only while perched and pecking) */}
+      <g className="wd-peck-sparks" stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round">
         <line x1="-18" y1="-18" x2="-24" y2="-22" />
         <line x1="-19" y1="-11" x2="-26" y2="-11" />
       </g>
@@ -715,6 +727,43 @@ export function FireflyDance() {
           <circle cx="0" cy="0" r="2.8" fill="#fef9c3" />
         </g>
       ))}
+    </g>
+  )
+}
+
+/** Night/dusk barred owl taking a silent swoop across the moonlit sky and returning to its oak bough. */
+export function OwlNightFlight() {
+  return (
+    <g className="wd-owl-flight">
+      {/* Wide barred wings */}
+      <path
+        d="M-12,6 C-46,-16 -64,-4 -54,18 C-40,22 -22,18 -10,14 Z"
+        fill="#573c28"
+        className="wd-owl-wing-l"
+        style={{ transformOrigin: '-10px 8px' }}
+      />
+      <path
+        d="M12,6 C46,-16 64,-4 54,18 C40,22 22,18 10,14 Z"
+        fill="#573c28"
+        className="wd-owl-wing-r"
+        style={{ transformOrigin: '10px 8px' }}
+      />
+      {/* Plump body & chest */}
+      <ellipse cx="0" cy="14" rx="19" ry="23" fill="#6e4e37" />
+      <ellipse cx="0" cy="17" rx="12.5" ry="16" fill="#e6d7be" />
+      {/* Head & glowing amber eyes */}
+      <polygon points="-14,-12 -19,-23 -7,-15" fill="#573c28" />
+      <polygon points="14,-12 19,-23 7,-15" fill="#573c28" />
+      <ellipse cx="0" cy="-5" rx="16" ry="13.5" fill="#78563c" />
+      <circle cx="-6.8" cy="-5" r="7.5" fill="#f5ead6" />
+      <circle cx="6.8" cy="-5" r="7.5" fill="#f5ead6" />
+      <circle cx="-6.8" cy="-5" r="4.4" fill="#1c1917" />
+      <circle cx="6.8" cy="-5" r="4.4" fill="#1c1917" />
+      <circle cx="-6.8" cy="-5" r="4.2" fill="none" stroke="#f59e0b" strokeWidth="1.3" />
+      <circle cx="6.8" cy="-5" r="4.2" fill="none" stroke="#f59e0b" strokeWidth="1.3" />
+      <circle cx="-5.4" cy="-6.6" r="1.4" fill="#fffbeb" />
+      <circle cx="8.2" cy="-6.6" r="1.4" fill="#fffbeb" />
+      <polygon points="0,-2 -3.5,3.5 3.5,3.5" fill="#d97706" />
     </g>
   )
 }
