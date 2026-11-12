@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { autumnVisits } from '../../lib/autumnAmbience'
 import { playBalloonPopSound } from '../../lib/useAudioChime'
 import { getQueryParam } from '../sky/queryParam'
 import type { SkyKind, SkyPhase } from '../sky/skyEngine'
@@ -373,7 +372,7 @@ export const WoodlandStage = React.memo(function WoodlandStage({
   const acornCount = hollowAcornCount(date)
   const sleeps = daysUntilThanksgiving(date)
   const tgDay = isThanksgivingDay(date)
-  const isStatic = paused || quality === 'low'
+  const isStatic = paused
 
   // Periodic ambient woodland cameos (squirrel sortie, fox chase, bunny, woodpecker, acorn drop, fireflies, turkey)
   const [climberRun, setClimberRun] = useState<number | null>(null)
@@ -381,35 +380,43 @@ export const WoodlandStage = React.memo(function WoodlandStage({
     kind: WoodlandVignette
     id: number
   } | null>(null)
+  const activeVignetteRef = useRef<WoodlandVignette | null>(null)
   const lastVignetteRef = useRef<WoodlandVignette | null>(null)
+  const clearVignetteTimer = useRef<ReturnType<typeof setTimeout>>()
   const [turkeyOut, setTurkeyOut] = useState<boolean>(() => tgDay || getQueryParam('woodland') === 'turkey')
 
   useEffect(() => {
     setTurkeyOut(tgDay || getQueryParam('woodland') === 'turkey')
   }, [tgDay])
 
+  const launchVignette = useCallback((v: WoodlandVignette) => {
+    const duration = VIGNETTE_DURATIONS_MS[v]
+    lastVignetteRef.current = v
+    activeVignetteRef.current = v
+    setActiveVignette({ kind: v, id: Date.now() })
+    clearTimeout(clearVignetteTimer.current)
+    clearVignetteTimer.current = setTimeout(() => {
+      activeVignetteRef.current = null
+      setActiveVignette(null)
+    }, duration)
+  }, [])
+
   useEffect(() => {
     if (isStatic) {
       setClimberRun(null)
+      activeVignetteRef.current = null
       setActiveVignette(null)
+      clearTimeout(clearVignetteTimer.current)
       return
     }
     const forced = getQueryParam('woodland')
     let forcedTimer: ReturnType<typeof setTimeout> | undefined
-    let clearTimer: ReturnType<typeof setTimeout> | undefined
-
-    const launch = (v: WoodlandVignette) => {
-      const duration = VIGNETTE_DURATIONS_MS[v]
-      lastVignetteRef.current = v
-      setActiveVignette({ kind: v, id: Date.now() })
-      clearTimeout(clearTimer)
-      clearTimer = setTimeout(() => setActiveVignette(null), duration)
-    }
+    let clearClimb: ReturnType<typeof setTimeout> | undefined
 
     if (forced === 'climb') {
       forcedTimer = setTimeout(() => {
         setClimberRun(Date.now())
-        clearTimer = setTimeout(() => setClimberRun(null), 8_600)
+        clearClimb = setTimeout(() => setClimberRun(null), 8_600)
       }, 600)
     } else if (
       forced === 'chase' ||
@@ -419,29 +426,31 @@ export const WoodlandStage = React.memo(function WoodlandStage({
       forced === 'acorn_drop' ||
       forced === 'fireflies'
     ) {
-      forcedTimer = setTimeout(() => launch(forced), 600)
+      forcedTimer = setTimeout(() => launchVignette(forced), 600)
     }
 
-    const triggerNext = () => {
-      if (document.hidden) return
-      const picked = pickWoodlandVignette(phase, kind, lastVignetteRef.current)
+    const triggerNext = (preferFirst = false) => {
+      if (document.hidden || activeVignetteRef.current !== null) return
+      const picked = preferFirst
+        ? pickWoodlandVignette(phase, kind, 'acorn_drop', () => 0)
+        : pickWoodlandVignette(phase, kind, lastVignetteRef.current)
       if (!picked) return
-      const duration = VIGNETTE_DURATIONS_MS[picked]
-      if (autumnVisits.claim(performance.now(), duration)) {
-        launch(picked)
-      }
+      launchVignette(picked)
     }
 
-    const firstCheck = setTimeout(triggerNext, 12_000)
-    const vignetteLoop = setInterval(triggerNext, 22_000)
+    // Show the first woodland cameo shortly after opening (3.5s) so it's easy to spot,
+    // then cycle another cameo every 26 seconds without being blocked by sky geese.
+    const firstCheck = setTimeout(() => triggerNext(true), 3_500)
+    const vignetteLoop = setInterval(() => triggerNext(false), 26_000)
 
     return () => {
       clearTimeout(forcedTimer)
-      clearTimeout(clearTimer)
+      clearTimeout(clearClimb)
+      clearTimeout(clearVignetteTimer.current)
       clearTimeout(firstCheck)
       clearInterval(vignetteLoop)
     }
-  }, [isStatic, kind, phase])
+  }, [isStatic, kind, phase, launchVignette])
 
   // Thanksgiving week: let the pilgrim-hat turkey peek out periodically (always out on Thanksgiving Day)
   useEffect(() => {
@@ -901,6 +910,9 @@ export const WoodlandStage = React.memo(function WoodlandStage({
             handleCritterTap(e, () => {
               setSquirrelExcited(true)
               setTimeout(() => setSquirrelExcited(false), 900)
+              if (!isStatic && !mood.wet && !snowy && phase !== 'night' && activeVignetteRef.current === null) {
+                launchVignette('sortie')
+              }
               popToast(`🌰 ${acornCount} acorns stored for winter!`)
             })
           }
@@ -916,6 +928,9 @@ export const WoodlandStage = React.memo(function WoodlandStage({
             handleCritterTap(e, () => {
               setFoxWagged(true)
               setTimeout(() => setFoxWagged(false), 1_600)
+              if (!isStatic && !mood.wet && !snowy && (phase === 'day' || phase === 'dawn') && activeVignetteRef.current === null) {
+                launchVignette('chase')
+              }
               popToast(mood.fox === 'curled' ? '🦊 Cozy & warm in the den!' : '🦊 *happy woodland yip!*')
             })
           }
