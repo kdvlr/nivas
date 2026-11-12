@@ -4,18 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chore Canyon Stunt Jump</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Inter:wght@600;800&display=swap" rel="stylesheet">
     <style>
+        * {
+            box-sizing: border-box;
+        }
         body {
             margin: 0;
             overflow: hidden;
             background-color: #0f172a;
-            font-family: 'Inter', sans-serif;
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
             user-select: none;
         }
         .stunt-font {
-            font-family: 'Bangers', cursive;
+            font-family: 'Impact', 'Arial Black', 'Avenir Next Condensed', system-ui, sans-serif;
+            font-style: italic;
+            font-weight: 900;
             letter-spacing: 0.06em;
         }
         #canvas-container {
@@ -32,6 +35,44 @@
             display: block;
             width: 100%;
             height: 100%;
+        }
+        #victoryBanner {
+            position: fixed;
+            top: 20%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            opacity: 0;
+            z-index: 30;
+            width: auto;
+            max-width: 520px;
+            text-align: center;
+        }
+        .victory-card {
+            position: relative;
+            background: linear-gradient(180deg, #1e3a8a 0%, #1e40af 52%, #0f172a 100%);
+            border: 4px solid #ffffff;
+            border-radius: 16px;
+            padding: 16px 32px;
+            box-shadow: 0 15px 45px rgba(0, 0, 0, 0.85);
+            overflow: hidden;
+        }
+        .victory-stripe-top,
+        .victory-stripe-bottom {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 8px;
+            background: linear-gradient(90deg, #dc2626 0%, #ffffff 50%, #dc2626 100%);
+        }
+        .victory-stripe-top { top: 0; }
+        .victory-stripe-bottom { bottom: 0; }
+        .victory-title {
+            font-size: clamp(1.85rem, 4.2vw, 3.1rem);
+            color: #ffffff;
+            text-shadow: 0 4px 0 #dc2626;
+            white-space: nowrap;
+            margin: 4px 0;
         }
         /* Banner Slam Animation */
         @keyframes bannerSlam {
@@ -63,13 +104,11 @@
     <canvas id="stuntCanvas"></canvas>
 
     <!-- Victory Banner Modal (Appears at ~5.05s on touchdown) -->
-    <div id="victoryBanner" class="fixed top-[20%] left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-0 z-30 w-auto max-w-md text-center">
-        <div class="relative bg-gradient-to-b from-blue-900 via-blue-800 to-slate-900 border-4 border-white rounded-2xl px-6 py-3 sm:px-8 sm:py-4 shadow-[0_15px_45px_rgba(0,0,0,0.85)] overflow-hidden">
-            <!-- Red & White Retro Stripes Accent -->
-            <div class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-red-600 via-white to-red-600"></div>
-            <div class="absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-r from-red-600 via-white to-red-600"></div>
-
-            <h1 class="stunt-font text-3xl sm:text-5xl text-white drop-shadow-[0_4px_0_#dc2626] tracking-wider whitespace-nowrap my-1">
+    <div id="victoryBanner">
+        <div class="victory-card">
+            <div class="victory-stripe-top"></div>
+            <div class="victory-stripe-bottom"></div>
+            <h1 class="stunt-font victory-title">
                 CHORES CONQUERED!
             </h1>
         </div>

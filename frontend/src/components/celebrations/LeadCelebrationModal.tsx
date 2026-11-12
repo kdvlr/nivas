@@ -1,6 +1,10 @@
 import React, { useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import confetti from 'canvas-confetti'
+import {
+  IS_TABLET_KIOSK,
+  fireTabletConfetti,
+  resetTabletConfetti,
+} from '../../lib/confettiEngine'
 import Avatar from '../Avatar'
 
 interface LeadCelebrationModalProps {
@@ -57,16 +61,16 @@ export default function LeadCelebrationModal({
       )
     } catch {}
 
-    // 1. Trigger celebratory side cannons with canvas-confetti
+    // 1. Trigger celebratory side cannons on OffscreenCanvas Web Worker
     try {
-      confetti({
+      fireTabletConfetti({
         particleCount: 70,
         spread: 80,
         origin: { x: 0.15, y: 0.75 },
         colors: ['#f59e0b', '#fbbf24', '#ef4444', '#3b82f6', '#ffffff'],
         zIndex: 160,
       })
-      confetti({
+      fireTabletConfetti({
         particleCount: 70,
         spread: 80,
         origin: { x: 0.85, y: 0.75 },
@@ -78,7 +82,7 @@ export default function LeadCelebrationModal({
     // Additional confetti burst after 1.5s
     const secondBurst = setTimeout(() => {
       try {
-        confetti({
+        fireTabletConfetti({
           particleCount: 90,
           spread: 100,
           origin: { x: 0.5, y: 0.35 },
@@ -103,22 +107,27 @@ export default function LeadCelebrationModal({
     if (!ctx) return
 
     let animId = 0
+    let running = true
     let lastTime = performance.now()
     const sparks: Spark[] = []
     const rockets: Spark[] = []
     let nextRocket = 0
+    let W = window.innerWidth
+    let H = window.innerHeight
 
     const resize = () => {
-      canvas.width = window.innerWidth
-      canvas.height = window.innerHeight
+      W = window.innerWidth
+      H = window.innerHeight
+      canvas.width = W
+      canvas.height = H
     }
     resize()
     window.addEventListener('resize', resize)
 
+    const sparkBurstCount = IS_TABLET_KIOSK ? 34 : 55
     const explode = (x: number, y: number, hueColor: string) => {
-      const count = 55
-      for (let i = 0; i < count; i++) {
-        const angle = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.1
+      for (let i = 0; i < sparkBurstCount; i++) {
+        const angle = (i / sparkBurstCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.1
         const speed = 100 + Math.random() * 280
         sparks.push({
           x,
@@ -134,23 +143,24 @@ export default function LeadCelebrationModal({
     }
 
     const tick = (now: number) => {
+      if (!running) return
       const dt = Math.min((now - lastTime) / 1000, 0.05)
       lastTime = now
 
       // Semi-transparent background clear for spark motion trails
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.18)'
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'
+      ctx.fillRect(0, 0, W, H)
 
       // Launch rockets periodically
       const elapsed = now / 1000
       if (elapsed >= nextRocket) {
-        nextRocket = elapsed + 0.3 + Math.random() * 0.4
-        const targetX = canvas.width * (0.15 + Math.random() * 0.7)
+        nextRocket = elapsed + 0.34 + Math.random() * 0.42
+        const targetX = W * (0.15 + Math.random() * 0.7)
         rockets.push({
           x: targetX,
-          y: canvas.height,
+          y: H,
           vx: (Math.random() - 0.5) * 50,
-          vy: -(canvas.height * (0.55 + Math.random() * 0.25)),
+          vy: -(H * (0.55 + Math.random() * 0.25)),
           life: 0,
           maxLife: 0.65 + Math.random() * 0.3,
           color: FIREWORK_COLORS[Math.floor(Math.random() * FIREWORK_COLORS.length)],
@@ -166,13 +176,11 @@ export default function LeadCelebrationModal({
         r.y += r.vy * dt
         r.vy += 220 * dt // gravity
 
-        // Draw rocket head
         ctx.fillStyle = r.color
         ctx.beginPath()
         ctx.arc(r.x, r.y, r.size, 0, Math.PI * 2)
         ctx.fill()
 
-        // Draw rocket spark tail
         ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'
         ctx.fillRect(r.x - 1, r.y + 4, 2, 8)
 
@@ -196,9 +204,8 @@ export default function LeadCelebrationModal({
 
         ctx.fillStyle = s.color
         ctx.globalAlpha = alpha
-        ctx.beginPath()
-        ctx.arc(s.x, s.y, s.size * (1 - progress * 0.4), 0, Math.PI * 2)
-        ctx.fill()
+        const sz = s.size * (1 - progress * 0.4) * 1.75
+        ctx.fillRect(s.x - sz * 0.5, s.y - sz * 0.5, sz, sz)
         ctx.globalAlpha = 1.0
 
         if (s.life >= s.maxLife) {
@@ -209,13 +216,25 @@ export default function LeadCelebrationModal({
       animId = requestAnimationFrame(tick)
     }
 
+    const onVisibility = () => {
+      if (document.hidden) {
+        cancelAnimationFrame(animId)
+      } else if (running) {
+        lastTime = performance.now()
+        animId = requestAnimationFrame(tick)
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibility)
     animId = requestAnimationFrame(tick)
 
     return () => {
+      running = false
+      document.removeEventListener('visibilitychange', onVisibility)
       cancelAnimationFrame(animId)
       window.removeEventListener('resize', resize)
       timersRef.current.forEach(clearTimeout)
       timersRef.current = []
+      resetTabletConfetti()
     }
   }, [isOpen, onClose])
 
@@ -230,7 +249,11 @@ export default function LeadCelebrationModal({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.25 }}
-          className="fixed inset-0 z-[150] flex flex-col items-center justify-center pointer-events-auto select-none bg-black/80 backdrop-blur-md overflow-hidden cursor-pointer"
+          className="fixed inset-0 z-[150] flex flex-col items-center justify-center pointer-events-auto select-none overflow-hidden cursor-pointer"
+          style={{
+            background:
+              'radial-gradient(circle at 50% 42%, rgba(56, 30, 6, 0.94) 0%, rgba(14, 11, 8, 0.96) 65%, rgba(4, 4, 7, 0.98) 100%)',
+          }}
           onClick={onClose}
         >
           {/* Fullscreen fireworks canvas */}
@@ -270,16 +293,20 @@ export default function LeadCelebrationModal({
               </svg>
             </div>
 
+            {/* Compositor-only pulsing golden halo (zero per-frame drop-shadow filter on Mali-G52) */}
+            <motion.div
+              className="pointer-events-none absolute w-[280px] h-[280px] rounded-full"
+              style={{
+                background:
+                  'radial-gradient(circle, rgba(250, 204, 21, 0.62) 0%, rgba(245, 158, 11, 0.26) 46%, rgba(245, 158, 11, 0) 72%)',
+              }}
+              animate={{ scale: [0.92, 1.2, 0.92], opacity: [0.65, 1, 0.65] }}
+              transition={{ repeat: Infinity, duration: 1.4, ease: 'easeInOut' }}
+            />
+
             {/* Glowing Medal Structure */}
             <motion.div
-              animate={{
-                scale: [1, 1.1, 1],
-                filter: [
-                  'drop-shadow(0 0 25px rgba(250,204,21,0.75))',
-                  'drop-shadow(0 0 50px rgba(251,191,36,0.95))',
-                  'drop-shadow(0 0 25px rgba(250,204,21,0.75))',
-                ],
-              }}
+              animate={{ scale: [1, 1.1, 1] }}
               transition={{ repeat: Infinity, duration: 1.4, ease: 'easeInOut' }}
             >
               <svg width="200" height="230" viewBox="0 0 200 230" className="overflow-visible">
@@ -393,7 +420,7 @@ export default function LeadCelebrationModal({
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2, duration: 0.4 }}
-            className="flex items-center gap-2.5 px-5 py-2 rounded-full bg-white/15 backdrop-blur-md border border-white/25 mt-4 shadow-lg"
+            className="flex items-center gap-2.5 px-5 py-2 rounded-full bg-stone-900/85 border border-amber-300/35 mt-4 shadow-lg"
           >
             {avatar || avatarEmoji ? (
               <Avatar name={personName} color={color} src={avatar} emoji={avatarEmoji} size={32} />
@@ -407,7 +434,7 @@ export default function LeadCelebrationModal({
           <motion.h1
             animate={{ scale: [1, 1.04, 1] }}
             transition={{ repeat: Infinity, duration: 1.2, ease: 'easeInOut' }}
-            className="mt-3 text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-100 to-amber-400 drop-shadow-[0_4px_16px_rgba(234,179,8,0.7)]"
+            className="mt-3 text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-100 to-amber-400"
           >
             {isSelf ? "YOU'RE IN THE LEAD!" : `${personName.toUpperCase()} IS IN THE LEAD!`}
           </motion.h1>

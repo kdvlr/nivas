@@ -19,7 +19,12 @@
  * - High-DPI retina rendering support.
  */
 
+import { getOptimalDpr } from '../../lib/confettiEngine'
+import type { RiveSceneConfig } from './RiveCelebrationStage'
+import { playCoyoteNopeCue } from './riveAudio'
+
 export type PinFailName =
+  | 'rive-coyote'
   | 'gandalf'
   | 'alarm'
   | 'guarddog'
@@ -39,7 +44,8 @@ export interface PinFailAnimation {
   taunts: string[]
   durationMs?: number
   hideHtmlTaunt?: boolean
-  run: (canvas: HTMLCanvasElement) => () => void
+  riveConfig?: RiveSceneConfig
+  run?: (canvas: HTMLCanvasElement) => () => void
 }
 
 // =============================================================================
@@ -81,7 +87,7 @@ function roundRect(
 function setupCanvas(canvas: HTMLCanvasElement) {
   let W = canvas.clientWidth || window.innerWidth
   let H = canvas.clientHeight || window.innerHeight
-  const dpr = Math.min(window.devicePixelRatio || 1, 2)
+  const dpr = getOptimalDpr()
   canvas.width = Math.round(W * dpr)
   canvas.height = Math.round(H * dpr)
 
@@ -984,6 +990,23 @@ const vaultRun = (canvas: HTMLCanvasElement) => {
 // =============================================================================
 
 export const PIN_FAIL_ANIMATIONS: PinFailAnimation[] = [
+  {
+    name: 'rive-coyote',
+    emoji: '🐺',
+    label: 'Unimpressed Coyote',
+    backdrop: 'radial-gradient(circle at 50% 55%, #57534e 0%, #292524 62%, #0c0a09 100%)',
+    taunts: ['Coyote is NOT impressed.', 'Wrong PIN, Road Runner!', 'Nice try, super-genius!'],
+    durationMs: 4200,
+    riveConfig: {
+      src: '/celebrations/rive/coyote.riv',
+      artboard: 'DEMO',
+      stateMachine: 'Coyote',
+      fit: 'cover',
+      stageClassName:
+        'relative z-10 mt-14 h-[72vh] w-[72vh] max-w-[720px] max-h-[720px] rounded-[40px] overflow-hidden ring-4 ring-amber-200/35 shadow-2xl flex items-center justify-center',
+      onStartSound: playCoyoteNopeCue,
+    },
+  },
   {
     name: 'gandalf',
     emoji: '🧙',

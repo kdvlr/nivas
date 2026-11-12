@@ -11,6 +11,8 @@
  *    "CHORES ARE BLOWN AWAY!"
  */
 
+import { getOptimalDpr } from '../../lib/confettiEngine'
+
 export const V_W = 1280
 export const V_H = 720
 export const TOTAL_DURATION = 7.5
@@ -882,7 +884,7 @@ export const balloonCannonRun = (canvas: HTMLCanvasElement): (() => void) => {
   let offsetY = 0
 
   const updateSize = () => {
-    const dpr = window.devicePixelRatio || 1
+    const dpr = getOptimalDpr()
     const cw = canvas.clientWidth || window.innerWidth
     const ch = canvas.clientHeight || window.innerHeight
     targetW = Math.floor(cw * dpr)

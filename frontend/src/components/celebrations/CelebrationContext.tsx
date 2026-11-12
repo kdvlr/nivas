@@ -7,8 +7,12 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { resetTabletConfetti } from '../../lib/confettiEngine'
 import { CELEBRATIONS, type Celebration, type CelebrationName } from './animations'
-import { runSadAnimation, type SadAnimationOptions, type SadAnimationName } from './sad-animations'
+import RiveCelebrationStage from './RiveCelebrationStage'
+import { prewarmRiveRuntime } from './riveRuntime'
+import { runSadAnimation, type SadAnimationName, type SadAnimationOptions } from './sad-animations'
+import StoryboardStage, { prewarmStoryboards } from './StoryboardStage'
 
 const DURATION_MS = 3800
 
@@ -25,9 +29,20 @@ const CelebrationContext = createContext<Ctx>({ celebrate: () => {}, celebrateSa
 
 export const useCelebration = () => useContext(CelebrationContext)
 
+function getSoundFlag(): '1' | '0' {
+  try {
+    return typeof window !== 'undefined' && localStorage.getItem('nivas_celebration_sound') === 'true'
+      ? '1'
+      : '0'
+  } catch {
+    return '0'
+  }
+}
+
 export function CelebrationProvider({ children }: { children: ReactNode }) {
   const [active, setActive] = useState<Celebration | null>(null)
   const [sadOptions, setSadOptions] = useState<SadAnimationOptions | null>(null)
+  const [runId, setRunId] = useState(0)
   const [praise, setPraise] = useState('')
   const [fading, setFading] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -41,6 +56,11 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
 
   const COOLDOWN_MS = 2 * 60 * 1000 // 2-minute non-repeat cooldown
 
+  useEffect(() => {
+    prewarmRiveRuntime()
+    prewarmStoryboards()
+  }, [])
+
   const stop = useCallback((suppressDurationMs = 0) => {
     if (suppressDurationMs > 0) {
       suppressedUntilRef.current = Date.now() + suppressDurationMs
@@ -49,6 +69,7 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
     timersRef.current = []
     cleanupRef.current?.()
     cleanupRef.current = null
+    resetTabletConfetti()
     setActive(null)
     setSadOptions(null)
     setFading(false)
@@ -65,11 +86,9 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
       if (name) {
         pool = CELEBRATIONS.filter((c) => c.name === name)
       } else {
-        // Exclude animations played within the last 2 minutes
         let eligible = CELEBRATIONS.filter(
           (c) => now - (historyRef.current.get(c.name) || 0) >= COOLDOWN_MS,
         )
-        // If all or most animations were played recently, fallback to avoiding consecutive repeats
         if (eligible.length === 0 && lastRef.current && CELEBRATIONS.length > 1) {
           eligible = CELEBRATIONS.filter((c) => c.name !== lastRef.current)
         }
@@ -80,6 +99,7 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
       const chosen = pool[Math.floor(Math.random() * pool.length)]
       lastRef.current = chosen.name
       historyRef.current.set(chosen.name, now)
+      setRunId((id) => id + 1)
       setPraise(chosen.praise[Math.floor(Math.random() * chosen.praise.length)])
       setActive(chosen)
     },
@@ -93,15 +113,19 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
       }
       stop()
       const now = Date.now()
-      const penaltyPool: SadAnimationName[] = ['icecream', 'balance-beam', 'bicycle-rain', 'trick-or-treat', 'banana-monkey']
+      const penaltyPool: SadAnimationName[] = [
+        'icecream',
+        'balance-beam',
+        'bicycle-rain',
+        'trick-or-treat',
+        'banana-monkey',
+      ]
       let chosenAnim = options?.animation
 
       if (!chosenAnim) {
-        // Exclude penalties played within the 2-minute cooldown window
         let eligible = penaltyPool.filter(
           (p) => now - (sadHistoryRef.current.get(p) || 0) >= COOLDOWN_MS,
         )
-        // With only 2 animations, if both have been played in 2 mins, alternate (no back-to-back repeats)
         if (eligible.length === 0 && lastSadRef.current && penaltyPool.length > 1) {
           eligible = penaltyPool.filter((p) => p !== lastSadRef.current)
         }
@@ -113,6 +137,7 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
 
       lastSadRef.current = chosenAnim
       sadHistoryRef.current.set(chosenAnim, now)
+      setRunId((id) => id + 1)
 
       setSadOptions({
         ...options,
@@ -146,7 +171,7 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
       cleanupRef.current?.()
       cleanupRef.current = null
     }
-  }, [active, stop])
+  }, [active, runId, stop])
 
   useEffect(() => {
     if (!sadOptions) return
@@ -171,7 +196,9 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
       cleanupRef.current?.()
       cleanupRef.current = null
     }
-  }, [sadOptions, stop])
+  }, [sadOptions, runId, stop])
+
+  const soundFlag = active || sadOptions ? getSoundFlag() : '0'
 
   return (
     <CelebrationContext.Provider value={{ celebrate, celebrateSad, stop }}>
@@ -186,67 +213,51 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
           }}
           onClick={() => stop()}
         >
-          {active?.iframeSrc ? (
-            <iframe
-              key={active.name}
-              src={`${active.iframeSrc}${active.iframeSrc.includes('?') ? '&' : '?'}sound=${
-                typeof window !== 'undefined' && localStorage.getItem('nivas_celebration_sound') === 'true' ? '1' : '0'
-              }`}
+          {active?.riveConfig ? (
+            <RiveCelebrationStage key={`rive-${active.name}-${runId}`} config={active.riveConfig} />
+          ) : active?.iframeSrc ? (
+            <StoryboardStage
+              key={`story-${active.name}-${runId}`}
+              url={`${active.iframeSrc}${active.iframeSrc.includes('?') ? '&' : '?'}sound=${soundFlag}`}
               title={active.label}
-              className="pointer-events-none h-full w-full border-0"
             />
           ) : sadOptions && sadOptions.animation === 'balance-beam' ? (
-            <iframe
-              key={`sad-beam-${Date.now()}`}
-              src={`/celebrations/balance_beam_oops.html?embed=1&points=${Math.abs(sadOptions.coinsLost ?? 10)}&sound=${
-                typeof window !== 'undefined' && localStorage.getItem('nivas_celebration_sound') === 'true' ? '1' : '0'
-              }`}
+            <StoryboardStage
+              key={`sad-beam-${runId}`}
+              url={`/celebrations/balance_beam_oops.html?embed=1&points=${Math.abs(sadOptions.coinsLost ?? 10)}&sound=${soundFlag}`}
               title="Balance Beam Oops"
-              className="pointer-events-none h-full w-full border-0"
             />
           ) : sadOptions && sadOptions.animation === 'bicycle-rain' ? (
-            <iframe
-              key={`sad-bike-${Date.now()}`}
-              src={`/celebrations/bicycle_park_rain.html?embed=1&points=${Math.abs(sadOptions.coinsLost ?? 10)}&sound=${
-                typeof window !== 'undefined' && localStorage.getItem('nivas_celebration_sound') === 'true' ? '1' : '0'
-              }`}
+            <StoryboardStage
+              key={`sad-bike-${runId}`}
+              url={`/celebrations/bicycle_park_rain.html?embed=1&points=${Math.abs(sadOptions.coinsLost ?? 10)}&sound=${soundFlag}`}
               title="Bicycle Rain Tragedy"
-              className="pointer-events-none h-full w-full border-0"
             />
           ) : sadOptions && sadOptions.animation === 'trick-or-treat' ? (
-            <iframe
-              key={`sad-halloween-${Date.now()}`}
-              src={`/celebrations/trick_or_treat_penalty.html?embed=1&coins=${Math.abs(sadOptions.coinsLost ?? 25)}&points=${Math.abs(sadOptions.coinsLost ?? 25)}&sound=${
-                typeof window !== 'undefined' && localStorage.getItem('nivas_celebration_sound') === 'true' ? '1' : '0'
-              }`}
+            <StoryboardStage
+              key={`sad-halloween-${runId}`}
+              url={`/celebrations/trick_or_treat_penalty.html?embed=1&coins=${Math.abs(sadOptions.coinsLost ?? 25)}&points=${Math.abs(sadOptions.coinsLost ?? 25)}&sound=${soundFlag}`}
               title="Trick or Treat Fright"
-              className="pointer-events-none h-full w-full border-0"
             />
           ) : sadOptions && sadOptions.animation === 'banana-monkey' ? (
-            <iframe
-              key={`sad-banana-${Date.now()}`}
-              src={`/celebrations/banana_peel_monkey.html?embed=1&points=${Math.abs(sadOptions.coinsLost ?? 10)}&sound=${
-                typeof window !== 'undefined' && localStorage.getItem('nivas_celebration_sound') === 'true' ? '1' : '0'
-              }`}
+            <StoryboardStage
+              key={`sad-banana-${runId}`}
+              url={`/celebrations/banana_peel_monkey.html?embed=1&points=${Math.abs(sadOptions.coinsLost ?? 10)}&sound=${soundFlag}`}
               title="Banana Peel & Cheeky Monkey"
-              className="pointer-events-none h-full w-full border-0"
             />
           ) : sadOptions && sadOptions.animation !== 'storm' ? (
-            <iframe
-              key={`sad-icecream-${Date.now()}`}
-              src={`/celebrations/ice_cream_tragedy.html?embed=1&points=${Math.abs(sadOptions.coinsLost ?? 10)}&sound=${
-                typeof window !== 'undefined' && localStorage.getItem('nivas_celebration_sound') === 'true' ? '1' : '0'
-              }`}
+            <StoryboardStage
+              key={`sad-icecream-${runId}`}
+              url={`/celebrations/ice_cream_tragedy.html?embed=1&points=${Math.abs(sadOptions.coinsLost ?? 10)}&sound=${soundFlag}`}
               title="Ice Cream Tragedy"
-              className="pointer-events-none h-full w-full border-0"
             />
           ) : (
             <canvas ref={canvasRef} className="h-full w-full" />
           )}
-          {active && !active.durationMs && !active.hideHtmlPraise && (
-            <div className="pointer-events-none absolute inset-x-0 top-[12%] text-center">
+          {active && !active.hideHtmlPraise && (
+            <div className="pointer-events-none absolute inset-x-0 top-[9%] z-20 px-4 text-center">
               <span
-                className="inline-block animate-bounce text-7xl font-black tracking-tight text-white"
+                className="inline-block animate-bounce text-5xl sm:text-7xl font-black tracking-tight text-white"
                 style={{ textShadow: '0 4px 24px rgba(0,0,0,0.45)' }}
               >
                 {praise}

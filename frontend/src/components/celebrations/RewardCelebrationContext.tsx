@@ -7,7 +7,10 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { resetTabletConfetti } from '../../lib/confettiEngine'
 import { REWARD_ANIMATIONS, type RewardAnimation, type RewardAnimationName } from './reward-animations'
+import RiveCelebrationStage from './RiveCelebrationStage'
+import StoryboardStage from './StoryboardStage'
 
 const DURATION_MS = 4800
 
@@ -24,6 +27,7 @@ export const useRewardCelebration = () => useContext(RewardCelebrationContext)
 
 export function RewardCelebrationProvider({ children }: { children: ReactNode }) {
   const [active, setActive] = useState<RewardAnimation | null>(null)
+  const [runId, setRunId] = useState(0)
   const [praise, setPraise] = useState('')
   const [fading, setFading] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -43,6 +47,7 @@ export function RewardCelebrationProvider({ children }: { children: ReactNode })
     timersRef.current = []
     cleanupRef.current?.()
     cleanupRef.current = null
+    resetTabletConfetti()
     setActive(null)
     setFading(false)
   }, [])
@@ -58,11 +63,9 @@ export function RewardCelebrationProvider({ children }: { children: ReactNode })
       if (name) {
         pool = REWARD_ANIMATIONS.filter((a) => a.name === name)
       } else {
-        // Exclude reward animations played within the last 2 minutes
         let eligible = REWARD_ANIMATIONS.filter(
           (a) => now - (historyRef.current.get(a.name) || 0) >= COOLDOWN_MS,
         )
-        // Fallback if all were played within 2 minutes: avoid consecutive duplicate
         if (eligible.length === 0 && lastRef.current && REWARD_ANIMATIONS.length > 1) {
           eligible = REWARD_ANIMATIONS.filter((a) => a.name !== lastRef.current)
         }
@@ -73,6 +76,7 @@ export function RewardCelebrationProvider({ children }: { children: ReactNode })
       const chosen = pool[Math.floor(Math.random() * pool.length)]
       lastRef.current = chosen.name
       historyRef.current.set(chosen.name, now)
+      setRunId((id) => id + 1)
       setPraise(chosen.praise[Math.floor(Math.random() * chosen.praise.length)])
       setActive(chosen)
     },
@@ -103,7 +107,7 @@ export function RewardCelebrationProvider({ children }: { children: ReactNode })
       cleanupRef.current?.()
       cleanupRef.current = null
     }
-  }, [active, stop])
+  }, [active, runId, stop])
 
   return (
     <RewardCelebrationContext.Provider value={{ celebrateReward, stop }}>
@@ -114,22 +118,26 @@ export function RewardCelebrationProvider({ children }: { children: ReactNode })
           style={{ background: active.backdrop }}
           onClick={() => stop()}
         >
-          {active.iframeSrc ? (
-            <iframe
-              key={active.name}
-              src={`${active.iframeSrc}${active.iframeSrc.includes('?') ? '&' : '?'}sound=${
-                typeof window !== 'undefined' && localStorage.getItem('nivas_celebration_sound') === 'true' ? '1' : '0'
+          {active.riveConfig ? (
+            <RiveCelebrationStage key={`rive-${active.name}-${runId}`} config={active.riveConfig} />
+          ) : active.iframeSrc ? (
+            <StoryboardStage
+              key={`story-${active.name}-${runId}`}
+              url={`${active.iframeSrc}${active.iframeSrc.includes('?') ? '&' : '?'}sound=${
+                typeof window !== 'undefined' && localStorage.getItem('nivas_celebration_sound') === 'true'
+                  ? '1'
+                  : '0'
               }`}
               title={active.label}
-              className="pointer-events-none h-full w-full border-0"
             />
           ) : (
             <canvas ref={canvasRef} className="h-full w-full" />
           )}
           {!active.hideHtmlPraise && (
-            <div className="pointer-events-none absolute inset-x-0 top-[10%] text-center px-4">
+            <div className="pointer-events-none absolute inset-x-0 top-[9%] z-20 px-4 text-center">
               <span
-                className="inline-block animate-bounce text-5xl sm:text-7xl font-black tracking-tight text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.65)]"
+                className="inline-block animate-bounce text-5xl sm:text-7xl font-black tracking-tight text-white"
+                style={{ textShadow: '0 4px 24px rgba(0,0,0,0.65)' }}
               >
                 {praise}
               </span>

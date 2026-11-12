@@ -9,7 +9,14 @@
  * - Web Audio API sound effects strictly gated by `nivas_celebration_sound` toggle.
  */
 
+import { getOptimalDpr } from '../../lib/confettiEngine'
+import type { RiveSceneConfig } from './RiveCelebrationStage'
+import { playGizmoBotCue, playRoadTripCue, playTreasureVaultCue } from './riveAudio'
+
 export type RewardAnimationName =
+  | 'rive-golden-chest'
+  | 'rive-gizmo-bot'
+  | 'rive-road-trip'
   | 'fairy'
   | 'treasure'
   | 'candy'
@@ -31,6 +38,7 @@ export interface RewardAnimation {
   durationMs?: number
   hideHtmlPraise?: boolean
   iframeSrc?: string
+  riveConfig?: RiveSceneConfig
   run?: (canvas: HTMLCanvasElement) => () => void
 }
 
@@ -533,7 +541,7 @@ function roundRect(
 function setupCanvas(canvas: HTMLCanvasElement) {
   let W = canvas.clientWidth || window.innerWidth
   let H = canvas.clientHeight || window.innerHeight
-  const dpr = Math.min(window.devicePixelRatio || 1, 2)
+  const dpr = getOptimalDpr()
   canvas.width = Math.round(W * dpr)
   canvas.height = Math.round(H * dpr)
 
@@ -2070,6 +2078,69 @@ const pirateRun = (canvas: HTMLCanvasElement) => {
 // =============================================================================
 
 export const REWARD_ANIMATIONS: RewardAnimation[] = [
+  {
+    name: 'rive-golden-chest',
+    emoji: '👑',
+    label: 'Radiant Treasure',
+    backdrop: 'radial-gradient(circle at 50% 56%, #4c1d95 0%, #1e1b4b 54%, #090d1f 100%)',
+    praise: ['Royal Vault Unlocked!', 'Golden Reward Claimed!', 'Legendary Loot!'],
+    durationMs: 5400,
+    riveConfig: {
+      src: '/celebrations/rive/rewards_chest.riv',
+      artboard: 'Chest',
+      animations: ['Open', 'Coin', 'Items_Move'],
+      haloBackground:
+        'radial-gradient(circle, rgba(250, 204, 21, 0.5) 0%, rgba(168, 85, 247, 0.25) 48%, rgba(9, 13, 31, 0) 72%)',
+      stageClassName:
+        'relative z-10 mt-10 h-[78vh] w-[86vw] max-w-[920px] max-h-[800px] flex items-center justify-center',
+      confettiBursts: [
+        { delayMs: 420, colors: ['#fde047', '#f59e0b', '#fef08a', '#c084fc'], count: 75 },
+        { delayMs: 2200, colors: ['#fde047', '#fbbf24', '#38bdf8', '#ffffff'], count: 65 },
+      ],
+      onStartSound: playTreasureVaultCue,
+    },
+  },
+  {
+    name: 'rive-gizmo-bot',
+    emoji: '🎛️',
+    label: 'Gizmo Bot',
+    backdrop: 'radial-gradient(circle at 50% 52%, #1e293b 0%, #0f172a 100%)',
+    praise: ['Reward Synthesized!', 'Gizmo Bot Approves!', 'Awesome Earned!'],
+    durationMs: 5400,
+    riveConfig: {
+      src: '/celebrations/rive/gizmo_bot.riv',
+      stateMachine: 'State Machine 1',
+      fit: 'cover',
+      periodicTriggers: [{ inputName: 'Trigger 1', intervalMs: 1700, initialDelayMs: 450 }],
+      tapTriggerInput: 'Trigger 1',
+      stageClassName:
+        'relative z-10 mt-14 h-[74vh] w-[84vw] max-w-[1040px] max-h-[720px] rounded-[40px] overflow-hidden ring-4 ring-amber-200/45 shadow-2xl flex items-center justify-center cursor-pointer',
+      confettiBursts: [
+        { delayMs: 300, colors: ['#38bdf8', '#34d399', '#fde047', '#f472b6'], count: 65 },
+      ],
+      onStartSound: playGizmoBotCue,
+    },
+  },
+  {
+    name: 'rive-road-trip',
+    emoji: '🚐',
+    label: 'Victory Van',
+    backdrop: '#ea4c64',
+    praise: ['Road Trip Reward!', 'Cruising in Style!', 'Adventure Unlocked!'],
+    durationMs: 5400,
+    riveConfig: {
+      src: '/celebrations/rive/road_trip.riv',
+      artboard: 'Truck',
+      stateMachine: 'bumpy',
+      fit: 'cover',
+      periodicTriggers: [{ inputName: 'bump', intervalMs: 1450, initialDelayMs: 500 }],
+      tapTriggerInput: 'bump',
+      confettiBursts: [
+        { delayMs: 320, colors: ['#fde047', '#5eead4', '#ffffff', '#38bdf8'], count: 65 },
+      ],
+      onStartSound: playRoadTripCue,
+    },
+  },
   {
     name: 'fairy',
     emoji: '🧚',

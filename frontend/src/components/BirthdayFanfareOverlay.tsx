@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react'
-import confetti from 'canvas-confetti'
+import type confetti from 'canvas-confetti'
+import { fireTabletConfetti, resetTabletConfetti } from '../lib/confettiEngine'
 import { getQueryParam, isSwaraBirthday } from './sky/queryParam'
 import {
   playBirthdayFanfareSound,
@@ -13,33 +14,8 @@ interface BirthdayFanfareOverlayProps {
 
 const PASTEL_COLORS = ['#f43f5e', '#ec4899', '#c084fc', '#a855f7', '#5eead4', '#fde047']
 
-const isTouchDevice =
-  typeof window !== 'undefined' &&
-  (navigator.maxTouchPoints > 0 ||
-    window.innerWidth <= 1280 ||
-    /Android|webOS|iPhone|iPad|iPod|Tablet/i.test(navigator.userAgent))
-
-// Adaptive parameters for smooth 60 FPS on Android tablets and high-DPI displays:
-// - Use square shapes (quad fill) which rasterize much faster than circular arcs on mobile GPUs
-// - Keep particle counts light and punchy: 15-25 large flakes per cannon on tablets
-// - Scale flake size up (scalar: 1.35) so confetti flutters like real celebratory ribbon flakes
-// - Ticks capped to 85 frames (~1.4s) for snappy bursts with zero accumulation
-// - zIndex: 9999 ensures canvas renders directly on top of modal, avoiding backdrop invalidations
-const PARTICLE_SCALE = isTouchDevice ? 0.38 : 0.75
-const TICK_LIMIT = isTouchDevice ? 85 : 120
-
 function fireConfetti(opts: confetti.Options) {
-  const baseCount = opts.particleCount ?? 40
-  const count = Math.max(8, Math.round(baseCount * PARTICLE_SCALE))
-  return confetti({
-    ...opts,
-    particleCount: count,
-    ticks: opts.ticks ?? TICK_LIMIT,
-    scalar: (opts.scalar ?? 1.0) * (isTouchDevice ? 1.35 : 1.1),
-    shapes: isTouchDevice ? ['square'] : ['square', 'circle'],
-    zIndex: 9999,
-    disableForReducedMotion: true,
-  })
+  return fireTabletConfetti(opts)
 }
 
 export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfareOverlayProps) {
@@ -154,7 +130,7 @@ export default function BirthdayFanfareOverlay({ seasonalDate }: BirthdayFanfare
     setTimeout(() => {
       setActive(false)
       setFading(false)
-      confetti.reset()
+      resetTabletConfetti()
     }, 350)
   }
 

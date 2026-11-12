@@ -4,21 +4,75 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chores Completed - GSAP Vector Animation</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <script src="/celebrations/vendor/gsap.min.js"></script>
     
     <style>
+        * {
+            box-sizing: border-box;
+        }
         body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
+            margin: 0;
+            padding: 16px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: ui-rounded, 'SF Pro Rounded', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
             background: radial-gradient(circle at 50% 20%, #f8fafc 0%, #e2e8f0 100%);
             color: #334155;
             overflow-x: hidden;
+            user-select: none;
         }
         .font-display {
-            font-family: 'Fredoka', sans-serif;
+            font-family: ui-rounded, 'SF Pro Rounded', 'Fredoka', 'Trebuchet MS', system-ui, sans-serif;
+        }
+        .tower-shell {
+            width: 100%;
+            max-width: 896px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        #towerHeader, #towerControls {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.92);
+            border: 1px solid #cbd5e1;
+            padding: 12px 18px;
+            border-radius: 16px;
+        }
+        #towerHeader h1 {
+            margin: 0;
+            font-size: 1.15rem;
+        }
+        #towerHeader p {
+            margin: 2px 0 0;
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+        .ctrl-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        button {
+            cursor: pointer;
+            border: 1px solid #cbd5e1;
+            background: #f1f5f9;
+            color: #334155;
+            border-radius: 10px;
+            padding: 7px 12px;
+            font-weight: 700;
+            font-size: 0.78rem;
+        }
+        #playPauseBtn {
+            background: #0ea5e9;
+            border-color: #0284c7;
+            color: #ffffff;
         }
         /* Custom range slider for timeline scrubbing */
         input[type=range].scrubber {
@@ -26,6 +80,8 @@
             appearance: none;
             background: transparent;
             cursor: pointer;
+            width: 100%;
+            flex: 1;
         }
         input[type=range].scrubber::-webkit-slider-runnable-track {
             background: #cbd5e1;
@@ -42,18 +98,32 @@
             border-radius: 50%;
             border: 3px solid #fff;
             box-shadow: 0 2px 6px rgba(51, 65, 85, 0.25);
-            transition: transform 0.15s ease;
-        }
-        input[type=range].scrubber::-webkit-slider-thumb:hover {
-            transform: scale(1.2);
-            background-color: #2563eb;
         }
         .svg-stage {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16 / 10;
+            border-radius: 24px;
+            overflow: hidden;
+            background: #e0f2fe;
             box-shadow: 0 20px 45px -12px rgba(51, 65, 85, 0.18), 0 0 0 1px rgba(100, 116, 139, 0.2);
         }
-        /* Building starts dark/unlit in shadow until power-on */
-        #buildingContainer {
-            filter: brightness(var(--bldg-bright, 0.16)) saturate(var(--bldg-sat, 0.15)) contrast(1.1) drop-shadow(0px 6px 5px rgba(15, 23, 42, 0.45));
+        #animationStage {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        #timerBadge {
+            position: absolute;
+            bottom: 12px;
+            right: 14px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid #cbd5e1;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-family: ui-monospace, monospace;
+            pointer-events: none;
         }
 
         /* Embed iframe mode for celebration overlay */
@@ -75,7 +145,7 @@
         body.embed #timeDisplay {
             display: none !important;
         }
-        body.embed > div.w-full {
+        body.embed > .tower-shell {
             max-width: 100vw !important;
             width: 100vw !important;
             height: 100vh !important;
@@ -102,40 +172,33 @@
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center justify-center p-3 sm:p-6 select-none">
+<body>
 
-    <div class="w-full max-w-4xl flex flex-col gap-4">
+    <div class="tower-shell">
         
         <!-- Top Header -->
-        <div id="towerHeader" class="flex flex-wrap items-center justify-between gap-3 bg-white/85 backdrop-blur-md border border-slate-200/90 px-5 py-3.5 rounded-2xl shadow-sm">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-sky-100 border border-sky-200 flex items-center justify-center text-sky-600">
-                    <i class="ph-fill ph-buildings text-2xl"></i>
-                </div>
-                <div>
-                    <h1 class="font-display text-lg sm:text-xl font-bold tracking-wide text-slate-700 flex items-center gap-2">
-                        ChoreTower <span class="text-xs font-sans font-semibold px-2.5 py-0.5 rounded-full bg-sky-100 text-sky-700 border border-sky-200">GSAP Vector</span>
-                    </h1>
-                    <p class="text-xs text-slate-500">Bottom-up floor stacking (S-E-R-O-H-C) • 7.5s Total Runtime</p>
-                </div>
+        <div id="towerHeader">
+            <div>
+                <h1 class="font-display">🏗️ ChoreTower</h1>
+                <p>Bottom-up floor stacking (S-E-R-O-H-C) • 7.5s Total Runtime</p>
             </div>
 
             <!-- Sound & Status Controls -->
-            <div class="flex items-center gap-2.5">
-                <div id="statusBadge" class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-xs font-semibold text-amber-700">
-                    <span class="w-2 h-2 rounded-full bg-sky-500 animate-pulse" id="statusDot"></span>
+            <div class="ctrl-row">
+                <div id="statusBadge">
+                    <span id="statusDot"></span>
                     <span id="statusText">Constructing...</span>
                 </div>
-                <button id="soundBtn" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200/70 border border-slate-200 text-xs font-semibold text-slate-700 transition active:scale-95" title="Toggle Synthesized Sound Effects">
-                    <i id="soundIcon" class="ph-fill ph-speaker-slash text-base text-slate-400"></i>
+                <button id="soundBtn" title="Toggle Synthesized Sound Effects">
+                    <span id="soundIcon">🔇</span>
                     <span id="soundLabel">SFX Off</span>
                 </button>
             </div>
         </div>
 
-        <div class="relative w-full aspect-[4/3] sm:aspect-[16/10] rounded-3xl overflow-hidden svg-stage bg-sky-50/40">
+        <div class="svg-stage">
             
-            <svg id="animationStage" viewBox="0 0 800 520" preserveAspectRatio="xMidYMid slice" class="w-full h-full block">
+            <svg id="animationStage" viewBox="0 0 800 520" preserveAspectRatio="xMidYMid slice">
                 <defs>
                     <!-- Soft Cool Morning Sky Gradient -->
                     <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -179,26 +242,14 @@
                         <stop offset="100%" stop-color="#facc15" />
                     </linearGradient>
 
-                    <!-- Warm Window Outer Glow -->
-                    <filter id="windowGlow" x="-35%" y="-35%" width="170%" height="170%">
-                        <feDropShadow dx="0" dy="0" stdDeviation="3.5" flood-color="#fde047" flood-opacity="0.7" />
-                    </filter>
-
-                    <!-- Soft Cool Shadow for Building & Banner -->
-                    <filter id="dropShadow" x="-10%" y="-10%" width="130%" height="130%">
-                        <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#0f172a" flood-opacity="0.22" />
-                    </filter>
-
-                    <filter id="letterShadow" x="-20%" y="-20%" width="140%" height="140%">
-                        <feDropShadow dx="0" dy="1.5" stdDeviation="0.5" flood-color="#334155" flood-opacity="0.16" />
-                    </filter>
-
-                    <!-- Reusable Window Pair (Supports Dark Unlit State & Warm Lit Night State) -->
+                    <!-- Reusable Window Pair (Mali-G52 filter-free warm halo + lit glass) -->
                     <g id="windowPair">
+                        <!-- Warm Halo Behind Window When Lit (Zero SVG filter pass) -->
+                        <rect x="-3" y="-3" width="32" height="36" rx="6" fill="#fde047" style="opacity: calc(var(--win-lit, 0) * 0.34)" />
                         <!-- Unlit Dark Glass -->
                         <rect x="0" y="0" width="26" height="30" rx="4" fill="#1e293b" stroke="#0f172a" stroke-width="2" />
                         <!-- Nighttime Warm Illuminated Pane (Fades in via CSS variable --win-lit) -->
-                        <rect x="0" y="0" width="26" height="30" rx="4" fill="url(#litWindowGrad)" stroke="#475569" stroke-width="2" filter="url(#windowGlow)" style="opacity: var(--win-lit, 0)" />
+                        <rect x="0" y="0" width="26" height="30" rx="4" fill="url(#litWindowGrad)" stroke="#475569" stroke-width="2" style="opacity: var(--win-lit, 0)" />
                         <!-- Window Mullions -->
                         <line x1="0" y1="15" x2="26" y2="15" stroke="#334155" stroke-width="1.5" opacity="0.6" />
                         <line x1="13" y1="0" x2="13" y2="30" stroke="#334155" stroke-width="1.5" opacity="0.6" />
@@ -345,7 +396,7 @@
                         <use href="#windowPair" x="440" y="390" />
                         <use href="#windowPair" x="476" y="390" />
                         <rect x="376" y="384" width="48" height="40" rx="8" fill="#f8fafc" stroke="#475569" stroke-width="2" />
-                        <text x="400" y="413" text-anchor="middle" class="font-display" font-size="28" font-weight="700" fill="#334155" filter="url(#letterShadow)">S</text>
+                        <text x="400" y="413" text-anchor="middle" class="font-display" font-size="28" font-weight="700" fill="#334155">S</text>
                     </g>
 
                     <!-- FLOOR 2: "E" - Pastel Terracotta Sandstone (y: 332 to 380) -->
@@ -357,7 +408,7 @@
                         <use href="#windowPair" x="440" y="342" />
                         <use href="#windowPair" x="476" y="342" />
                         <rect x="376" y="336" width="48" height="40" rx="8" fill="#f8fafc" stroke="#475569" stroke-width="2" />
-                        <text x="400" y="365" text-anchor="middle" class="font-display" font-size="28" font-weight="700" fill="#c2410c" filter="url(#letterShadow)">E</text>
+                        <text x="400" y="365" text-anchor="middle" class="font-display" font-size="28" font-weight="700" fill="#c2410c">E</text>
                     </g>
 
                     <!-- FLOOR 3: "R" - Pastel Golden Ochre (y: 284 to 332) -->
@@ -369,7 +420,7 @@
                         <use href="#windowPair" x="440" y="294" />
                         <use href="#windowPair" x="476" y="294" />
                         <rect x="376" y="288" width="48" height="40" rx="8" fill="#f8fafc" stroke="#475569" stroke-width="2" />
-                        <text x="400" y="317" text-anchor="middle" class="font-display" font-size="28" font-weight="700" fill="#b45309" filter="url(#letterShadow)">R</text>
+                        <text x="400" y="317" text-anchor="middle" class="font-display" font-size="28" font-weight="700" fill="#b45309">R</text>
                     </g>
 
                     <!-- FLOOR 4: "O" - Pastel Sage Mint Green (y: 236 to 284) -->
@@ -381,7 +432,7 @@
                         <use href="#windowPair" x="440" y="246" />
                         <use href="#windowPair" x="476" y="246" />
                         <rect x="376" y="240" width="48" height="40" rx="8" fill="#f8fafc" stroke="#475569" stroke-width="2" />
-                        <text x="400" y="269" text-anchor="middle" class="font-display" font-size="28" font-weight="700" fill="#15803d" filter="url(#letterShadow)">O</text>
+                        <text x="400" y="269" text-anchor="middle" class="font-display" font-size="28" font-weight="700" fill="#15803d">O</text>
                     </g>
 
                     <!-- FLOOR 5: "H" - Pastel Seafoam Teal (y: 188 to 236) -->
@@ -393,7 +444,7 @@
                         <use href="#windowPair" x="440" y="198" />
                         <use href="#windowPair" x="476" y="198" />
                         <rect x="376" y="192" width="48" height="40" rx="8" fill="#f8fafc" stroke="#475569" stroke-width="2" />
-                        <text x="400" y="221" text-anchor="middle" class="font-display" font-size="28" font-weight="700" fill="#0f766e" filter="url(#letterShadow)">H</text>
+                        <text x="400" y="221" text-anchor="middle" class="font-display" font-size="28" font-weight="700" fill="#0f766e">H</text>
                     </g>
 
                     <!-- FLOOR 6 (Top): "C" - Pastel Denim Sky Blue (y: 140 to 188) -->
@@ -405,7 +456,7 @@
                         <use href="#windowPair" x="440" y="150" />
                         <use href="#windowPair" x="476" y="150" />
                         <rect x="376" y="144" width="48" height="40" rx="8" fill="#f8fafc" stroke="#475569" stroke-width="2" />
-                        <text x="400" y="173" text-anchor="middle" class="font-display" font-size="28" font-weight="700" fill="#1d4ed8" filter="url(#letterShadow)">C</text>
+                        <text x="400" y="173" text-anchor="middle" class="font-display" font-size="28" font-weight="700" fill="#1d4ed8">C</text>
                     </g>
 
                     <!-- ROOF CROWN & COMPLETION BEACON (y: 112 to 140) -->
@@ -420,10 +471,13 @@
                         <!-- Soft Teal-Blue Pennant -->
                         <path id="roofFlag" d="M402,70 L438,78 L402,87 Z" fill="#38bdf8" stroke="#475569" stroke-width="1.5" stroke-linejoin="round" />
                     </g>
+
+                    <!-- Mali-G52 Filter-Free Shadow Veil Over Unpowered Building (Fades out on power-on!) -->
+                    <rect id="buildingDimVeil" x="252" y="96" width="296" height="356" rx="8" fill="#0f172a" opacity="0.62" pointer-events="none" />
                 </g>
 
                 <!-- 3.5 FOREGROUND CRANE COMPLETION BANNER (Unfurls in front of completed building & flagpole) -->
-                <g id="craneBannerGroup" transform="translate(385, 50)" filter="url(#dropShadow)">
+                <g id="craneBannerGroup" transform="translate(385, 50)">
                     <!-- Suspension Rigging Cables from Jib -->
                     <line x1="-130" y1="0" x2="-130" y2="12" stroke="#475569" stroke-width="2.5" />
                     <line x1="0" y1="0" x2="0" y2="12" stroke="#475569" stroke-width="2.5" />
@@ -568,38 +622,29 @@
             </svg>
 
             <!-- Floating Timer Badge inside Stage -->
-            <div id="timerBadge" class="absolute bottom-3.5 right-4 bg-white/85 backdrop-blur-md border border-slate-200 px-3 py-1 rounded-full text-xs font-mono text-slate-600 flex items-center gap-1.5 pointer-events-none shadow-sm">
-                <i class="ph-fill ph-timer text-sky-500"></i>
+            <div id="timerBadge">
                 <span id="timeDisplay">0.0s / 7.5s</span>
             </div>
         </div>
 
         <!-- Interactive Lottie-Style Player Controls -->
-        <div id="towerControls" class="bg-white/85 backdrop-blur-md border border-slate-200/90 px-5 py-4 rounded-2xl flex flex-col sm:flex-row items-center gap-4 shadow-sm">
-            <div class="flex items-center gap-2">
-                <button id="playPauseBtn" class="w-11 h-11 rounded-xl bg-sky-500 hover:bg-sky-600 text-white flex items-center justify-center font-bold shadow-md shadow-sky-300/50 transition active:scale-95" title="Play / Pause">
-                    <i id="playPauseIcon" class="ph-fill ph-pause text-xl"></i>
+        <div id="towerControls">
+            <div class="ctrl-row">
+                <button id="playPauseBtn" title="Play / Pause">
+                    <span id="playPauseIcon">⏸</span>
                 </button>
-                <button id="replayBtn" class="px-3.5 h-11 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition active:scale-95">
-                    <i class="ph-bold ph-arrow-counter-clockwise text-base"></i>
-                    <span>Replay</span>
+                <button id="replayBtn">
+                    <span>↺ Replay</span>
                 </button>
             </div>
 
             <!-- Timeline Scrubber -->
-            <div class="flex-1 w-full flex items-center gap-3">
-                <input id="timelineScrubber" type="range" min="0" max="1000" value="0" class="scrubber w-full" />
-            </div>
+            <input id="timelineScrubber" type="range" min="0" max="1000" value="0" class="scrubber" />
 
             <!-- Speed & Loop Options -->
-            <div class="flex items-center gap-2">
-                <button id="speedBtn" class="px-3 py-2 rounded-xl bg-slate-100 border border-slate-200 hover:border-slate-300 text-xs font-mono font-bold text-sky-600 transition">
-                    1.0x
-                </button>
-                <button id="loopBtn" class="px-3 py-2 rounded-xl bg-slate-100 border border-slate-200 hover:border-slate-300 text-xs font-semibold text-slate-700 flex items-center gap-1.5 transition">
-                    <i class="ph-bold ph-repeat text-sm"></i>
-                    <span>Loop: Off</span>
-                </button>
+            <div class="ctrl-row">
+                <button id="speedBtn">1.0x</button>
+                <button id="loopBtn"><span>Loop: Off</span></button>
             </div>
         </div>
     </div>
@@ -611,58 +656,58 @@
         }
 
         // ============================================================================
-        // 1. SYNTHESIZED SOUND ENGINE (Tone.js - Zero external audio files required)
+        // 1. SYNTHESIZED SOUND ENGINE (Native Web Audio API - Zero CDN dependencies)
         // ============================================================================
         let soundEnabled = false;
         let synthsInitialized = false;
-        let thudSynth, popSynth, fanfareSynth;
+        let audioCtx = null;
 
         async function initAudio() {
-            if (synthsInitialized) return;
-            await Tone.start();
-            
-            // Deep impact sound when a floor lands
-            thudSynth = new Tone.MembraneSynth({
-                pitchDecay: 0.04,
-                octaves: 4,
-                oscillator: { type: "sine" },
-                envelope: { attack: 0.001, decay: 0.2, sustain: 0.01, release: 0.2 }
-            }).toDestination();
-            thudSynth.volume.value = -8;
-
-            // Ascending chime per floor S-E-R-O-H-C
-            popSynth = new Tone.PolySynth(Tone.Synth, {
-                oscillator: { type: "triangle" },
-                envelope: { attack: 0.01, decay: 0.15, sustain: 0.05, release: 0.3 }
-            }).toDestination();
-            popSynth.volume.value = -10;
-
-            // Victory celebration chord synth
-            fanfareSynth = new Tone.PolySynth(Tone.Synth, {
-                oscillator: { type: "fatsawtooth", count: 3, spread: 20 },
-                envelope: { attack: 0.02, decay: 0.3, sustain: 0.25, release: 0.8 }
-            }).toDestination();
-            fanfareSynth.volume.value = -12;
-
+            if (!audioCtx) {
+                const Ctor = window.AudioContext || window.webkitAudioContext;
+                if (!Ctor) return;
+                audioCtx = new Ctor();
+            }
+            if (audioCtx.state === "suspended") {
+                try { await audioCtx.resume(); } catch (e) {}
+            }
             synthsInitialized = true;
+        }
+
+        function playTone(freq, delay, dur, type, peakGain, endFreq) {
+            if (!audioCtx) return;
+            const t0 = audioCtx.currentTime + delay;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, t0);
+            if (endFreq) {
+                osc.frequency.exponentialRampToValueAtTime(endFreq, t0 + dur);
+            }
+            gain.gain.setValueAtTime(0.0001, t0);
+            gain.gain.linearRampToValueAtTime(peakGain, t0 + 0.015);
+            gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(t0);
+            osc.stop(t0 + dur + 0.02);
         }
 
         function playFloorSound(index) {
             if (!soundEnabled || !synthsInitialized) return;
-            const notes = ["C4", "D4", "E4", "G4", "A4", "C5"];
+            const notes = [261.63, 293.66, 329.63, 392.0, 440.0, 523.25];
             try {
-                thudSynth.triggerAttackRelease("C2", "16n");
-                popSynth.triggerAttackRelease(notes[index] || "C5", "16n", "+0.03");
+                playTone(130, 0, 0.18, "sine", 0.14, 52);
+                playTone(notes[index] || 523.25, 0.03, 0.24, "triangle", 0.11);
             } catch (e) {}
         }
 
         function playVictoryFanfare() {
             if (!soundEnabled || !synthsInitialized) return;
             try {
-                const now = Tone.now();
-                fanfareSynth.triggerAttackRelease(["C4", "E4", "G4"], "16n", now);
-                fanfareSynth.triggerAttackRelease(["E4", "G4", "C5"], "16n", now + 0.14);
-                fanfareSynth.triggerAttackRelease(["G4", "C5", "E5", "G5"], "4n", now + 0.28);
+                [261.63, 329.63, 392.0].forEach((f) => playTone(f, 0, 0.18, "sawtooth", 0.06));
+                [329.63, 392.0, 523.25].forEach((f) => playTone(f, 0.14, 0.18, "sawtooth", 0.06));
+                [392.0, 523.25, 659.25, 783.99].forEach((f) => playTone(f, 0.28, 0.65, "sawtooth", 0.065));
             } catch (e) {}
         }
 
@@ -766,7 +811,7 @@
                 if (shouldLoop) {
                     masterTL.restart();
                 } else {
-                    playPauseIcon.className = "ph-fill ph-play text-xl";
+                    playPauseIcon.textContent = "▶";
                 }
             }
         });
@@ -789,8 +834,8 @@
             masterTL.set("#roofBeacon", { fill: "#38bdf8" }, 0);
             masterTL.set("#roofBeaconGlow", { opacity: 0, scale: 0.5, transformOrigin: "center center" }, 0);
 
-            // Keep the entire building dark and desaturated during construction
-            masterTL.set("#buildingContainer", { "--bldg-bright": 0.16, "--bldg-sat": 0.15 }, 0);
+            // Keep the building shaded during construction via zero-filter opacity veil
+            masterTL.set("#buildingDimVeil", { opacity: 0.62 }, 0);
             masterTL.set("#foundation", { scaleX: 0, opacity: 0, transformOrigin: "center bottom" }, 0);
             masterTL.set(".building-floor", { y: -320, opacity: 0, scaleX: 0.92, scaleY: 1.08, "--win-lit": 0, transformOrigin: "center bottom" }, 0);
             masterTL.set("#buildingRoof", { y: -220, opacity: 0, scale: 0.85, transformOrigin: "center bottom" }, 0);
@@ -983,11 +1028,11 @@
 
             // Once the entire building + roof cap is complete at night (~4.97s), the whole building flickers and turns bright!
             const powerOnBaseTime = roofTime + 0.32;
-            masterTL.to("#buildingContainer", { "--bldg-bright": 0.85, "--bldg-sat": 0.85, duration: 0.05, ease: "none" }, powerOnBaseTime);
-            masterTL.to("#buildingContainer", { "--bldg-bright": 0.22, "--bldg-sat": 0.2, duration: 0.05, ease: "none" }, powerOnBaseTime + 0.05);
-            masterTL.to("#buildingContainer", { "--bldg-bright": 1.0, "--bldg-sat": 1.0, duration: 0.06, ease: "none" }, powerOnBaseTime + 0.10);
-            masterTL.to("#buildingContainer", { "--bldg-bright": 0.35, "--bldg-sat": 0.4, duration: 0.05, ease: "none" }, powerOnBaseTime + 0.16);
-            masterTL.to("#buildingContainer", { "--bldg-bright": 1.08, "--bldg-sat": 1.05, duration: 0.28, ease: "power2.out" }, powerOnBaseTime + 0.21);
+            masterTL.to("#buildingDimVeil", { opacity: 0.08, duration: 0.05, ease: "none" }, powerOnBaseTime);
+            masterTL.to("#buildingDimVeil", { opacity: 0.52, duration: 0.05, ease: "none" }, powerOnBaseTime + 0.05);
+            masterTL.to("#buildingDimVeil", { opacity: 0.0, duration: 0.06, ease: "none" }, powerOnBaseTime + 0.10);
+            masterTL.to("#buildingDimVeil", { opacity: 0.35, duration: 0.05, ease: "none" }, powerOnBaseTime + 0.16);
+            masterTL.to("#buildingDimVeil", { opacity: 0.0, duration: 0.28, ease: "power2.out" }, powerOnBaseTime + 0.21);
 
             floorSequence.forEach((floor, index) => {
                 const fTime = powerOnBaseTime + index * 0.04;
@@ -1171,19 +1216,19 @@
         playPauseBtn.addEventListener('click', () => {
             if (masterTL.progress() === 1) {
                 masterTL.restart();
-                playPauseIcon.className = "ph-fill ph-pause text-xl";
+                playPauseIcon.textContent = "⏸";
             } else if (masterTL.paused()) {
                 masterTL.play();
-                playPauseIcon.className = "ph-fill ph-pause text-xl";
+                playPauseIcon.textContent = "⏸";
             } else {
                 masterTL.pause();
-                playPauseIcon.className = "ph-fill ph-play text-xl";
+                playPauseIcon.textContent = "▶";
             }
         });
 
         replayBtn.addEventListener('click', () => {
             masterTL.restart();
-            playPauseIcon.className = "ph-fill ph-pause text-xl";
+            playPauseIcon.textContent = "⏸";
         });
 
         // Scrubber interaction
@@ -1192,7 +1237,7 @@
             const progress = parseFloat(e.target.value) / 1000;
             masterTL.pause();
             masterTL.progress(progress);
-            playPauseIcon.className = "ph-fill ph-play text-xl";
+            playPauseIcon.textContent = "▶";
         });
 
         scrubber.addEventListener('change', () => {
@@ -1213,23 +1258,14 @@
         loopBtn.addEventListener('click', () => {
             shouldLoop = !shouldLoop;
             loopBtn.querySelector('span').textContent = `Loop: ${shouldLoop ? 'On' : 'Off'}`;
-            loopBtn.classList.toggle('text-sky-600', shouldLoop);
-            loopBtn.classList.toggle('border-sky-300', shouldLoop);
         });
 
         // Synthesized Sound toggle
         soundBtn.addEventListener('click', async () => {
             await initAudio();
             soundEnabled = !soundEnabled;
-            if (soundEnabled) {
-                soundIcon.className = "ph-fill ph-speaker-high text-base text-sky-600";
-                soundLabel.textContent = "SFX On";
-                soundBtn.classList.add("border-sky-300");
-            } else {
-                soundIcon.className = "ph-fill ph-speaker-slash text-base text-slate-400";
-                soundLabel.textContent = "SFX Off";
-                soundBtn.classList.remove("border-sky-300");
-            }
+            soundIcon.textContent = soundEnabled ? "🔊" : "🔇";
+            soundLabel.textContent = soundEnabled ? "SFX On" : "SFX Off";
         });
 
         // Audio Initialization
@@ -1239,9 +1275,8 @@
                 initAudio().then(() => {
                     soundEnabled = true;
                     if (soundIcon && soundLabel) {
-                        soundIcon.className = "ph-fill ph-speaker-high text-base text-sky-600";
+                        soundIcon.textContent = "🔊";
                         soundLabel.textContent = "SFX On";
-                        soundBtn?.classList.add("border-sky-300");
                     }
                 }).catch(() => {});
             }
@@ -1256,7 +1291,9 @@
 
         window.addEventListener("pagehide", () => {
             masterTL.pause();
-            try { Tone.Transport.stop(); } catch (e) {}
+            if (audioCtx) {
+                try { audioCtx.close().catch(() => {}); } catch (e) {}
+            }
         });
     </script>
 </body>

@@ -1,8 +1,12 @@
 import os
 import asyncio
 import logging
+import mimetypes
 from contextlib import asynccontextmanager
 from pathlib import Path
+
+mimetypes.add_type("application/wasm", ".wasm")
+mimetypes.add_type("application/octet-stream", ".riv")
 
 os.environ["OAUTHLIB_RELAX_TOKEN_SCOPE"] = "1"
 

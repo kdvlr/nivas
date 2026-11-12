@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import type { PinFailAnimation } from './pin-fail-animations'
+import RiveCelebrationStage from './RiveCelebrationStage'
 
 const DURATION_MS = 3400
 
@@ -21,7 +22,7 @@ export default function PinFailOverlay({
   }
 
   useEffect(() => {
-    const cleanup = canvasRef.current ? anim.run(canvasRef.current) : undefined
+    const cleanup = canvasRef.current && anim.run ? anim.run(canvasRef.current) : undefined
     const duration = anim.durationMs || DURATION_MS
     const timer = setTimeout(() => onDoneRef.current(), duration)
     return () => {
@@ -36,11 +37,16 @@ export default function PinFailOverlay({
       style={{ background: anim.backdrop }}
       onClick={() => onDoneRef.current()}
     >
-      <canvas ref={canvasRef} className="h-full w-full" />
+      {anim.riveConfig ? (
+        <RiveCelebrationStage config={anim.riveConfig} />
+      ) : (
+        <canvas ref={canvasRef} className="h-full w-full" />
+      )}
       {!anim.hideHtmlTaunt && (
-        <div className="pointer-events-none absolute inset-x-0 top-[10%] px-6 text-center">
+        <div className="pointer-events-none absolute inset-x-0 top-[9%] z-20 px-6 text-center">
           <span
-            className="inline-block animate-bounce text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.7)]"
+            className="inline-block animate-bounce text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white"
+            style={{ textShadow: '0 4px 24px rgba(0,0,0,0.72)' }}
           >
             {tauntRef.current}
           </span>
@@ -50,4 +56,3 @@ export default function PinFailOverlay({
     document.body,
   )
 }
-

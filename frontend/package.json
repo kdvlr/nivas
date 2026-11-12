@@ -17,6 +17,7 @@
     "@fullcalendar/multimonth": "^6.1.21",
     "@fullcalendar/react": "^6.1.15",
     "@fullcalendar/timegrid": "^6.1.15",
+    "@rive-app/react-webgl2": "^4.39.0",
     "canvas-confetti": "^1.9.3",
     "framer-motion": "^12.42.2",
     "react": "^18.3.1",

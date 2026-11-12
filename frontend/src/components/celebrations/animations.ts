@@ -1,10 +1,27 @@
-/** Fullscreen canvas celebrations. Each returns a cleanup function. */
+/** Fullscreen canvas & Rive WebGL2 celebrations. Each returns a cleanup function. */
 
-import confetti from 'canvas-confetti'
+import {
+  IS_TABLET_KIOSK,
+  createBoundConfetti,
+  scaleTabletParticleCount,
+} from '../../lib/confettiEngine'
 import { balloonCannonRun } from './balloon-cannon-animation'
+import type { RiveSceneConfig } from './RiveCelebrationStage'
+import {
+  playBirbDanceCue,
+  playHappyJuiceCue,
+  playHoverboardCue,
+  playJeepBounceCue,
+  playJetFlybyCue,
+} from './riveAudio'
 import { wreckingBallRun } from './wrecking-ball-animation'
 
 export type CelebrationName =
+  | 'rive-dancing-birb'
+  | 'rive-hoverboard'
+  | 'rive-safari-jeep'
+  | 'rive-happy-juice'
+  | 'rive-jet-blast'
   | 'confetti'
   | 'fireworks'
   | 'rocket'
@@ -44,6 +61,8 @@ export interface Celebration {
   hideHtmlPraise?: boolean
   /** Animation-only standalone scene rendered without its preview-page chrome. */
   iframeSrc?: string
+  /** Hardware-accelerated Rive WebGL2 scene configuration. */
+  riveConfig?: RiveSceneConfig
   run?: (canvas: HTMLCanvasElement) => () => void
 }
 
@@ -52,40 +71,86 @@ const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)]
 
 function loop(draw: (dt: number, t: number) => void): () => void {
   let raf = 0
+  let running = true
   let last = performance.now()
   const start = last
   const tick = (now: number) => {
+    if (!running) return
     const dt = Math.min((now - last) / 1000, 0.05)
     last = now
     draw(dt, (now - start) / 1000)
     raf = requestAnimationFrame(tick)
   }
+  const onVisibility = () => {
+    if (document.hidden) {
+      cancelAnimationFrame(raf)
+    } else if (running) {
+      last = performance.now()
+      raf = requestAnimationFrame(tick)
+    }
+  }
+  document.addEventListener('visibilitychange', onVisibility)
   raf = requestAnimationFrame(tick)
-  return () => cancelAnimationFrame(raf)
+  return () => {
+    running = false
+    document.removeEventListener('visibilitychange', onVisibility)
+    cancelAnimationFrame(raf)
+  }
 }
 
 function fit(canvas: HTMLCanvasElement) {
-  canvas.width = canvas.clientWidth
-  canvas.height = canvas.clientHeight
+  canvas.width = window.innerWidth || canvas.clientWidth || 1920
+  canvas.height = window.innerHeight || canvas.clientHeight || 1080
   return canvas.getContext('2d')!
 }
 
 /* ---------------------------------------------------------------- confetti */
 
 const confettiRun = (canvas: HTMLCanvasElement) => {
-  const shoot = confetti.create(canvas, { resize: true, useWorker: false })
-  const defaults = { ticks: 220, gravity: 1.1, scalar: 1.6, startVelocity: 65 }
-  shoot({ ...defaults, particleCount: 220, spread: 100, origin: { x: 0.5, y: 0.7 } })
+  const shoot = createBoundConfetti(canvas)
+  const defaults = {
+    ticks: IS_TABLET_KIOSK ? 135 : 200,
+    gravity: 1.1,
+    scalar: IS_TABLET_KIOSK ? 1.85 : 1.6,
+    startVelocity: 65,
+    shapes: IS_TABLET_KIOSK ? (['square'] as ('square' | 'circle')[]) : undefined,
+  }
+  shoot({
+    ...defaults,
+    particleCount: scaleTabletParticleCount(220),
+    spread: 100,
+    origin: { x: 0.5, y: 0.7 },
+  })
   const t1 = setTimeout(
-    () => shoot({ ...defaults, particleCount: 130, spread: 120, angle: 60, origin: { x: 0, y: 0.9 } }),
+    () =>
+      shoot({
+        ...defaults,
+        particleCount: scaleTabletParticleCount(130),
+        spread: 120,
+        angle: 60,
+        origin: { x: 0, y: 0.9 },
+      }),
     280,
   )
   const t2 = setTimeout(
-    () => shoot({ ...defaults, particleCount: 130, spread: 120, angle: 120, origin: { x: 1, y: 0.9 } }),
+    () =>
+      shoot({
+        ...defaults,
+        particleCount: scaleTabletParticleCount(130),
+        spread: 120,
+        angle: 120,
+        origin: { x: 1, y: 0.9 },
+      }),
     520,
   )
   const t3 = setTimeout(
-    () => shoot({ ...defaults, particleCount: 180, spread: 160, origin: { x: 0.5, y: 0.4 } }),
+    () =>
+      shoot({
+        ...defaults,
+        particleCount: scaleTabletParticleCount(180),
+        spread: 160,
+        origin: { x: 0.5, y: 0.4 },
+      }),
     900,
   )
   return () => {
@@ -1003,6 +1068,102 @@ const hyperspaceRun = (canvas: HTMLCanvasElement) => {
 }
 
 export const CELEBRATIONS: Celebration[] = [
+  {
+    name: 'rive-dancing-birb',
+    emoji: '🐦',
+    label: 'Dancing Birb',
+    backdrop: 'radial-gradient(circle at 50% 54%, #38bdf8 0%, #2563eb 52%, #1e1b4b 100%)',
+    durationMs: 5600,
+    praise: ['Groove on, superstar!', 'Birb dance party!', 'Happy feet, chores complete!'],
+    riveConfig: {
+      src: '/celebrations/rive/birb.riv',
+      artboard: 'birb',
+      stateMachine: 'birb',
+      initialInputs: { dance: true },
+      periodicTriggers: [{ inputName: 'look up', intervalMs: 1800, initialDelayMs: 650 }],
+      tapTriggerInput: 'look up',
+      haloBackground:
+        'radial-gradient(circle, rgba(254, 249, 195, 0.55) 0%, rgba(125, 211, 252, 0.25) 45%, rgba(30, 27, 75, 0) 72%)',
+      stageClassName:
+        'relative z-10 mt-14 h-[74vh] w-[82vw] max-w-[820px] max-h-[760px] flex items-center justify-center cursor-pointer',
+      confettiBursts: [
+        { delayMs: 250, colors: ['#38bdf8', '#fde047', '#f472b6', '#ffffff'], count: 65 },
+        { delayMs: 2400, colors: ['#fde047', '#34d399', '#60a5fa', '#ffffff'], count: 55 },
+      ],
+      onStartSound: playBirbDanceCue,
+    },
+  },
+  {
+    name: 'rive-hoverboard',
+    emoji: '🛹',
+    label: 'Hoverboard Hero',
+    backdrop: 'radial-gradient(circle at 50% 54%, #583b61 0%, #372540 58%, #1a1224 100%)',
+    durationMs: 5600,
+    praise: ['Radical job!', 'Hoverboard hero!', 'Future legend!'],
+    riveConfig: {
+      src: '/celebrations/rive/marty_hoverboard.riv',
+      stateMachine: 'State Machine 1',
+      fit: 'cover',
+      stageClassName:
+        'relative z-10 mt-14 h-[74vh] w-[74vh] max-w-[740px] max-h-[740px] rounded-[40px] overflow-hidden ring-4 ring-fuchsia-300/35 shadow-2xl flex items-center justify-center',
+      confettiBursts: [
+        { delayMs: 300, colors: ['#f472b6', '#38bdf8', '#facc15', '#c084fc'], count: 65 },
+      ],
+      onStartSound: playHoverboardCue,
+    },
+  },
+  {
+    name: 'rive-safari-jeep',
+    emoji: '🚙',
+    label: 'Rubber-Duck Jeep',
+    backdrop: 'linear-gradient(180deg, #22d3ee 0%, #0284c7 62%, #1e293b 100%)',
+    durationMs: 5500,
+    praise: ['Cruisin’ past chores!', 'Beep beep, all done!', 'Off-road awesome!'],
+    riveConfig: {
+      src: '/celebrations/rive/safari_jeep.riv',
+      animations: ['bouncing', 'windshield_wipers'],
+      fit: 'cover',
+      confettiBursts: [
+        { delayMs: 350, colors: ['#fde047', '#fb923c', '#34d399', '#ffffff'], count: 60 },
+      ],
+      onStartSound: playJeepBounceCue,
+    },
+  },
+  {
+    name: 'rive-happy-juice',
+    emoji: '🧃',
+    label: 'Happy Juice Dance',
+    backdrop: '#2dd4bf',
+    durationMs: 5200,
+    praise: ['Freshly squeezed win!', 'Refreshing work!', 'Sip sip hooray!'],
+    riveConfig: {
+      src: '/celebrations/rive/happy_juice.riv',
+      animations: ['walk', 'orange_pink'],
+      stageClassName:
+        'relative z-10 mt-14 h-[74vh] w-[74vh] max-w-[740px] max-h-[740px] rounded-[40px] overflow-hidden ring-4 ring-white/35 shadow-2xl flex items-center justify-center',
+      confettiBursts: [
+        { delayMs: 250, colors: ['#fb923c', '#fde047', '#f472b6', '#ffffff'], count: 65 },
+      ],
+      onStartSound: playHappyJuiceCue,
+    },
+  },
+  {
+    name: 'rive-jet-blast',
+    emoji: '✈️',
+    label: 'Supersonic Flyby',
+    backdrop: 'linear-gradient(180deg, #1e1b4b 0%, #7c2d12 60%, #f97316 100%)',
+    durationMs: 5400,
+    praise: ['Supersonic speed!', 'Cleared for takeoff!', 'Mach-10 chore champ!'],
+    riveConfig: {
+      src: '/celebrations/rive/jet_blast.riv',
+      animations: ['Animation 1'],
+      fit: 'cover',
+      confettiBursts: [
+        { delayMs: 400, colors: ['#fb923c', '#fde047', '#38bdf8', '#ffffff'], count: 65 },
+      ],
+      onStartSound: playJetFlybyCue,
+    },
+  },
   {
     name: 'bunny-bake-off',
     emoji: '🐰',
