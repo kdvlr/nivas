@@ -112,16 +112,17 @@ const WOODLAND_CSS = `
 }
 @keyframes wdPeck {
   0%, 100% { transform: rotate(0deg); }
-  20%, 60% { transform: rotate(-18deg); }
-  40%, 80% { transform: rotate(4deg); }
+  20%, 60% { transform: rotate(15deg); }
+  40%, 80% { transform: rotate(-4deg); }
 }
 @keyframes wdWoodpeckerFlight {
-  0% { transform: translate(1985px, 310px) rotate(-14deg); opacity: 0; }
+  0% { transform: translate(1420px, 285px) rotate(12deg); opacity: 0; }
   8% { opacity: 1; }
   22% { transform: translate(1772px, 468px) rotate(0deg); opacity: 1; }
   76% { transform: translate(1772px, 468px) rotate(0deg); opacity: 1; }
-  92% { transform: translate(1930px, 340px) scale(-1, 1) rotate(-18deg); opacity: 1; }
-  100% { transform: translate(2010px, 270px) scale(-1, 1) rotate(-22deg); opacity: 0; }
+  79% { transform: translate(1746px, 450px) scale(-1, 1) rotate(10deg); opacity: 1; }
+  92% { transform: translate(1540px, 315px) scale(-1, 1) rotate(14deg); opacity: 1; }
+  100% { transform: translate(1380px, 240px) scale(-1, 1) rotate(18deg); opacity: 0; }
 }
 @keyframes wdPeckerWings {
   0%, 24%, 75%, 100% { transform: scaleY(0.25); }

@@ -288,26 +288,26 @@ export function ScamperingSquirrel() {
 export function WoodpeckerCameo() {
   return (
     <g className="wd-woodpecker-flight">
-      <g className="wd-peck" style={{ transformOrigin: '8px 18px' }}>
-        <path d="M12,18 L24,34 L16,34 L6,18 Z" fill="#1e293b" />
+      <g className="wd-peck" style={{ transformOrigin: '-8px 18px' }}>
+        <path d="M-12,18 L-24,34 L-16,34 L-6,18 Z" fill="#1e293b" />
         {/* Flapping wing during flight */}
         <path
-          d="M6,-2 C22,-18 32,-12 20,8 Z"
+          d="M-6,-2 C-22,-18 -32,-12 -20,8 Z"
           fill="#334155"
           className="wd-pecker-wings"
-          style={{ transformOrigin: '8px 2px' }}
+          style={{ transformOrigin: '-8px 2px' }}
         />
-        <ellipse cx="6" cy="4" rx="10" ry="16" fill="#1e293b" />
-        <ellipse cx="2" cy="6" rx="6" ry="11" fill="#f8fafc" />
-        <circle cx="3" cy="-12" r="8" fill="#1e293b" />
-        <polygon points="1,-19 12,-24 8,-12" fill="#dc2626" />
-        <polygon points="-4,-13 -15,-11 -4,-9" fill="#94a3b8" />
-        <circle cx="1" cy="-13" r="1.8" fill="#fef08a" />
+        <ellipse cx="-6" cy="4" rx="10" ry="16" fill="#1e293b" />
+        <ellipse cx="-2" cy="6" rx="6" ry="11" fill="#f8fafc" />
+        <circle cx="-3" cy="-12" r="8" fill="#1e293b" />
+        <polygon points="-1,-19 -12,-24 -8,-12" fill="#dc2626" />
+        <polygon points="4,-13 17,-11 4,-9" fill="#94a3b8" />
+        <circle cx="-1" cy="-13" r="1.8" fill="#fef08a" />
       </g>
-      {/* Tiny bark tap lines (visible only while perched and pecking) */}
+      {/* Tiny bark tap lines at the beak tip (visible only while perched and pecking) */}
       <g className="wd-peck-sparks" stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round">
-        <line x1="-18" y1="-18" x2="-24" y2="-22" />
-        <line x1="-19" y1="-11" x2="-26" y2="-11" />
+        <line x1="18" y1="-17" x2="24" y2="-22" />
+        <line x1="19" y1="-11" x2="26" y2="-11" />
       </g>
     </g>
   )
