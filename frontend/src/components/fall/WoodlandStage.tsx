@@ -12,13 +12,23 @@ import {
   isThanksgivingDay,
 } from './fallDates'
 import {
+  pickWoodlandVignette,
+  VIGNETTE_DURATIONS_MS,
+  type WoodlandVignette,
+} from '../../lib/woodlandVignettes'
+import {
+  AcornDropCameo,
+  CottontailBunny,
+  FireflyDance,
   FoxDenScene,
+  FoxSquirrelChase,
   GouacheMapleLeaf,
   GouacheOakLeaf,
   HarvestStumpFeast,
   HollowScene,
   PeekingWoodlandTurkey,
   ScamperingSquirrel,
+  SquirrelTreeSortie,
   WoodlandOwl,
   WoodpeckerCameo,
 } from './WoodlandCritters'
@@ -105,6 +115,137 @@ const WOODLAND_CSS = `
   20%, 60% { transform: rotate(-18deg); }
   40%, 80% { transform: rotate(4deg); }
 }
+@keyframes wdHopBob {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-9px) rotate(-6deg); }
+}
+@keyframes wdSortieSquirrel {
+  0% { transform: translate(116px, 488px) scale(0.75, 0.75); opacity: 0; }
+  5% { transform: translate(136px, 496px) scale(0.95, 0.95); opacity: 1; }
+  12% { transform: translate(152px, 540px) rotate(68deg); opacity: 1; }
+  26% { transform: translate(172px, 825px) rotate(62deg); }
+  36% { transform: translate(232px, 974px) rotate(12deg); }
+  48% { transform: translate(365px, 1004px) rotate(0deg); }
+  54% { transform: translate(432px, 1006px) rotate(4deg); }
+  59% { transform: translate(432px, 1006px) scale(-1, 1); }
+  70% { transform: translate(242px, 978px) scale(-1, 1) rotate(14deg); }
+  80% { transform: translate(174px, 820px) scale(-1, 1) rotate(72deg); }
+  92% { transform: translate(148px, 530px) scale(-1, 1) rotate(76deg); opacity: 1; }
+  97% { transform: translate(118px, 490px) scale(-0.8, 0.8); opacity: 0.7; }
+  100% { transform: translate(114px, 488px) scale(-0.7, 0.7); opacity: 0; }
+}
+@keyframes wdSortieAcorn {
+  0%, 4% { opacity: 0; transform: scale(0.6); }
+  10%, 52% { opacity: 1; transform: scale(1); }
+  56%, 100% { opacity: 0; transform: scale(0.5); }
+}
+@keyframes wdChaseSquirrel {
+  0% { transform: translate(118px, 488px) scale(0.75, 0.75); opacity: 0; }
+  4% { transform: translate(144px, 512px) rotate(68deg); opacity: 1; }
+  14% { transform: translate(172px, 820px) rotate(64deg); }
+  22% { transform: translate(248px, 982px) rotate(8deg); }
+  30% { transform: translate(480px, 1006px) rotate(0deg); }
+  35% { transform: translate(652px, 1010px) rotate(0deg); }
+  38% { transform: translate(652px, 980px) scale(-1, 1) rotate(-8deg); }
+  44% { transform: translate(510px, 1004px) scale(-1, 1); }
+  52% { transform: translate(236px, 968px) scale(-1, 1) rotate(16deg); }
+  61% { transform: translate(168px, 710px) scale(-1, 1) rotate(78deg); }
+  68% { transform: translate(154px, 440px) scale(-1, 1) rotate(82deg); }
+  74% { transform: translate(212px, 224px) scale(1, 1) rotate(0deg); }
+  84% { transform: translate(212px, 224px) scale(1, 1) rotate(-4deg); }
+  92% { transform: translate(152px, 380px) scale(-1, 1) rotate(-78deg); opacity: 1; }
+  97% { transform: translate(122px, 486px) scale(-0.8, 0.8); opacity: 0.75; }
+  100% { transform: translate(118px, 488px) scale(-0.7, 0.7); opacity: 0; }
+}
+@keyframes wdChaseSpark {
+  0%, 34% { opacity: 0; transform: scale(0.3); }
+  37% { opacity: 1; transform: scale(1.12); }
+  45% { opacity: 1; transform: scale(1); }
+  49%, 100% { opacity: 0; transform: scale(0.6); }
+}
+@keyframes wdChaseFox {
+  0% { transform: translate(1698px, 968px) scale(1, 1); opacity: 1; }
+  22% { transform: translate(1690px, 970px) scale(1, 1); }
+  26% { transform: translate(1650px, 974px) scale(1.04, 0.92); }
+  34% { transform: translate(1360px, 992px) scale(1, 1); }
+  42% { transform: translate(1020px, 1004px) scale(1, 1); }
+  50% { transform: translate(670px, 1006px) scale(1, 1); }
+  58% { transform: translate(345px, 990px) scale(1, 1); }
+  62%, 75% { transform: translate(332px, 990px) rotate(16deg); }
+  78% { transform: translate(332px, 990px) scale(-1, 1); }
+  88% { transform: translate(1020px, 1004px) scale(-1, 1); }
+  97% { transform: translate(1690px, 970px) scale(-1, 1); }
+  100% { transform: translate(1698px, 968px) scale(1, 1); opacity: 1; }
+}
+@keyframes wdFoxGallop {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(4deg); }
+}
+@keyframes wdBunnyPath {
+  0% { transform: translate(200px, 1034px) scale(0.9, 0.9); opacity: 0; }
+  8% { transform: translate(250px, 1024px) scale(1, 1); opacity: 1; }
+  26% { transform: translate(395px, 1022px) scale(1, 1); }
+  42% { transform: translate(540px, 1020px) scale(1, 1); }
+  56% { transform: translate(540px, 1020px) scale(1, 1); }
+  60% { transform: translate(540px, 1020px) scale(-1, 1); }
+  78% { transform: translate(375px, 1022px) scale(-1, 1); }
+  93% { transform: translate(238px, 1028px) scale(-1, 1); opacity: 1; }
+  100% { transform: translate(195px, 1036px) scale(-0.9, 0.9); opacity: 0; }
+}
+@keyframes wdBunnyHop {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-15px); }
+}
+@keyframes wdBunnyEars {
+  0%, 100% { transform: rotate(0deg); }
+  35% { transform: rotate(8deg); }
+  70% { transform: rotate(-6deg); }
+}
+@keyframes wdAcornDrop {
+  0% { transform: translate(344px, 118px) rotate(0deg); opacity: 0; }
+  8% { transform: translate(344px, 126px) rotate(12deg); opacity: 1; }
+  48% { transform: translate(352px, 1010px) rotate(160deg); opacity: 1; }
+  58% { transform: translate(360px, 974px) rotate(215deg); opacity: 1; }
+  68% { transform: translate(368px, 1012px) rotate(270deg); opacity: 1; }
+  76% { transform: translate(374px, 996px) rotate(310deg); opacity: 1; }
+  84% { transform: translate(380px, 1014px) rotate(345deg); opacity: 0.95; }
+  100% { transform: translate(386px, 1016px) rotate(365deg); opacity: 0; }
+}
+@keyframes wdFirefly1 {
+  0% { transform: translate(190px, 930px) scale(0.7); opacity: 0; }
+  20% { transform: translate(265px, 895px) scale(1.05); opacity: 0.95; }
+  50% { transform: translate(340px, 945px) scale(0.85); opacity: 0.55; }
+  80% { transform: translate(235px, 972px) scale(1.1); opacity: 0.95; }
+  100% { transform: translate(190px, 930px) scale(0.7); opacity: 0; }
+}
+@keyframes wdFirefly2 {
+  0% { transform: translate(430px, 985px) scale(0.8); opacity: 0; }
+  25% { transform: translate(520px, 942px) scale(1.1); opacity: 0.9; }
+  55% { transform: translate(465px, 905px) scale(0.75); opacity: 0.5; }
+  85% { transform: translate(385px, 956px) scale(1); opacity: 0.9; }
+  100% { transform: translate(430px, 985px) scale(0.8); opacity: 0; }
+}
+@keyframes wdFirefly3 {
+  0% { transform: translate(1480px, 970px) scale(0.7); opacity: 0; }
+  30% { transform: translate(1560px, 920px) scale(1.1); opacity: 0.95; }
+  60% { transform: translate(1640px, 958px) scale(0.8); opacity: 0.5; }
+  88% { transform: translate(1545px, 995px) scale(1.05); opacity: 0.9; }
+  100% { transform: translate(1480px, 970px) scale(0.7); opacity: 0; }
+}
+@keyframes wdFirefly4 {
+  0% { transform: translate(135px, 845px) scale(0.8); opacity: 0; }
+  30% { transform: translate(210px, 822px) scale(1.05); opacity: 0.9; }
+  65% { transform: translate(290px, 865px) scale(0.8); opacity: 0.45; }
+  90% { transform: translate(185px, 882px) scale(1); opacity: 0.85; }
+  100% { transform: translate(135px, 845px) scale(0.8); opacity: 0; }
+}
+@keyframes wdFirefly5 {
+  0% { transform: translate(920px, 995px) scale(0.75); opacity: 0; }
+  30% { transform: translate(990px, 955px) scale(1.05); opacity: 0.88; }
+  65% { transform: translate(1065px, 990px) scale(0.8); opacity: 0.48; }
+  90% { transform: translate(965px, 1005px) scale(1); opacity: 0.85; }
+  100% { transform: translate(920px, 995px) scale(0.75); opacity: 0; }
+}
 @keyframes wdCardFloat {
   0% { transform: translate3d(-50%, -22px, 0) rotate(-1.5deg); opacity: 0; }
   12% { transform: translate3d(-50%, 0px, 0) rotate(0.6deg); opacity: 1; }
@@ -132,6 +273,22 @@ const WOODLAND_CSS = `
 .wd-climber { animation: wdClimb 8.4s ease-in-out both; }
 .wd-peck { animation: wdPeck 0.45s ease-in-out 8; }
 .wd-breath { animation: wdBreath 4.2s ease-out infinite; }
+.wd-hop-bob { animation: wdHopBob 0.38s ease-in-out infinite; }
+.wd-sortie-squirrel { animation: wdSortieSquirrel 9.4s ease-in-out both; }
+.wd-sortie-acorn { animation: wdSortieAcorn 9.4s linear both; }
+.wd-chase-squirrel { animation: wdChaseSquirrel 10.6s ease-in-out both; }
+.wd-chase-spark { transform-box: fill-box; transform-origin: center; animation: wdChaseSpark 10.6s ease-out both; }
+.wd-chase-fox { animation: wdChaseFox 10.6s ease-in-out both; }
+.wd-fox-gallop { animation: wdFoxGallop 0.34s ease-in-out infinite; }
+.wd-bunny-path { animation: wdBunnyPath 8.2s ease-in-out both; }
+.wd-bunny-hop { animation: wdBunnyHop 0.48s ease-in-out 10; }
+.wd-bunny-ears { animation: wdBunnyEars 1.4s ease-in-out infinite; }
+.wd-acorn-drop { animation: wdAcornDrop 4.2s ease-in both; }
+.wd-firefly-1 { animation: wdFirefly1 9.6s ease-in-out both; }
+.wd-firefly-2 { animation: wdFirefly2 9.6s ease-in-out 0.5s both; }
+.wd-firefly-3 { animation: wdFirefly3 9.6s ease-in-out 0.9s both; }
+.wd-firefly-4 { animation: wdFirefly4 9.6s ease-in-out 0.3s both; }
+.wd-firefly-5 { animation: wdFirefly5 9.6s ease-in-out 0.7s both; }
 
 .wd-static * {
   animation-play-state: paused !important;
@@ -218,9 +375,13 @@ export const WoodlandStage = React.memo(function WoodlandStage({
   const tgDay = isThanksgivingDay(date)
   const isStatic = paused || quality === 'low'
 
-  // Periodic ambient woodland cameos (trunk climber, woodpecker, Thanksgiving turkey)
+  // Periodic ambient woodland cameos (squirrel sortie, fox chase, bunny, woodpecker, acorn drop, fireflies, turkey)
   const [climberRun, setClimberRun] = useState<number | null>(null)
-  const [peckerRun, setPeckerRun] = useState<number | null>(null)
+  const [activeVignette, setActiveVignette] = useState<{
+    kind: WoodlandVignette
+    id: number
+  } | null>(null)
+  const lastVignetteRef = useRef<WoodlandVignette | null>(null)
   const [turkeyOut, setTurkeyOut] = useState<boolean>(() => tgDay || getQueryParam('woodland') === 'turkey')
 
   useEffect(() => {
@@ -228,51 +389,59 @@ export const WoodlandStage = React.memo(function WoodlandStage({
   }, [tgDay])
 
   useEffect(() => {
-    if (isStatic) return
+    if (isStatic) {
+      setClimberRun(null)
+      setActiveVignette(null)
+      return
+    }
     const forced = getQueryParam('woodland')
-    let t1: ReturnType<typeof setTimeout> | undefined
-    let t2: ReturnType<typeof setTimeout> | undefined
-    let clearClimb: ReturnType<typeof setTimeout> | undefined
-    let clearPeck: ReturnType<typeof setTimeout> | undefined
+    let forcedTimer: ReturnType<typeof setTimeout> | undefined
+    let clearTimer: ReturnType<typeof setTimeout> | undefined
 
-    const canClimb = !mood.wet && !snowy && phase !== 'night'
-    const canPeck = !mood.wet && !snowy && (phase === 'day' || phase === 'dawn')
+    const launch = (v: WoodlandVignette) => {
+      const duration = VIGNETTE_DURATIONS_MS[v]
+      lastVignetteRef.current = v
+      setActiveVignette({ kind: v, id: Date.now() })
+      clearTimeout(clearTimer)
+      clearTimer = setTimeout(() => setActiveVignette(null), duration)
+    }
 
     if (forced === 'climb') {
-      t1 = setTimeout(() => setClimberRun(Date.now()), 900)
-    } else if (forced === 'peck') {
-      t2 = setTimeout(() => setPeckerRun(Date.now()), 900)
+      forcedTimer = setTimeout(() => {
+        setClimberRun(Date.now())
+        clearTimer = setTimeout(() => setClimberRun(null), 8_600)
+      }, 600)
+    } else if (
+      forced === 'chase' ||
+      forced === 'sortie' ||
+      forced === 'bunny' ||
+      forced === 'peck' ||
+      forced === 'acorn_drop' ||
+      forced === 'fireflies'
+    ) {
+      forcedTimer = setTimeout(() => launch(forced), 600)
     }
 
-    const climbLoop = setInterval(() => {
-      if (!canClimb || document.hidden) return
-      if (autumnVisits.claim(performance.now(), 8_600)) {
-        const id = Date.now()
-        setClimberRun(id)
-        clearTimeout(clearClimb)
-        clearClimb = setTimeout(() => setClimberRun(null), 8_600)
+    const triggerNext = () => {
+      if (document.hidden) return
+      const picked = pickWoodlandVignette(phase, kind, lastVignetteRef.current)
+      if (!picked) return
+      const duration = VIGNETTE_DURATIONS_MS[picked]
+      if (autumnVisits.claim(performance.now(), duration)) {
+        launch(picked)
       }
-    }, 32_000)
+    }
 
-    const peckLoop = setInterval(() => {
-      if (!canPeck || document.hidden) return
-      if (autumnVisits.claim(performance.now(), 4_500)) {
-        const id = Date.now()
-        setPeckerRun(id)
-        clearTimeout(clearPeck)
-        clearPeck = setTimeout(() => setPeckerRun(null), 4_500)
-      }
-    }, 44_000)
+    const firstCheck = setTimeout(triggerNext, 12_000)
+    const vignetteLoop = setInterval(triggerNext, 22_000)
 
     return () => {
-      clearTimeout(t1)
-      clearTimeout(t2)
-      clearTimeout(clearClimb)
-      clearTimeout(clearPeck)
-      clearInterval(climbLoop)
-      clearInterval(peckLoop)
+      clearTimeout(forcedTimer)
+      clearTimeout(clearTimer)
+      clearTimeout(firstCheck)
+      clearInterval(vignetteLoop)
     }
-  }, [isStatic, mood.wet, snowy, phase])
+  }, [isStatic, kind, phase])
 
   // Thanksgiving week: let the pilgrim-hat turkey peek out periodically (always out on Thanksgiving Day)
   useEffect(() => {
@@ -558,13 +727,26 @@ export const WoodlandStage = React.memo(function WoodlandStage({
           </g>
 
           {/* Periodic Right-Trunk Woodpecker Cameo */}
-          {peckerRun !== null && <WoodpeckerCameo key={peckerRun} />}
+          {activeVignette?.kind === 'peck' && <WoodpeckerCameo key={activeVignette.id} />}
 
           {/* Thanksgiving Peeking Pilgrim-Hat Turkey */}
           {thanksgivingWeek && turkeyOut && <PeekingWoodlandTurkey gobble={turkeyGobble} />}
 
           {/* Right Oak Root Den + Red Fox & Kit Routine */}
-          <FoxDenScene mode={mood.fox} frosty={frosty} snowy={snowy} wagged={foxWagged} />
+          <FoxDenScene
+            mode={mood.fox}
+            frosty={frosty}
+            snowy={snowy}
+            wagged={foxWagged}
+            hideAdult={activeVignette?.kind === 'chase'}
+          />
+
+          {/* Occasional Woodland Vignettes (Squirrel Sortie, Fox-Squirrel Chase, Bunny, Acorn Drop, Fireflies) */}
+          {activeVignette?.kind === 'sortie' && <SquirrelTreeSortie key={activeVignette.id} />}
+          {activeVignette?.kind === 'chase' && <FoxSquirrelChase key={activeVignette.id} />}
+          {activeVignette?.kind === 'bunny' && <CottontailBunny key={activeVignette.id} />}
+          {activeVignette?.kind === 'acorn_drop' && <AcornDropCameo key={activeVignette.id} />}
+          {activeVignette?.kind === 'fireflies' && <FireflyDance key={activeVignette.id} />}
 
           {/* 5. Acorn-Cap String Lanterns Across Left Roots */}
           <g className={windy ? 'wd-garland-windy' : 'wd-garland'}>

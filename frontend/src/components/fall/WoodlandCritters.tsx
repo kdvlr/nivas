@@ -307,11 +307,13 @@ export function FoxDenScene({
   frosty,
   snowy,
   wagged,
+  hideAdult = false,
 }: {
   mode: 'stretching' | 'watching' | 'curled'
   frosty: boolean
   snowy: boolean
   wagged: boolean
+  hideAdult?: boolean
 }) {
   return (
     <g transform="translate(1766, 956)">
@@ -354,6 +356,7 @@ export function FoxDenScene({
             <circle cx="3.5" cy="-1" r="1.8" fill="#1c1917" />
           </g>
           {/* Adult fox stretching left on mossy ledge */}
+          {!hideAdult && (
           <g transform="translate(-88, 16)">
             <path
               d="M32,-16 C54,-34 66,-22 56,-6 C48,4 34,0 28,-8 Z"
@@ -385,32 +388,37 @@ export function FoxDenScene({
               )}
             </g>
           </g>
+          )}
         </g>
       ) : (
         /* Clear/Cloudy Daytime: Fox & Kit sitting upright watching the clearing */
         <g transform="translate(-68, 12)">
-          {/* Bushy tail */}
-          <path
-            d="M18,12 C46,6 54,-18 38,-24 C26,-28 20,-4 16,8 Z"
-            fill="#d9531e"
-            className={wagged ? 'wd-tail-fast' : 'wd-tail'}
-            style={{ transformOrigin: '18px 10px' }}
-          />
-          <circle cx="41" cy="-19" r="8.5" fill="#fef3c7" />
-          {/* Seated body & white chest bib */}
-          <ellipse cx="0" cy="4" rx="18" ry="24" fill="#d9531e" />
-          <ellipse cx="-5" cy="2" rx="9" ry="16" fill="#fef3c7" />
-          {/* Perked head facing clearing */}
-          <g transform="translate(-6, -22)">
-            <polygon points="-9,-9 -12,-24 -1,-12" fill="#9a3412" />
-            <polygon points="5,-11 11,-24 13,-9" fill="#9a3412" />
-            <circle cx="0" cy="0" r="13.5" fill="#ea580c" />
-            <path d="M-16,3 L-3,-3 L-3,8 Z" fill="#ea580c" />
-            <path d="M-15,4 L-3,8 L-3,2 Z" fill="#fef3c7" />
-            <circle cx="-16" cy="3" r="2.2" fill="#1c1917" />
-            <circle cx="-5" cy="-2" r="2.3" fill="#1c1917" />
-            <circle cx="-4.3" cy="-2.8" r="0.8" fill="#fff" />
-          </g>
+          {!hideAdult && (
+            <g>
+              {/* Bushy tail */}
+              <path
+                d="M18,12 C46,6 54,-18 38,-24 C26,-28 20,-4 16,8 Z"
+                fill="#d9531e"
+                className={wagged ? 'wd-tail-fast' : 'wd-tail'}
+                style={{ transformOrigin: '18px 10px' }}
+              />
+              <circle cx="41" cy="-19" r="8.5" fill="#fef3c7" />
+              {/* Seated body & white chest bib */}
+              <ellipse cx="0" cy="4" rx="18" ry="24" fill="#d9531e" />
+              <ellipse cx="-5" cy="2" rx="9" ry="16" fill="#fef3c7" />
+              {/* Perked head facing clearing */}
+              <g transform="translate(-6, -22)">
+                <polygon points="-9,-9 -12,-24 -1,-12" fill="#9a3412" />
+                <polygon points="5,-11 11,-24 13,-9" fill="#9a3412" />
+                <circle cx="0" cy="0" r="13.5" fill="#ea580c" />
+                <path d="M-16,3 L-3,-3 L-3,8 Z" fill="#ea580c" />
+                <path d="M-15,4 L-3,8 L-3,2 Z" fill="#fef3c7" />
+                <circle cx="-16" cy="3" r="2.2" fill="#1c1917" />
+                <circle cx="-5" cy="-2" r="2.3" fill="#1c1917" />
+                <circle cx="-4.3" cy="-2.8" r="0.8" fill="#fff" />
+              </g>
+            </g>
+          )}
 
           {/* Little kit seated beside */}
           <g transform="translate(52, 8) scale(0.72)">
@@ -532,6 +540,181 @@ export function HarvestStumpFeast({
           />
         )}
       </g>
+    </g>
+  )
+}
+
+/** Shared upright/scampering squirrel body centered at (0,0), facing right (+x). */
+function CuteSquirrelSprite({ withAcorn = false }: { withAcorn?: boolean }) {
+  return (
+    <g>
+      {/* Fluffy curved tail */}
+      <path
+        d="M-8,2 C-28,-8 -30,-30 -14,-34 C-3,-36 -2,-16 -6,-4"
+        fill="#b44d14"
+        className="wd-tail-fast"
+        style={{ transformOrigin: '-6px 0px' }}
+      />
+      {/* Body & cream belly */}
+      <ellipse cx="2" cy="-3" rx="12" ry="9.5" fill="#d96b27" />
+      <ellipse cx="5" cy="-1" rx="7" ry="6" fill="#f5d0a9" />
+      {/* Head & ear */}
+      <circle cx="12" cy="-12" r="7.8" fill="#d96b27" />
+      <polygon points="8,-18 11,-26 15,-18" fill="#9a3412" />
+      <circle cx="15" cy="-13.5" r="1.9" fill="#1c1917" />
+      <circle cx="15.6" cy="-14.1" r="0.7" fill="#fff" />
+      {/* Tiny paws */}
+      <ellipse cx="10" cy="4" rx="3.2" ry="2" fill="#9a3412" />
+      <ellipse cx="-2" cy="5" rx="3.8" ry="2.2" fill="#9a3412" />
+      {withAcorn && (
+        <g transform="translate(20, -7) rotate(15)">
+          <ellipse cx="0" cy="1.5" rx="4.2" ry="5.5" fill="#92400e" />
+          <path d="M-5,-1 C-5,-5 5,-5 5,-1 Z" fill="#3f2211" />
+        </g>
+      )}
+    </g>
+  )
+}
+
+/** Squirrel comes out of the tree hollow, hops onto the mossy floor to forage, and scrambles back up. */
+export function SquirrelTreeSortie() {
+  return (
+    <g>
+      {/* Little acorn waiting on the mossy floor that disappears as squirrel snatches it */}
+      <g className="wd-sortie-acorn">
+        <ellipse cx="446" cy="1008" rx="4.5" ry="6" fill="#92400e" />
+        <path d="M440.5,1005 C440.5,1000 451.5,1000 451.5,1005 Z" fill="#3f2211" />
+      </g>
+      <g className="wd-sortie-squirrel">
+        <g className="wd-hop-bob">
+          <CuteSquirrelSprite withAcorn />
+        </g>
+      </g>
+    </g>
+  )
+}
+
+/** Playful two-character vignette: fox spots the foraging squirrel and chases it back up the oak! */
+export function FoxSquirrelChase() {
+  return (
+    <g>
+      {/* Squirrel path */}
+      <g className="wd-chase-squirrel">
+        <g className="wd-hop-bob">
+          <CuteSquirrelSprite />
+        </g>
+      </g>
+
+      {/* Cute startled '!' spark when squirrel spots the bounding fox */}
+      <g className="wd-chase-spark">
+        <g transform="translate(652, 956)">
+          <circle cx="0" cy="0" r="14" fill="#fef3c7" stroke="#ea580c" strokeWidth="2" />
+          <text
+            x="0"
+            y="5"
+            textAnchor="middle"
+            fill="#b91c1c"
+            fontFamily="Georgia, serif"
+            fontSize="18"
+            fontWeight="700"
+          >
+            !
+          </text>
+        </g>
+      </g>
+
+      {/* Bounding Red Fox (centered around den pose at 0,0, facing left) */}
+      <g className="wd-chase-fox">
+        <g className="wd-fox-gallop">
+          {/* Bushy white-tipped tail */}
+          <path
+            d="M22,-2 C48,-10 56,-28 40,-32 C28,-35 22,-14 18,-2 Z"
+            fill="#d9531e"
+            className="wd-tail-fast"
+            style={{ transformOrigin: '20px -2px' }}
+          />
+          <circle cx="43" cy="-27" r="7.5" fill="#fef3c7" />
+          {/* Sleek running torso */}
+          <ellipse cx="0" cy="0" rx="26" ry="13.5" fill="#d9531e" />
+          <ellipse cx="-10" cy="3" rx="12" ry="7.5" fill="#fef3c7" />
+          {/* Bounding legs */}
+          <path d="M-16,8 L-28,22" stroke="#9a3412" strokeWidth="5.5" strokeLinecap="round" />
+          <path d="M-6,10 L-14,23" stroke="#9a3412" strokeWidth="5.5" strokeLinecap="round" />
+          <path d="M14,8 L26,22" stroke="#9a3412" strokeWidth="5.5" strokeLinecap="round" />
+          {/* Alert head facing left */}
+          <g transform="translate(-24, -10)">
+            <polygon points="-6,-9 -8,-22 2,-10" fill="#9a3412" />
+            <polygon points="4,-10 10,-22 12,-8" fill="#9a3412" />
+            <circle cx="0" cy="0" r="12.5" fill="#ea580c" />
+            <path d="M-17,3 L-4,-3 L-4,7 Z" fill="#ea580c" />
+            <path d="M-16,4 L-4,7 L-4,2 Z" fill="#fef3c7" />
+            <circle cx="-17" cy="3" r="2.1" fill="#1c1917" />
+            <circle cx="-4" cy="-2" r="2.2" fill="#1c1917" />
+            <circle cx="-3.4" cy="-2.8" r="0.8" fill="#fff" />
+          </g>
+        </g>
+      </g>
+    </g>
+  )
+}
+
+/** Curious cottontail bunny that hops out from behind the toadstools, twitches, and hops home. */
+export function CottontailBunny() {
+  return (
+    <g className="wd-bunny-path">
+      <g className="wd-bunny-hop">
+        {/* Fluffy white cottontail */}
+        <circle cx="-16" cy="2" r="6.5" fill="#faf5eb" />
+        {/* Plump cocoa-cream body */}
+        <ellipse cx="0" cy="0" rx="15" ry="11.5" fill="#d6bfa7" />
+        <ellipse cx="4" cy="3" rx="8.5" ry="6.5" fill="#f5eadc" />
+        {/* Back paw */}
+        <ellipse cx="-5" cy="10" rx="7" ry="3.2" fill="#bfa388" />
+        {/* Head + twitching ears */}
+        <g transform="translate(13, -8)">
+          <g className="wd-bunny-ears" style={{ transformOrigin: '-2px -6px' }}>
+            <ellipse cx="-4" cy="-16" rx="3.4" ry="11" transform="rotate(-14 -4 -16)" fill="#d6bfa7" />
+            <ellipse cx="-4" cy="-16" rx="1.6" ry="7.5" transform="rotate(-14 -4 -16)" fill="#f3c6c0" />
+            <ellipse cx="3" cy="-17" rx="3.4" ry="11.5" transform="rotate(8 3 -17)" fill="#c7ad93" />
+          </g>
+          <circle cx="0" cy="0" r="9" fill="#d6bfa7" />
+          <circle cx="3.5" cy="-1.5" r="1.9" fill="#1c1917" />
+          <circle cx="4.1" cy="-2.1" r="0.65" fill="#fff" />
+          <circle cx="9" cy="1.5" r="1.8" fill="#f4978e" />
+        </g>
+      </g>
+    </g>
+  )
+}
+
+/** Glossy acorn that drops from the upper-left oak bough and bounces onto the mossy clearing. */
+export function AcornDropCameo() {
+  return (
+    <g className="wd-acorn-drop">
+      <ellipse cx="0" cy="3" rx="6.5" ry="8.5" fill="#92400e" />
+      <path d="M-7.5,-1 C-7.5,-7 7.5,-7 7.5,-1 Z" fill="#3f2211" />
+      <line x1="0" y1="-6" x2="1" y2="-10" stroke="#3f2211" strokeWidth="2" strokeLinecap="round" />
+    </g>
+  )
+}
+
+/** Warm golden fireflies drifting gently around the lanterns & toadstools on dusk/night evenings. */
+export function FireflyDance() {
+  const flies = [
+    { cls: 'wd-firefly-1', r: 16 },
+    { cls: 'wd-firefly-2', r: 14 },
+    { cls: 'wd-firefly-3', r: 18 },
+    { cls: 'wd-firefly-4', r: 15 },
+    { cls: 'wd-firefly-5', r: 17 },
+  ]
+  return (
+    <g>
+      {flies.map((f) => (
+        <g key={f.cls} className={f.cls}>
+          <circle cx="0" cy="0" r={f.r} fill="url(#wdWarmOrb)" opacity="0.85" />
+          <circle cx="0" cy="0" r="2.8" fill="#fef9c3" />
+        </g>
+      ))}
     </g>
   )
 }
