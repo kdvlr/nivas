@@ -1,15 +1,13 @@
 import React, { useState, useEffect, useMemo, useRef, useId, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { autumnVisits, autumnProgress } from '../lib/autumnAmbience'
+import { autumnVisits } from '../lib/autumnAmbience'
 import { playBalloonPopSound } from '../lib/useAudioChime'
 import Icon from './Icon'
 import { AutumnLeafTopper, DiyaTopper, ThanksgivingTopper } from './SeasonalPhotoToppers'
-import { FallSceneDetails } from './SeasonalSceneDetails'
-import { FallHorizonExtras } from './fall/FallHorizonExtras'
-import { FallSkyLayer } from './fall/FallSkyLayer'
-import { FallOverlay, GratitudeNote } from './fall/FallOverlay'
-import { Clothespin, CornHuskTopper, MiniPumpkinTopper, PineConeTopper, ThanksgivingRibbon } from './fall/FallToppers'
-import { isAutumnScene, thanksgivingPhotoYear } from './fall/fallDates'
+import { WoodlandBackdrop } from './fall/WoodlandBackdrop'
+import { WoodlandStage, GratitudeNote } from './fall/WoodlandStage'
+import { CornHuskTopper, MiniPumpkinTopper, PineConeTopper, ThanksgivingRibbon } from './fall/FallToppers'
+import { isAutumnScene, isFrostyWoodland, isWindyWoodland, thanksgivingPhotoYear } from './fall/fallDates'
 import { DiwaliHorizon } from './DiwaliHorizon'
 import { DiwaliMarigoldBanner } from './DiwaliMarigoldBanner'
 import { Peacock } from './Peacock'
@@ -23,7 +21,6 @@ import { KINDS, getKindOverride, getPhaseOverride, hasSkyOverride } from './sky/
 import {
   getQueryParam,
   getSeasonalDate,
-  getHolidayOverride,
   isOctober,
   isSwaraBirthday,
   isNovember,
@@ -83,7 +80,8 @@ interface WeatherDay {
 
 interface WeatherResp {
   configured: boolean
-  current: { kind?: string } | null
+  unit?: string
+  current: { kind?: string; temp?: number; wind?: number } | null
   daily: WeatherDay[]
 }
 
@@ -1112,1327 +1110,6 @@ function CandyCane({ seed = 0 }: { seed?: number }) {
         fill="none"
       />
     </svg>
-  )
-}
-
-function AutumnHarvestHorizon({
-  seasonalDate,
-  phase,
-  kind = 'clear',
-  quality,
-  paused,
-  gratitudeCount = 0,
-}: {
-  seasonalDate?: Date
-  phase: SkyPhase
-  kind?: SkyKind
-  quality: Quality
-  paused: boolean
-  gratitudeCount?: number
-}) {
-  const isNightOrDusk = phase === 'night' || phase === 'dusk'
-  const isDiwali = isDiwaliSeason(seasonalDate)
-  const thanksgiving = isThanksgivingWeek(seasonalDate)
-  const progress = autumnProgress(seasonalDate ?? new Date())
-  const holidayOverride = getHolidayOverride()?.toLowerCase()
-  const horizonOverride = getQueryParam('horizon')?.toLowerCase()
-
-  // During Diwali (starts Nov 6 at 6pm through Nov 8, or explicit override), display the majestic Indian Temple & Ghat skyline
-  if ((isDiwali || holidayOverride === 'diwali' || horizonOverride === 'diwali') && horizonOverride !== 'autumn' && horizonOverride !== 'harvest') {
-    return <DiwaliHorizon phase={phase} quality={quality} paused={paused} />
-  }
-
-  const c = isNightOrDusk ? {
-    hillFar: '#1c1008',
-    hillFarOpacity: '0.85',
-    hillMid: '#160a04',
-    hillMidOpacity: '0.9',
-    hillFore: '#0d0703',
-    hillSlope: '#180d06',
-    crest: '#2b1509',
-    grass: '#78350f',
-    woodDark: '#201208',
-    woodLight: '#361e0f',
-    woodPost: '#29160a',
-    hayDark: '#331d0b',
-    hayLight: '#4a2c12',
-    pumpkin1: '#9a3412',
-    pumpkin2: '#7c2d12',
-    stem: '#14532d',
-    birchTrunk: '#cbd5e1',
-    birchMark: '#1e293b',
-    bF1: '#78350f', bF2: '#92400e', bF3: '#b45309', bF4: '#d97706',
-    mTrunk: '#1a0d05',
-    mF1: '#450a0a', mF2: '#7f1d1d', mF3: '#991b1b', mF4: '#b91c1c', mL1: '#dc2626', mL2: '#ea580c',
-    oTrunk: '#180b03',
-    oF1: '#3d1602', oF2: '#78350f', oF3: '#92400e', oF4: '#b45309', oL1: '#d97706', oL2: '#f59e0b',
-    leaves: ['#7f1d1d', '#991b1b', '#b91c1c', '#78350f', '#92400e', '#b45309', '#c2410c', '#9a3412', '#7c2d12', '#d97706'],
-    driftBack: '#1a0b04', driftMid: '#2a1206', driftFront: '#3d1c0a'
-  } : {
-    hillFar: '#78350f',
-    hillFarOpacity: '0.65',
-    hillMid: '#632e08',
-    hillMidOpacity: '0.85',
-    hillFore: '#451a03',
-    hillSlope: '#5c2406',
-    crest: '#7a380e',
-    grass: '#b45309',
-    woodDark: '#54290c',
-    woodLight: '#783e15',
-    woodPost: '#693612',
-    hayDark: '#b45309',
-    hayLight: '#d97706',
-    pumpkin1: '#ea580c',
-    pumpkin2: '#f97316',
-    stem: '#15803d',
-    birchTrunk: '#f8fafc',
-    birchMark: '#334155',
-    bF1: '#ca8a04', bF2: '#eab308', bF3: '#facc15', bF4: '#fef08a',
-    mTrunk: '#291206',
-    mF1: '#7f1d1d', mF2: '#991b1b', mF3: '#dc2626', mF4: '#ef4444', mL1: '#f87171', mL2: '#fb923c',
-    oTrunk: '#240f04',
-    oF1: '#78350f', oF2: '#9a3412', oF3: '#c2410c', oF4: '#ea580c', oL1: '#f59e0b', oL2: '#fbbf24',
-    leaves: ['#dc2626', '#ef4444', '#b91c1c', '#ea580c', '#f97316', '#c2410c', '#f59e0b', '#d97706', '#b45309', '#eab308', '#facc15'],
-    driftBack: '#5c2205', driftMid: '#85320c', driftFront: '#b44410'
-  }
-
-  if (thanksgiving && !isNightOrDusk) {
-    c.pumpkin1 = '#a95f32'
-    c.pumpkin2 = '#c18747'
-    c.hayLight = '#c6a36b'
-    c.hillSlope = '#5e3d2c'
-  }
-  if (!isNightOrDusk) {
-    c.bF3 = progress > 0.65 ? '#b17a4a' : c.bF3
-    c.bF4 = progress > 0.65 ? '#c69257' : c.bF4
-    c.mF4 = progress > 0.65 ? '#9a4b35' : c.mF4
-    c.oF4 = progress > 0.65 ? '#966140' : c.oF4
-  }
-
-  return (
-    <div
-      className="absolute bottom-0 left-0 right-0 h-44 pointer-events-none z-[25] select-none overflow-hidden autumn-harvest"
-      data-static={quality !== 'high' || paused}
-    >
-      <svg
-        viewBox="0 0 1920 176"
-        preserveAspectRatio="none"
-        className="w-full h-full"
-        aria-hidden="true"
-      >
-        <defs>
-          {/* Pointed Maple Leaf */}
-          <g id="autumn-leaf-maple">
-            <path d="M 0,-8 L 1.5,-3.5 L 5.5,-5 L 3,-1.2 L 7,1 L 3,2.5 L 4.5,6 L 1.2,4.5 L 0,8 L -1.2,4.5 L -4.5,6 L -3,2.5 L -7,1 L -3,-1.2 L -5.5,-5 L -1.5,-3.5 Z" />
-            <path d="M 0,4.5 L 0,9.5" stroke="rgba(0,0,0,0.35)" strokeWidth="0.75" fill="none" strokeLinecap="round" />
-          </g>
-          {/* Lobed Oak Leaf */}
-          <g id="autumn-leaf-oak">
-            <path d="M 0,-7.5 C 2.5,-6 4.2,-4.5 2.8,-2.5 C 5,-1.2 5,1 2.8,2.2 C 4.5,4.2 3.5,6.2 1.6,6.8 L 0,8 L -1.6,6.8 C -3.5,6.2 -4.5,4.2 -2.8,2.2 C -5,1 -5,-1.2 -2.8,-2.5 C -4.2,-4.5 -2.5,-6 0,-7.5 Z" />
-            <path d="M 0,5 L 0,9.5" stroke="rgba(0,0,0,0.35)" strokeWidth="0.75" fill="none" strokeLinecap="round" />
-          </g>
-          {/* Birch Leaf */}
-          <g id="autumn-leaf-birch">
-            <path d="M 0,-6.5 C 3.2,-3.2 3.2,3.2 0,6.5 C -3.2,3.2 -3.2,-3.2 0,-6.5 Z" />
-            <path d="M 0,4 L 0,7.5" stroke="rgba(0,0,0,0.35)" strokeWidth="0.65" fill="none" strokeLinecap="round" />
-          </g>
-
-          {/* Natural Undulating Leaf Drift Blanket under trees */}
-          <g id="autumn-tree-drift">
-            <path d="M -36 8 Q -24 0 -12 2 Q 0 -2 14 0 Q 26 -1 38 8 Q 20 12 0 11 Q -20 12 -36 8 Z" fill={c.driftBack} opacity="0.95" />
-            <path d="M -28 7 Q -16 1 -6 3 Q 4 0 16 2 Q 24 1 30 7 Q 15 10 0 9 Q -15 10 -28 7 Z" fill={c.driftMid} opacity="0.92" />
-            <path d="M -20 6 Q -10 2 0 3 Q 10 1 20 6 Q 10 8 0 8 Q -10 8 -20 6 Z" fill={c.driftFront} opacity="0.88" />
-            <use href="#autumn-leaf-maple" transform="translate(-18, 3) scale(0.65) rotate(25)" fill={c.leaves[0]} />
-            <use href="#autumn-leaf-oak" transform="translate(-8, 1) scale(0.6) rotate(-35)" fill={c.leaves[3]} />
-            <use href="#autumn-leaf-birch" transform="translate(6, 2) scale(0.7) rotate(55)" fill={c.leaves[7]} />
-            <use href="#autumn-leaf-maple" transform="translate(18, 4) scale(0.6) rotate(-15)" fill={c.leaves[1]} />
-            <use href="#autumn-leaf-oak" transform="translate(0, 5) scale(0.55) rotate(10)" fill={c.leaves[4]} />
-          </g>
-
-          {/* Grass Clump */}
-          <g id="autumn-grass-clump">
-            <path d="M -2 0 L -5 -8 M 0 0 L 0 -11 M 2 0 L 5 -7" stroke={c.grass} strokeWidth="1.2" strokeLinecap="round" fill="none" />
-          </g>
-        </defs>
-
-        <style>{`
-          @keyframes treeSwaySoft {
-            0%, 100% { transform: rotate(0deg); }
-            50% { transform: rotate(1.1deg); }
-          }
-          @keyframes treeSwayGentle {
-            0%, 100% { transform: rotate(0deg); }
-            50% { transform: rotate(-1.3deg); }
-          }
-          @keyframes treeSwayWind {
-            0%, 100% { transform: rotate(0deg); }
-            50% { transform: rotate(1.4deg); }
-          }
-          @keyframes leafEdgeFlutter {
-            0%, 100% { transform: rotate(0deg) scale(1); }
-            50% { transform: rotate(4deg) scale(1.03); }
-          }
-          @keyframes groundLeafTumble1 {
-            0% { transform: translate(0, 0) rotate(0deg); opacity: 0.9; }
-            30% { transform: translate(35px, -8px) rotate(110deg); opacity: 1; }
-            65% { transform: translate(80px, -2px) rotate(240deg); opacity: 0.95; }
-            100% { transform: translate(130px, 0px) rotate(360deg); opacity: 0.9; }
-          }
-          @keyframes groundLeafTumble2 {
-            0% { transform: translate(0, 0) rotate(0deg); opacity: 0.85; }
-            35% { transform: translate(30px, -10px) rotate(-90deg); opacity: 1; }
-            70% { transform: translate(75px, -4px) rotate(-210deg); opacity: 0.9; }
-            100% { transform: translate(120px, 0px) rotate(-340deg); opacity: 0.85; }
-          }
-          @keyframes harvestDiyaFlicker {
-            0%, 100% { opacity: 0.95; }
-            50% { opacity: 0.65; }
-          }
-          @keyframes rangoliGlow {
-            0%, 100% { opacity: 0.85; }
-            50% { opacity: 0.55; }
-          }
-        `}</style>
-
-        <style>{`
-          .autumn-harvest[data-static="true"] svg * { animation: none !important; }
-          @media (prefers-reduced-motion: reduce) {
-            .autumn-harvest svg * { animation: none !important; }
-          }
-        `}</style>
-
-        {/* 1. Background Distant Ridge & Hills */}
-        <path
-          d="M 0 176 L 0 115 Q 320 85, 640 105 Q 960 125, 1280 95 Q 1600 80, 1920 102 L 1920 176 Z"
-          fill={c.hillFar}
-          opacity={c.hillFarOpacity}
-        />
-
-        {/* Static, low-contrast canopy adds depth without another animation layer. */}
-        <g opacity={(isNightOrDusk ? 0.3 : 0.4) * (1 - progress * 0.65)}>
-          {Array.from({ length: 16 }, (_, i) => (
-            <g key={i} transform={`translate(${80 + i * 116}, ${102 + Math.sin(i * 1.7) * 7})`}>
-              <path d="M0 10V-14M0-2L-6-9" stroke={c.woodDark} strokeWidth="2" />
-              <ellipse cy="-17" rx={16 + i % 3 * 3} ry={17 + i % 4 * 2}
-                fill={[c.mF1, c.oF2, c.bF1][i % 3]} />
-            </g>
-          ))}
-        </g>
-
-        {/* Distant Golden Aspen Grove on Background Ridge (x = 760-860) */}
-        <g opacity={isNightOrDusk ? '0.6' : '0.85'}>
-          <path d="M 764 113 L 766 84 M 792 115 L 794 80 M 822 116 L 824 86 M 852 117 L 854 84" stroke={isNightOrDusk ? '#201208' : '#54290c'} strokeWidth="1.8" />
-          <ellipse cx="766" cy="78" rx="12" ry="16" fill={isNightOrDusk ? '#78350f' : '#ca8a04'} />
-          <ellipse cx="767" cy="74" rx="8" ry="12" fill={isNightOrDusk ? '#92400e' : '#eab308'} />
-          <ellipse cx="794" cy="72" rx="14" ry="18" fill={isNightOrDusk ? '#92400e' : '#eab308'} />
-          <ellipse cx="795" cy="68" rx="10" ry="13" fill={isNightOrDusk ? '#b45309' : '#facc15'} />
-          <ellipse cx="824" cy="80" rx="11" ry="14" fill={isNightOrDusk ? '#78350f' : '#d97706'} />
-          <ellipse cx="854" cy="78" rx="13" ry="16" fill={isNightOrDusk ? '#9a3412' : '#ea580c'} />
-        </g>
-
-        {/* Distant Barn on Ridge */}
-        <g transform="translate(1120, 84)" opacity={isNightOrDusk ? '0.8' : '0.85'}>
-          <polygon points="0,20 18,6 36,20 36,36 0,36" fill={isNightOrDusk ? '#2a140a' : '#991b1b'} />
-          <polygon points="12,14 18,9 24,14 24,22 12,22" fill={isNightOrDusk ? '#160a04' : '#ffffff'} />
-          <rect x="39" y="10" width="10" height="26" fill={isNightOrDusk ? '#201006' : '#64748b'} />
-          <ellipse cx="44" cy="10" rx="5" ry="3" fill={isNightOrDusk ? '#2a140a' : '#94a3b8'} />
-        </g>
-
-        {/* 2. Midground Rolling Hill */}
-        <path
-          d="M 0 176 L 0 115 Q 300 93, 620 109 Q 980 127, 1340 103 Q 1660 87, 1920 107 L 1920 176 Z"
-          fill={c.hillMid}
-          opacity={c.hillMidOpacity}
-        />
-
-        {/* 3. Foreground Main Rolling Ridge */}
-        <path
-          d="M 0 176 L 0 108 Q 280 88, 560 104 Q 840 120, 1120 98 Q 1400 82, 1680 100 Q 1820 106, 1920 94 L 1920 176 Z"
-          fill={c.hillFore}
-        />
-        {/* Warm Autumn Turf Slope Wash (Adds rich depth across ground!) */}
-        <path
-          d="M 0 108 Q 280 88, 560 104 Q 840 120, 1120 98 Q 1400 82, 1680 100 Q 1820 106, 1920 94 L 1920 135 Q 1680 142, 1400 124 Q 1120 138, 840 156 Q 560 140, 280 126 L 0 142 Z"
-          fill={c.hillSlope}
-          opacity="0.55"
-        />
-        <path
-          d="M 0 108 Q 280 88, 560 104 Q 840 120, 1120 98 Q 1400 82, 1680 100 Q 1820 106, 1920 94"
-          stroke={c.crest}
-          strokeWidth="2.2"
-          fill="none"
-          opacity="0.75"
-        />
-
-        {/* Tufts of grass along crest */}
-        <use href="#autumn-grass-clump" transform="translate(85, 106)" />
-        <use href="#autumn-grass-clump" transform="translate(250, 95)" />
-        <use href="#autumn-grass-clump" transform="translate(430, 99)" />
-        <use href="#autumn-grass-clump" transform="translate(670, 111)" />
-        <use href="#autumn-grass-clump" transform="translate(910, 117)" />
-        <use href="#autumn-grass-clump" transform="translate(1120, 98)" />
-        <use href="#autumn-grass-clump" transform="translate(1330, 91)" />
-        <use href="#autumn-grass-clump" transform="translate(1550, 94)" />
-        <use href="#autumn-grass-clump" transform="translate(1780, 104)" />
-
-        {/* 4. DETAILED AUTUMN TREES */}
-
-        {/* TREE 1: GOLDEN PAPER BIRCH (Left, x = 110, y = 110) */}
-        <g transform="translate(110, 110)">
-          {/* Root flare */}
-          <path d="M -8 36 Q -5 26 -2 14 L 3 14 Q 6 26 9 36 Z" fill={c.birchMark} opacity="0.85" />
-          {/* White Birch Trunk */}
-          <path d="M -3 36 Q -5 18 -2 -4 Q 0 -22 2 -38 L 5.5 -37 Q 3.5 -21 1.5 -4 Q -1 18 2.5 36 Z" fill={c.birchTrunk} />
-          {/* Bark markings */}
-          <g stroke={c.birchMark} strokeWidth="1.1" strokeLinecap="round">
-            <line x1="-2.5" y1="30" x2="1.8" y2="30" />
-            <line x1="-3" y1="22" x2="-0.5" y2="22" />
-            <line x1="0.5" y1="21.5" x2="2.5" y2="21.5" strokeWidth="0.8" />
-            <line x1="-2" y1="14" x2="1.8" y2="14" />
-            <line x1="-1.5" y1="6" x2="1" y2="6" />
-            <line x1="-1" y1="-2" x2="2" y2="-2" />
-            <line x1="-2" y1="-10" x2="1" y2="-10" />
-          </g>
-          <polygon points="-2.5,18 -0.5,16.5 -2.5,15" fill={c.birchMark} />
-          <polygon points="2,3 0,4.5 2,6" fill={c.birchMark} />
-
-          {/* Branches ascending into canopy */}
-          <g stroke={c.birchMark} strokeLinecap="round" fill="none">
-            <path d="M -2 2 Q -8 -6 -14 -14 Q -18 -22 -20 -30" strokeWidth="1.6" />
-            <path d="M 2 0 Q 8 -8 14 -16 Q 18 -24 20 -32" strokeWidth="1.6" />
-            <path d="M 0 -14 Q -3 -26 -4 -40" strokeWidth="1.3" />
-            <path d="M 1 -14 Q 5 -26 6 -42" strokeWidth="1.3" />
-          </g>
-
-          {/* Animated Birch Foliage Canopy */}
-          <g opacity={1 - progress * 0.72} style={{ transformOrigin: '0px 6px', animation: 'treeSwayGentle 6.5s ease-in-out infinite' }}>
-            <circle cx="-14" cy="-28" r="17" fill={c.bF1} opacity="0.95" />
-            <circle cx="14" cy="-28" r="17" fill={c.bF1} opacity="0.95" />
-            <circle cx="0" cy="-42" r="22" fill={c.bF1} opacity="0.95" />
-            <circle cx="-16" cy="-34" r="16" fill={c.bF2} opacity="0.95" />
-            <circle cx="16" cy="-34" r="16" fill={c.bF2} opacity="0.95" />
-            <circle cx="-8" cy="-48" r="16" fill={c.bF2} opacity="0.95" />
-            <circle cx="8" cy="-48" r="16" fill={c.bF2} opacity="0.95" />
-            <circle cx="0" cy="-44" r="17" fill={c.bF3} opacity="0.95" />
-            <circle cx="-8" cy="-56" r="14" fill={c.bF3} opacity="0.95" />
-            <circle cx="8" cy="-56" r="14" fill={c.bF3} opacity="0.95" />
-            <circle cx="0" cy="-64" r="13" fill={c.bF4} opacity="0.92" />
-            <ellipse cx="-5" cy="-46" rx="10" ry="7" fill={c.bF4} opacity="0.85" />
-            <ellipse cx="6" cy="-44" rx="10" ry="7" fill={c.bF4} opacity="0.85" />
-
-            {/* Sprinkled Birch Leaves along Perimeter */}
-            <g style={{ animation: 'leafEdgeFlutter 3s ease-in-out infinite' }}>
-              <use href="#autumn-leaf-birch" transform="translate(-28, -22) scale(0.85) rotate(-35)" fill={c.bF4} />
-              <use href="#autumn-leaf-birch" transform="translate(-30, -42) scale(0.8) rotate(-65)" fill={c.bF3} />
-              <use href="#autumn-leaf-birch" transform="translate(-16, -66) scale(0.85) rotate(-20)" fill={c.bF4} />
-              <use href="#autumn-leaf-birch" transform="translate(6, -74) scale(0.9) rotate(10)" fill={c.bF4} />
-              <use href="#autumn-leaf-birch" transform="translate(24, -64) scale(0.8) rotate(45)" fill={c.bF3} />
-              <use href="#autumn-leaf-birch" transform="translate(30, -42) scale(0.85) rotate(75)" fill={c.bF4} />
-              <use href="#autumn-leaf-birch" transform="translate(28, -20) scale(0.75) rotate(110)" fill={c.bF2} />
-            </g>
-          </g>
-
-          {/* Broad Leaf Drift Blanket at Birch Base */}
-          <use href="#autumn-tree-drift" transform="translate(0, 32) scale(1.1, 0.95)" />
-        </g>
-
-        {/* TREE 2: GRAND SUGAR MAPLE (Center-Left, x = 340, y = 106) */}
-        <g transform="translate(340, 106)">
-          {/* Root Flare */}
-          <path d="M -12 40 Q -8 30 -4 16 L 6 16 Q 10 30 14 40 Q 6 38 0 39 Q -6 38 -12 40 Z" fill={c.mTrunk} />
-          {/* Trunk */}
-          <path d="M -4 40 Q -5 20 -2 2 Q 0 -12 2 -26 L 6 -24 Q 4 -10 2 2 Q 4 20 6 40 Z" fill={c.mTrunk} />
-          <path d="M -2 32 Q -3 16 -1 4 M 1 30 Q 0 16 2 2 M 3 34 Q 2 18 3 8" stroke="#120601" strokeWidth="1" strokeLinecap="round" />
-
-          {/* Branches extending up into canopy */}
-          <g stroke={c.mTrunk} strokeLinecap="round" fill="none">
-            <path d="M -2 4 Q -12 -4 -18 -14 Q -24 -24 -26 -34" strokeWidth="2.6" />
-            <path d="M 2 2 Q 12 -4 18 -14 Q 24 -24 26 -34" strokeWidth="2.6" />
-            <path d="M 0 -10 Q -4 -22 -4 -42" strokeWidth="2" />
-            <path d="M 2 -10 Q 6 -22 6 -42" strokeWidth="2" />
-          </g>
-
-          {/* Animated Sugar Maple Canopy */}
-          <g opacity={1 - progress * 0.72} style={{ transformOrigin: '1px 10px', animation: 'treeSwaySoft 7.2s ease-in-out infinite', animationDelay: '0.8s' }}>
-            <circle cx="-22" cy="-26" r="20" fill={c.mF1} opacity="0.95" />
-            <circle cx="22" cy="-26" r="20" fill={c.mF1} opacity="0.95" />
-            <circle cx="0" cy="-38" r="26" fill={c.mF1} opacity="0.95" />
-            <circle cx="-26" cy="-36" r="19" fill={c.mF2} opacity="0.95" />
-            <circle cx="26" cy="-36" r="19" fill={c.mF2} opacity="0.95" />
-            <circle cx="-14" cy="-52" r="20" fill={c.mF2} opacity="0.95" />
-            <circle cx="14" cy="-52" r="20" fill={c.mF2} opacity="0.95" />
-            <circle cx="0" cy="-46" r="22" fill={c.mF3} opacity="0.95" />
-            <circle cx="-12" cy="-62" r="17" fill={c.mF3} opacity="0.95" />
-            <circle cx="12" cy="-62" r="17" fill={c.mF3} opacity="0.95" />
-            <circle cx="0" cy="-72" r="15" fill={c.mF4} opacity="0.92" />
-            <ellipse cx="-16" cy="-44" rx="13" ry="9" fill={c.mL2} opacity="0.85" />
-            <ellipse cx="16" cy="-44" rx="13" ry="9" fill={c.mL2} opacity="0.85" />
-            <ellipse cx="0" cy="-58" rx="14" ry="10" fill={c.mL1} opacity="0.88" />
-
-            {/* Perimeter Pointed Maple Leaves */}
-            <g style={{ animation: 'leafEdgeFlutter 3.2s ease-in-out infinite', animationDelay: '0.5s' }}>
-              <use href="#autumn-leaf-maple" transform="translate(-40, -22) scale(0.9) rotate(-45)" fill={c.mL1} />
-              <use href="#autumn-leaf-maple" transform="translate(-44, -44) scale(0.85) rotate(-70)" fill={c.mL2} />
-              <use href="#autumn-leaf-maple" transform="translate(-28, -68) scale(0.95) rotate(-30)" fill={c.mL1} />
-              <use href="#autumn-leaf-maple" transform="translate(-6, -84) scale(1) rotate(5)" fill={c.mL2} />
-              <use href="#autumn-leaf-maple" transform="translate(18, -82) scale(0.95) rotate(35)" fill={c.mL1} />
-              <use href="#autumn-leaf-maple" transform="translate(38, -66) scale(0.9) rotate(65)" fill={c.mL2} />
-              <use href="#autumn-leaf-maple" transform="translate(44, -42) scale(0.85) rotate(85)" fill={c.mL1} />
-              <use href="#autumn-leaf-maple" transform="translate(38, -20) scale(0.8) rotate(115)" fill={c.mL2} />
-            </g>
-          </g>
-
-          {/* Maple Base Leaf Drift Blanket */}
-          <use href="#autumn-tree-drift" transform="translate(0, 32) scale(1.3, 1.05)" />
-        </g>
-
-        {/* RUSTIC FENCES & HARVEST DETAILS */}
-        <g stroke={c.woodPost} strokeWidth="2.5" strokeLinecap="round">
-          <line x1="220" y1="130" x2="220" y2="98" />
-          <line x1="260" y1="130" x2="260" y2="98" />
-          <line x1="300" y1="130" x2="300" y2="98" />
-          <path d="M 215 106 L 305 106 M 215 118 L 305 118" stroke={c.woodDark} strokeWidth="2.2" />
-          <path d="M 215 107.5 L 305 107.5 M 215 119.5 L 305 119.5" stroke={c.woodLight} strokeWidth="1" opacity="0.8" />
-
-          <line x1="480" y1="132" x2="480" y2="100" />
-          <line x1="520" y1="132" x2="520" y2="100" />
-          <line x1="560" y1="132" x2="560" y2="100" />
-          <line x1="600" y1="132" x2="600" y2="100" />
-          <path d="M 475 108 L 605 108 M 475 120 L 605 120" stroke={c.woodDark} strokeWidth="2.2" />
-          <path d="M 475 109.5 L 605 109.5 M 475 121.5 L 605 121.5" stroke={c.woodLight} strokeWidth="1" opacity="0.8" />
-        </g>
-
-        {/* Leaves resting on left fence rails */}
-        <use href="#autumn-leaf-maple" transform="translate(242, 105) scale(0.6) rotate(15)" fill={c.leaves[1]} />
-        <use href="#autumn-leaf-birch" transform="translate(278, 105) scale(0.65) rotate(-25)" fill={c.leaves[7]} />
-        <use href="#autumn-leaf-oak" transform="translate(505, 107) scale(0.6) rotate(35)" fill={c.leaves[4]} />
-        <use href="#autumn-leaf-maple" transform="translate(548, 107) scale(0.55) rotate(-10)" fill={c.leaves[2]} />
-
-        {/* Hay Bale Left */}
-        <g transform="translate(440, 116)">
-          <ellipse cx="0" cy="0" rx="14" ry="10" fill={c.hayDark} />
-          <ellipse cx="6" cy="0" rx="14" ry="10" fill={c.hayLight} />
-          <ellipse cx="6" cy="0" rx="11" ry="8" stroke={c.hayDark} strokeWidth="1.2" fill="none" />
-          <ellipse cx="6" cy="0" rx="5" ry="4" stroke={c.hayDark} strokeWidth="1" fill="none" />
-          <use href="#autumn-leaf-maple" transform="translate(4, -9) scale(0.55) rotate(20)" fill={c.leaves[0]} />
-        </g>
-
-        {/* Pumpkins in Field */}
-        <g transform="translate(240, 130)">
-          <ellipse cx="-4" cy="0" rx="7.5" ry="6" fill={c.pumpkin1} />
-          <ellipse cx="4" cy="1" rx="6.5" ry="5.5" fill={c.pumpkin2} />
-          <path d="M -4 -5.5 L -5 -8 M 4 -4.5 L 5 -7" stroke={c.stem} strokeWidth="1.3" strokeLinecap="round" />
-        </g>
-        <g transform="translate(580, 129)">
-          <ellipse cx="4" cy="0" rx="8" ry="6.5" fill={c.pumpkin1} />
-          <ellipse cx="-4" cy="1" rx="7" ry="5.5" fill={c.pumpkin2} />
-          <path d="M 4 -6 L 3 -9 M -4 -4.5 L -5 -7" stroke={c.stem} strokeWidth="1.3" strokeLinecap="round" />
-        </g>
-
-        {/* Hay Bale Right */}
-        <g transform="translate(1410, 112)">
-          <ellipse cx="0" cy="0" rx="15" ry="11" fill={c.hayDark} />
-          <ellipse cx="7" cy="0" rx="15" ry="11" fill={c.hayLight} />
-          <ellipse cx="7" cy="0" rx="12" ry="9" stroke={c.hayDark} strokeWidth="1.2" fill="none" />
-          <ellipse cx="7" cy="0" rx="6" ry="4.5" stroke={c.hayDark} strokeWidth="1" fill="none" />
-          <use href="#autumn-leaf-oak" transform="translate(5, -10) scale(0.55) rotate(-15)" fill={c.leaves[3]} />
-        </g>
-
-        {/* Pumpkin Cluster Right */}
-        <g transform="translate(1324, 126)">
-          <ellipse cx="-4" cy="0" rx="8" ry="6" fill={c.pumpkin2} />
-          <ellipse cx="4" cy="1" rx="6.5" ry="5.5" fill={c.pumpkin1} />
-          <path d="M -4 -5.5 L -3 -8 M 4 -4.5 L 5 -7" stroke={c.stem} strokeWidth="1.3" strokeLinecap="round" />
-        </g>
-
-        {/* Right Split-Rail Fence */}
-        <g stroke={c.woodPost} strokeWidth="2.5" strokeLinecap="round">
-          <line x1="1260" y1="132" x2="1260" y2="100" />
-          <line x1="1300" y1="132" x2="1300" y2="100" />
-          <line x1="1340" y1="132" x2="1340" y2="100" />
-          <line x1="1380" y1="132" x2="1380" y2="100" />
-          <path d="M 1255 108 L 1385 108 M 1255 120 L 1385 120" stroke={c.woodDark} strokeWidth="2.2" />
-          <path d="M 1255 109.5 L 1385 109.5 M 1255 121.5 L 1385 121.5" stroke={c.woodLight} strokeWidth="1" opacity="0.8" />
-
-          <line x1="1680" y1="130" x2="1680" y2="98" />
-          <line x1="1720" y1="130" x2="1720" y2="98" />
-          <line x1="1760" y1="130" x2="1760" y2="98" />
-          <path d="M 1675 106 L 1765 106 M 1675 118 L 1765 118" stroke={c.woodDark} strokeWidth="2.2" />
-          <path d="M 1675 107.5 L 1765 107.5 M 1675 119.5 L 1765 119.5" stroke={c.woodLight} strokeWidth="1" opacity="0.8" />
-        </g>
-
-        {/* Leaves resting on right fence rails */}
-        <use href="#autumn-leaf-oak" transform="translate(1282, 107) scale(0.6) rotate(25)" fill={c.leaves[4]} />
-        <use href="#autumn-leaf-maple" transform="translate(1360, 107) scale(0.55) rotate(-35)" fill={c.leaves[1]} />
-        <use href="#autumn-leaf-oak" transform="translate(1705, 105) scale(0.6) rotate(10)" fill={c.leaves[5]} />
-
-        {/* TREE 3: ANCIENT MAJESTIC OAK (Right, x = 1530, y = 100) */}
-        <g transform="translate(1530, 100)">
-          {/* Buttress Roots */}
-          <path d="M -16 42 Q -12 32 -5 18 L 7 18 Q 14 32 20 42 Q 9 40 0 41 Q -9 40 -16 42 Z" fill={c.oTrunk} />
-          {/* Gnarled Trunk */}
-          <path d="M -6 42 Q -9 20 -4 0 Q 0 -14 3 -28 L 8 -26 Q 6 -12 4 0 Q 7 20 10 42 Z" fill={c.oTrunk} />
-          <path d="M -3 34 Q -4 16 -1 2 M 2 32 Q 1 14 3 0 M 5 36 Q 4 18 5 6" stroke="#0e0401" strokeWidth="1.2" strokeLinecap="round" />
-
-          {/* Sturdy limbs spreading into canopy */}
-          <g stroke={c.oTrunk} strokeLinecap="round" fill="none">
-            <path d="M -3 4 Q -16 -4 -24 -12 Q -32 -20 -36 -30" strokeWidth="3" />
-            <path d="M 4 2 Q 16 -4 24 -12 Q 32 -20 36 -30" strokeWidth="3" />
-            <path d="M -1 -10 Q -5 -24 -4 -38" strokeWidth="2.2" />
-            <path d="M 3 -10 Q 7 -24 8 -38" strokeWidth="2.2" />
-          </g>
-
-          {/* Animated Oak Canopy */}
-          <g opacity={1 - progress * 0.72} style={{ transformOrigin: '0px 12px', animation: 'treeSwayWind 7.8s ease-in-out infinite', animationDelay: '1.4s' }}>
-            <circle cx="-26" cy="-24" r="22" fill={c.oF1} opacity="0.95" />
-            <circle cx="26" cy="-24" r="22" fill={c.oF1} opacity="0.95" />
-            <circle cx="0" cy="-36" r="28" fill={c.oF1} opacity="0.95" />
-            <circle cx="-30" cy="-36" r="21" fill={c.oF2} opacity="0.95" />
-            <circle cx="30" cy="-36" r="21" fill={c.oF2} opacity="0.95" />
-            <circle cx="-16" cy="-52" r="21" fill={c.oF2} opacity="0.95" />
-            <circle cx="16" cy="-52" r="21" fill={c.oF2} opacity="0.95" />
-            <circle cx="0" cy="-46" r="24" fill={c.oF3} opacity="0.95" />
-            <circle cx="-14" cy="-62" r="18" fill={c.oF3} opacity="0.95" />
-            <circle cx="14" cy="-62" r="18" fill={c.oF3} opacity="0.95" />
-            <circle cx="0" cy="-70" r="16" fill={c.oF4} opacity="0.92" />
-            <ellipse cx="-20" cy="-46" rx="15" ry="10" fill={c.oL2} opacity="0.85" />
-            <ellipse cx="20" cy="-46" rx="15" ry="10" fill={c.oL2} opacity="0.85" />
-            <ellipse cx="0" cy="-58" rx="16" ry="11" fill={c.oL1} opacity="0.88" />
-
-            {/* Perimeter Lobed Oak Leaves */}
-            <g style={{ animation: 'leafEdgeFlutter 3.5s ease-in-out infinite', animationDelay: '1s' }}>
-              <use href="#autumn-leaf-oak" transform="translate(-48, -20) scale(0.95) rotate(-40)" fill={c.oL1} />
-              <use href="#autumn-leaf-oak" transform="translate(-50, -44) scale(0.9) rotate(-65)" fill={c.oL2} />
-              <use href="#autumn-leaf-oak" transform="translate(-32, -68) scale(1) rotate(-25)" fill={c.oL2} />
-              <use href="#autumn-leaf-oak" transform="translate(-6, -82) scale(1.05) rotate(5)" fill={c.oL1} />
-              <use href="#autumn-leaf-oak" transform="translate(20, -80) scale(1) rotate(35)" fill={c.oL2} />
-              <use href="#autumn-leaf-oak" transform="translate(44, -66) scale(0.95) rotate(60)" fill={c.oL1} />
-              <use href="#autumn-leaf-oak" transform="translate(52, -42) scale(0.9) rotate(85)" fill={c.oL2} />
-              <use href="#autumn-leaf-oak" transform="translate(46, -18) scale(0.85) rotate(115)" fill={c.oL1} />
-            </g>
-          </g>
-
-          {/* Oak Base Leaf Blanket */}
-          <use href="#autumn-tree-drift" transform="translate(0, 32) scale(1.35, 1.1)" />
-        </g>
-
-        {/* TREE 4: FIERY RUST MAPLE (Far Right, x = 1810, y = 106) */}
-        <g transform="translate(1810, 106)">
-          <path d="M -7 36 Q -4 26 -2 14 L 3 14 Q 7 26 10 36 Z" fill={c.mTrunk} />
-          <path d="M -3 36 Q -5 18 -1 0 Q 2 -14 4 -26 L 8 -24 Q 6 -12 2 0 Q 0 18 4 36 Z" fill={c.mTrunk} />
-          <g stroke={c.mTrunk} strokeLinecap="round" fill="none">
-            <path d="M -2 4 Q -10 -4 -16 -12 Q -20 -18 -24 -24" strokeWidth="1.8" />
-            <path d="M 2 2 Q 10 -4 16 -12 Q 20 -18 24 -24" strokeWidth="1.8" />
-            <path d="M 0 -8 Q -3 -20 -2 -32" strokeWidth="1.5" />
-          </g>
-
-          {/* Canopy */}
-          <g opacity={1 - progress * 0.72} style={{ transformOrigin: '0px 8px', animation: 'treeSwaySoft 6.8s ease-in-out infinite', animationDelay: '1.8s' }}>
-            <circle cx="-16" cy="-22" r="16" fill={c.mF2} opacity="0.95" />
-            <circle cx="16" cy="-22" r="16" fill={c.mF2} opacity="0.95" />
-            <circle cx="0" cy="-32" r="20" fill={c.mF2} opacity="0.95" />
-            <circle cx="-10" cy="-44" r="15" fill={c.mF3} opacity="0.95" />
-            <circle cx="10" cy="-44" r="15" fill={c.mF3} opacity="0.95" />
-            <circle cx="0" cy="-54" r="13" fill={c.mF4} opacity="0.92" />
-            <ellipse cx="0" cy="-40" rx="12" ry="8" fill={c.mL2} opacity="0.85" />
-
-            <use href="#autumn-leaf-maple" transform="translate(-30, -18) scale(0.8) rotate(-40)" fill={c.mL1} />
-            <use href="#autumn-leaf-maple" transform="translate(-20, -52) scale(0.85) rotate(-20)" fill={c.mL2} />
-            <use href="#autumn-leaf-maple" transform="translate(10, -58) scale(0.9) rotate(25)" fill={c.mL1} />
-            <use href="#autumn-leaf-maple" transform="translate(30, -40) scale(0.8) rotate(70)" fill={c.mL2} />
-          </g>
-
-          <use href="#autumn-tree-drift" transform="translate(0, 30) scale(1.1, 0.9)" />
-        </g>
-
-        {/* 5. ABUNDANT FALLEN LEAVES ON THE GROUND */}
-        {/* Natural leaf drifts along field contours */}
-        <g>
-          <use href="#autumn-tree-drift" transform="translate(260, 118) scale(0.95, 0.7)" />
-          <use href="#autumn-tree-drift" transform="translate(540, 120) scale(1, 0.75)" />
-          <use href="#autumn-tree-drift" transform="translate(720, 126) scale(0.85, 0.65)" />
-          <use href="#autumn-tree-drift" transform="translate(860, 130) scale(0.95, 0.7)" />
-          <use href="#autumn-tree-drift" transform="translate(1020, 128) scale(1, 0.75)" />
-          <use href="#autumn-tree-drift" transform="translate(1180, 124) scale(0.95, 0.7)" />
-          <use href="#autumn-tree-drift" transform="translate(1320, 120) scale(1.05, 0.75)" />
-          <use href="#autumn-tree-drift" transform="translate(1720, 118) scale(0.95, 0.7)" />
-        </g>
-
-        {/* 60+ Scattered Fallen Autumn Leaves Across the Rolling Ridge */}
-        <g>
-          {/* Upper Ridge Slope (y = 108 to 125) */}
-          <use href="#autumn-leaf-maple" transform="translate(55, 115) scale(0.7) rotate(35)" fill={c.leaves[0]} />
-          <use href="#autumn-leaf-birch" transform="translate(150, 118) scale(0.75) rotate(-45)" fill={c.leaves[7]} />
-          <use href="#autumn-leaf-oak" transform="translate(205, 112) scale(0.7) rotate(80)" fill={c.leaves[4]} />
-          <use href="#autumn-leaf-maple" transform="translate(390, 116) scale(0.75) rotate(-20)" fill={c.leaves[1]} />
-          <use href="#autumn-leaf-oak" transform="translate(470, 118) scale(0.7) rotate(50)" fill={c.leaves[3]} />
-          <use href="#autumn-leaf-birch" transform="translate(630, 122) scale(0.7) rotate(-60)" fill={c.leaves[8]} />
-          <use href="#autumn-leaf-maple" transform="translate(710, 126) scale(0.8) rotate(25)" fill={c.leaves[2]} />
-          <use href="#autumn-leaf-oak" transform="translate(795, 125) scale(0.75) rotate(-35)" fill={c.leaves[5]} />
-          <use href="#autumn-leaf-birch" transform="translate(890, 128) scale(0.7) rotate(75)" fill={c.leaves[6]} />
-          <use href="#autumn-leaf-maple" transform="translate(980, 124) scale(0.75) rotate(-15)" fill={c.leaves[0]} />
-          <use href="#autumn-leaf-oak" transform="translate(1070, 120) scale(0.7) rotate(40)" fill={c.leaves[4]} />
-          <use href="#autumn-leaf-maple" transform="translate(1160, 116) scale(0.8) rotate(-55)" fill={c.leaves[1]} />
-          <use href="#autumn-leaf-birch" transform="translate(1250, 114) scale(0.7) rotate(60)" fill={c.leaves[7]} />
-          <use href="#autumn-leaf-oak" transform="translate(1450, 110) scale(0.75) rotate(-30)" fill={c.leaves[3]} />
-          <use href="#autumn-leaf-maple" transform="translate(1600, 112) scale(0.7) rotate(45)" fill={c.leaves[2]} />
-          <use href="#autumn-leaf-birch" transform="translate(1760, 115) scale(0.7) rotate(-70)" fill={c.leaves[8]} />
-          <use href="#autumn-leaf-oak" transform="translate(1860, 114) scale(0.75) rotate(15)" fill={c.leaves[5]} />
-
-          {/* Mid-Slope (y = 126 to 148) */}
-          <use href="#autumn-leaf-maple" transform="translate(35, 134) scale(0.8) rotate(-40)" fill={c.leaves[1]} />
-          <use href="#autumn-leaf-oak" transform="translate(95, 138) scale(0.85) rotate(105)" fill={c.leaves[3]} />
-          <use href="#autumn-leaf-birch" transform="translate(175, 136) scale(0.8) rotate(30)" fill={c.leaves[6]} />
-          <use href="#autumn-leaf-maple" transform="translate(290, 138) scale(0.85) rotate(-65)" fill={c.leaves[0]} />
-          <use href="#autumn-leaf-oak" transform="translate(365, 142) scale(0.8) rotate(20)" fill={c.leaves[5]} />
-          <use href="#autumn-leaf-birch" transform="translate(425, 140) scale(0.75) rotate(-85)" fill={c.leaves[7]} />
-          <use href="#autumn-leaf-maple" transform="translate(515, 145) scale(0.9) rotate(55)" fill={c.leaves[2]} />
-          <use href="#autumn-leaf-oak" transform="translate(605, 146) scale(0.85) rotate(-25)" fill={c.leaves[4]} />
-          <use href="#autumn-leaf-birch" transform="translate(680, 144) scale(0.8) rotate(90)" fill={c.leaves[8]} />
-          <use href="#autumn-leaf-maple" transform="translate(755, 146) scale(0.85) rotate(-10)" fill={c.leaves[1]} />
-          <use href="#autumn-leaf-oak" transform="translate(835, 148) scale(0.9) rotate(70)" fill={c.leaves[3]} />
-          <use href="#autumn-leaf-birch" transform="translate(930, 146) scale(0.8) rotate(-50)" fill={c.leaves[6]} />
-          <use href="#autumn-leaf-maple" transform="translate(1015, 145) scale(0.85) rotate(35)" fill={c.leaves[0]} />
-          <use href="#autumn-leaf-oak" transform="translate(1105, 144) scale(0.8) rotate(-80)" fill={c.leaves[5]} />
-          <use href="#autumn-leaf-maple" transform="translate(1210, 142) scale(0.9) rotate(15)" fill={c.leaves[2]} />
-          <use href="#autumn-leaf-birch" transform="translate(1295, 140) scale(0.8) rotate(-35)" fill={c.leaves[7]} />
-          <use href="#autumn-leaf-oak" transform="translate(1385, 142) scale(0.85) rotate(65)" fill={c.leaves[4]} />
-          <use href="#autumn-leaf-maple" transform="translate(1490, 144) scale(0.9) rotate(-15)" fill={c.leaves[1]} />
-          <use href="#autumn-leaf-birch" transform="translate(1575, 142) scale(0.8) rotate(80)" fill={c.leaves[8]} />
-          <use href="#autumn-leaf-oak" transform="translate(1660, 140) scale(0.85) rotate(-45)" fill={c.leaves[3]} />
-          <use href="#autumn-leaf-maple" transform="translate(1745, 138) scale(0.9) rotate(50)" fill={c.leaves[0]} />
-          <use href="#autumn-leaf-birch" transform="translate(1825, 136) scale(0.8) rotate(-60)" fill={c.leaves[6]} />
-
-          {/* Foreground Slope (y = 149 to 170) */}
-          <use href="#autumn-leaf-maple" transform="translate(70, 158) scale(0.95) rotate(45)" fill={c.leaves[0]} />
-          <use href="#autumn-leaf-oak" transform="translate(140, 162) scale(1) rotate(-30)" fill={c.leaves[4]} />
-          <use href="#autumn-leaf-birch" transform="translate(225, 160) scale(0.85) rotate(110)" fill={c.leaves[8]} />
-          <use href="#autumn-leaf-maple" transform="translate(320, 164) scale(0.95) rotate(-15)" fill={c.leaves[2]} />
-          <use href="#autumn-leaf-oak" transform="translate(450, 162) scale(1) rotate(75)" fill={c.leaves[3]} />
-          <use href="#autumn-leaf-birch" transform="translate(560, 165) scale(0.9) rotate(-40)" fill={c.leaves[7]} />
-          <use href="#autumn-leaf-maple" transform="translate(645, 168) scale(1) rotate(60)" fill={c.leaves[1]} />
-          <use href="#autumn-leaf-oak" transform="translate(735, 166) scale(0.95) rotate(-70)" fill={c.leaves[5]} />
-          <use href="#autumn-leaf-birch" transform="translate(820, 168) scale(0.85) rotate(25)" fill={c.leaves[6]} />
-          <use href="#autumn-leaf-maple" transform="translate(905, 170) scale(1.05) rotate(-55)" fill={c.leaves[0]} />
-          <use href="#autumn-leaf-oak" transform="translate(995, 168) scale(0.95) rotate(90)" fill={c.leaves[4]} />
-          <use href="#autumn-leaf-birch" transform="translate(1080, 166) scale(0.9) rotate(-20)" fill={c.leaves[8]} />
-          <use href="#autumn-leaf-maple" transform="translate(1165, 168) scale(1) rotate(40)" fill={c.leaves[2]} />
-          <use href="#autumn-leaf-oak" transform="translate(1260, 164) scale(0.95) rotate(-85)" fill={c.leaves[3]} />
-          <use href="#autumn-leaf-birch" transform="translate(1350, 162) scale(0.85) rotate(55)" fill={c.leaves[7]} />
-          <use href="#autumn-leaf-maple" transform="translate(1440, 166) scale(1) rotate(-35)" fill={c.leaves[1]} />
-          <use href="#autumn-leaf-oak" transform="translate(1530, 168) scale(0.95) rotate(15)" fill={c.leaves[5]} />
-          <use href="#autumn-leaf-birch" transform="translate(1620, 164) scale(0.85) rotate(-65)" fill={c.leaves[6]} />
-          <use href="#autumn-leaf-maple" transform="translate(1705, 166) scale(1) rotate(70)" fill={c.leaves[0]} />
-          <use href="#autumn-leaf-oak" transform="translate(1795, 164) scale(0.95) rotate(-25)" fill={c.leaves[4]} />
-          <use href="#autumn-leaf-birch" transform="translate(1875, 162) scale(0.9) rotate(45)" fill={c.leaves[8]} />
-        </g>
-
-        {/* 2 Lightweight Wind-Tumbling Ground Leaves */}
-        <g transform="translate(280, 134)" style={{ animation: 'groundLeafTumble1 8s linear infinite' }}>
-          <use href="#autumn-leaf-maple" scale="0.7" fill={c.leaves[0]} />
-        </g>
-        <g transform="translate(1120, 136)" style={{ animation: 'groundLeafTumble2 9.5s linear infinite', animationDelay: '2s' }}>
-          <use href="#autumn-leaf-oak" scale="0.7" fill={c.leaves[3]} />
-        </g>
-
-        {/* DIWALI SPECIAL: Glowing Diyas & Radiant Rangoli */}
-        {isDiwali && (
-          <g>
-            {/* Glowing Clay Diyas on Fence Posts & Hill Crests */}
-            {[220, 300, 480, 600, 800, 960, 1120, 1260, 1380, 1680, 1760].map((dx, i) => (
-              <g key={dx} transform={`translate(${dx}, ${dx === 800 || dx === 960 || dx === 1120 ? 116 : 98})`}>
-                <path d="M -6 4 Q 0 7 6 4 Q 0 0 -6 4 Z" fill="#9a3412" stroke="#ea580c" strokeWidth="0.8" />
-                <g style={{ transformOrigin: '0 3px', animation: `harvestDiyaFlicker ${1.6 + (i % 4) * 0.3}s ease-in-out infinite`, animationDelay: `${(i % 5) * 0.25}s` }}>
-                  <path d="M 0 -5 C -2.5 -1, -2.5 3, 0 3 C 2.5 3, 2.5 -1, 0 -5 Z" fill="#facc15" />
-                  <ellipse cx="0" cy="1" rx="1.2" ry="2" fill="#ffffff" />
-                </g>
-              </g>
-            ))}
-
-            {/* Radiant Glowing Rangoli Geometric Mandala in Bottom Center (x = 960) */}
-            <g transform="translate(960, 142)" style={{ animation: 'rangoliGlow 3.5s ease-in-out infinite' }}>
-              <circle cx="0" cy="0" r="28" stroke="#facc15" strokeWidth="1.2" strokeDasharray="3 3" fill="none" opacity="0.85" />
-              <circle cx="0" cy="0" r="20" stroke="#f97316" strokeWidth="1.5" fill="none" opacity="0.9" />
-              <polygon points="0,-18 5,-7 17,-7 8,1 12,12 0,6 -12,12 -8,1 -17,-7 -5,-7" fill="#fbbf24" opacity="0.6" />
-              <polygon points="0,18 -5,7 -17,7 -8,-1 -12,-12 0,-6 12,-12 8,-1 17,7 5,7" fill="#f43f5e" opacity="0.5" />
-              <circle cx="0" cy="0" r="8" fill="#ea580c" opacity="0.85" />
-              <ellipse cx="0" cy="1" rx="4.5" ry="2.5" fill="#fef08a" />
-              <g style={{ transformOrigin: '0 0', animation: 'harvestDiyaFlicker 1.8s ease-in-out infinite' }}>
-                <path d="M 0 -8 C -2 -3, -2 0, 0 0 C 2 0, 2 -3, 0 -8 Z" fill="#ffffff" />
-              </g>
-            </g>
-          </g>
-        )}
-        <FallSceneDetails phase={phase} thanksgiving={thanksgiving} />
-        <FallHorizonExtras
-          phase={phase}
-          kind={kind}
-          date={seasonalDate ?? new Date()}
-          thanksgiving={thanksgiving}
-          gratitudeCount={gratitudeCount}
-        />
-      </svg>
-    </div>
-  )
-}
-
-type SquirrelPhase = 'entering' | 'sniffing' | 'digging' | 'burying' | 'alert' | 'fleeing'
-
-function SquirrelFigure({
-  phase = 'entering',
-  flip = false,
-}: {
-  phase?: SquirrelPhase
-  flip?: boolean
-}) {
-  const isAlert = phase === 'alert'
-  const isDigging = phase === 'digging'
-  const isBurying = phase === 'burying'
-  const isFleeing = phase === 'fleeing'
-  const isSniffing = phase === 'sniffing'
-
-  return (
-    <svg
-      width="76"
-      height="58"
-      viewBox="0 0 68 50"
-      className="pointer-events-none select-none filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)]"
-      style={{
-        transform: flip ? 'scaleX(-1)' : undefined,
-        transformOrigin: '34px 25px',
-      }}
-      aria-hidden="true"
-    >
-      <style>{`
-        @keyframes squirrelTailWiggle {
-          0%, 100% { transform: rotate(0deg); }
-          50% { transform: rotate(9deg); }
-        }
-        @keyframes squirrelTailDig {
-          0%, 100% { transform: rotate(-8deg); }
-          50% { transform: rotate(12deg); }
-        }
-        @keyframes squirrelTailAlert {
-          0%, 100% { transform: rotate(2deg); }
-          25% { transform: rotate(16deg); }
-          50% { transform: rotate(4deg); }
-          75% { transform: rotate(18deg); }
-        }
-        @keyframes squirrelTailStream {
-          0%, 100% { transform: rotate(-22deg) scaleY(0.9); }
-          50% { transform: rotate(-17deg) scaleY(1.05); }
-        }
-        @keyframes squirrelChew {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-1.2px); }
-        }
-        @keyframes squirrelSniff {
-          0%, 100% { transform: translateY(0) rotate(0deg); }
-          50% { transform: translateY(1.5px) rotate(4deg); }
-        }
-        @keyframes squirrelLookAround {
-          0%, 100% { transform: rotate(-6deg); }
-          30% { transform: rotate(-14deg); }
-          70% { transform: rotate(5deg); }
-        }
-        @keyframes squirrelDigPawL {
-          0%, 100% { transform: translate(0, 0); }
-          50% { transform: translate(-3px, 4px); }
-        }
-        @keyframes squirrelDigPawR {
-          0%, 100% { transform: translate(-3px, 4px); }
-          50% { transform: translate(0, 0); }
-        }
-        @keyframes squirrelPatPaw {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(3.5px); }
-        }
-        @keyframes squirrelSprintPawL {
-          0%, 100% { transform: translate(-2px, 1px) rotate(-15deg); }
-          50% { transform: translate(3px, -2px) rotate(15deg); }
-        }
-        @keyframes squirrelSprintPawR {
-          0%, 100% { transform: translate(3px, -2px) rotate(15deg); }
-          50% { transform: translate(-2px, 1px) rotate(-15deg); }
-        }
-        @keyframes squirrelDirtFly1 {
-          0% { transform: translate(46px, 42px) scale(0.6); opacity: 0; }
-          20% { opacity: 0.95; }
-          100% { transform: translate(22px, 32px) scale(1.1); opacity: 0; }
-        }
-        @keyframes squirrelDirtFly2 {
-          0% { transform: translate(48px, 43px) scale(0.5); opacity: 0; }
-          25% { opacity: 0.95; }
-          100% { transform: translate(14px, 35px) scale(0.85); opacity: 0; }
-        }
-        @keyframes squirrelDirtFly3 {
-          0% { transform: translate(44px, 41px) scale(0.7); opacity: 0; }
-          30% { opacity: 0.95; }
-          100% { transform: translate(26px, 28px) scale(1.2); opacity: 0; }
-        }
-      `}</style>
-
-      {/* Fluffy Bushy Tail arching over back */}
-      <g
-        style={{
-          transformOrigin: '14px 34px',
-          animation: isDigging
-            ? 'squirrelTailDig 0.22s ease-in-out infinite'
-            : isAlert
-            ? 'squirrelTailAlert 0.8s ease-in-out infinite'
-            : isFleeing
-            ? 'squirrelTailStream 0.16s ease-in-out infinite'
-            : isBurying
-            ? 'squirrelTailWiggle 0.7s ease-in-out infinite'
-            : 'squirrelTailWiggle 1.4s ease-in-out infinite',
-        }}
-      >
-        <path
-          d="M 14 34 
-             C 6 36, 0 28, 2 18 
-             C 4 8, 14 2, 22 4 
-             C 28 6, 26 14, 20 18 
-             C 14 22, 16 30, 20 34 Z"
-          fill="#b45309"
-        />
-        <path
-          d="M 10 24 C 6 16, 12 10, 18 10 C 20 12, 16 18, 14 24 Z"
-          fill="#d97706"
-        />
-      </g>
-
-      {/* Squirrel Body */}
-      <g
-        style={{
-          transformOrigin: '20px 38px',
-          transform: isDigging
-            ? 'rotate(14deg)'
-            : isBurying
-            ? 'rotate(10deg)'
-            : isAlert
-            ? 'rotate(-10deg)'
-            : isFleeing
-            ? 'rotate(10deg)'
-            : isSniffing
-            ? 'rotate(6deg)'
-            : 'rotate(0deg)',
-          transition: 'transform 0.25s ease-out',
-        }}
-      >
-        <ellipse cx="28" cy="32" rx="14" ry="10" fill="#92400e" />
-        <ellipse cx="32" cy="34" rx="8" ry="6" fill="#fef3c7" opacity="0.85" />
-
-        {/* Scampering back leg & paw */}
-        <ellipse cx="18" cy="36" rx="6" ry="5" fill="#78350f" />
-        <path d="M 14 39 L 10 42 L 15 42 Z" fill="#78350f" />
-
-        {/* Squirrel Head & Ears */}
-        <g
-          style={{
-            transformOrigin: '44px 24px',
-            animation: isAlert
-              ? 'squirrelLookAround 1.2s ease-in-out infinite'
-              : isSniffing
-              ? 'squirrelSniff 0.28s ease-in-out infinite'
-              : isDigging || isBurying || isFleeing
-              ? undefined
-              : 'squirrelChew 0.8s ease-in-out infinite',
-            transform: isDigging
-              ? 'translate(1px, 3px) rotate(8deg)'
-              : isAlert
-              ? 'translate(-1px, -4px)'
-              : undefined,
-          }}
-        >
-          <ellipse cx="44" cy="24" rx="8" ry="7" fill="#92400e" />
-          <circle cx="48" cy="27" r="4.2" fill="#b45309" />
-          <path d="M 40 18 C 38 12, 42 12, 44 18 Z" fill="#78350f" />
-          <path d="M 41 17 C 40 14, 42 14, 43 17 Z" fill="#fef3c7" />
-
-          {/* Eye */}
-          <circle cx="45" cy="22" r={isAlert ? '2.3' : '1.8'} fill="#1c1917" />
-          <circle cx={isAlert ? '44.3' : '44.5'} cy={isAlert ? '21.3' : '21.5'} r={isAlert ? '0.8' : '0.6'} fill="#ffffff" />
-          <circle cx="51" cy="25" r="1.1" fill="#1c1917" />
-
-          {/* Tiny whiskers */}
-          <line x1="49" y1="26" x2="55" y2="24" stroke="#fef3c7" strokeWidth="0.6" opacity="0.7" />
-          <line x1="49" y1="27" x2="55" y2="28" stroke="#fef3c7" strokeWidth="0.6" opacity="0.7" />
-        </g>
-
-        {/* Front Paws & Acorn State */}
-        {/* Phase: ENTERING / SNIFFING (holding acorn) */}
-        {(phase === 'entering' || phase === 'sniffing') && (
-          <g>
-            <g transform="translate(48, 30)">
-              <ellipse cx="0" cy="2" rx="3.2" ry="4" fill="#78350f" />
-              <ellipse cx="0" cy="-1" rx="3.8" ry="2" fill="#451a03" />
-              <line x1="0" y1="-1" x2="0.6" y2="-3" stroke="#451a03" strokeWidth="0.8" />
-            </g>
-            <ellipse cx="45" cy="31" rx="3.5" ry="2.2" fill="#92400e" />
-            <ellipse cx="48" cy="34" rx="3.5" ry="2.2" fill="#92400e" />
-          </g>
-        )}
-
-        {/* Phase: DIGGING (paws scratching frantically, acorn on ground, dirt spraying) */}
-        {phase === 'digging' && (
-          <g>
-            {/* Acorn resting beside the dig spot */}
-            <g transform="translate(54, 38) rotate(-18)">
-              <ellipse cx="0" cy="1.5" rx="3.2" ry="3.8" fill="#78350f" />
-              <ellipse cx="0" cy="-1.5" rx="3.8" ry="1.8" fill="#451a03" />
-              <line x1="0" y1="-1.5" x2="0.5" y2="-3.2" stroke="#451a03" strokeWidth="0.8" />
-            </g>
-
-            {/* Alternating digging paws */}
-            <g style={{ transformOrigin: '44px 34px', animation: 'squirrelDigPawL 0.12s ease-in-out infinite' }}>
-              <ellipse cx="44" cy="38" rx="3.6" ry="2.4" fill="#92400e" />
-              <line x1="45" y1="39" x2="47" y2="41" stroke="#78350f" strokeWidth="1" strokeLinecap="round" />
-            </g>
-            <g style={{ transformOrigin: '48px 34px', animation: 'squirrelDigPawR 0.12s ease-in-out infinite' }}>
-              <ellipse cx="48" cy="38" rx="3.6" ry="2.4" fill="#92400e" />
-              <line x1="49" y1="39" x2="51" y2="41" stroke="#78350f" strokeWidth="1" strokeLinecap="round" />
-            </g>
-
-            {/* Flying dirt particles */}
-            <circle cx="0" cy="0" r="1.6" fill="#5c2c16" style={{ animation: 'squirrelDirtFly1 0.22s linear infinite' }} />
-            <circle cx="0" cy="0" r="1.3" fill="#78350f" style={{ animation: 'squirrelDirtFly2 0.22s linear infinite', animationDelay: '0.07s' }} />
-            <circle cx="0" cy="0" r="1.8" fill="#451a03" style={{ animation: 'squirrelDirtFly3 0.22s linear infinite', animationDelay: '0.14s' }} />
-            <circle cx="0" cy="0" r="1.1" fill="#92400e" style={{ animation: 'squirrelDirtFly1 0.22s linear infinite', animationDelay: '0.11s' }} />
-          </g>
-        )}
-
-        {/* Phase: BURYING (nut in ground, paws patting earth down) */}
-        {phase === 'burying' && (
-          <g>
-            {/* Acorn in ground */}
-            <g transform="translate(48, 40)">
-              <ellipse cx="0" cy="1" rx="3" ry="3" fill="#78350f" />
-              <ellipse cx="0" cy="-1.5" rx="3.5" ry="1.6" fill="#451a03" />
-            </g>
-
-            {/* Paws patting dirt down */}
-            <g style={{ transformOrigin: '46px 34px', animation: 'squirrelPatPaw 0.16s ease-in-out infinite' }}>
-              <ellipse cx="45" cy="37" rx="3.6" ry="2.2" fill="#92400e" />
-              <ellipse cx="49" cy="38" rx="3.6" ry="2.2" fill="#92400e" />
-            </g>
-          </g>
-        )}
-
-        {/* Phase: ALERT (empty paws held against chest) */}
-        {phase === 'alert' && (
-          <g>
-            <ellipse cx="38" cy="27" rx="3.4" ry="2.2" fill="#92400e" />
-            <ellipse cx="42" cy="28" rx="3.4" ry="2.2" fill="#92400e" />
-          </g>
-        )}
-
-        {/* Phase: FLEEING (paws pumping in fast sprint) */}
-        {phase === 'fleeing' && (
-          <g>
-            <g style={{ transformOrigin: '38px 30px', animation: 'squirrelSprintPawL 0.13s ease-in-out infinite' }}>
-              <ellipse cx="40" cy="34" rx="3.8" ry="2.2" fill="#92400e" />
-            </g>
-            <g style={{ transformOrigin: '44px 30px', animation: 'squirrelSprintPawR 0.13s ease-in-out infinite' }}>
-              <ellipse cx="48" cy="32" rx="3.8" ry="2.2" fill="#92400e" />
-            </g>
-          </g>
-        )}
-      </g>
-    </svg>
-  )
-}
-
-const Squirrel = SquirrelFigure
-
-function BuriedNutMound() {
-  return (
-    <svg
-      width="64"
-      height="26"
-      viewBox="0 0 64 26"
-      className="overflow-visible filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)]"
-    >
-      {/* Freshly dug dark earth mound */}
-      <ellipse cx="32" cy="20" rx="16" ry="5.5" fill="#381907" />
-      <ellipse cx="32" cy="18.5" rx="13" ry="4" fill="#5c2c16" />
-      <ellipse cx="30" cy="17" rx="9" ry="2.8" fill="#78350f" />
-
-      {/* Loose soil crumbs around base */}
-      <circle cx="14" cy="22" r="1.2" fill="#381907" />
-      <circle cx="18" cy="20.5" r="1.5" fill="#5c2c16" />
-      <circle cx="46" cy="20.5" r="1.6" fill="#5c2c16" />
-      <circle cx="50" cy="22" r="1.2" fill="#381907" />
-      <circle cx="24" cy="22.5" r="1" fill="#78350f" />
-      <circle cx="40" cy="22.5" r="1" fill="#78350f" />
-
-      {/* The Acorn cap peeking out and fallen autumn leaves */}
-      <g transform="translate(32, 16)">
-        {/* Top of buried acorn tucked into earth */}
-        <ellipse cx="0" cy="0" rx="3.6" ry="1.8" fill="#451a03" />
-        <line x1="0" y1="-0.5" x2="0.8" y2="-3" stroke="#78350f" strokeWidth="1" strokeLinecap="round" />
-        {/* Fallen autumn leaves resting beside the mound */}
-        <path d="M 4 0 C 8 -3, 11 1, 8 3 C 6 2, 5 1, 4 0 Z" fill="#ea580c" />
-        <path d="M -5 1 C -8 -1, -10 2, -8 4 C -6 3, -5 2, -5 1 Z" fill="#eab308" />
-      </g>
-    </svg>
-  )
-}
-
-function RunningSquirrel() {
-  const [active, setActive] = useState(false)
-  const [runId, setRunId] = useState(0)
-  const [direction, setDirection] = useState<1 | -1>(1)
-  const [phase, setPhase] = useState<SquirrelPhase>('entering')
-  const [coords, setCoords] = useState<{ startX: number; buryX: number; exitX: number } | null>(null)
-  const [showMound, setShowMound] = useState(false)
-  const [moundCoords, setMoundCoords] = useState<{ x: number } | null>(null)
-  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
-
-  const clearAllTimers = () => {
-    timersRef.current.forEach((t) => clearTimeout(t))
-    timersRef.current = []
-  }
-
-  const trigger = (e?: Event) => {
-    const frozen = Boolean((e as CustomEvent | undefined)?.detail?.freeze)
-    if (!frozen && (document.hidden || !autumnVisits.claim(performance.now(), 9_400))) {
-      timersRef.current.push(setTimeout(trigger, 5_000))
-      return
-    }
-    clearAllTimers()
-    setShowMound(false)
-    setMoundCoords(null)
-
-    const custom = e as CustomEvent<{
-      freeze?: boolean
-      phase?: SquirrelPhase
-      x?: number
-      direction?: 1 | -1
-    }> | undefined
-
-    const isFreeze = Boolean(custom?.detail?.freeze)
-    const targetPhase = isFreeze ? (custom?.detail?.phase || 'digging') : 'entering'
-    const w = typeof window !== 'undefined' ? window.innerWidth : 1920
-    const dir: 1 | -1 = custom?.detail?.direction ?? (Math.random() < 0.5 ? 1 : -1)
-    setDirection(dir)
-
-    const buryX = custom?.detail?.x ?? (dir === 1
-      ? Math.round(w * (0.34 + Math.random() * 0.14))
-      : Math.round(w * (0.52 + Math.random() * 0.14)))
-    const startX = isFreeze ? buryX : (dir === 1 ? -90 : w + 90)
-    const exitX = isFreeze ? buryX : (dir === 1 ? w + 110 : -110)
-
-    setCoords({ startX, buryX, exitX })
-    setPhase(targetPhase)
-    setActive(true)
-    setRunId((r) => r + 1)
-
-    const moundX = buryX + (dir === 1 ? 48 : 16)
-
-    if (isFreeze) {
-      if (targetPhase === 'burying' || targetPhase === 'alert' || targetPhase === 'fleeing') {
-        setMoundCoords({ x: moundX })
-        setShowMound(true)
-      }
-      return
-    }
-
-    // Phase schedule:
-    // 0.0s - 2.4s: entering (runs to buryX with nut in paws)
-    // 2.4s - 3.2s: sniffing (sniff sniff, finds spot)
-    // 3.2s - 5.0s: digging (paws dig rapidly, dirt sprays backwards)
-    // 5.0s - 6.5s: burying (nut placed in hole, mound appears, paws pat down earth)
-    // 6.5s - 7.6s: alert (sits up on hind legs, empty paws at chest, looks left & right)
-    // 7.6s - 9.4s: fleeing (sprints away fast with empty paws)
-    timersRef.current.push(
-      setTimeout(() => {
-        setPhase('sniffing')
-      }, 2400)
-    )
-
-    timersRef.current.push(
-      setTimeout(() => {
-        setPhase('digging')
-      }, 3200)
-    )
-
-    timersRef.current.push(
-      setTimeout(() => {
-        setPhase('burying')
-        setMoundCoords({ x: moundX })
-        setShowMound(true)
-      }, 5000)
-    )
-
-    timersRef.current.push(
-      setTimeout(() => {
-        setPhase('alert')
-      }, 6500)
-    )
-
-    timersRef.current.push(
-      setTimeout(() => {
-        setPhase('fleeing')
-      }, 7600)
-    )
-  }
-
-  useEffect(() => {
-    const qp = getQueryParam('squirrel')
-    if (qp) {
-      const normalized =
-        qp === 'bury'
-          ? 'burying'
-          : qp === 'dig'
-          ? 'digging'
-          : qp === 'run' || qp === 'flee'
-          ? 'fleeing'
-          : qp
-      const validPhases: SquirrelPhase[] = ['entering', 'sniffing', 'digging', 'burying', 'alert', 'fleeing']
-      const freezePhase = validPhases.includes(normalized as SquirrelPhase) ? (normalized as SquirrelPhase) : 'digging'
-      trigger(
-        new CustomEvent('trigger-squirrel', {
-          detail: { freeze: true, phase: freezePhase, x: 960, direction: 1 },
-        })
-      )
-      return
-    }
-
-    window.addEventListener('trigger-squirrel', trigger)
-    const initialTimer = setTimeout(trigger, 6_000)
-    timersRef.current.push(initialTimer)
-
-    return () => {
-      window.removeEventListener('trigger-squirrel', trigger)
-      clearAllTimers()
-    }
-  }, [])
-
-  const handleAnimationComplete = () => {
-    if (coords && coords.startX === coords.exitX) {
-      return
-    }
-    setActive(false)
-    // Keep one static acorn mound until the next visit; never accumulate SVGs.
-    // Schedule next run
-    timersRef.current.push(
-      setTimeout(trigger, 45_000 + Math.random() * 45_000)
-    )
-  }
-
-  const bounceConfig = useMemo(() => {
-    switch (phase) {
-      case 'entering':
-        return { y: [0, -6, 0], duration: 0.22, repeat: Infinity }
-      case 'sniffing':
-        return { y: [0, -1.5, 0], duration: 0.35, repeat: Infinity }
-      case 'digging':
-        return { y: [0, -2.5, 0], duration: 0.12, repeat: Infinity }
-      case 'burying':
-        return { y: [0, -2, 0], duration: 0.16, repeat: Infinity }
-      case 'alert':
-        return { y: -4, duration: 0.2, repeat: 0 }
-      case 'fleeing':
-        return { y: [0, -9, 0], duration: 0.13, repeat: Infinity }
-      default:
-        return { y: 0, duration: 0.2, repeat: 0 }
-    }
-  }, [phase])
-
-  if ((!active && !showMound) || !coords) return null
-
-  return (
-    <>
-      {/* Persisting Buried Nut Mound on the Ground */}
-      <AnimatePresence>
-        {showMound && moundCoords && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.85, transition: { duration: 1.0 } }}
-            className="fixed bottom-0 pointer-events-none z-20 select-none"
-            style={{ left: moundCoords.x, transform: 'translateX(-50%)' }}
-          >
-            <BuriedNutMound />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Animated Squirrel Figure */}
-      {active && (
-        <motion.div
-          key={runId}
-          initial={{ x: coords.startX }}
-          animate={{
-            x: [coords.startX, coords.buryX, coords.buryX, coords.exitX],
-          }}
-          transition={{
-            duration: 9.4,
-            times: [0, 0.255, 0.808, 1],
-            ease: ['easeOut', 'linear', 'easeIn'],
-          }}
-          onAnimationComplete={handleAnimationComplete}
-          className="fixed bottom-1 pointer-events-none z-30 select-none"
-        >
-          <motion.div
-            animate={Array.isArray(bounceConfig.y) ? { y: bounceConfig.y } : { y: bounceConfig.y }}
-            transition={{
-              duration: bounceConfig.duration,
-              repeat: bounceConfig.repeat,
-              ease: 'easeInOut',
-            }}
-          >
-            <SquirrelFigure phase={phase} flip={direction === -1} />
-          </motion.div>
-        </motion.div>
-      )}
-    </>
-  )
-}
-
-function Turkey({ flip = false }: { flip?: boolean }) {
-  return (
-    <svg
-      width="84"
-      height="80"
-      viewBox="0 0 76 72"
-      className="pointer-events-none select-none"
-      style={{ transform: flip ? 'scaleX(-1)' : undefined }}
-      aria-hidden="true"
-    >
-      <style>{`
-        @keyframes harvestTurkeyPeck {
-          0%, 31%, 42%, 53%, 65%, 100% { transform: rotate(0deg); }
-          36%, 47% { transform: rotate(48deg); }
-        }
-        @keyframes turkeyWattleSway {
-          0%, 100% { transform: rotate(0deg); }
-          50% { transform: rotate(14deg); }
-        }
-        @keyframes turkeyTailFan {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.05, 0.98); }
-        }
-      `}</style>
-
-      {/* Magnificent Fanned Tail Feathers */}
-      <g style={{ transformOrigin: '24px 44px', animation: 'turkeyTailFan 2s ease-in-out infinite' }}>
-        {[-50, -35, -20, -5, 10, 25, 40].map((deg, i) => (
-          <g key={deg} transform={`translate(24, 44) rotate(${deg}) translate(0, -32)`}>
-            <path d="M -4 16 L -5 -6 Q 0 -12 5 -6 L 4 16 Z" fill={i % 2 === 0 ? '#78350f' : '#b45309'} />
-            <path d="M -4.5 4 L 4.5 4 L 4.8 -2 L -4.8 -2 Z" fill="#d97706" />
-            <path d="M -4.8 -2 L 4.8 -2 Q 0 -10 -4.8 -2 Z" fill="#fde047" />
-          </g>
-        ))}
-      </g>
-
-      {/* Plump Turkey Body */}
-      <ellipse cx="36" cy="46" rx="16" ry="14" fill="#451a03" />
-      <path
-        d="M 28 42 C 26 50, 36 56, 44 48 C 42 42, 34 38, 28 42 Z"
-        fill="#78350f"
-      />
-
-      {/* Two pecks while stopped at the harvest basket. */}
-      <g style={{ transformOrigin: '45px 43px', animation: 'harvestTurkeyPeck 12s linear both' }}>
-      {/* Turkey Neck and Head */}
-      <path
-        d="M 44 44 C 48 36, 52 28, 50 20 C 53 22, 56 28, 52 44 Z"
-        fill="#b91c1c"
-      />
-      <circle cx="50" cy="20" r="7" fill="#b91c1c" />
-
-      {/* Pilgrim Hat on Turkey's Head */}
-      <g transform="translate(50, 14)">
-        <ellipse cx="0" cy="0" rx="10" ry="2.5" fill="#18181b" />
-        <polygon points="-6,0 6,0 4.5,-12 -4.5,-12" fill="#27272a" />
-        <rect x="-5" y="-3.5" width="10" height="3" fill="#ca8a04" />
-        <rect x="-2" y="-4.5" width="4" height="4.5" fill="#facc15" stroke="#18181b" strokeWidth="0.8" />
-      </g>
-
-      {/* Eye & Beak */}
-      <circle cx="53" cy="19" r="1.8" fill="#ffffff" />
-      <circle cx="54" cy="19" r="1" fill="#18181b" />
-      <polygon points="56,19 63,22 56,24" fill="#f59e0b" />
-
-      {/* Red Wattle & Snood */}
-      <g style={{ transformOrigin: '55px 22px', animation: 'turkeyWattleSway 1.2s ease-in-out infinite' }}>
-        <path
-          d="M 55 21 C 58 20, 60 26, 57 32 C 55 36, 52 34, 54 28 Z"
-          fill="#dc2626"
-        />
-      </g>
-
-      </g>
-
-      {/* Big Yellow Turkey Legs & Strutting Feet */}
-      <g stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round">
-        <line x1="32" y1="58" x2="30" y2="67" />
-        <path d="M 24 67 L 30 67 L 33 65 M 30 67 L 32 69" fill="none" />
-
-        <line x1="42" y1="58" x2="44" y2="67" />
-        <path d="M 38 67 L 44 67 L 47 65 M 44 67 L 46 69" fill="none" />
-      </g>
-    </svg>
-  )
-}
-
-function StruttingTurkey() {
-  const activeRef = useRef(false)
-  const triggerRef = useRef<() => void>(() => {})
-  const [strutting, setStrutting] = useState(false)
-  const [direction, setDirection] = useState<1 | -1>(1)
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  useEffect(() => {
-    const trigger = () => {
-      if (activeRef.current) return
-      if (timerRef.current) clearTimeout(timerRef.current)
-      if (document.hidden || !autumnVisits.claim(performance.now(), 12_000)) {
-        timerRef.current = setTimeout(trigger, 5_000)
-        return
-      }
-      activeRef.current = true
-      setDirection(Math.random() < 0.5 ? 1 : -1)
-      setStrutting(true)
-    }
-    triggerRef.current = trigger
-    window.addEventListener('trigger-turkey', trigger)
-    timerRef.current = setTimeout(trigger, 8_000)
-
-    return () => {
-      window.removeEventListener('trigger-turkey', trigger)
-      if (timerRef.current) clearTimeout(timerRef.current)
-    }
-  }, [])
-
-  const handleAnimationComplete = () => {
-    activeRef.current = false
-    setStrutting(false)
-    if (timerRef.current) clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(() => triggerRef.current(), 45_000 + Math.random() * 45_000)
-  }
-
-  if (!strutting) return null
-
-  return (
-    <motion.div
-      initial={{ x: direction === 1 ? -90 : window.innerWidth + 90 }}
-      animate={{ x: [direction === 1 ? -90 : window.innerWidth + 90,
-        window.innerWidth * (346 / 1920) - (direction === 1 ? 70 : 12),
-        window.innerWidth * (346 / 1920) - (direction === 1 ? 70 : 12),
-        direction === 1 ? window.innerWidth + 90 : -90] }}
-      transition={{ duration: 12, times: [0, 0.3, 0.6, 1], ease: 'linear' }}
-      onAnimationComplete={handleAnimationComplete}
-      className="fixed bottom-1 pointer-events-none z-30 select-none"
-    >
-      <motion.div
-        animate={{ y: [0, -4, 0, -4, 0, 0, -4, 0] }}
-        transition={{ duration: 12, times: [0, 0.1, 0.2, 0.25, 0.3, 0.6, 0.8, 1], ease: 'easeInOut' }}
-      >
-        <Turkey flip={direction === -1} />
-      </motion.div>
-    </motion.div>
   )
 }
 
@@ -6351,16 +5028,18 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
   const matShadow = `${ambient}0 4px 10px rgba(0,0,0,0.3), 0 16px 36px rgba(0,0,0,0.4)`
   // Original camera clips are never autoplayed. A verified playback derivative
   // is the only video source eligible for unattended slideshow playback.
+  const seasonalNow = seasonalDate ?? getSeasonalDate()
+  const autumnCard = isAutumnScene(seasonalNow)
   const autoplayable = quality !== 'low' && !!item.playbackUrl
-  const tilt = ((seed % 44) / 10 - 2.2) * (pairIdx === 1 ? -1 : 1) * (diwali ? 0.35 : 1)
+  const tilt = ((seed % 44) / 10 - 2.2) * (pairIdx === 1 ? -1 : 1) * (diwali ? 0.35 : autumnCard ? 0.45 : 1)
 
   const media = (
     <div
-      className="overflow-hidden bg-neutral-100 relative"
+      className={`overflow-hidden bg-neutral-100 relative ${autumnCard ? 'rounded-[6px]' : ''}`}
       style={{
         aspectRatio: aspect,
         maxHeight: pair ? '74vh' : daylight ? '78vh' : '82vh',
-        maxWidth: pair ? '44vw' : '84vw',
+        maxWidth: pair ? '42vw' : autumnCard ? '76vw' : '84vw',
       }}
     >
       {mediaFailed ? (
@@ -6417,8 +5096,8 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
     <div
       style={{
         fontFamily: "'Caveat', cursive",
-        color: ink.color,
-        textShadow: ink.shadow,
+        color: autumnCard ? '#f5e4c3' : ink.color,
+        textShadow: autumnCard ? '0 1px 3px rgba(15, 8, 4, 0.72)' : ink.shadow,
       }}
       className={`mt-3 mb-0.5 w-full text-center ${pair ? 'text-[1.65rem] sm:text-[1.85rem]' : 'text-[1.85rem] sm:text-[2.15rem]'} font-medium tracking-normal select-none pointer-events-none flex flex-wrap items-center justify-center gap-x-2 leading-relaxed px-1.5`}
     >
@@ -6428,21 +5107,30 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
     </div>
   )
 
-  const seasonalNow = seasonalDate ?? getSeasonalDate()
   const hasSittingElf = isElfSeason(seasonalNow) && !isNewYearSeason(seasonalNow)
   const seedOffset = seed + pairIdx * 3 + index
   const elfPosition = pair ? (pairIdx === 0 ? 'left' : 'right') : 'right'
   const elfFlip = pair ? pairIdx === 0 : false
   const bowPosition = pair ? (pairIdx === 0 ? 'right' : 'left') : 'right'
-  const autumnCard = isAutumnScene(seasonalNow)
   const tgPhotoYear = autumnCard ? thanksgivingPhotoYear(item.date_taken, seasonalNow) : null
 
   const card = (
     <div
-      className="relative bg-[#faf8f5] p-3.5 pb-4 rounded-[4px] border border-neutral-200/60 flex flex-col items-center pointer-events-auto cursor-pointer"
+      className={`relative bg-[#faf8f5] p-3.5 pb-4 ${autumnCard ? 'rounded-[12px]' : 'rounded-[4px]'} border border-neutral-200/60 flex flex-col items-center pointer-events-auto cursor-pointer`}
       style={{
-        boxShadow: diwali ? `inset 0 0 0 1px #c49a5a, ${matShadow}` : matShadow,
-        ...(diwali ? { backgroundColor: diwaliTheme(phase).frame, borderColor: '#c49a5a' } : {}),
+        boxShadow: diwali
+          ? `inset 0 0 0 1px #c49a5a, ${matShadow}`
+          : autumnCard
+            ? `inset 0 0 0 1px rgba(235, 181, 101, 0.28), 0 24px 56px rgba(8, 5, 3, 0.7), ${matShadow}`
+            : matShadow,
+        ...(diwali
+          ? { backgroundColor: diwaliTheme(phase).frame, borderColor: '#c49a5a' }
+          : autumnCard
+            ? {
+                background: 'linear-gradient(180deg, #3c2617 0%, #26160d 100%)',
+                borderColor: 'rgba(235, 181, 101, 0.45)',
+              }
+            : {}),
         transform: `rotate(${tilt.toFixed(1)}deg) translateZ(0)`,
         willChange: 'transform',
       }}
@@ -6467,11 +5155,6 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
           className={`absolute -top-3.5 ${bowPosition === 'left' ? '-left-3.5' : '-right-3.5'} pointer-events-none z-20 select-none`}
         >
           <BirthdayBow seed={seedOffset} />
-        </div>
-      )}
-      {autumnCard && (
-        <div className="absolute -top-5 left-1/2 -translate-x-1/2 pointer-events-none z-20 select-none">
-          <Clothespin />
         </div>
       )}
       {autumnCard && tgPhotoYear !== null && <ThanksgivingRibbon year={tgPhotoYear} />}
@@ -6617,15 +5300,13 @@ const MemoDiwaliMarigoldBanner = React.memo(DiwaliMarigoldBanner)
 const MemoPhotoRig = React.memo(PhotoRig)
 const MemoDaytimePumpkinPatch = React.memo(DaytimePumpkinPatch)
 const MemoSpookyGraveyard = React.memo(SpookyGraveyard)
-const MemoAutumnHarvestHorizon = React.memo(AutumnHarvestHorizon)
+const MemoDiwaliHorizon = React.memo(DiwaliHorizon)
 const MemoDaytimePartyBuntingAndSpiders = React.memo(DaytimePartyBuntingAndSpiders)
 const MemoSpookyWebsAndSpiders = React.memo(SpookyWebsAndSpiders)
 const MemoDancingSkeleton = React.memo(DancingSkeleton)
 const MemoFloatingBirthdayBalloons = React.memo(FloatingBirthdayBalloons)
 const MemoBirthdayParade = React.memo(BirthdayParade)
 const MemoRunningElf = React.memo(RunningElf)
-const MemoRunningSquirrel = React.memo(RunningSquirrel)
-const MemoStruttingTurkey = React.memo(StruttingTurkey)
 const MemoPeacock = React.memo(Peacock)
 
 export default function Slideshow({
@@ -6660,6 +5341,7 @@ export default function Slideshow({
   // and silently drop the sky back to real weather.
   const [override] = useState(() => ({ phase: getPhaseOverride(), kind: getKindOverride() }))
   const [kind, setKind] = useState<SkyKind>(override.kind ?? 'clear')
+  const [weatherMeta, setWeatherMeta] = useState<{ tempF: number | null; windSpeed: number }>({ tempF: null, windSpeed: 0 })
   const [sun, setSun] = useState<{ sunrise: Date | null; sunset: Date | null }>({ sunrise: null, sunset: null })
   // Minute-aligned: the overlay shows hh:mm and phase changes are minutes apart.
   const now = useClock()
@@ -6743,6 +5425,14 @@ export default function Slideshow({
         const data = await api.get<WeatherResp>('/api/weather')
         if (!alive) return
         if (!override.kind) setKind(toKind(data.current?.kind))
+        const rawTemp = data.current?.temp
+        const tempF =
+          typeof rawTemp === 'number'
+            ? data.unit === 'celsius'
+              ? Math.round((rawTemp * 9) / 5 + 32)
+              : rawTemp
+            : null
+        setWeatherMeta({ tempF, windSpeed: data.current?.wind ?? 0 })
         const today = data.daily?.[0]
         setSun({
           sunrise: today?.sunrise ? new Date(today.sunrise) : null,
@@ -7105,21 +5795,21 @@ export default function Slideshow({
         style={{ background: 'radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.26) 100%)' }}
       />
 
-      <MemoCelestialGlow phase={phase} kind={kind} hideMoon={autumnScene} />
+      {!autumnScene && <MemoCelestialGlow phase={phase} kind={kind} />}
 
-      {/* Stars + shooting stars (behind photos) */}
-      <canvas ref={starRef} className="absolute inset-0 w-full h-full pointer-events-none" />
+      {/* Stars + shooting stars (behind photos; woodland backdrop paints its own sky gap stars) */}
+      <canvas ref={starRef} className={`absolute inset-0 w-full h-full pointer-events-none ${autumnScene ? 'hidden' : ''}`} />
 
-      <MemoCloudLayer phase={phase} kind={kind} quality={quality} />
+      {!autumnScene && <MemoCloudLayer phase={phase} kind={kind} quality={quality} />}
 
-      {/* November: harvest moon, dusk stars, Thanksgiving parade balloon */}
+      {/* November Storybook Woodland Backdrop (behind photos) */}
       {autumnScene && (
-        <FallSkyLayer
+        <WoodlandBackdrop
           phase={phase}
           kind={kind}
           quality={quality}
           paused={!!skyState.paused}
-          thanksgivingWeek={isThanksgivingWeek(seasonalDate)}
+          frosty={isFrostyWoodland(seasonalDate, phase, kind, weatherMeta.tempF)}
         />
       )}
 
@@ -7174,15 +5864,28 @@ export default function Slideshow({
         <MemoSpookyGraveyard isBirthday={isSwaraBirthday(seasonalDate)} />
       )}
 
-      {/* November autumn harvest & Thanksgiving / Diwali horizon in FOREGROUND (photos float up from behind) */}
-      {(isNovember(seasonalDate) || isDiwaliSeason(seasonalDate) || isThanksgivingWeek(seasonalDate)) && (
-        <MemoAutumnHarvestHorizon
-          seasonalDate={seasonalDate}
+      {/* Diwali Temple & Ghat skyline in FOREGROUND (Nov 6 6pm through Nov 8 or ?holiday=diwali) */}
+      {isDiwaliSeason(seasonalDate) && !autumnScene && (
+        <MemoDiwaliHorizon
           phase={phase}
-          kind={kind}
           quality={quality}
           paused={!!skyState.paused || photoEntering}
-          gratitudeCount={gratitudeNotes.length}
+        />
+      )}
+
+      {/* November Storybook Woodland Stage in FOREGROUND (framing trunks, critters, weather & Thanksgiving feast) */}
+      {autumnScene && (
+        <WoodlandStage
+          phase={phase}
+          kind={kind}
+          date={seasonalDate}
+          quality={quality}
+          paused={!!skyState.paused}
+          thanksgivingWeek={isThanksgivingWeek(seasonalDate)}
+          frosty={isFrostyWoodland(seasonalDate, phase, kind, weatherMeta.tempF)}
+          windy={isWindyWoodland(kind, weatherMeta.windSpeed)}
+          notes={gratitudeNotes}
+          onInteract={handleBalloonPop}
         />
       )}
 
@@ -7211,28 +5914,6 @@ export default function Slideshow({
 
       {/* Holiday Delights (Running Elf across bottom bezel, Dec 1-24) */}
       {isElfSeason(seasonalDate) && !isNewYearSeason(seasonalDate) && <MemoRunningElf />}
-
-      {/* November Autumn Delights: Burying Nut Squirrel (when not Thanksgiving week, or with query override) */}
-      {!skyState.paused && ((isNovember(seasonalDate) && !isThanksgivingWeek(seasonalDate) && !isDiwaliSeason(seasonalDate)) || Boolean(getQueryParam('squirrel'))) && (
-        <MemoRunningSquirrel />
-      )}
-
-      {/* Thanksgiving Week: Strutting Cartoon Turkey */}
-      {!skyState.paused && isThanksgivingWeek(seasonalDate) && <MemoStruttingTurkey />}
-
-      {/* November scene: visitors, hidden acorn, turkey spotting, gratitude cards, leaf wipe */}
-      {!skyState.paused && autumnScene && (
-        <FallOverlay
-          phase={phase}
-          kind={kind}
-          date={seasonalDate}
-          quality={quality}
-          thanksgivingWeek={isThanksgivingWeek(seasonalDate)}
-          slideKey={currentIdx}
-          onPop={handleBalloonPop}
-          notes={gratitudeNotes}
-        />
-      )}
 
       {/* Indian Festive & Diwali Delights: Regal Strutting & Displaying Peacock */}
       {!skyState.paused && (isDiwaliSeason(seasonalDate) || getQueryParam('peacock') !== null) && (

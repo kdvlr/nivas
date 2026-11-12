@@ -1504,8 +1504,8 @@ function GratitudeCard() {
       badge={<Badge ok={list.length > 0} label={`${list.length} note${list.length === 1 ? '' : 's'}`} />}
     >
       <p className="mb-3 text-base text-ink-soft">
-        What is your family thankful for? Each note becomes a leaf on the little tree in the November slideshow, and
-        every few minutes one floats down as a big card. Up to 40 notes.
+        What is your family thankful for? Notes tuck a glowing gratitude scroll onto the mossy roots in the November
+        woodland slideshow, and every few minutes one floats down as a storybook card. Up to 40 notes.
       </p>
       <div className="flex flex-col gap-2">
         {list.map((n, i) => (
