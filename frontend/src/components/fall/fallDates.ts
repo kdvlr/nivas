@@ -7,12 +7,10 @@ import {
 import type { SkyKind, SkyPhase } from '../sky/skyEngine'
 import { getHolidayOverride, getQueryParam, isDiwaliSeason, isNovember } from '../sky/queryParam'
 
+import { thanksgivingDate } from '../../lib/thanksgivingWeek'
+
 /** US Thanksgiving: the fourth Thursday of November. */
-export function thanksgivingDate(year: number): Date {
-  const first = new Date(year, 10, 1)
-  const firstThursday = 1 + ((4 - first.getDay() + 7) % 7)
-  return new Date(year, 10, firstThursday + 21)
-}
+export { thanksgivingDate }
 
 const sameDay = (a: Date, b: Date) =>
   a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()

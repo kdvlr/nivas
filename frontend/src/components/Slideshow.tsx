@@ -5886,6 +5886,8 @@ export default function Slideshow({
           windy={isWindyWoodland(kind, weatherMeta.windSpeed)}
           notes={gratitudeNotes}
           onInteract={handleBalloonPop}
+          photoTick={currentIdx}
+          videoSlide={!!activeSlide?.items.some((i) => i.type === 'video')}
         />
       )}
 

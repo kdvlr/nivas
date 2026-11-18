@@ -5,16 +5,53 @@ import type { SkyKind, SkyPhase } from '../sky/skyEngine'
 import type { Quality } from '../sky/useQuality'
 import {
   canopyDensity,
-  daysUntilThanksgiving,
+  dayHash,
   deriveWoodlandMood,
+  fallDayOfMonth,
   hollowAcornCount,
   isThanksgivingDay,
+  todayKey,
 } from './fallDates'
 import {
   pickWoodlandVignette,
   VIGNETTE_DURATIONS_MS,
   type WoodlandVignette,
 } from '../../lib/woodlandVignettes'
+import {
+  completesFeed,
+  eligibleTgInterludes,
+  feastGuests,
+  feastStage,
+  FEED_GOAL,
+  hiddenTurkeySpot,
+  interludeCooldownMs,
+  newestGuest,
+  pickTgInterlude,
+  sleepsUntilFeast,
+  TG_INTERLUDE_MS,
+  tgDaySegment,
+  type TgDaySegment,
+  type TgInterlude,
+} from '../../lib/thanksgivingWeek'
+import {
+  AcornFootball,
+  ConfettiBurst,
+  CountdownSign,
+  FeastTable,
+  FeedAcorns,
+  HIDE_SPOT_GEOMETRY,
+  HiddenTurkey,
+  LeafTornado,
+  ParadeBalloon,
+  PieToss,
+  TG_CSS,
+  tableTurkeyPos,
+  ThankfulTree,
+  THANKFUL_TREE_SLOTS,
+  TurkeyDance,
+  TurkeyTrotParade,
+  type FallingAcorn,
+} from './ThanksgivingFeast'
 import {
   AcornDropCameo,
   CottontailBunny,
@@ -23,10 +60,8 @@ import {
   FoxSquirrelChase,
   GouacheMapleLeaf,
   GouacheOakLeaf,
-  HarvestStumpFeast,
   HollowScene,
   OwlNightFlight,
-  PeekingWoodlandTurkey,
   ScamperingSquirrel,
   SquirrelTreeSortie,
   WoodlandOwl,
@@ -354,6 +389,33 @@ function writeIdx(n: number) {
   } catch {}
 }
 
+function readDailyCount(key: string): number {
+  try {
+    return Number(localStorage.getItem(key)) || 0
+  } catch {
+    return 0
+  }
+}
+
+function writeDailyCount(key: string, n: number) {
+  try {
+    localStorage.setItem(key, String(n))
+  } catch {}
+}
+
+const TG_INTERLUDE_KINDS: TgInterlude[] = ['parade', 'leaf_tornado', 'balloon', 'pie_toss', 'football', 'turkey_dance']
+const TG_SEGMENTS: TgDaySegment[] = ['parade', 'game', 'feast', 'coma']
+
+/** SVG-unit hit box → % positioned tap zone (stage SVG uses preserveAspectRatio="none"). */
+function svgBox(cx: number, cy: number, w: number, h: number): React.CSSProperties {
+  return {
+    left: `${((cx - w / 2) / 1920) * 100}%`,
+    top: `${((cy - h / 2) / 1080) * 100}%`,
+    width: `${(w / 1920) * 100}%`,
+    height: `${(h / 1080) * 100}%`,
+  }
+}
+
 function getBarkColors(phase: SkyPhase, snowy: boolean) {
   if (phase === 'night') {
     return {
@@ -399,6 +461,8 @@ export const WoodlandStage = React.memo(function WoodlandStage({
   windy,
   notes,
   onInteract,
+  photoTick = 0,
+  videoSlide = false,
 }: {
   phase: SkyPhase
   kind: SkyKind
@@ -410,15 +474,43 @@ export const WoodlandStage = React.memo(function WoodlandStage({
   windy: boolean
   notes: GratitudeNote[]
   onInteract: () => void
+  /** Increments whenever the slideshow advances to a new photo (interludes ride the transition). */
+  photoTick?: number
+  /** True while a video slide is on screen — show-time interludes hold off. */
+  videoSlide?: boolean
 }) {
   const snowy = kind === 'snowy'
   const mood = deriveWoodlandMood(phase, kind)
   const bark = getBarkColors(phase, snowy)
   const density = canopyDensity(date)
   const acornCount = hollowAcornCount(date)
-  const sleeps = daysUntilThanksgiving(date)
-  const tgDay = isThanksgivingDay(date)
   const isStatic = paused
+
+  // ── Great Woodland Feast (Thanksgiving week storyline) ──
+  // ?fallday=N previews any day of the week; ?holiday=thanksgiving alone previews the big day.
+  const previewDay = getQueryParam('fallday') !== null
+  const sleeps =
+    date.getMonth() === 10 || previewDay
+      ? sleepsUntilFeast(date.getFullYear(), fallDayOfMonth(date))
+      : isThanksgivingDay(date)
+        ? 0
+        : 3
+  const tgDay = previewDay ? sleeps === 0 : isThanksgivingDay(date) || sleeps === 0
+  const feastSleeps = tgDay ? 0 : sleeps
+  const forcedSegment = getQueryParam('tgseg') as TgDaySegment | null
+  const segment: TgDaySegment | null = tgDay
+    ? forcedSegment && TG_SEGMENTS.includes(forcedSegment)
+      ? forcedSegment
+      : tgDaySegment(new Date().getHours())
+    : null
+  const stage = feastStage(feastSleeps)
+  const guests = feastGuests(feastSleeps)
+  const arriving = newestGuest(feastSleeps)
+  const leftovers = feastSleeps < 0
+  const guestsSleepy = segment === 'coma' || phase === 'night'
+  const hideAndSeek = thanksgivingWeek && feastSleeps > 0
+  const dayKey = todayKey(date)
+  const lowQuality = quality === 'low'
 
   // Periodic ambient woodland cameos (squirrel sortie, fox chase, bunny, woodpecker, acorn drop, fireflies, turkey)
   const [climberRun, setClimberRun] = useState<number | null>(null)
@@ -429,11 +521,10 @@ export const WoodlandStage = React.memo(function WoodlandStage({
   const activeVignetteRef = useRef<WoodlandVignette | null>(null)
   const lastVignetteRef = useRef<WoodlandVignette | null>(null)
   const clearVignetteTimer = useRef<ReturnType<typeof setTimeout>>()
-  const [turkeyOut, setTurkeyOut] = useState<boolean>(() => tgDay || getQueryParam('woodland') === 'turkey')
 
-  useEffect(() => {
-    setTurkeyOut(tgDay || getQueryParam('woodland') === 'turkey')
-  }, [tgDay])
+  // Show-time interludes share the stage with vignettes but never overlap them.
+  const [interlude, setInterlude] = useState<{ kind: TgInterlude; id: number } | null>(null)
+  const interludeRef = useRef<TgInterlude | null>(null)
 
   const launchVignette = useCallback((v: WoodlandVignette) => {
     const duration = VIGNETTE_DURATIONS_MS[v]
@@ -477,7 +568,7 @@ export const WoodlandStage = React.memo(function WoodlandStage({
     }
 
     const triggerNext = (preferFirst = false) => {
-      if (document.hidden || activeVignetteRef.current !== null) return
+      if (document.hidden || activeVignetteRef.current !== null || interludeRef.current !== null) return
       const picked = preferFirst
         ? pickWoodlandVignette(phase, kind, 'acorn_drop', () => 0)
         : pickWoodlandVignette(phase, kind, lastVignetteRef.current)
@@ -499,34 +590,10 @@ export const WoodlandStage = React.memo(function WoodlandStage({
     }
   }, [isStatic, kind, phase, launchVignette])
 
-  // Thanksgiving week: let the pilgrim-hat turkey peek out periodically (always out on Thanksgiving Day)
-  useEffect(() => {
-    if (!thanksgivingWeek || isStatic) return
-    if (tgDay || getQueryParam('woodland') === 'turkey') {
-      setTurkeyOut(true)
-      return
-    }
-    let hide: ReturnType<typeof setTimeout> | undefined
-    const show = () => {
-      if (document.hidden) return
-      setTurkeyOut(true)
-      clearTimeout(hide)
-      hide = setTimeout(() => setTurkeyOut(false), 15_000)
-    }
-    const first = setTimeout(show, 14_000)
-    const loop = setInterval(show, 42_000)
-    return () => {
-      clearTimeout(first)
-      clearTimeout(hide)
-      clearInterval(loop)
-    }
-  }, [thanksgivingWeek, tgDay, isStatic])
-
   // Interactive tap states
   const [hoot, setHoot] = useState(false)
   const [squirrelExcited, setSquirrelExcited] = useState(false)
   const [foxWagged, setFoxWagged] = useState(false)
-  const [turkeyGobble, setTurkeyGobble] = useState(false)
   const [toast, setToast] = useState<{ text: string; id: number } | null>(null)
   const toastTimer = useRef<ReturnType<typeof setTimeout>>()
 
@@ -537,6 +604,171 @@ export const WoodlandStage = React.memo(function WoodlandStage({
   }, [])
 
   useEffect(() => () => clearTimeout(toastTimer.current), [])
+
+  // ── Great Woodland Feast: show-time interludes (parade, leaf tornado, balloon, pie toss, football) ──
+  const lastInterludeRef = useRef<TgInterlude | null>(null)
+  const lastInterludeAt = useRef(0)
+  const interludeTimer = useRef<ReturnType<typeof setTimeout>>()
+  const tgSceneRef = useRef({ phase, kind, segment, lowQuality, videoSlide, enabled: false })
+  tgSceneRef.current = { phase, kind, segment, lowQuality, videoSlide, enabled: thanksgivingWeek && !isStatic }
+
+  const launchInterlude = useCallback((k: TgInterlude) => {
+    interludeRef.current = k
+    lastInterludeRef.current = k
+    lastInterludeAt.current = Date.now()
+    setInterlude({ kind: k, id: Date.now() })
+    clearTimeout(interludeTimer.current)
+    interludeTimer.current = setTimeout(() => {
+      interludeRef.current = null
+      setInterlude(null)
+    }, TG_INTERLUDE_MS[k])
+  }, [])
+
+  const tryInterlude = useCallback(
+    (ignoreCooldown = false) => {
+      const s = tgSceneRef.current
+      if (!s.enabled || document.hidden || s.videoSlide) return false
+      if (interludeRef.current !== null || activeVignetteRef.current !== null) return false
+      if (!ignoreCooldown && Date.now() - lastInterludeAt.current < interludeCooldownMs(s.lowQuality, s.segment)) return false
+      const picked = pickTgInterlude(eligibleTgInterludes(s.phase, s.kind, s.segment), lastInterludeRef.current)
+      if (!picked) return false
+      launchInterlude(picked)
+      return true
+    },
+    [launchInterlude],
+  )
+
+  // Interludes ride photo transitions (the leaf tornado sweeps the new photo in).
+  const firstTickRef = useRef(true)
+  useEffect(() => {
+    if (firstTickRef.current) {
+      firstTickRef.current = false
+      return
+    }
+    tryInterlude()
+  }, [photoTick, tryInterlude])
+
+  useEffect(() => {
+    if (!thanksgivingWeek || isStatic) return
+    const forced = getQueryParam('tgint') as TgInterlude | null
+    const first = setTimeout(
+      () => {
+        if (forced && TG_INTERLUDE_KINDS.includes(forced)) launchInterlude(forced)
+        else tryInterlude(true)
+      },
+      forced ? 1_200 : 14_000,
+    )
+    // Fallback when a photo/video lingers: never go much longer than the cooldown without a show.
+    const loop = setInterval(() => {
+      const s = tgSceneRef.current
+      if (Date.now() - lastInterludeAt.current > interludeCooldownMs(s.lowQuality, s.segment) * 1.5) tryInterlude(true)
+    }, 30_000)
+    return () => {
+      clearTimeout(first)
+      clearInterval(loop)
+      clearTimeout(interludeTimer.current)
+      interludeRef.current = null
+      setInterlude(null)
+    }
+  }, [thanksgivingWeek, isStatic, launchInterlude, tryInterlude])
+
+  // ── Find the Hidden Turkey (moves to a new spot every time it's found) ──
+  const foundKey = `nivas_tg_found_${dayKey}`
+  const fedKey = `nivas_tg_fed_${dayKey}`
+  const [foundCount, setFoundCount] = useState(() => readDailyCount(foundKey))
+  const [spotCount, setSpotCount] = useState(() => readDailyCount(foundKey))
+  const [foundRun, setFoundRun] = useState<number | null>(null)
+  const [fedCount, setFedCount] = useState(() => readDailyCount(fedKey))
+  const spotTimer = useRef<ReturnType<typeof setTimeout>>()
+
+  useEffect(() => {
+    const f = readDailyCount(foundKey)
+    setFoundCount(f)
+    setSpotCount(f)
+    setFedCount(readDailyCount(fedKey))
+  }, [foundKey, fedKey])
+
+  useEffect(() => () => clearTimeout(spotTimer.current), [])
+
+  const turkeySpot = hiddenTurkeySpot(dayHash(date, 'turkey'), spotCount)
+  const turkeyGeo = HIDE_SPOT_GEOMETRY[turkeySpot]
+  const showHiddenTurkey = hideAndSeek && interlude?.kind !== 'turkey_dance'
+
+  const findTurkey = () => {
+    if (foundRun !== null) return
+    const n = foundCount + 1
+    setFoundCount(n)
+    writeDailyCount(foundKey, n)
+    setFoundRun(Date.now())
+    popToast(n === 1 ? '🦃 You found me! Now I’ll hide somewhere else…' : `🦃 Found me again! That’s ${n} today!`)
+    clearTimeout(spotTimer.current)
+    spotTimer.current = setTimeout(() => {
+      setFoundRun(null)
+      setSpotCount(n)
+    }, 1_600)
+  }
+
+  // ── Feed the Turkey: golden acorns tumble from the canopy now and then ──
+  const [acorns, setAcorns] = useState<FallingAcorn[]>([])
+  const [acornPop, setAcornPop] = useState<{ id: number; x: number } | null>(null)
+  const acornsAllowed = thanksgivingWeek && !isStatic && phase !== 'night' && !mood.wet && !snowy && segment !== 'coma'
+
+  useEffect(() => {
+    if (!acornsAllowed) {
+      setAcorns([])
+      return
+    }
+    let clearTimer: ReturnType<typeof setTimeout> | undefined
+    const drop = () => {
+      if (document.hidden || interludeRef.current !== null) return
+      const base = Date.now()
+      setAcorns([0, 1, 2].map((i) => ({ id: base + i, x: 372 + i * 80 + Math.round(Math.random() * 18), delay: i * 0.35 })))
+      clearTimeout(clearTimer)
+      clearTimer = setTimeout(() => setAcorns([]), 25_000)
+    }
+    const first = setTimeout(drop, getQueryParam('tgacorns') === '1' ? 1_000 : 22_000)
+    const loop = setInterval(drop, lowQuality ? 150_000 : 75_000)
+    return () => {
+      clearTimeout(first)
+      clearTimeout(clearTimer)
+      clearInterval(loop)
+    }
+  }, [acornsAllowed, lowQuality])
+
+  const feedAcorn = (id: number, x: number) => {
+    setAcorns((list) => list.filter((a) => a.id !== id))
+    const n = fedCount + 1
+    setFedCount(n)
+    writeDailyCount(fedKey, n)
+    setAcornPop({ id: Date.now(), x })
+    if (completesFeed(n)) {
+      popToast('🎉 Turkey is full! Happy dance time!')
+      launchInterlude('turkey_dance')
+    } else {
+      popToast(`🦃 Gobble! ${n % FEED_GOAL}/${FEED_GOAL} acorns`)
+    }
+  }
+
+  const GUEST_NAMES = {
+    squirrel: 'Squirrel',
+    bunny: 'The bunny family',
+    chipmunk: 'The chipmunks',
+    hedgehog: 'Chef Hedgehog',
+    fox_kit: 'Little Fox',
+    turkey: 'Turkey',
+  } as const
+
+  const tapSign = () => {
+    if (feastSleeps > 0) {
+      const who = arriving ? ` ${GUEST_NAMES[arriving]} just arrived for the feast!` : ''
+      popToast(`🦃 ${feastSleeps} more sleep${feastSleeps === 1 ? '' : 's'}!${who}`)
+    } else if (feastSleeps === 0) {
+      popToast('🦃 Happy Thanksgiving! Everyone made it to the feast!')
+    } else {
+      popToast('🥧 Mmm… leftover pie for days!')
+    }
+    tryInterlude(true)
+  }
 
   // Storybook Gratitude Parchment Cards
   const [activeCard, setActiveCard] = useState<{ note: GratitudeNote; id: number } | null>(null)
@@ -593,7 +825,7 @@ export const WoodlandStage = React.memo(function WoodlandStage({
 
   return (
     <>
-      <style>{WOODLAND_CSS}</style>
+      <style>{thanksgivingWeek ? WOODLAND_CSS + TG_CSS : WOODLAND_CSS}</style>
 
       {/* Main Framing Woodland Stage SVG */}
       <div
@@ -710,6 +942,9 @@ export const WoodlandStage = React.memo(function WoodlandStage({
             </g>
           )}
 
+          {/* Hide-and-seek turkey tucked BEHIND a trunk (drawn before the trunks so the bark covers it) */}
+          {showHiddenTurkey && turkeyGeo.layer === 'back' && <HiddenTurkey spot={turkeySpot} foundRun={foundRun} />}
+
           {/* 3. Grand Left Storybook Oak Trunk & Roots */}
           <path
             d="M-20,0 L168,0 C152,275 146,555 178,825 C202,935 272,1015 348,1080 L-20,1080 Z"
@@ -776,6 +1011,13 @@ export const WoodlandStage = React.memo(function WoodlandStage({
           {/* Periodic Trunk-Scampering Squirrel */}
           {climberRun !== null && <ScamperingSquirrel key={climberRun} />}
 
+          {/* Thanksgiving countdown sign hanging from the owl bough */}
+          {thanksgivingWeek && <CountdownSign sleeps={feastSleeps} found={foundCount} fed={fedCount} animate={!isStatic} />}
+
+          {/* Hide-and-seek turkey in front spots (owl branch, on top of the sign, in the leaf pile) */}
+          {showHiddenTurkey && turkeyGeo.layer === 'front' && <HiddenTurkey spot={turkeySpot} foundRun={foundRun} />}
+          {foundRun !== null && <ConfettiBurst key={foundRun} x={turkeyGeo.x} y={turkeyGeo.y - 20} count={14} />}
+
           {/* 4. Grand Right Storybook Oak Trunk (narrow upper trunk keeps Top-Right HUD sky clear!) */}
           <path
             d="M1940,0 L1826,0 C1814,225 1786,515 1714,900 C1676,988 1602,1040 1540,1080 L1940,1080 Z"
@@ -795,16 +1037,15 @@ export const WoodlandStage = React.memo(function WoodlandStage({
           {/* Periodic Right-Trunk Woodpecker Cameo */}
           {activeVignette?.kind === 'peck' && <WoodpeckerCameo key={activeVignette.id} />}
 
-          {/* Thanksgiving Peeking Pilgrim-Hat Turkey */}
-          {thanksgivingWeek && turkeyOut && <PeekingWoodlandTurkey gobble={turkeyGobble} />}
-
           {/* Right Oak Root Den + Red Fox & Kit Routine */}
           <FoxDenScene
             mode={mood.fox}
             frosty={frosty}
             snowy={snowy}
             wagged={foxWagged}
-            hideAdult={activeVignette?.kind === 'chase'}
+            hideAdult={
+              activeVignette?.kind === 'chase' || interlude?.kind === 'pie_toss' || interlude?.kind === 'football'
+            }
           />
 
           {/* Occasional Woodland Vignettes (Squirrel Sortie, Fox-Squirrel Chase, Bunny, Acorn Drop, Fireflies, Owl Flight) */}
@@ -920,7 +1161,7 @@ export const WoodlandStage = React.memo(function WoodlandStage({
           )}
 
           {/* 7. Glowing Gratitude Leaf & Parchment Scroll Tuck on Left Moss (when parent added notes) */}
-          {notes.length > 0 && (
+          {notes.length > 0 && !thanksgivingWeek && (
             <g transform="translate(468, 1036)">
               <circle cx="0" cy="0" r="36" fill="url(#wdWarmOrb)" opacity="0.72" />
               <GouacheOakLeaf x={-12} y={2} scale={0.55} rot={-38} fill="#f59e0b" />
@@ -932,10 +1173,39 @@ export const WoodlandStage = React.memo(function WoodlandStage({
             </g>
           )}
 
-          {/* 8. Thanksgiving Week Miniature Stump Feast & Countdown Sign */}
+          {/* 8. The Great Woodland Feast: growing table, guests, Thankful Tree & feed-the-turkey acorns */}
           {thanksgivingWeek && (
-            <HarvestStumpFeast sleeps={sleeps} isTgDay={tgDay} frosty={frosty} snowy={snowy} />
+            <>
+              <ThankfulTree
+                filled={Math.min(notes.length, THANKFUL_TREE_SLOTS)}
+                glowing={tgDay}
+                frosty={frosty || snowy}
+              />
+              <FeastTable
+                stage={stage}
+                guests={guests}
+                arriving={isStatic ? null : arriving}
+                sleepy={guestsSleepy}
+                segment={segment}
+                leftovers={leftovers}
+                frosty={frosty}
+                snowy={snowy}
+                hideTurkey={interlude?.kind === 'turkey_dance'}
+              />
+              <FeedAcorns acorns={acorns} />
+              {acornPop && <ConfettiBurst key={acornPop.id} x={acornPop.x} y={1050} count={8} />}
+            </>
           )}
+
+          {/* Show-time interludes (one at a time, in front of the feast) */}
+          {interlude?.kind === 'parade' && <TurkeyTrotParade key={interlude.id} />}
+          {interlude?.kind === 'leaf_tornado' && <LeafTornado key={interlude.id} count={lowQuality ? 16 : 32} />}
+          {interlude?.kind === 'balloon' && (
+            <ParadeBalloon key={interlude.id} variant={segment === 'parade' && interlude.id % 2 === 0 ? 'turkey' : 'pumpkin'} />
+          )}
+          {interlude?.kind === 'pie_toss' && <PieToss key={interlude.id} />}
+          {interlude?.kind === 'football' && <AcornFootball key={interlude.id} />}
+          {interlude?.kind === 'turkey_dance' && <TurkeyDance key={interlude.id} />}
 
           {/* Subtle Gouache Leaves Resting on Foreground Edges */}
           <GouacheOakLeaf x={1612} y={248} scale={0.82} rot={-28} fill={phase === 'night' ? '#7c2d12' : '#ea580c'} opacity={0.88} />
@@ -999,25 +1269,65 @@ export const WoodlandStage = React.memo(function WoodlandStage({
           style={{ right: '2.5%', bottom: '5.5%', width: 175, height: 110 }}
         />
 
-        {/* Tap Thanksgiving Turkey */}
-        {thanksgivingWeek && turkeyOut && (
+        {/* Thanksgiving week: countdown sign (tap for a show!), hidden turkey, Thankful Tree, acorns, table turkey */}
+        {thanksgivingWeek && (
           <button
             type="button"
-            aria-label="Thanksgiving woodland turkey"
+            aria-label="Feast countdown sign"
+            onClick={(e) => handleCritterTap(e, tapSign)}
+            className="absolute pointer-events-auto cursor-pointer bg-transparent border-0"
+            style={svgBox(301, 310, 260, 130)}
+          />
+        )}
+        {showHiddenTurkey && (
+          <button
+            type="button"
+            aria-label="Hidden turkey"
+            onClick={(e) => handleCritterTap(e, findTurkey)}
+            className="absolute pointer-events-auto cursor-pointer bg-transparent border-0"
+            style={svgBox(turkeyGeo.x, turkeyGeo.y - 10 * turkeyGeo.s, 110, 110)}
+          />
+        )}
+        {thanksgivingWeek && (
+          <button
+            type="button"
+            aria-label="Thankful tree"
             onClick={(e) =>
               handleCritterTap(e, () => {
-                setTurkeyGobble(true)
-                setTimeout(() => setTurkeyGobble(false), 900)
-                popToast('🦃 Gobble gobble!')
+                if (notes.length) showNextGratitude()
+                else popToast('🌳 Every thankful note grows a leaf on the Thankful Tree!')
               })
             }
             className="absolute pointer-events-auto cursor-pointer bg-transparent border-0"
-            style={{ right: '13.5%', bottom: '3.5%', width: 84, height: 84 }}
+            style={svgBox(1592, 990, 130, 150)}
+          />
+        )}
+        {acorns.map((a) => (
+          <button
+            key={a.id}
+            type="button"
+            aria-label="Golden acorn"
+            onClick={(e) => handleCritterTap(e, () => feedAcorn(a.id, a.x))}
+            className="absolute pointer-events-auto cursor-pointer bg-transparent border-0"
+            style={svgBox(a.x, 1054, 84, 76)}
+          />
+        ))}
+        {thanksgivingWeek && guests.includes('turkey') && (
+          <button
+            type="button"
+            aria-label="Thanksgiving turkey at the feast"
+            onClick={(e) =>
+              handleCritterTap(e, () =>
+                popToast(guestsSleepy ? '🦃 *snore*… too much pie…' : '🦃 Gobble gobble! I’m a guest, not the dinner!'),
+              )
+            }
+            className="absolute pointer-events-auto cursor-pointer bg-transparent border-0"
+            style={svgBox(tableTurkeyPos(stage).x, tableTurkeyPos(stage).y, 120, 140)}
           />
         )}
 
         {/* Tap Gratitude Scroll */}
-        {notes.length > 0 && (
+        {notes.length > 0 && !thanksgivingWeek && (
           <button
             type="button"
             aria-label="Family gratitude scroll"

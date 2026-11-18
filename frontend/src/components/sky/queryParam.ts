@@ -1,3 +1,4 @@
+import { isInThanksgivingWeek } from '../../lib/thanksgivingWeek.ts'
 // The sky engine asks for overrides many times per animation frame. Parsing
 // up to three URLSearchParams per call added up on the tablet, so results are
 // memoized per URL; any navigation (new href) invalidates the cache.
@@ -121,8 +122,8 @@ export function isThanksgivingWeek(d?: Date): boolean {
   const date = d ?? getSeasonalDate()
   const override = getHolidayOverride()?.toLowerCase()
   if (override === 'thanksgiving' || override === 'turkey') return true
-  if (date.getMonth() !== 10) return false
-  return date.getDate() >= 22 && date.getDate() <= 30
+  // Sunday before → Sunday after the fourth Thursday (not a fixed Nov 22–30 window).
+  return isInThanksgivingWeek(date)
 }
 
 export function isDecember(d?: Date): boolean {

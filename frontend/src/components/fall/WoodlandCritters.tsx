@@ -557,7 +557,7 @@ export function HarvestStumpFeast({
 }
 
 /** Shared upright/scampering squirrel body centered at (0,0), facing right (+x). */
-function CuteSquirrelSprite({ withAcorn = false }: { withAcorn?: boolean }) {
+export function CuteSquirrelSprite({ withAcorn = false }: { withAcorn?: boolean }) {
   return (
     <g>
       {/* Fluffy curved tail */}
