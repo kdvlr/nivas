@@ -6,6 +6,7 @@ import Icon from './Icon'
 import { AutumnLeafTopper, DiyaTopper, ThanksgivingTopper } from './SeasonalPhotoToppers'
 import { WoodlandBackdrop } from './fall/WoodlandBackdrop'
 import { WoodlandStage, GratitudeNote } from './fall/WoodlandStage'
+import { HarvestExpressStage } from './thanksgiving/HarvestExpressStage'
 import { CornHuskTopper, MiniPumpkinTopper, PineConeTopper, ThanksgivingRibbon } from './fall/FallToppers'
 import { isAutumnScene, isFrostyWoodland, isWindyWoodland, thanksgivingPhotoYear } from './fall/fallDates'
 import { DiwaliHorizon } from './DiwaliHorizon'
@@ -5029,17 +5030,20 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
   // Original camera clips are never autoplayed. A verified playback derivative
   // is the only video source eligible for unattended slideshow playback.
   const seasonalNow = seasonalDate ?? getSeasonalDate()
-  const autumnCard = isAutumnScene(seasonalNow)
+  const harvestExpress = isThanksgivingWeek(seasonalNow)
+  const autumnCard = isAutumnScene(seasonalNow) && !harvestExpress
   const autoplayable = quality !== 'low' && !!item.playbackUrl
-  const tilt = ((seed % 44) / 10 - 2.2) * (pairIdx === 1 ? -1 : 1) * (diwali ? 0.35 : autumnCard ? 0.45 : 1)
+  const tilt = harvestExpress
+    ? (pair ? (pairIdx === 0 ? -1.1 : 1.1) : -0.7)
+    : ((seed % 44) / 10 - 2.2) * (pairIdx === 1 ? -1 : 1) * (diwali ? 0.35 : autumnCard ? 0.45 : 1)
 
   const media = (
     <div
-      className={`overflow-hidden bg-neutral-100 relative ${autumnCard ? 'rounded-[6px]' : ''}`}
+      className={`overflow-hidden bg-neutral-100 relative ${autumnCard ? 'rounded-[6px]' : harvestExpress ? 'rounded-[4px]' : ''}`}
       style={{
         aspectRatio: aspect,
-        maxHeight: pair ? '74vh' : daylight ? '78vh' : '82vh',
-        maxWidth: pair ? '42vw' : autumnCard ? '76vw' : '84vw',
+        maxHeight: harvestExpress ? (pair ? '44vh' : '48vh') : pair ? '74vh' : daylight ? '78vh' : '82vh',
+        maxWidth: harvestExpress ? (pair ? '34vw' : '42vw') : pair ? '42vw' : autumnCard ? '76vw' : '84vw',
       }}
     >
       {mediaFailed ? (
@@ -5096,8 +5100,8 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
     <div
       style={{
         fontFamily: "'Caveat', cursive",
-        color: autumnCard ? '#f5e4c3' : ink.color,
-        textShadow: autumnCard ? '0 1px 3px rgba(15, 8, 4, 0.72)' : ink.shadow,
+        color: autumnCard ? '#f5e4c3' : harvestExpress ? '#3f2211' : ink.color,
+        textShadow: autumnCard ? '0 1px 3px rgba(15, 8, 4, 0.72)' : harvestExpress ? 'none' : ink.shadow,
       }}
       className={`mt-3 mb-0.5 w-full text-center ${pair ? 'text-[1.65rem] sm:text-[1.85rem]' : 'text-[1.85rem] sm:text-[2.15rem]'} font-medium tracking-normal select-none pointer-events-none flex flex-wrap items-center justify-center gap-x-2 leading-relaxed px-1.5`}
     >
@@ -5112,17 +5116,19 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
   const elfPosition = pair ? (pairIdx === 0 ? 'left' : 'right') : 'right'
   const elfFlip = pair ? pairIdx === 0 : false
   const bowPosition = pair ? (pairIdx === 0 ? 'right' : 'left') : 'right'
-  const tgPhotoYear = autumnCard ? thanksgivingPhotoYear(item.date_taken, seasonalNow) : null
+  const tgPhotoYear = (autumnCard || harvestExpress) ? thanksgivingPhotoYear(item.date_taken, seasonalNow) : null
 
   const card = (
     <div
-      className={`relative bg-[#faf8f5] p-3.5 pb-4 ${autumnCard ? 'rounded-[12px]' : 'rounded-[4px]'} border border-neutral-200/60 flex flex-col items-center pointer-events-auto cursor-pointer`}
+      className={`relative ${harvestExpress ? 'bg-[#fcf6e8] p-3.5 pb-4 rounded-[8px]' : `bg-[#faf8f5] p-3.5 pb-4 ${autumnCard ? 'rounded-[12px]' : 'rounded-[4px]'}`} border border-neutral-200/60 flex flex-col items-center pointer-events-auto cursor-pointer`}
       style={{
         boxShadow: diwali
           ? `inset 0 0 0 1px #c49a5a, ${matShadow}`
-          : autumnCard
-            ? `inset 0 0 0 1px rgba(235, 181, 101, 0.28), 0 24px 56px rgba(8, 5, 3, 0.7), ${matShadow}`
-            : matShadow,
+          : harvestExpress
+            ? '0 28px 65px rgba(0, 0, 0, 0.52), 0 0 0 1px rgba(120, 53, 15, 0.22)'
+            : autumnCard
+              ? `inset 0 0 0 1px rgba(235, 181, 101, 0.28), 0 24px 56px rgba(8, 5, 3, 0.7), ${matShadow}`
+              : matShadow,
         ...(diwali
           ? { backgroundColor: diwaliTheme(phase).frame, borderColor: '#c49a5a' }
           : autumnCard
@@ -5157,7 +5163,7 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
           <BirthdayBow seed={seedOffset} />
         </div>
       )}
-      {autumnCard && tgPhotoYear !== null && <ThanksgivingRibbon year={tgPhotoYear} />}
+      {(autumnCard || harvestExpress) && tgPhotoYear !== null && <ThanksgivingRibbon year={tgPhotoYear} />}
       {media}
       {caption}
     </div>
@@ -5263,6 +5269,26 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
       <div className="absolute bottom-[calc(100%-12px)] pointer-events-none select-none z-10">
         <Balloon color={balloonColor} />
       </div>
+    )
+  }
+
+  if (harvestExpress) {
+    // Photo rises directly from the Harvest Express brass scissor-lift flatbed
+    return (
+      <motion.div
+        initial={{ y: '32vh', scale: 0.48, opacity: 0 }}
+        animate={{ y: '0vh', scale: 1, opacity: 1 }}
+        exit={{ y: '30vh', scale: 0.48, opacity: 0, transition: { duration: 0.45, ease: 'easeIn' } }}
+        transition={{
+          duration: 0.85,
+          ease: [0.22, 1, 0.36, 1],
+          delay: pairIdx * 0.1 + 0.18,
+        }}
+        style={{ transform: 'translateZ(0)', willChange: 'transform, opacity' }}
+        className="relative"
+      >
+        {card}
+      </motion.div>
     )
   }
 
@@ -5378,7 +5404,8 @@ export default function Slideshow({
 
   // Overrides are cached by getHolidayOverride; real dates can still advance overnight.
   const seasonalDate = useMemo(() => getSeasonalDate(now), [now])
-  const autumnScene = isAutumnScene(seasonalDate)
+  const thanksgivingExpress = isThanksgivingWeek(seasonalDate)
+  const autumnScene = isAutumnScene(seasonalDate) && !thanksgivingExpress
   const { data: gratitudeData } = useData<{ notes: GratitudeNote[] }>('/api/setup/gratitude', ['gratitude'])
   const gratitudeNotes = useMemo(() => (autumnScene ? gratitudeData?.notes ?? [] : []), [autumnScene, gratitudeData])
   const [isOverlayOpen, setIsOverlayOpen] = useState(false)
@@ -5795,12 +5822,21 @@ export default function Slideshow({
         style={{ background: 'radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.26) 100%)' }}
       />
 
-      {!autumnScene && <MemoCelestialGlow phase={phase} kind={kind} />}
+      {!autumnScene && !thanksgivingExpress && <MemoCelestialGlow phase={phase} kind={kind} />}
 
-      {/* Stars + shooting stars (behind photos; woodland backdrop paints its own sky gap stars) */}
-      <canvas ref={starRef} className={`absolute inset-0 w-full h-full pointer-events-none ${autumnScene ? 'hidden' : ''}`} />
+      {/* Stars + shooting stars (behind photos; woodland & Harvest Express paint their own sky) */}
+      <canvas ref={starRef} className={`absolute inset-0 w-full h-full pointer-events-none ${autumnScene || thanksgivingExpress ? 'hidden' : ''}`} />
 
-      {!autumnScene && <MemoCloudLayer phase={phase} kind={kind} quality={quality} />}
+      {!autumnScene && !thanksgivingExpress && <MemoCloudLayer phase={phase} kind={kind} quality={quality} />}
+
+      {/* Thanksgiving Week Coast-to-Coast Harvest Express Stage */}
+      {thanksgivingExpress && (
+        <HarvestExpressStage
+          phase={phase}
+          paused={!!skyState.paused}
+          slideTick={currentIdx}
+        />
+      )}
 
       {/* November Storybook Woodland Backdrop (behind photos) */}
       {autumnScene && (
@@ -5822,7 +5858,7 @@ export default function Slideshow({
       )}
 
       {/* Background delights & distant bats (flying behind photos) */}
-      <canvas ref={bgFxRef} className="absolute inset-0 w-full h-full pointer-events-none" />
+      <canvas ref={bgFxRef} className={`absolute inset-0 w-full h-full pointer-events-none ${thanksgivingExpress ? 'hidden' : ''}`} />
 
       {/* Photos. Plain sync presence: every layer here is already absolutely
           positioned, so popLayout's layout projection was measuring for
@@ -5830,7 +5866,7 @@ export default function Slideshow({
       <AnimatePresence>
         {activeSlide && <motion.div
           key={activeSlide.id}
-          className="absolute inset-0 flex items-center justify-center gap-12 p-10"
+          className={`absolute inset-0 flex items-center justify-center ${thanksgivingExpress ? 'gap-8 px-10 pt-[4vh] pb-[24vh]' : 'gap-12 p-10'}`}
           animate={{ zIndex: 10 }}
           exit={{ zIndex: 5 }}
         >
@@ -5852,7 +5888,13 @@ export default function Slideshow({
       </AnimatePresence>
 
       {/* Weather + delights (rain, snow, fireflies, birds — in front of photos) */}
-      <canvas ref={fxRef} className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: isDiwaliSeason(seasonalDate) ? 26 : 20 }} />
+      <canvas
+        ref={fxRef}
+        className={`absolute inset-0 w-full h-full pointer-events-none ${
+          thanksgivingExpress && kind !== 'rainy' && kind !== 'stormy' && kind !== 'snowy' ? 'hidden' : ''
+        }`}
+        style={{ zIndex: isDiwaliSeason(seasonalDate) ? 26 : 20 }}
+      />
 
       {/* October daytime seasonal delights: pumpkin patch & sunflowers in FOREGROUND */}
       {isOctober(seasonalDate) && (phase === 'day' || phase === 'dawn') && (
@@ -6022,9 +6064,11 @@ export default function Slideshow({
         </div>
       )}
 
-      <div className="absolute bottom-6 left-6 text-white/35 text-xs font-light tracking-wider z-30 pointer-events-none">
-        Tap screen to return
-      </div>
+      {!thanksgivingExpress && (
+        <div className="absolute bottom-6 left-6 text-white/35 text-xs font-light tracking-wider z-30 pointer-events-none">
+          Tap screen to return
+        </div>
+      )}
     </div>
   )
 }
