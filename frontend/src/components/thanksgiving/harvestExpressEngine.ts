@@ -11,13 +11,13 @@ export interface HarvestRegionMeta {
 }
 
 export const HARVEST_REGIONS: HarvestRegionMeta[] = [
-  { name: '🌊 Stop 1 of 7 · Pacific Coast, CA',    ribbon: '🌊 West Coast',         caption: 'Golden Gate & Big Sur — California' },
-  { name: '🌵 Stop 2 of 7 · Monument Valley, AZ',  ribbon: '🌵 Desert Southwest',   caption: 'Red Rock Mesas — Arizona' },
-  { name: '🏔️ Stop 3 of 7 · Rocky Mountains, CO',  ribbon: '🏔️ Alpine Pass',        caption: 'Continental Divide — Colorado' },
-  { name: '🌾 Stop 4 of 7 · Heartland Plains, KS', ribbon: '🌾 Great Plains',       caption: 'Amber Waves of Grain — Kansas' },
-  { name: '🍂 Stop 5 of 7 · Great Smoky Mtns, TN', ribbon: '🍂 Smoky Ridges',       caption: 'Blue Mist Hollow — Tennessee' },
-  { name: '🗽 Stop 6 of 7 · New York Harbor, NY',  ribbon: '🗽 Autumn in New York', caption: 'Manhattan & Lady Liberty — New York' },
-  { name: '🦃 Stop 7 of 7 · Atlantic Feast, MA',   ribbon: '🥧 Thanksgiving Feast!', caption: 'Lighthouse Bluff — New England Coast' },
+  { name: '01 · Pacific Coast, CA',      ribbon: 'Pacific Coast',      caption: 'Golden Gate & Big Sur — California' },
+  { name: '02 · Monument Valley, AZ',    ribbon: 'Desert Southwest',   caption: 'Red Rock Mesas — Arizona' },
+  { name: '03 · Rocky Mountains, CO',    ribbon: 'Alpine Pass',        caption: 'Continental Divide — Colorado' },
+  { name: '04 · Heartland Plains, KS',   ribbon: 'Great Plains',       caption: 'Amber Waves of Grain — Kansas' },
+  { name: '05 · Great Smoky Mtns, TN',   ribbon: 'Smoky Ridges',       caption: 'Blue Ridge Hollow — Tennessee' },
+  { name: '06 · New York Harbor, NY',    ribbon: 'New York Harbor',    caption: 'Manhattan & Brooklyn Bridge — New York' },
+  { name: '07 · Atlantic Coast, MA',     ribbon: 'Harvest Terminus',   caption: 'Lighthouse Bluff — New England Coast' },
 ]
 
 export interface HarvestExpressOptions {
@@ -154,10 +154,7 @@ export function mountHarvestExpress(
         <path d="M-10,2 L-7,-12 L7,-12 L10,2 Z" fill="#292524"/>
         <rect x="-9" y="-3" width="18" height="3.5" fill="#f59e0b"/>
       </g>
-      <g class="speech" transform="translate(-28, -74)">
-        <rect x="-34" y="-14" width="68" height="20" rx="10" fill="#fffbeb" stroke="#78350f" stroke-width="1.3"/>
-        <text x="0" y="0" text-anchor="middle" fill="#7c2d12" font-family="'Caveat', cursive" font-size="16" font-weight="700">Wait up!!</text>
-      </g>
+
     `;
     const pilArm = elSVG('g');
     pilArm.innerHTML = `
@@ -165,7 +162,6 @@ export function mountHarvestExpress(
       <line x1="24" y1="-37" x2="41" y2="-49" stroke="#92400e" stroke-width="3" stroke-linecap="round"/>
       <ellipse cx="43" cy="-51" rx="5.5" ry="3.5" transform="rotate(-35 43 -51)" fill="#b45309"/>
     `;
-    const speech = pilBody.querySelector('.speech');
     pilgrim.append(pilLegBack, pilCape, pilBody, pilLegFront, pilArm);
 
     // 3. ARTICULATED RUNAWAY TURKEY (2-jointed drumsticks, tail fan follow-through & frantic wing!)
@@ -188,7 +184,7 @@ export function mountHarvestExpress(
       <path d="M24,-34 C28,-29 25,-23 21,-26 Z" fill="#dc2626"/>
       <circle cx="21" cy="-38" r="3.1" fill="#fff"/>
       <circle cx="22.2" cy="-38" r="1.4" fill="#1c1917"/>
-      <text x="25" y="-49" fill="#fef08a" stroke="#7f1d1d" stroke-width="0.8" font-size="18" font-weight="800">!</text>
+
     `;
     const turkWing = elSVG('path', { d: 'M-8,-17 C-2,-28 10,-24 6,-13 C2,-9 -8,-10 -8,-17 Z', fill: '#92400e' });
     turkBody.append(turkTail, turkTorso, turkNeckHead, turkWing);
@@ -198,7 +194,7 @@ export function mountHarvestExpress(
     container.appendChild(roam);
     animatedChases.push({
       roam, fox, foxTail, foxTailTip, foxLegB1, foxLegB2, foxLegF1, foxLegF2, foxTorso, foxHead,
-      pilgrim, pilLegBack, pilLegFront, pilCape, pilBody, pilArm, speech,
+      pilgrim, pilLegBack, pilLegFront, pilCape, pilBody, pilArm,
       turkey, turkLegB, turkLegF, turkBody, turkTail, turkNeckHead, turkWing
     });
   }
@@ -973,14 +969,10 @@ export function mountHarvestExpress(
   const steamPool = Array.from({ length: 24 }, (_, i) => {
     const g = elSVG('g');
     g.style.display = 'none';
-    if (i % 4 === 0) {
-      g.appendChild(elSVG('path', { d: 'M0,4 C-7,-6 -19,-2 -15,10 C-12,18 0,24 0,24 C0,24 12,18 15,10 C19,-2 7,-6 0,4 Z', fill: '#fde68a' }));
-    } else {
-      // 3-lobe billowing volumetric cloud puff
-      g.appendChild(elSVG('circle', { cx: '-8', cy: '3', r: '11', fill: '#fed7aa', opacity: '0.78' }));
-      g.appendChild(elSVG('circle', { cx: '8', cy: '2', r: '10', fill: '#fff7ed', opacity: '0.88' }));
-      g.appendChild(elSVG('circle', { cx: '0', cy: '-4', r: '13', fill: '#ffffff', opacity: '0.94' }));
-    }
+    // Natural multi-lobe volumetric steam plume
+    g.appendChild(elSVG('circle', { cx: '-9', cy: '3', r: '11', fill: '#e8dfd5', opacity: '0.72' }));
+    g.appendChild(elSVG('circle', { cx: '8', cy: '2', r: '10.5', fill: '#f5efe6', opacity: '0.82' }));
+    g.appendChild(elSVG('circle', { cx: '0', cy: '-4', r: '13.5', fill: '#ffffff', opacity: '0.90' }));
     worldSteamLayer.appendChild(g);
     return { el: g, active: false, wx: 0, y: 0, age: 0, life: 1.9, rot: (i * 37) % 360 };
   });
@@ -1040,7 +1032,7 @@ export function mountHarvestExpress(
 
   // World-space sculpted autumn leaves overtaken by train
   const worldLeafLayer = byId('worldLeafLayer');
-  const leafColors = ['#ea580c', '#f59e0b', '#dc2626', '#facc15', '#d97706'];
+  const leafColors = ['#b8542a', '#c98e32', '#993326', '#cfa648', '#a35b24'];
   const leaves = Array.from({ length: 9 }, (_, i) => {
     const p = elSVG('path', {
       d: 'M0,-12 C4,-8 10,-9 9,-3 C12,2 7,8 2,9 L0,14 L-2,9 C-7,8 -12,2 -9,-3 C-10,-9 -4,-8 0,-12 Z',
@@ -1118,7 +1110,6 @@ export function mountHarvestExpress(
 
     for (const ch of animatedChases) {
       ch.roam.setAttribute('transform', `translate(${roamX.toFixed(1)}, 0) scale(${dir}, 1)`);
-      ch.speech.setAttribute('transform', `translate(-28, -74) scale(${dir}, 1)`); // counter-flip so text never mirrors
 
       const gPh = tSec * 13.5;
       const flex = Math.sin(gPh);

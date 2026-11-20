@@ -87,16 +87,18 @@ function HarvestExpressStageInner({ phase, paused, slideTick }: HarvestExpressSt
       <style>{HARVEST_EXPRESS_CSS}</style>
       <div ref={hostRef} className="absolute inset-0 w-full h-full" />
 
-      {/* Coast-to-Coast Route Progress Pill (passive, bottom-left) */}
+      {/* Coast-to-Coast Route Progress Pill (editorial railway timetable style) */}
       <div
-        className="absolute bottom-[18px] left-[28px] z-30 flex items-center gap-3 px-4 py-2 rounded-full pointer-events-none select-none"
+        className="absolute bottom-[20px] left-[28px] z-30 flex items-center gap-3.5 px-4 py-2 rounded-full pointer-events-none select-none backdrop-blur-md"
         style={{
-          background: 'rgba(18, 10, 5, 0.78)',
-          border: '1px solid rgba(253, 224, 71, 0.28)',
-          color: '#fef3c7',
-          fontSize: '13px',
+          background: 'rgba(18, 15, 13, 0.62)',
+          border: '1px solid rgba(212, 173, 82, 0.28)',
+          color: '#f2e8d5',
+          fontSize: '12px',
           fontWeight: 600,
-          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.45)',
+          letterSpacing: '0.06em',
+          textTransform: 'uppercase',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.42)',
         }}
       >
         <span>{activeRegion.name}</span>
@@ -105,16 +107,15 @@ function HarvestExpressStageInner({ phase, paused, slideTick }: HarvestExpressSt
             <div
               key={r.name}
               style={{
-                width: i === regionIdx ? '22px' : '8px',
-                height: '8px',
+                width: i === regionIdx ? '20px' : '6px',
+                height: '6px',
                 borderRadius: '999px',
                 background:
                   i === regionIdx
-                    ? '#fbbf24'
+                    ? '#d4ad52'
                     : i < regionIdx
-                      ? 'rgba(251, 191, 36, 0.65)'
-                      : 'rgba(255, 255, 255, 0.22)',
-                boxShadow: i === regionIdx ? '0 0 10px rgba(251, 191, 36, 0.75)' : 'none',
+                      ? 'rgba(212, 173, 82, 0.55)'
+                      : 'rgba(255, 255, 255, 0.20)',
                 transition: 'all 0.45s cubic-bezier(0.22, 1, 0.36, 1)',
               }}
             />
