@@ -5273,16 +5273,23 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
   }
 
   if (harvestExpress) {
-    // Photo rises directly from the Harvest Express brass scissor-lift flatbed
+    // Photo descends into the flatbed, leaves the sky open while the train surges
+    // into the next US stop, then glides slowly up as the brass scissor lift rises.
+    const enterDelay = (index === 0 ? 0.45 : 2.85) + pairIdx * 0.28
     return (
       <motion.div
-        initial={{ y: '32vh', scale: 0.48, opacity: 0 }}
+        initial={{ y: '34vh', scale: 0.46, opacity: 0 }}
         animate={{ y: '0vh', scale: 1, opacity: 1 }}
-        exit={{ y: '30vh', scale: 0.48, opacity: 0, transition: { duration: 0.45, ease: 'easeIn' } }}
+        exit={{
+          y: '32vh',
+          scale: 0.46,
+          opacity: 0,
+          transition: { duration: 0.85, ease: [0.4, 0, 0.2, 1] },
+        }}
         transition={{
-          duration: 0.85,
-          ease: [0.22, 1, 0.36, 1],
-          delay: pairIdx * 0.1 + 0.18,
+          y: { duration: 2.1, ease: [0.16, 1, 0.3, 1], delay: enterDelay },
+          scale: { duration: 2.1, ease: [0.16, 1, 0.3, 1], delay: enterDelay },
+          opacity: { duration: 1.15, ease: 'easeOut', delay: enterDelay },
         }}
         style={{ transform: 'translateZ(0)', willChange: 'transform, opacity' }}
         className="relative"
@@ -5639,9 +5646,9 @@ export default function Slideshow({
         }
         return next
       })
-    }, 9000)
+    }, thanksgivingExpress ? 12500 : 9000)
     return () => clearInterval(timer)
-  }, [slides.length, selectedVideo, paused])
+  }, [slides.length, selectedVideo, paused, thanksgivingExpress])
 
   // Keep the seasonal scene mounted while the photo list loads.
   const activeSlide = slides[currentIdx] ?? slides[0]
