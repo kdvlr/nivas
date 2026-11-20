@@ -5364,7 +5364,7 @@ export default function Slideshow({
     const timer = setTimeout(() => setPhotoEntering(false), 2_000)
     return () => clearTimeout(timer)
   }, [currentIdx])
-  const [paused, setPaused] = useState(false)
+  const [showPhotos, setShowPhotos] = useState(true)
   const swipeStart = useRef<number | null>(null)
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null)
   const [playerReady, setPlayerReady] = useState(false)
@@ -5604,7 +5604,7 @@ export default function Slideshow({
   // never lands in the middle of the entrance animation. Clean up references
   // on slide change to avoid memory accumulation on Android WebViews.
   useEffect(() => {
-    if (slides.length <= 1) return
+    if (!showPhotos || slides.length <= 1) return
     const next = slides[(currentIdx + 1) % slides.length]
     const preloads: HTMLImageElement[] = []
     for (const it of next.items) {
@@ -5621,7 +5621,7 @@ export default function Slideshow({
         img.src = ''
       }
     }
-  }, [currentIdx, slides])
+  }, [currentIdx, slides, showPhotos])
 
   // Performance telemetry logging for diagnosing Android tablet slowdowns
   useEffect(() => {
@@ -5632,13 +5632,15 @@ export default function Slideshow({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIdx, slides.length, quality])
 
-  // Advance every 9 seconds, paused while a full video is being watched.
+  // Advance automatically, paused while a full video is being watched.
   // When wrapping around at the end of the deck, re-shuffle so the next loop
   // plays in a completely new random order.
   useEffect(() => {
-    if (slides.length <= 1 || selectedVideo !== null || paused) return
+    if (selectedVideo !== null) return
+    if (slides.length <= 1 && !thanksgivingExpress) return
     const timer = setInterval(() => {
       setCurrentIdx((prev) => {
+        if (slides.length <= 1) return prev + 1
         const next = prev + 1
         if (next >= slides.length) {
           setShuffleSeed(Math.random())
@@ -5648,7 +5650,7 @@ export default function Slideshow({
       })
     }, thanksgivingExpress ? 12500 : 9000)
     return () => clearInterval(timer)
-  }, [slides.length, selectedVideo, paused, thanksgivingExpress])
+  }, [slides.length, selectedVideo, thanksgivingExpress])
 
   // Keep the seasonal scene mounted while the photo list loads.
   const activeSlide = slides[currentIdx] ?? slides[0]
@@ -5871,7 +5873,7 @@ export default function Slideshow({
           positioned, so popLayout's layout projection was measuring for
           nothing on every frame. */}
       <AnimatePresence>
-        {activeSlide && <motion.div
+        {showPhotos && activeSlide && <motion.div
           key={activeSlide.id}
           className={`absolute inset-0 flex items-center justify-center ${thanksgivingExpress ? 'gap-8 px-10 pt-[4vh] pb-[24vh]' : 'gap-12 p-10'}`}
           animate={{ zIndex: 10 }}
@@ -5990,14 +5992,19 @@ export default function Slideshow({
             <Icon name="skip_previous" />
           </button>
           <button
-            aria-label={paused ? 'Play slideshow' : 'Pause slideshow'}
+            aria-label={showPhotos ? 'Hide photos' : 'Show photos'}
+            title={showPhotos ? 'Hide photos' : 'Show photos'}
             onClick={(e) => {
               e.stopPropagation()
-              setPaused((value) => !value)
+              setShowPhotos((value) => !value)
             }}
-            className="p-3 rounded-full bg-black/45 hover:bg-black/60 active:scale-95 text-white transition backdrop-blur-md cursor-pointer"
+            className={`p-3 rounded-full active:scale-95 text-white transition backdrop-blur-md cursor-pointer ${
+              showPhotos
+                ? 'bg-black/45 hover:bg-black/60'
+                : 'bg-amber-500/35 hover:bg-amber-500/50 ring-1 ring-amber-300/60'
+            }`}
           >
-            <Icon name={paused ? 'play_arrow' : 'pause'} />
+            <Icon name={showPhotos ? 'image' : 'hide_image'} />
           </button>
           <button
             aria-label="Next slide"
