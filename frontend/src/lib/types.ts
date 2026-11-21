@@ -257,11 +257,3 @@ export interface KidsDailyAdminResponse {
   }
 }
 
-export interface KioskScheduleConfig {
-  kiosk_sleep_enabled: boolean
-  kiosk_sleep_start: string
-  kiosk_sleep_end: string
-  kiosk_daytime_screen_off_mins: number
-  kiosk_suppress_night_motion: boolean
-}
-

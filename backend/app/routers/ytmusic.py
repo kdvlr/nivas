@@ -227,21 +227,6 @@ def get_local_artwork(album_id: str):
 def get_home(limit: int = Query(6, ge=1, le=20)):
     return ytmusic_service.get_home(limit=limit)
 
-@router.get("/explore")
-def get_explore():
-    return ytmusic_service.get_explore()
-
-@router.get("/charts")
-def get_charts(country: str = Query("US", min_length=2, max_length=5)):
-    return ytmusic_service.get_charts(country=country)
-
-@router.get("/artist/{channel_id}")
-def get_artist(channel_id: str):
-    data = ytmusic_service.get_artist(channel_id)
-    if not data:
-        raise HTTPException(status_code=404, detail="Artist not found")
-    return data
-
 @router.get("/album/{browse_id}")
 def get_album(browse_id: str):
     if browse_id.startswith("local:"):
@@ -283,12 +268,6 @@ def get_playlist_songs(playlist_id: str, limit: int = Query(12, ge=1, le=50)):
     if not data:
         raise HTTPException(status_code=404, detail="Playlist not found")
     return data
-
-@router.get("/watch")
-def get_watch(video_id: Optional[str] = None, playlist_id: Optional[str] = None):
-    if not video_id and not playlist_id:
-        raise HTTPException(status_code=400, detail="Must provide video_id or playlist_id")
-    return ytmusic_service.get_watch_playlist(video_id=video_id, playlist_id=playlist_id)
 
 @router.get("/lyrics/{video_id}")
 def get_lyrics(video_id: str):

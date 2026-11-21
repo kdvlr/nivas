@@ -5924,7 +5924,7 @@ export default function Slideshow({
         />
       )}
 
-      {/* November Storybook Woodland Stage in FOREGROUND (framing trunks, critters, weather & Thanksgiving feast) */}
+      {/* November Storybook Woodland Stage in FOREGROUND (framing trunks, critters, weather) */}
       {autumnScene && (
         <WoodlandStage
           phase={phase}
@@ -5932,13 +5932,10 @@ export default function Slideshow({
           date={seasonalDate}
           quality={quality}
           paused={!!skyState.paused}
-          thanksgivingWeek={isThanksgivingWeek(seasonalDate)}
           frosty={isFrostyWoodland(seasonalDate, phase, kind, weatherMeta.tempF)}
           windy={isWindyWoodland(kind, weatherMeta.windSpeed)}
           notes={gratitudeNotes}
           onInteract={handleBalloonPop}
-          photoTick={currentIdx}
-          videoSlide={!!activeSlide?.items.some((i) => i.type === 'video')}
         />
       )}
 

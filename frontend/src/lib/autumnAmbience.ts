@@ -23,7 +23,3 @@ export function createAutumnVisitGate(random: () => number = Math.random) {
 }
 
 export const autumnVisits = createAutumnVisitGate()
-
-export function autumnProgress(date: Date): number {
-  return Math.max(0, Math.min(1, (date.getDate() - 1) / 29))
-}

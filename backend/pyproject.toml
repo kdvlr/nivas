@@ -24,8 +24,6 @@ dependencies = [
     "ytmusicapi>=1.7.0",
     "yt-dlp>=2024.0.0",
     "pyatv>=0.14.0",
-    "zeroconf>=0.131.0",
-    "async-lru>=2.0.4",
     "mutagen>=1.47.0",
 ]
 

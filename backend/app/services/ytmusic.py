@@ -379,57 +379,6 @@ class YTMusicService:
             logger.error(f"YTMusic get_home error: {e}")
             return []
 
-    def get_explore(self) -> Dict[str, Any]:
-        cache_key = "explore"
-        cached = self._get_cache(cache_key)
-        if cached is not None:
-            return cached
-
-        if not self._ytmusic:
-            return {}
-
-        try:
-            explore = self._ytmusic.get_explore()
-            self._set_cache(cache_key, explore, CACHE_TTL["home"])
-            return explore
-        except Exception as e:
-            logger.error(f"YTMusic get_explore error: {e}")
-            return {}
-
-    def get_charts(self, country: str = "IN") -> Dict[str, Any]:
-        cache_key = f"charts:{country}"
-        cached = self._get_cache(cache_key)
-        if cached is not None:
-            return cached
-
-        if not self._ytmusic:
-            return {}
-
-        try:
-            charts = self._ytmusic.get_charts(country=country)
-            self._set_cache(cache_key, charts, CACHE_TTL["charts"])
-            return charts
-        except Exception as e:
-            logger.error(f"YTMusic get_charts error: {e}")
-            return {}
-
-    def get_artist(self, channel_id: str) -> Dict[str, Any]:
-        cache_key = f"artist:{channel_id}"
-        cached = self._get_cache(cache_key)
-        if cached is not None:
-            return cached
-
-        if not self._ytmusic:
-            return {}
-
-        try:
-            artist = self._ytmusic.get_artist(channel_id)
-            self._set_cache(cache_key, artist, CACHE_TTL["artist"])
-            return artist
-        except Exception as e:
-            logger.error(f"YTMusic get_artist error '{channel_id}': {e}")
-            return {}
-
     def get_album(self, browse_id: str) -> Dict[str, Any]:
         cache_key = f"album:{browse_id}"
         cached = self._get_cache(cache_key)

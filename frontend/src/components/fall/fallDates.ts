@@ -23,13 +23,6 @@ export function isThanksgivingDay(d: Date): boolean {
   return sameDay(d, thanksgivingDate(d.getFullYear()))
 }
 
-/** Whole days until Thanksgiving (0 on the day, negative after). */
-export function daysUntilThanksgiving(d: Date): number {
-  const tg = thanksgivingDate(d.getFullYear())
-  const today = new Date(d.getFullYear(), d.getMonth(), d.getDate())
-  return Math.round((tg.getTime() - today.getTime()) / 86_400_000)
-}
-
 /** Day of November used for month progression; ?fallday=N overrides for previews. */
 export function fallDayOfMonth(d: Date): number {
   const forced = Number(getQueryParam('fallday'))
