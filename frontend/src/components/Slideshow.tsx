@@ -1723,6 +1723,9 @@ function SittingElf({
 }
 
 type ElfPhase = 'enter' | 'think' | 'write' | 'glance' | 'nod' | 'exit'
+type ElfMood = 'happy' | 'sad' | 'angry'
+
+const ELF_MOODS: ElfMood[] = ['happy', 'sad', 'angry']
 
 interface ElfSpot {
   id: string
@@ -1782,7 +1785,7 @@ const SCOUT_ELF_CSS = `
 }
 `
 
-function ScoutElfSvg({ phase, hasLedge }: { phase: ElfPhase; hasLedge: boolean }) {
+function ScoutElfSvg({ phase, mood, hasLedge }: { phase: ElfPhase; mood: ElfMood; hasLedge: boolean }) {
   const isThinking = phase === 'think'
   const isWriting = phase === 'write'
   const isGlancing = phase === 'glance'
@@ -1791,7 +1794,7 @@ function ScoutElfSvg({ phase, hasLedge }: { phase: ElfPhase; hasLedge: boolean }
 
   // Pupils: staring straight ahead at the room during think/glance/nod, glancing down behind the secret book while writing
   const pupilY = lookingDown ? 45.2 : 42.5
-  const browOffset = isThinking ? -1.2 : isGlancing ? -1.6 : 0
+  const browOffset = isThinking ? -0.8 : isGlancing ? -1.2 : 0
 
   return (
     <svg
@@ -1933,24 +1936,76 @@ function ScoutElfSvg({ phase, hasLedge }: { phase: ElfPhase; hasLedge: boolean }
           />
 
           {/* Rosy Cheeks */}
-          <ellipse cx="44.5" cy="50" rx="4.4" ry="2.7" fill="#fb7185" opacity="0.42" />
-          <ellipse cx="71.5" cy="50" rx="4.4" ry="2.7" fill="#fb7185" opacity="0.42" />
+          <ellipse
+            cx="44.5"
+            cy="50"
+            rx="4.4"
+            ry="2.7"
+            fill={mood === 'angry' ? '#ef4444' : '#fb7185'}
+            opacity={mood === 'happy' ? 0.52 : mood === 'angry' ? 0.48 : 0.3}
+          />
+          <ellipse
+            cx="71.5"
+            cy="50"
+            rx="4.4"
+            ry="2.7"
+            fill={mood === 'angry' ? '#ef4444' : '#fb7185'}
+            opacity={mood === 'happy' ? 0.52 : mood === 'angry' ? 0.48 : 0.3}
+          />
 
-          {/* Eyebrows */}
-          <path
-            d={`M 44 ${35.5 + browOffset} Q 49 ${33 + browOffset} 54 ${35.5 + browOffset}`}
-            stroke="#78350f"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            fill="none"
-          />
-          <path
-            d={`M 62 ${35.5 + browOffset} Q 67 ${33 + browOffset} 72 ${35.5 + browOffset}`}
-            stroke="#78350f"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            fill="none"
-          />
+          {/* Expressive Eyebrows (happy arched, sad tilted out, angry furrowed V) */}
+          {mood === 'angry' ? (
+            <>
+              <path
+                d={`M 43.5 ${32.5 + browOffset} L 54.5 ${36.8 + browOffset}`}
+                stroke="#78350f"
+                strokeWidth="2.3"
+                strokeLinecap="round"
+                fill="none"
+              />
+              <path
+                d={`M 72.5 ${32.5 + browOffset} L 61.5 ${36.8 + browOffset}`}
+                stroke="#78350f"
+                strokeWidth="2.3"
+                strokeLinecap="round"
+                fill="none"
+              />
+            </>
+          ) : mood === 'sad' ? (
+            <>
+              <path
+                d={`M 43.5 ${37.2 + browOffset} Q 49 ${34.5 + browOffset} 54 ${32.5 + browOffset}`}
+                stroke="#78350f"
+                strokeWidth="1.9"
+                strokeLinecap="round"
+                fill="none"
+              />
+              <path
+                d={`M 62 ${32.5 + browOffset} Q 67 ${34.5 + browOffset} 72.5 ${37.2 + browOffset}`}
+                stroke="#78350f"
+                strokeWidth="1.9"
+                strokeLinecap="round"
+                fill="none"
+              />
+            </>
+          ) : (
+            <>
+              <path
+                d={`M 44 ${34.5 + browOffset} Q 49 ${31 + browOffset} 54 ${34 + browOffset}`}
+                stroke="#78350f"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                fill="none"
+              />
+              <path
+                d={`M 62 ${34 + browOffset} Q 67 ${31 + browOffset} 72 ${34.5 + browOffset}`}
+                stroke="#78350f"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                fill="none"
+              />
+            </>
+          )}
 
           {/* Big Attentive Eyes Staring Straight Ahead */}
           <g style={{ transformOrigin: '58px 42.5px', animation: 'scoutElfBlink 4.4s ease-in-out infinite' }}>
@@ -1963,16 +2018,26 @@ function ScoutElfSvg({ phase, hasLedge }: { phase: ElfPhase; hasLedge: boolean }
             <circle cx="67" cy={pupilY} r="2.9" fill="#1e3a8a" />
             <circle cx="67" cy={pupilY} r="1.6" fill="#0f172a" />
             <circle cx="68.2" cy={pupilY - 1.3} r="1.05" fill="#ffffff" />
+
+            {/* Subtle glossy lower-lid tear shimmer when sad */}
+            {mood === 'sad' && (
+              <>
+                <circle cx="45.8" cy="46.6" r="1.15" fill="#38bdf8" opacity="0.85" />
+                <circle cx="70.2" cy="46.6" r="1.15" fill="#38bdf8" opacity="0.85" />
+              </>
+            )}
           </g>
 
           {/* Little Nose */}
           <ellipse cx="58" cy="48" rx="2.3" ry="1.7" fill="#f0a875" />
 
-          {/* Mouth: thoughtful pursed line while staring/writing, knowing little smirk on nod */}
-          {phase === 'nod' ? (
-            <path d="M 52 54.5 Q 58 59 64 53.5" stroke="#991b1b" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+          {/* Expressive Mouth (smiling, sad frown, or angry scowl) */}
+          {mood === 'happy' ? (
+            <path d="M 50.5 53.5 Q 58 60.5 65.5 53.5" stroke="#991b1b" strokeWidth="2.0" strokeLinecap="round" fill="none" />
+          ) : mood === 'sad' ? (
+            <path d="M 51.5 57.8 Q 58 52.8 64.5 57.8" stroke="#991b1b" strokeWidth="1.9" strokeLinecap="round" fill="none" />
           ) : (
-            <path d="M 53 55 Q 58 56.2 63 54.6" stroke="#991b1b" strokeWidth="1.7" strokeLinecap="round" fill="none" />
+            <path d="M 51 57.2 Q 58 53.8 65 57.2" stroke="#991b1b" strokeWidth="2.1" strokeLinecap="round" fill="none" />
           )}
 
           {/* Classic Pointed Elf Hat with Red Brim & Jingle Bell */}
@@ -2094,8 +2159,10 @@ function ScoutElfSvg({ phase, hasLedge }: { phase: ElfPhase; hasLedge: boolean }
 
 function RunningElf() {
   const [phase, setPhase] = useState<ElfPhase | null>(null)
+  const [mood, setMood] = useState<ElfMood>('happy')
   const [spot, setSpot] = useState<ElfSpot>(ELF_SPOTS[1])
   const lastSpotIdRef = useRef<string | null>(null)
+  const lastMoodRef = useRef<ElfMood | null>(null)
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
 
   useEffect(() => {
@@ -2115,6 +2182,18 @@ function RunningElf() {
         const picked = candidates[Math.floor(Math.random() * candidates.length)] ?? ELF_SPOTS[0]
         lastSpotIdRef.current = picked.id
         setSpot(picked)
+
+        // Pick a random expression (happy, sad, or angry), avoiding back-to-back repeats
+        const forcedMood = getQueryParam('elfmood') as ElfMood | null
+        const pickedMood =
+          forcedMood && ELF_MOODS.includes(forcedMood)
+            ? forcedMood
+            : (() => {
+                const moodCandidates = ELF_MOODS.filter((m) => m !== lastMoodRef.current)
+                return moodCandidates[Math.floor(Math.random() * moodCandidates.length)] ?? 'happy'
+              })()
+        lastMoodRef.current = pickedMood
+        setMood(pickedMood)
         setPhase('enter')
 
         const steps: Array<[number, ElfPhase | null]> = [
@@ -2170,7 +2249,7 @@ function RunningElf() {
           ease: isExiting ? [0.4, 0, 1, 1] : [0.22, 1, 0.36, 1],
         }}
       >
-        <ScoutElfSvg phase={phase} hasLedge={spot.hasLedge} />
+        <ScoutElfSvg phase={phase} mood={mood} hasLedge={spot.hasLedge} />
       </motion.div>
     </div>
   )
