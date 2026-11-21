@@ -96,12 +96,19 @@ fn disable_wifi_power_save() {}
 enum SenderMessage {
     /// A fully serialized packet ready for timed transmission.
     Packet {
-        /// Pre-serialized wire bytes per target (one entry per SendTarget).
-        /// Single-device: 1 entry. Group: N entries (each encrypted with device-specific cipher).
-        wire_packets: Vec<Vec<u8>>,
-        /// Pre-serialized sync packet bytes per target, if sync is needed this frame.
-        /// Each target receives its own sync packet matching its RTP timestamp offset.
+        /// Pre-serialized wire bytes per target slot (None for inactive/removed slots).
+        wire_packets: Vec<Option<Vec<u8>>>,
+        /// Pre-serialized sync packet bytes per target slot, if sync is needed this frame.
         sync_packets: Vec<Option<Vec<u8>>>,
+    },
+    /// Dynamically add/replace a target at the given slot without pausing other targets.
+    AddTarget {
+        slot: usize,
+        target: SendTarget,
+    },
+    /// Dynamically remove a target at the given slot without pausing other targets.
+    RemoveTarget {
+        slot: usize,
     },
     /// Pause: sender thread should stop advancing deadlines and wait for Resume.
     Pause,
@@ -227,7 +234,7 @@ struct SendTarget {
 /// For example, burst_size=4 sends 4 packets rapidly, then waits 4*frame_duration.
 fn sender_thread_main(
     rx: Receiver<SenderMessage>,
-    mut targets: Vec<SendTarget>,
+    mut targets: Vec<Option<SendTarget>>,
     frame_duration: std::time::Duration,
     burst_size: usize,
 ) {
@@ -252,10 +259,10 @@ fn sender_thread_main(
     let mut jitter_exceed_count: u64 = 0;
 
     // Burst buffer for WiFi/BT coexistence
-    // Each entry: (wire_packets per target, per-target sync packets)
-    let mut burst_buffer: Vec<(Vec<Vec<u8>>, Vec<Option<Vec<u8>>>)> = Vec::with_capacity(burst_size);
+    // Each entry: (wire_packets per target slot, per-target sync packets)
+    let mut burst_buffer: Vec<(Vec<Option<Vec<u8>>>, Vec<Option<Vec<u8>>>)> = Vec::with_capacity(burst_size);
 
-    let target_count = targets.len();
+    let target_count = targets.iter().filter(|t| t.is_some()).count();
     tracing::info!(
         "Sender thread started: {} target(s), frame_duration={:.3}ms, burst_size={}, timing={}",
         target_count,
@@ -284,6 +291,28 @@ fn sender_thread_main(
                 tracing::info!("Sender thread: received Stop, exiting");
                 break;
             }
+            SenderMessage::AddTarget { slot, target } => {
+                if slot >= targets.len() {
+                    targets.resize_with(slot + 1, || None);
+                }
+                tracing::info!(
+                    "Sender thread: hot-added target at slot {} ({})",
+                    slot,
+                    target.data_dest
+                );
+                targets[slot] = Some(target);
+                continue;
+            }
+            SenderMessage::RemoveTarget { slot } => {
+                if let Some(removed) = targets.get_mut(slot).and_then(|entry| entry.take()) {
+                    tracing::info!(
+                        "Sender thread: hot-removed target at slot {} ({})",
+                        slot,
+                        removed.data_dest
+                    );
+                }
+                continue;
+            }
             SenderMessage::Pause => {
                 tracing::debug!("Sender thread: paused");
                 loop {
@@ -299,6 +328,17 @@ fn sender_thread_main(
                                 next_deadline = std::time::Instant::now();
                             }
                             break;
+                        }
+                        Ok(SenderMessage::AddTarget { slot, target }) => {
+                            if slot >= targets.len() {
+                                targets.resize_with(slot + 1, || None);
+                            }
+                            targets[slot] = Some(target);
+                        }
+                        Ok(SenderMessage::RemoveTarget { slot }) => {
+                            if let Some(entry) = targets.get_mut(slot) {
+                                *entry = None;
+                            }
                         }
                         Ok(SenderMessage::Stop) => {
                             tracing::info!("Sender thread: received Stop while paused, exiting");
@@ -407,8 +447,11 @@ fn sender_thread_main(
 
                 // Send all buffered packets
                 for (wire_packets, sync_packets) in burst_buffer.drain(..) {
-                    // Send per-target sync packets to each target's control dest
-                    for (i, target) in targets.iter().enumerate() {
+                    // Send per-target sync packets to each active target's control dest
+                    for (i, target_opt) in targets.iter().enumerate() {
+                        let Some(target) = target_opt.as_ref() else {
+                            continue;
+                        };
                         if let Some(Some(ref sync)) = sync_packets.get(i) {
                             if let Some(sock) = target
                                 .control_socket
@@ -428,8 +471,11 @@ fn sender_thread_main(
                     }
 
                     // Send per-target audio packets
-                    for (i, target) in targets.iter_mut().enumerate() {
-                        if let Some(wire_data) = wire_packets.get(i) {
+                    for (i, target_opt) in targets.iter_mut().enumerate() {
+                        let Some(target) = target_opt.as_mut() else {
+                            continue;
+                        };
+                        if let Some(Some(wire_data)) = wire_packets.get(i) {
                             if let Some(ref mut tcp) = target.tcp_stream {
                                 use std::io::Write;
                                 let len = (wire_data.len() as u16).to_be_bytes();
@@ -496,7 +542,8 @@ struct StreamerInner {
     state: StreamerState,
     config: StreamConfig,
     buffer: AudioBuffer,
-    rtp_senders: Vec<RtpSender>,
+    rtp_senders: Vec<Option<RtpSender>>,
+    force_sync_slots: Vec<usize>,
     current_timestamp: u64,
     last_sync_rtp: u32,
     clock: Clock,
@@ -563,6 +610,7 @@ impl AudioStreamer {
                 config,
                 buffer: AudioBuffer::new(audio_format, 2000),
                 rtp_senders: Vec::new(),
+                force_sync_slots: Vec::new(),
                 current_timestamp: 0,
                 last_sync_rtp: 0,
                 clock: Clock::new(audio_format.sample_rate.as_hz()),
@@ -590,7 +638,9 @@ impl AudioStreamer {
 
     /// Configure RTP sender (single device, backward compatible).
     pub async fn set_rtp_sender(&mut self, sender: RtpSender) {
-        self.inner.lock().await.rtp_senders = vec![sender];
+        let mut inner = self.inner.lock().await;
+        inner.rtp_senders = vec![Some(sender)];
+        inner.force_sync_slots.clear();
     }
 
     /// Configure multiple RTP senders for group streaming.
@@ -598,7 +648,73 @@ impl AudioStreamer {
     /// Each sender targets a different device with its own encryption key.
     /// All senders share the same RTP sequence/timestamp space.
     pub async fn set_rtp_senders(&mut self, senders: Vec<RtpSender>) {
-        self.inner.lock().await.rtp_senders = senders;
+        let mut inner = self.inner.lock().await;
+        inner.rtp_senders = senders.into_iter().map(Some).collect();
+        inner.force_sync_slots.clear();
+    }
+
+    /// Hot-add a new RTP sender to an active stream without interrupting other targets.
+    /// Returns `(slot_index, flush_seq, flush_rtptime)` aligned to the live timeline.
+    pub async fn add_rtp_sender(&self, mut sender: RtpSender) -> Result<(usize, u16, u32)> {
+        let tcp = sender.clone_tcp_stream().ok().flatten();
+        let data_sock = sender.clone_data_socket().ok().flatten().map(|(s, _)| s);
+        let ctrl = sender.clone_control_socket().ok().flatten();
+        let (ctrl_sock, ctrl_dest) = match ctrl {
+            Some((s, d)) => (Some(s), Some(d)),
+            None => (None, None),
+        };
+        let target = SendTarget {
+            data_socket: data_sock,
+            data_dest: sender.dest(),
+            tcp_stream: tcp,
+            control_socket: ctrl_sock,
+            control_dest: ctrl_dest,
+        };
+
+        let (slot, flush_seq, flush_rtptime) = {
+            let mut inner = self.inner.lock().await;
+            sender.reset_sync_state();
+            let (seq, rtptime) = sender.rtp_info(inner.current_timestamp);
+            let slot = if let Some(pos) = inner.rtp_senders.iter().position(|s| s.is_none()) {
+                inner.rtp_senders[pos] = Some(sender);
+                pos
+            } else {
+                inner.rtp_senders.push(Some(sender));
+                inner.rtp_senders.len() - 1
+            };
+            if !inner.force_sync_slots.contains(&slot) {
+                inner.force_sync_slots.push(slot);
+            }
+            (slot, seq, rtptime)
+        };
+
+        if let Some(ref tx) = self.sender_tx {
+            let tx_clone = tx.clone();
+            let _ = tokio::task::spawn_blocking(move || {
+                tx_clone.send(SenderMessage::AddTarget { slot, target })
+            })
+            .await;
+        }
+
+        Ok((slot, flush_seq, flush_rtptime))
+    }
+
+    /// Hot-remove an RTP sender from an active stream without interrupting other targets.
+    pub async fn remove_rtp_sender(&self, slot: usize) {
+        {
+            let mut inner = self.inner.lock().await;
+            if let Some(entry) = inner.rtp_senders.get_mut(slot) {
+                *entry = None;
+            }
+            inner.force_sync_slots.retain(|&s| s != slot);
+        }
+        if let Some(ref tx) = self.sender_tx {
+            let tx_clone = tx.clone();
+            let _ = tokio::task::spawn_blocking(move || {
+                tx_clone.send(SenderMessage::RemoveTarget { slot })
+            })
+            .await;
+        }
     }
 
     /// Enable PTP-mode sync packets (PT=87) instead of NTP sync (PT=84).
@@ -660,7 +776,7 @@ impl AudioStreamer {
         request: &crate::rtp::RetransmitRequest,
     ) -> airplay_core::error::Result<u16> {
         let inner = self.inner.lock().await;
-        if let Some(sender) = inner.rtp_senders.get(index) {
+        if let Some(Some(sender)) = inner.rtp_senders.get(index) {
             sender.handle_retransmit(request)
         } else {
             Ok(0)
@@ -720,27 +836,33 @@ impl AudioStreamer {
 
             {
                 let inner = self.inner.lock().await;
-                let mut targets = Vec::new();
-                for sender in &inner.rtp_senders {
-                    let tcp = sender.clone_tcp_stream().ok().flatten();
-                    let data_sock = sender.clone_data_socket().ok().flatten().map(|(s, _)| s);
-                    if tcp.is_some() || data_sock.is_some() {
-                        let ctrl = sender.clone_control_socket().ok().flatten();
-                        let (ctrl_sock, ctrl_dest) = match ctrl {
-                            Some((s, d)) => (Some(s), Some(d)),
-                            None => (None, None),
-                        };
-                        targets.push(SendTarget {
-                            data_socket: data_sock,
-                            data_dest: sender.dest(),
-                            tcp_stream: tcp,
-                            control_socket: ctrl_sock,
-                            control_dest: ctrl_dest,
-                        });
+                let mut targets: Vec<Option<SendTarget>> = Vec::with_capacity(inner.rtp_senders.len());
+                for sender_opt in &inner.rtp_senders {
+                    if let Some(sender) = sender_opt {
+                        let tcp = sender.clone_tcp_stream().ok().flatten();
+                        let data_sock = sender.clone_data_socket().ok().flatten().map(|(s, _)| s);
+                        if tcp.is_some() || data_sock.is_some() {
+                            let ctrl = sender.clone_control_socket().ok().flatten();
+                            let (ctrl_sock, ctrl_dest) = match ctrl {
+                                Some((s, d)) => (Some(s), Some(d)),
+                                None => (None, None),
+                            };
+                            targets.push(Some(SendTarget {
+                                data_socket: data_sock,
+                                data_dest: sender.dest(),
+                                tcp_stream: tcp,
+                                control_socket: ctrl_sock,
+                                control_dest: ctrl_dest,
+                            }));
+                        } else {
+                            targets.push(None);
+                        }
+                    } else {
+                        targets.push(None);
                     }
                 }
 
-                if !targets.is_empty() {
+                if targets.iter().any(|t| t.is_some()) {
                     // Burst size for WiFi/BT coexistence: send N packets rapidly, then wait.
                     // Creates gaps for Bluetooth to transmit cleanly.
                     // - burst_size=1: no bursting (original behavior)
@@ -874,27 +996,33 @@ impl AudioStreamer {
 
             {
                 let inner = self.inner.lock().await;
-                let mut targets = Vec::new();
-                for sender in &inner.rtp_senders {
-                    let tcp = sender.clone_tcp_stream().ok().flatten();
-                    let data_sock = sender.clone_data_socket().ok().flatten().map(|(s, _)| s);
-                    if tcp.is_some() || data_sock.is_some() {
-                        let ctrl = sender.clone_control_socket().ok().flatten();
-                        let (ctrl_sock, ctrl_dest) = match ctrl {
-                            Some((s, d)) => (Some(s), Some(d)),
-                            None => (None, None),
-                        };
-                        targets.push(SendTarget {
-                            data_socket: data_sock,
-                            data_dest: sender.dest(),
-                            tcp_stream: tcp,
-                            control_socket: ctrl_sock,
-                            control_dest: ctrl_dest,
-                        });
+                let mut targets: Vec<Option<SendTarget>> = Vec::with_capacity(inner.rtp_senders.len());
+                for sender_opt in &inner.rtp_senders {
+                    if let Some(sender) = sender_opt {
+                        let tcp = sender.clone_tcp_stream().ok().flatten();
+                        let data_sock = sender.clone_data_socket().ok().flatten().map(|(s, _)| s);
+                        if tcp.is_some() || data_sock.is_some() {
+                            let ctrl = sender.clone_control_socket().ok().flatten();
+                            let (ctrl_sock, ctrl_dest) = match ctrl {
+                                Some((s, d)) => (Some(s), Some(d)),
+                                None => (None, None),
+                            };
+                            targets.push(Some(SendTarget {
+                                data_socket: data_sock,
+                                data_dest: sender.dest(),
+                                tcp_stream: tcp,
+                                control_socket: ctrl_sock,
+                                control_dest: ctrl_dest,
+                            }));
+                        } else {
+                            targets.push(None);
+                        }
+                    } else {
+                        targets.push(None);
                     }
                 }
 
-                if !targets.is_empty() {
+                if targets.iter().any(|t| t.is_some()) {
                     let burst_size = 1;
 
                     let thread = std::thread::Builder::new()
@@ -968,7 +1096,7 @@ impl AudioStreamer {
             inner.presentation_timeline = None;
             inner.first_packet_sent = false;
             inner.last_sync_rtp = 0;
-            for sender in &mut inner.rtp_senders {
+            for sender in inner.rtp_senders.iter_mut().flatten() {
                 sender.reset_sync_state();
             }
             self.state_cache
@@ -984,7 +1112,7 @@ impl AudioStreamer {
         inner.first_packet_sent = false;
         inner.last_sync_rtp = 0;
         inner.presentation_timeline = None;
-        for sender in &mut inner.rtp_senders {
+        for sender in inner.rtp_senders.iter_mut().flatten() {
             sender.reset_sync_state();
         }
     }
@@ -1041,7 +1169,7 @@ impl AudioStreamer {
         inner.last_sync_rtp = 0;
         inner.first_packet_sent = false;
         inner.presentation_timeline = None;
-        for sender in &mut inner.rtp_senders {
+        for sender in inner.rtp_senders.iter_mut().flatten() {
             sender.reset_sync_state();
         }
         self.timestamp_cache
@@ -1059,7 +1187,9 @@ impl AudioStreamer {
         let inner = self.inner.lock().await;
         inner
             .rtp_senders
-            .first()
+            .iter()
+            .flatten()
+            .next()
             .map(|sender| sender.rtp_info(inner.current_timestamp))
     }
 
@@ -1312,9 +1442,11 @@ async fn run_streamer(
                 let rtp_ts = packet.timestamp as u32;
 
                 // Determine if sync is needed BEFORE borrowing rtp_sender
-                let need_sync = first_packet
+                let need_periodic_sync = first_packet
                     || last_sync_rtp == 0
                     || rtp_ts.wrapping_sub(last_sync_rtp) >= sample_rate;
+                let forced_sync_slots: Vec<usize> = std::mem::take(&mut guard.force_sync_slots);
+                let need_sync = need_periodic_sync || !forced_sync_slots.is_empty();
 
                 let sync_positions = if need_sync {
                     if guard.presentation_timeline.is_none() {
@@ -1346,10 +1478,10 @@ async fn run_streamer(
                 let use_ptp_sync = guard.use_ptp_sync;
                 let ptp_clock_id = guard.ptp_master_clock_id;
 
-                if !guard.rtp_senders.is_empty() {
+                if guard.rtp_senders.iter().any(|s| s.is_some()) {
                     if let Some(ref tx) = sender_tx {
-                        // Sender thread path: prepare per-target sync for ALL senders,
-                        // then prepare audio from ALL senders (per-device encryption).
+                        // Sender thread path: prepare per-target sync for ALL active senders (or hot-joined slots),
+                        // then prepare audio from ALL active senders (per-device encryption).
                         let sync_packets = if let Some((
                             play_rtp,
                             buffered_rtp,
@@ -1359,7 +1491,15 @@ async fn run_streamer(
                         )) = sync_positions
                         {
                             let mut syncs = Vec::with_capacity(guard.rtp_senders.len());
-                            for sender in &mut guard.rtp_senders {
+                            for (slot_idx, sender_opt) in guard.rtp_senders.iter_mut().enumerate() {
+                                let Some(sender) = sender_opt.as_mut() else {
+                                    syncs.push(None);
+                                    continue;
+                                };
+                                if !need_periodic_sync && !forced_sync_slots.contains(&slot_idx) {
+                                    syncs.push(None);
+                                    continue;
+                                }
                                 let ptp_id = sender.ptp_master_clock_id().or(if use_ptp_sync {
                                     Some(ptp_clock_id)
                                 } else {
@@ -1383,13 +1523,17 @@ async fn run_streamer(
                         };
 
                         let mut wire_packets = Vec::with_capacity(guard.rtp_senders.len());
-                        for sender in &mut guard.rtp_senders {
-                            wire_packets.push(sender.prepare_audio(
-                                payload_type,
-                                rtp_ts,
-                                &packet.data,
-                                marker,
-                            )?);
+                        for sender_opt in &mut guard.rtp_senders {
+                            if let Some(sender) = sender_opt.as_mut() {
+                                wire_packets.push(Some(sender.prepare_audio(
+                                    payload_type,
+                                    rtp_ts,
+                                    &packet.data,
+                                    marker,
+                                )?));
+                            } else {
+                                wire_packets.push(None);
+                            }
                         }
 
                         if diag < 5 || diag % 500 == 0 {
@@ -1397,12 +1541,12 @@ async fn run_streamer(
                                 "DIAG timing #{}: encode={:.2}ms, targets={} (sender thread handles send timing)",
                                 diag,
                                 encode_elapsed.as_secs_f64() * 1000.0,
-                                wire_packets.len(),
+                                wire_packets.iter().filter(|p| p.is_some()).count(),
                             );
                         }
 
                         // Update state BEFORE sending to channel
-                        if need_sync {
+                        if need_periodic_sync {
                             guard.last_sync_rtp = rtp_ts;
                         }
                         if first_packet {
@@ -1432,7 +1576,7 @@ async fn run_streamer(
                         continue;
                     } else {
                         // Fallback: direct send (no sender thread)
-                        // Send per-target sync and audio to all senders
+                        // Send per-target sync and audio to all active senders
                         if let Some((
                             play_rtp,
                             buffered_rtp,
@@ -1441,7 +1585,13 @@ async fn run_streamer(
                             ptp_buffered_anchor,
                         )) = sync_positions
                         {
-                            for sender in &mut guard.rtp_senders {
+                            for (slot_idx, sender_opt) in guard.rtp_senders.iter_mut().enumerate() {
+                                let Some(sender) = sender_opt.as_mut() else {
+                                    continue;
+                                };
+                                if !need_periodic_sync && !forced_sync_slots.contains(&slot_idx) {
+                                    continue;
+                                }
                                 let ptp_id = sender.ptp_master_clock_id().or(if use_ptp_sync {
                                     Some(ptp_clock_id)
                                 } else {
@@ -1461,7 +1611,7 @@ async fn run_streamer(
                         }
 
                         let send_start = Instant::now();
-                        for sender in &mut guard.rtp_senders {
+                        for sender in guard.rtp_senders.iter_mut().flatten() {
                             sender.send_audio(payload_type, rtp_ts, &packet.data, marker)?;
                         }
                         let send_elapsed = send_start.elapsed();
@@ -1472,12 +1622,12 @@ async fn run_streamer(
                                 diag,
                                 encode_elapsed.as_secs_f64() * 1000.0,
                                 send_elapsed.as_secs_f64() * 1000.0,
-                                guard.rtp_senders.len(),
+                                guard.rtp_senders.iter().filter(|s| s.is_some()).count(),
                                 (encode_elapsed + send_elapsed).as_secs_f64() * 1000.0
                             );
                         }
 
-                        if need_sync {
+                        if need_periodic_sync {
                             guard.last_sync_rtp = rtp_ts;
                         }
                         if first_packet {

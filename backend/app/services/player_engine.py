@@ -1447,6 +1447,29 @@ class PlayerEngine:
                         logger.info("Received AirPlay remote event: Prev")
                         if self._event_loop and self._event_loop.is_running():
                             asyncio.run_coroutine_threadsafe(self.prev_track(), self._event_loop)
+                    elif line_clean.startswith("TARGET_ADDED "):
+                        added_ip = line_clean.split("TARGET_ADDED ", 1)[1].strip()
+                        logger.info("AirPlay hot-added speaker %s seamlessly", added_ip)
+                        if added_ip in self.devices:
+                            self.devices[added_ip].is_connected = True
+                        self._broadcast_state()
+                    elif line_clean.startswith("TARGET_REMOVED "):
+                        removed_ip = line_clean.split("TARGET_REMOVED ", 1)[1].strip()
+                        logger.info("AirPlay hot-removed speaker %s seamlessly", removed_ip)
+                        if removed_ip in self.devices:
+                            self.devices[removed_ip].is_connected = False
+                        self._broadcast_state()
+                    elif line_clean.startswith("TARGET_ADD_FAILED "):
+                        parts = line_clean.split(None, 2)
+                        failed_ip = parts[1] if len(parts) > 1 else ""
+                        reason = parts[2] if len(parts) > 2 else "unknown"
+                        logger.warning(
+                            "AirPlay hot-add failed for %s (%s); falling back to clean group restart",
+                            failed_ip,
+                            reason,
+                        )
+                        if failed_ip in self.active_targets and self.current_track:
+                            self._schedule_membership_restart()
                     elif "Decoder EOF and buffer empty" in line_clean:
                         logger.info("AirPlay stream decoder reached EOF; waiting for speaker render buffer to drain")
                     elif "Reached end of audio" in line_clean:
@@ -1471,9 +1494,9 @@ class PlayerEngine:
                             pos_str = line_clean.split("Position:")[1].split("s,")[0].strip()
                             pos_sec = int(float(pos_str))
                             self._last_sender_progress = time.monotonic()
-                            for device_id in device_ids:
-                                if device_id in self.devices:
-                                    self.devices[device_id].is_connected = True
+                            for target_id in list(self.active_targets):
+                                if target_id in self.devices:
+                                    self.devices[target_id].is_connected = True
                             calculated_sec = max(0, int(self._stream_start_offset + pos_sec))
                             self.raw_elapsed_seconds = float(calculated_sec)
                             if self.duration_seconds > 0:
@@ -2061,11 +2084,37 @@ class PlayerEngine:
 
             self._save_preferences()
 
-            # Group membership is negotiated at sender startup. Coalesce
-            # rapid room changes (350 ms debounce) so multiple toggles result in
-            # exactly ONE clean group sender restart.
+            # Hot-add / hot-remove speakers on the live AirPlay 2 sender without pausing
+            # existing rooms. Falls back to a coalesced group restart if no live sender
+            # is running (e.g., 0 -> 1 speakers) or if the control pipe is unavailable.
             if (self.is_playing or self._stream_procs) and self.current_track:
-                self._schedule_membership_restart()
+                handled_hot = False
+                if self._stream_procs:
+                    if selected and len(self.active_targets) > 1:
+                        timing_mode = "ptp" if self._device_uses_ptp(dev) else "ntp"
+                        vol_scalar = max(0.0, min(1.0, dev.volume / 100.0))
+                        cmd = (
+                            f"add_target {dev.address} {dev.port} "
+                            f"{vol_scalar:.2f} {dev.sync_offset_ms} {timing_mode}"
+                        )
+                        handled_hot = self._write_stream_command(cmd)
+                        if handled_hot:
+                            logger.info(
+                                "Hot-adding AirPlay speaker %s (%s) without pausing active group",
+                                dev.name,
+                                dev.address,
+                            )
+                    elif not selected and len(self.active_targets) >= 1:
+                        handled_hot = self._write_stream_command(f"remove_target {dev.address}")
+                        if handled_hot:
+                            dev.is_connected = False
+                            logger.info(
+                                "Hot-removing AirPlay speaker %s (%s) without pausing active group",
+                                dev.name,
+                                dev.address,
+                            )
+                if not handled_hot:
+                    self._schedule_membership_restart()
 
         self._update_master_volume_from_devices()
         self._broadcast_state()

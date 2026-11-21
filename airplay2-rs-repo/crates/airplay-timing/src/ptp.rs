@@ -1738,20 +1738,43 @@ fn bind_ptp_socket(port: u16) -> Result<tokio::net::UdpSocket> {
     Ok(tokio::net::UdpSocket::from_std(std_socket)?)
 }
 
+/// Dynamic peer membership updates for a running PTP group master.
+pub enum PtpPeerCommand {
+    /// Add a newly joining PTP speaker and notify `ready_tx` once it completes
+    /// a Delay_Req/Delay_Resp exchange against our grandmaster clock.
+    AddPeer {
+        ip: std::net::IpAddr,
+        ready_tx: tokio::sync::oneshot::Sender<bool>,
+    },
+    /// Remove a departing PTP speaker from periodic Sync/Announce broadcasts.
+    RemovePeer {
+        ip: std::net::IpAddr,
+    },
+}
+
 pub async fn run_ptp_group_master_flow(
     peer_ips: Vec<std::net::IpAddr>,
     priority1: u8,
     clock_id_tx: tokio::sync::oneshot::Sender<[u8; 8]>,
+) -> Result<()> {
+    run_ptp_group_master_flow_with_commands(peer_ips, priority1, clock_id_tx, None).await
+}
+
+pub async fn run_ptp_group_master_flow_with_commands(
+    peer_ips: Vec<std::net::IpAddr>,
+    priority1: u8,
+    clock_id_tx: tokio::sync::oneshot::Sender<[u8; 8]>,
+    mut peer_cmd_rx: Option<tokio::sync::mpsc::UnboundedReceiver<PtpPeerCommand>>,
 ) -> Result<()> {
     // Bind to PTP ports with SO_REUSEADDR for exclusive single-master port binding
     let event_socket = bind_ptp_socket(PTP_EVENT_PORT)?;
     let general_socket = bind_ptp_socket(PTP_GENERAL_PORT)?;
 
     // Build destination addresses for all peers
-    let event_dests: Vec<std::net::SocketAddr> = peer_ips.iter()
+    let mut event_dests: Vec<std::net::SocketAddr> = peer_ips.iter()
         .map(|ip| std::net::SocketAddr::new(*ip, PTP_EVENT_PORT))
         .collect();
-    let general_dests: Vec<std::net::SocketAddr> = peer_ips.iter()
+    let mut general_dests: Vec<std::net::SocketAddr> = peer_ips.iter()
         .map(|ip| std::net::SocketAddr::new(*ip, PTP_GENERAL_PORT))
         .collect();
 
@@ -1873,10 +1896,12 @@ pub async fn run_ptp_group_master_flow(
 
     tracing::info!("PTP master: Entering master loop — sending Syncs to {} peers", peer_ips.len());
 
-    // Phase 3: Master loop — periodic Sync+Announce to all peers, handle Delay_Req
+    // Phase 3: Master loop — periodic Sync+Announce to all peers, handle Delay_Req & hot peer membership
     let sync_interval = std::time::Duration::from_millis(125); // 8 Hz sync rate
     let mut announce_interval_counter: u32 = 0;
     let announce_every = 16; // Send Announce every 16 sync cycles (~2s)
+    let mut pending_peers: std::collections::HashMap<std::net::IpAddr, tokio::sync::oneshot::Sender<bool>> =
+        std::collections::HashMap::new();
 
     loop {
         // Send Sync + Follow_Up to all peers
@@ -1886,7 +1911,7 @@ pub async fn run_ptp_group_master_flow(
             }
         }
 
-        // Periodically send Announce to all peers
+        // Periodically send Announce to all peers (and faster to hot-joining peers)
         announce_interval_counter += 1;
         if announce_interval_counter >= announce_every {
             announce_interval_counter = 0;
@@ -1895,14 +1920,52 @@ pub async fn run_ptp_group_master_flow(
                     tracing::warn!("PTP master: Failed to send Announce to {}: {}", general_dest, e);
                 }
             }
+        } else if !pending_peers.is_empty() && announce_interval_counter % 2 == 0 {
+            for &pending_ip in pending_peers.keys() {
+                let general_dest = std::net::SocketAddr::new(pending_ip, PTP_GENERAL_PORT);
+                let _ = send_ptp_announce(&general_socket, general_dest, &clock_identity, &mut announce_seq, 248, priority1).await;
+                let _ = send_mac_style_signaling(&general_socket, general_dest, &clock_identity, &mut signaling_seq).await;
+            }
         }
 
-        // Wait for sync interval, handling any incoming Delay_Req
+        // Wait for sync interval, handling any incoming Delay_Req or dynamic peer updates
         let deadline = tokio::time::Instant::now() + sync_interval;
         loop {
             tokio::select! {
                 _ = tokio::time::sleep_until(deadline) => {
                     break;
+                }
+                cmd = async {
+                    match peer_cmd_rx.as_mut() {
+                        Some(rx) => rx.recv().await,
+                        None => std::future::pending::<Option<PtpPeerCommand>>().await,
+                    }
+                } => {
+                    if let Some(cmd) = cmd {
+                        match cmd {
+                            PtpPeerCommand::AddPeer { ip, ready_tx } => {
+                                let event_dest = std::net::SocketAddr::new(ip, PTP_EVENT_PORT);
+                                let general_dest = std::net::SocketAddr::new(ip, PTP_GENERAL_PORT);
+                                if !event_dests.contains(&event_dest) {
+                                    event_dests.push(event_dest);
+                                }
+                                if !general_dests.contains(&general_dest) {
+                                    general_dests.push(general_dest);
+                                }
+                                tracing::info!("PTP master: Hot-adding peer {} (total peers={})", ip, event_dests.len());
+                                let _ = send_mac_style_signaling(&general_socket, general_dest, &clock_identity, &mut signaling_seq).await;
+                                let _ = send_ptp_announce(&general_socket, general_dest, &clock_identity, &mut announce_seq, 248, priority1).await;
+                                let _ = send_ptp_sync(&event_socket, &general_socket, event_dest, &clock_identity, &mut sync_seq).await;
+                                pending_peers.insert(ip, ready_tx);
+                            }
+                            PtpPeerCommand::RemovePeer { ip } => {
+                                event_dests.retain(|addr| addr.ip() != ip);
+                                general_dests.retain(|addr| addr.ip() != ip);
+                                pending_peers.remove(&ip);
+                                tracing::info!("PTP master: Removed peer {} (remaining peers={})", ip, event_dests.len());
+                            }
+                        }
+                    }
                 }
                 result = event_socket.recv_from(&mut event_buf) => {
                     if let Ok((len, src)) = result {
@@ -1913,6 +1976,9 @@ pub async fn run_ptp_group_master_flow(
                                     &event_socket, src, &header, &clock_identity
                                 ).await {
                                     tracing::warn!("PTP master: Failed to send Delay_Resp to {}: {}", src, e);
+                                } else if let Some(ready_tx) = pending_peers.remove(&src.ip()) {
+                                    tracing::info!("PTP master: Hot-added peer {} completed Delay_Req/Delay_Resp lock", src.ip());
+                                    let _ = ready_tx.send(true);
                                 }
                             }
                         }

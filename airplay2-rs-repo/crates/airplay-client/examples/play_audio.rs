@@ -86,6 +86,16 @@ enum SourceCommand {
     Resume,
     Volume { target: Option<IpAddr>, value: f32 },
     Track(TrackInfoPayload),
+    AddTarget {
+        ip: IpAddr,
+        port: u16,
+        volume: Option<f32>,
+        sync_offset_ms: i32,
+        use_ptp: bool,
+    },
+    RemoveTarget {
+        ip: IpAddr,
+    },
     Stop,
 }
 
@@ -134,6 +144,24 @@ fn parse_source_command(line: &str) -> Option<SourceCommand> {
                     value,
                 })
             }
+        }
+        "add_target" => {
+            let ip = parts.next()?.parse::<IpAddr>().ok()?;
+            let port = parts.next().and_then(|s| s.parse::<u16>().ok()).unwrap_or(7000);
+            let volume = parts.next().and_then(|s| s.parse::<f32>().ok()).map(|v| v.clamp(0.0, 1.0));
+            let sync_offset_ms = parts.next().and_then(|s| s.parse::<i32>().ok()).unwrap_or(0);
+            let use_ptp = parts.next().map(|s| s.eq_ignore_ascii_case("ptp")).unwrap_or(true);
+            Some(SourceCommand::AddTarget {
+                ip,
+                port,
+                volume,
+                sync_offset_ms,
+                use_ptp,
+            })
+        }
+        "remove_target" => {
+            let ip = parts.next()?.parse::<IpAddr>().ok()?;
+            Some(SourceCommand::RemoveTarget { ip })
         }
         _ => None,
     }
@@ -740,6 +768,12 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
             .map(|(i, _)| i)
             .collect();
 
+        let mut shared_ptp_clock_id: Option<[u8; 8]> = None;
+        let mut shared_timing_offset: Option<airplay_timing::ClockOffset> = None;
+        let mut shared_timing_rx: Option<tokio::sync::watch::Receiver<airplay_timing::ClockOffset>> = None;
+        let mut shared_ptp_peer_cmd_tx: Option<mpsc::UnboundedSender<airplay_timing::PtpPeerCommand>> = None;
+        let mut hoisted_ptp_task: Option<tokio::task::JoinHandle<()>> = None;
+
         if !ptp_indices.is_empty() {
             let ptp_target_ips: Vec<std::net::IpAddr> = ptp_indices.iter().map(|&i| ips[i]).collect();
             let primary_ptp_idx = ptp_indices[0];
@@ -759,6 +793,11 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
             let ptp_clock_id = conns[primary_ptp_idx].ptp_master_clock_id().unwrap_or([0u8; 8]);
             let timing_offset = conns[primary_ptp_idx].timing_offset().unwrap_or_default();
             let timing_rx = conns[primary_ptp_idx].timing_rx();
+            shared_ptp_clock_id = conns[primary_ptp_idx].ptp_master_clock_id();
+            shared_timing_offset = Some(timing_offset);
+            shared_timing_rx = timing_rx.clone();
+            shared_ptp_peer_cmd_tx = conns[primary_ptp_idx].ptp_peer_cmd_tx();
+            hoisted_ptp_task = conns[primary_ptp_idx].take_ptp_master_task();
             println!("Primary PTP setup done, clock ID: {:02x?}", ptp_clock_id);
 
             try_join_all(
@@ -815,6 +854,15 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
             }
             println!("Speaker {} ({}) streaming started!", idx + 1, ips[idx]);
         }
+
+        let mut ips = ips;
+        let mut slots: Vec<usize> = (0..conns.len()).collect();
+        let mut current_title = metadata_title.clone();
+        let mut current_album = metadata_album.clone();
+        let mut current_artist = metadata_artist.clone();
+        let mut current_artwork = artwork_bytes.clone();
+        let (hot_add_tx, mut hot_add_rx) =
+            mpsc::unbounded_channel::<std::result::Result<(IpAddr, usize, Connection), (IpAddr, String)>>();
 
         let mut feedback_counter = 0u32;
         let mut next_volume_step = 0usize;
@@ -897,6 +945,10 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
                         } else {
                             None
                         };
+                        current_title = payload.title.clone();
+                        current_album = payload.album.clone();
+                        current_artist = payload.artist.clone();
+                        current_artwork = artwork_bytes.clone();
 
                         for conn in &mut conns {
                             match AudioDecoder::open(&payload.path) {
@@ -929,8 +981,194 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
                             state_guard.state = airplay_client::PlaybackState::Playing;
                         }
                     }
+                    SourceCommand::AddTarget {
+                        ip,
+                        port,
+                        volume,
+                        sync_offset_ms,
+                        use_ptp: target_use_ptp,
+                    } => {
+                        if ips.contains(&ip) {
+                            tracing::info!("Hot-add ignored: {} is already active", ip);
+                        } else if target_use_ptp && (shared_ptp_peer_cmd_tx.is_none() || shared_ptp_clock_id.is_none()) {
+                            println!("TARGET_ADD_FAILED {} no_ptp_master", ip);
+                            let _ = std::io::Write::flush(&mut std::io::stdout());
+                        } else if let Some(shared_streamer) = conns.first().and_then(|c| c.streamer()) {
+                            let tx = hot_add_tx.clone();
+                            let mut target_config = config.clone();
+                            if target_use_ptp {
+                                target_config.timing_protocol = TimingProtocol::Ptp;
+                                target_config.ptp_mode = PtpMode::Master;
+                            } else {
+                                target_config.timing_protocol = TimingProtocol::Ntp;
+                            }
+                            let ptp_clock_id = shared_ptp_clock_id;
+                            let timing_offset = shared_timing_offset.unwrap_or_default();
+                            let timing_rx = shared_timing_rx.clone();
+                            let ptp_cmd_tx = shared_ptp_peer_cmd_tx.clone();
+                            let title = current_title.clone();
+                            let album = current_album.clone();
+                            let artist = current_artist.clone();
+                            let artwork = current_artwork.clone();
+                            let duration = current_duration_secs;
+                            tokio::spawn(async move {
+                                let res: std::result::Result<(IpAddr, usize, Connection), String> = async {
+                                    let dev_id_str = match ip {
+                                        IpAddr::V4(v4) => {
+                                            let o = v4.octets();
+                                            format!("{:02X}:{:02X}:{:02X}:{:02X}:00:00", o[0], o[1], o[2], o[3])
+                                        }
+                                        IpAddr::V6(v6) => {
+                                            let s = v6.segments();
+                                            format!(
+                                                "{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
+                                                (s[0] >> 8) as u8, s[0] as u8,
+                                                (s[1] >> 8) as u8, s[1] as u8,
+                                                (s[2] >> 8) as u8, s[2] as u8
+                                            )
+                                        }
+                                    };
+                                    let dev_id = DeviceId::from_mac_string(&dev_id_str).map_err(|e| e.to_string())?;
+                                    let dev = Device {
+                                        id: dev_id,
+                                        name: format!("AirPlay Target {}", ip),
+                                        model: "Unknown".to_string(),
+                                        manufacturer: None,
+                                        serial_number: None,
+                                        addresses: vec![ip],
+                                        port,
+                                        features: default_features,
+                                        required_sender_features: None,
+                                        public_key: None,
+                                        source_version: Default::default(),
+                                        firmware_version: None,
+                                        os_version: None,
+                                        protocol_version: None,
+                                        requires_password: false,
+                                        status_flags: 0,
+                                        access_control: None,
+                                        pairing_identity: None,
+                                        system_pairing_identity: None,
+                                        bluetooth_address: None,
+                                        homekit_home_id: None,
+                                        group_id: None,
+                                        is_group_leader: false,
+                                        group_public_name: None,
+                                        group_contains_discoverable_leader: false,
+                                        home_group_id: None,
+                                        household_id: None,
+                                        parent_group_id: None,
+                                        parent_group_contains_discoverable_leader: false,
+                                        tight_sync_id: None,
+                                        raop_port: None,
+                                        raop_encryption_types: None,
+                                        raop_codecs: None,
+                                        raop_transport: None,
+                                        raop_metadata_types: None,
+                                        raop_digest_auth: false,
+                                        vodka_version: None,
+                                    };
+
+                                    let mut conn = Connection::connect_auto(dev, target_config, "3939")
+                                        .await
+                                        .map_err(|e| format!("connect: {}", e))?;
+                                    if render_delay_ms > 0 {
+                                        conn.set_render_delay_ms(render_delay_ms);
+                                    }
+                                    if sync_offset_ms != 0 {
+                                        conn.set_sync_offset_ms(sync_offset_ms);
+                                    }
+
+                                    if target_use_ptp {
+                                        let clock_id = ptp_clock_id.ok_or_else(|| "missing_ptp_clock".to_string())?;
+                                        let rx = timing_rx.ok_or_else(|| "missing_timing_rx".to_string())?;
+                                        conn.setup_for_group(clock_id, timing_offset, rx)
+                                            .await
+                                            .map_err(|e| format!("setup_for_group: {}", e))?;
+
+                                        if let Some(cmd_tx) = ptp_cmd_tx {
+                                            let (ready_tx, ready_rx) = tokio::sync::oneshot::channel::<bool>();
+                                            let _ = cmd_tx.send(airplay_timing::PtpPeerCommand::AddPeer { ip, ready_tx });
+                                            match tokio::time::timeout(Duration::from_secs(5), ready_rx).await {
+                                                Ok(Ok(true)) => {}
+                                                _ => {
+                                                    let _ = cmd_tx.send(airplay_timing::PtpPeerCommand::RemovePeer { ip });
+                                                    let _ = conn.disconnect().await;
+                                                    return Err("ptp_lock_timeout".to_string());
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        conn.setup().await.map_err(|e| format!("setup: {}", e))?;
+                                    }
+
+                                    let slot = conn
+                                        .join_active_group(&shared_streamer, ptp_clock_id)
+                                        .await
+                                        .map_err(|e| format!("join_active_group: {}", e))?;
+                                    if let Some(vol) = volume {
+                                        let _ = conn.set_volume(vol).await;
+                                    }
+                                    let _ = conn.send_metadata(&title, &album, &artist).await;
+                                    if let Some(art) = artwork {
+                                        let _ = conn.send_artwork(art, "image/jpeg").await;
+                                    }
+                                    let _ = conn.send_progress(duration).await;
+                                    Ok((ip, slot, conn))
+                                }
+                                .await;
+
+                                match res {
+                                    Ok(joined) => {
+                                        let _ = tx.send(Ok(joined));
+                                    }
+                                    Err(err) => {
+                                        let _ = tx.send(Err((ip, err)));
+                                    }
+                                }
+                            });
+                        } else {
+                            println!("TARGET_ADD_FAILED {} no_active_streamer", ip);
+                            let _ = std::io::Write::flush(&mut std::io::stdout());
+                        }
+                    }
+                    SourceCommand::RemoveTarget { ip } => {
+                        if let Some(idx) = ips.iter().position(|&x| x == ip) {
+                            if conns.len() <= 1 {
+                                stop_requested = true;
+                            } else {
+                                let mut removed_conn = conns.remove(idx);
+                                let removed_slot = slots.remove(idx);
+                                ips.remove(idx);
+                                if let Some(ref cmd_tx) = shared_ptp_peer_cmd_tx {
+                                    let _ = cmd_tx.send(airplay_timing::PtpPeerCommand::RemovePeer { ip });
+                                }
+                                tokio::spawn(async move {
+                                    let _ = removed_conn.leave_active_group(removed_slot).await;
+                                });
+                                println!("TARGET_REMOVED {}", ip);
+                                let _ = std::io::Write::flush(&mut std::io::stdout());
+                            }
+                        }
+                    }
                     SourceCommand::Stop => {
                         stop_requested = true;
+                    }
+                }
+            }
+
+            while let Ok(join_result) = hot_add_rx.try_recv() {
+                match join_result {
+                    Ok((ip, slot, conn)) => {
+                        ips.push(ip);
+                        slots.push(slot);
+                        conns.push(conn);
+                        println!("TARGET_ADDED {}", ip);
+                        let _ = std::io::Write::flush(&mut std::io::stdout());
+                    }
+                    Err((ip, reason)) => {
+                        println!("TARGET_ADD_FAILED {} {}", ip, reason);
+                        let _ = std::io::Write::flush(&mut std::io::stdout());
                     }
                 }
             }
@@ -1082,6 +1320,9 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         println!("\n--- Stopping all speakers ---");
+        if let Some(task) = hoisted_ptp_task.take() {
+            task.abort();
+        }
         join_all(conns.into_iter().map(|mut conn| async move {
             let _ = conn.stop().await;
             let _ = conn.disconnect().await;

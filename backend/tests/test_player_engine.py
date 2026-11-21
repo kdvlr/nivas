@@ -1116,3 +1116,44 @@ def test_set_master_volume_adjusts_selected_speakers_proportionally(tmp_path):
     assert state["masterVolume"] == 0
     assert engine.master_volume == 0
 
+
+def test_toggle_device_hot_adds_and_removes_without_restarting():
+    engine = PlayerEngine()
+    engine._save_preferences = lambda: None
+    engine._broadcast_state = lambda: None
+
+    spk1 = AirPlayDevice("192.168.100.10", "Living Room", "192.168.100.10", port=7000, model="HomePod", volume=65)
+    spk2 = AirPlayDevice("192.168.100.11", "Kitchen", "192.168.100.11", port=7000, model="Sonos One", volume=55, sync_offset_ms=25)
+    spk1.is_selected = True
+    engine.devices = {spk1.id: spk1, spk2.id: spk2}
+    engine.active_targets = [spk1.id]
+    engine.current_track = {"videoId": "abc123", "title": "Test"}
+    engine.is_playing = True
+
+    class FakeStdin:
+        def __init__(self):
+            self.lines = []
+        def write(self, data):
+            self.lines.append(data)
+        def flush(self):
+            pass
+
+    class FakeProc:
+        def __init__(self):
+            self.stdin = FakeStdin()
+        def poll(self):
+            return None
+
+    fake_proc = FakeProc()
+    engine._stream_procs = {"group": fake_proc}
+
+    with patch.object(engine, "_schedule_membership_restart") as restart_mock:
+        engine.toggle_device(spk2.id, True)
+        assert restart_mock.call_count == 0
+        assert fake_proc.stdin.lines[-1] == "add_target 192.168.100.11 7000 0.55 25 ptp\n"
+
+        engine.toggle_device(spk2.id, False)
+        assert restart_mock.call_count == 0
+        assert fake_proc.stdin.lines[-1] == "remove_target 192.168.100.11\n"
+
+

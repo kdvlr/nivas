@@ -20,8 +20,8 @@ use airplay_crypto::chacha::AudioCipher;
 use airplay_crypto::chacha::ControlCipher;
 use airplay_crypto::hkdf::{derive_events_read_key, derive_events_write_key};
 use airplay_timing::{
-    run_bmca_yield_flow, run_ptp_group_master_flow, run_ptp_slave, ClockOffset, NtpTimingServer,
-    PtpMaster, PTP_EVENT_PORT,
+    run_bmca_yield_flow, run_ptp_group_master_flow_with_commands, run_ptp_slave, ClockOffset,
+    NtpTimingServer, PtpMaster, PtpPeerCommand, PTP_EVENT_PORT,
 };
 use std::net::{IpAddr, SocketAddr, UdpSocket};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -242,6 +242,8 @@ pub struct Connection {
     ptp_master: Option<PtpMaster>,
     /// Background task sending periodic PTP Sync messages
     ptp_master_sync_task: Option<JoinHandle<()>>,
+    /// Channel to dynamically add/remove PTP peers on the running PTP group master
+    ptp_peer_cmd_tx: Option<mpsc::UnboundedSender<PtpPeerCommand>>,
     /// Control port receiver (keeps the UDP socket alive so HomePod doesn't get ICMP unreachable)
     control_receiver: Option<Arc<RtpReceiver>>,
     /// Keys and background handler for the encrypted reverse event channel.
@@ -383,6 +385,7 @@ impl Connection {
             timing_server: None,
             ptp_master: None,
             ptp_master_sync_task: None,
+            ptp_peer_cmd_tx: None,
             ptp_master_clock_id: None,
             control_receiver: None,
             control_task: None,
@@ -580,6 +583,7 @@ impl Connection {
             timing_server: None,
             ptp_master: None,
             ptp_master_sync_task: None,
+            ptp_peer_cmd_tx: None,
             ptp_master_clock_id: None,
             control_receiver: None,
             control_task: None,
@@ -816,6 +820,7 @@ impl Connection {
             timing_server: None,
             ptp_master: None,
             ptp_master_sync_task: None,
+            ptp_peer_cmd_tx: None,
             ptp_master_clock_id: None,
             control_receiver: None,
             control_task: None,
@@ -1742,6 +1747,60 @@ impl Connection {
         Ok(())
     }
 
+    /// Hot-join this ready connection into an already-running `AudioStreamer` without
+    /// pausing or interrupting any existing group members.
+    pub async fn join_active_group(
+        &mut self,
+        streamer: &AudioStreamer,
+        ptp_clock_id: Option<[u8; 8]>,
+    ) -> Result<usize> {
+        let mut peer_sender = self.build_rtp_sender()?;
+        if self.stream_config.timing_protocol == TimingProtocol::Ptp {
+            if let Some(clock_id) = self.ptp_master_clock_id.or(ptp_clock_id) {
+                peer_sender.set_ptp_master_clock_id(clock_id);
+            }
+        }
+        let (slot, flush_seq, flush_rtptime) = streamer.add_rtp_sender(peer_sender).await?;
+        let flush_req = RtspRequest::flush_with_info(
+            self.session.request_uri(),
+            flush_seq,
+            flush_rtptime,
+        );
+        let _ = self.rtsp.send(flush_req).await;
+
+        self.start_control_listener(streamer, slot);
+        let _ = self.session.start_playing();
+        self.playback_state = PlaybackState::Playing;
+        self.streamer = Some(streamer.clone());
+        let _ = self.set_volume(self.volume).await;
+        Ok(slot)
+    }
+
+    /// Hot-leave an active group without stopping the shared `AudioStreamer` for remaining speakers.
+    pub async fn leave_active_group(&mut self, slot: usize) -> Result<()> {
+        self.stop_control_task();
+        if let Some(streamer) = self.streamer.take() {
+            streamer.remove_rtp_sender(slot).await;
+        }
+        self.disconnect().await
+    }
+
+    /// Get a clone of the shared `AudioStreamer` if currently streaming.
+    pub fn streamer(&self) -> Option<AudioStreamer> {
+        self.streamer.clone()
+    }
+
+    /// Get the channel for dynamically adding/removing PTP peers on the running grandmaster.
+    pub fn ptp_peer_cmd_tx(&self) -> Option<mpsc::UnboundedSender<PtpPeerCommand>> {
+        self.ptp_peer_cmd_tx.clone()
+    }
+
+    /// Detach the PTP grandmaster background task so another owner can keep it alive
+    /// if this connection leaves the group.
+    pub fn take_ptp_master_task(&mut self) -> Option<JoinHandle<()>> {
+        self.ptp_master_sync_task.take()
+    }
+
     /// Change track in an active streaming session without reconnecting.
     pub async fn change_track(
         &mut self,
@@ -2315,11 +2374,15 @@ impl Connection {
         self.timing_tx = Some(offset_tx);
         self.timing_offset = Some(ClockOffset::default());
 
+        let (peer_cmd_tx, peer_cmd_rx) = mpsc::unbounded_channel::<PtpPeerCommand>();
+        self.ptp_peer_cmd_tx = Some(peer_cmd_tx);
+
         self.ptp_master_sync_task = Some(tokio::spawn(async move {
-            if let Err(e) = run_ptp_group_master_flow(
+            if let Err(e) = run_ptp_group_master_flow_with_commands(
                 peer_ips_vec,
                 246, // Priority1=246 — wins against HomePod's 248
                 clock_id_tx,
+                Some(peer_cmd_rx),
             )
             .await
             {
