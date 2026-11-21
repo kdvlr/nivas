@@ -24,6 +24,7 @@ const ALL_STORYBOARD_PATHS = [
   '/celebrations/bicycle_park_rain.html',
   '/celebrations/trick_or_treat_penalty.html',
   '/celebrations/banana_peel_monkey.html',
+  '/celebrations/basketball_chore_hoop.html',
 ]
 
 function cacheStoryboard(pathname: string): Promise<string | undefined> {

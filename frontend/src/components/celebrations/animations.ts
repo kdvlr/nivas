@@ -48,6 +48,7 @@ export type CelebrationName =
   | 'ninja-chop'
   | 'chore-tower'
   | 'canyon-stunt'
+  | 'basketball-hoop'
 
 export interface Celebration {
   name: CelebrationName
@@ -1303,6 +1304,16 @@ export const CELEBRATIONS: Celebration[] = [
     hideHtmlPraise: true,
     praise: ['Chores Conquered!', 'Legendary Jump!', 'Stunt Champ!'],
     iframeSrc: '/celebrations/canyon_stunt_jump.html?embed=1',
+  },
+  {
+    name: 'basketball-hoop',
+    emoji: '🏀',
+    label: 'Basketball Chore Hoop',
+    backdrop: '#0c1220',
+    durationMs: 9200,
+    hideHtmlPraise: true,
+    praise: ['You hooped a chore!'],
+    iframeSrc: '/celebrations/basketball_chore_hoop.html?embed=1',
   },
   {
     name: 'confetti',

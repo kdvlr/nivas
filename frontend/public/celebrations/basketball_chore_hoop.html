@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>You Hooped a Chore! · Basketball Celebration</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #0c1220;
+      font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+    }
+
+    .stage-wrapper {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    svg#stageSvg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Championship Victory Banner */
+    .victory-banner {
+      position: absolute;
+      top: 7.5%;
+      left: 50%;
+      transform: translate(-50%, -140px) scale(0.72);
+      opacity: 0;
+      z-index: 20;
+      pointer-events: none;
+      transition: transform 0.72s cubic-bezier(0.22, 1.32, 0.36, 1), opacity 0.42s ease;
+      will-change: transform, opacity;
+    }
+
+    .victory-banner.show {
+      transform: translate(-50%, 0) scale(1);
+      opacity: 1;
+    }
+
+    .banner-card {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding: 18px 38px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, rgba(17, 25, 44, 0.94) 0%, rgba(30, 41, 68, 0.96) 100%);
+      border: 2px solid rgba(245, 196, 81, 0.85);
+      box-shadow:
+        0 24px 60px rgba(0, 0, 0, 0.55),
+        0 0 0 6px rgba(245, 196, 81, 0.14),
+        inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    }
+
+    .banner-badge {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #f59e0b, #c2410c);
+      border: 2px solid #fde68a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 6px 18px rgba(234, 88, 12, 0.45);
+      flex-shrink: 0;
+    }
+
+    .banner-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .banner-eyebrow {
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #f5c451;
+    }
+
+    .banner-title {
+      display: inline-flex;
+      align-items: center;
+      font-size: clamp(26px, 3.2vw, 44px);
+      font-weight: 900;
+      letter-spacing: -0.01em;
+      color: #fffbeb;
+      text-shadow: 0 3px 12px rgba(0, 0, 0, 0.45);
+      white-space: nowrap;
+    }
+
+    .bb-o {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 0.74em;
+      height: 0.74em;
+      margin: 0 0.035em;
+      transform: translateY(0.05em);
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45));
+    }
+
+    /* Subtle Replay Pill */
+    .replay-btn {
+      position: absolute;
+      bottom: 22px;
+      right: 26px;
+      z-index: 30;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.72);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: #f8fafc;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+      transition: background 0.2s, transform 0.15s;
+    }
+
+    .replay-btn:hover {
+      background: rgba(30, 41, 59, 0.9);
+      transform: translateY(-1px);
+    }
+
+    .replay-btn:active {
+      transform: scale(0.96);
+    }
+
+    .replay-btn.hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="stage-wrapper" id="stageWrap">
+    <!-- Victory Banner -->
+    <div id="victoryBanner" class="victory-banner" aria-live="polite">
+      <div class="banner-card">
+        <div class="banner-badge">
+          <svg viewBox="0 0 40 40" width="32" height="32">
+            <circle cx="20" cy="20" r="16" fill="#ea580c" stroke="#1e293b" stroke-width="2" />
+            <path d="M4,20 H36 M20,4 V36 M9,8 Q17,20 9,32 M31,8 Q23,20 31,32" stroke="#1e293b" stroke-width="1.8" fill="none" />
+          </svg>
+        </div>
+        <div class="banner-text">
+          <div class="banner-eyebrow">Swish · Chore Complete</div>
+          <div class="banner-title">
+            <span>You h</span>
+            <span class="bb-o" aria-label="o">
+              <svg viewBox="0 0 40 40" width="100%" height="100%">
+                <defs>
+                  <radialGradient id="bbLetterGrad" cx="35%" cy="30%" r="68%">
+                    <stop offset="0%" stop-color="#fb923c" />
+                    <stop offset="55%" stop-color="#ea580c" />
+                    <stop offset="100%" stop-color="#9a3412" />
+                  </radialGradient>
+                </defs>
+                <circle cx="20" cy="20" r="18" fill="url(#bbLetterGrad)" stroke="#1e293b" stroke-width="2.2" />
+                <path d="M2,20 H38 M20,2 V38 M8,7 Q16,20 8,33 M32,7 Q24,20 32,33" stroke="#1e293b" stroke-width="2" fill="none" />
+              </svg>
+            </span>
+            <span class="bb-o" aria-label="o">
+              <svg viewBox="0 0 40 40" width="100%" height="100%">
+                <circle cx="20" cy="20" r="18" fill="url(#bbLetterGrad)" stroke="#1e293b" stroke-width="2.2" />
+                <path d="M2,20 H38 M20,2 V38 M8,7 Q16,20 8,33 M32,7 Q24,20 32,33" stroke="#1e293b" stroke-width="2" fill="none" />
+              </svg>
+            </span>
+            <span>ped a chore !</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button id="replayBtn" class="replay-btn" type="button">↻ Replay</button>
+
+    <!-- 16:9 Arena Basketball Court SVG Stage -->
+    <svg id="stageSvg" viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <!-- Arena Upper Wall & Overhead Lighting -->
+        <linearGradient id="arenaBg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#0f172a" />
+          <stop offset="55%" stop-color="#1e293b" />
+          <stop offset="100%" stop-color="#2c3a52" />
+        </linearGradient>
+        <radialGradient id="spotGlow" cx="50%" cy="0%" r="75%">
+          <stop offset="0%" stop-color="#fef3c7" stop-opacity="0.32" />
+          <stop offset="50%" stop-color="#fde68a" stop-opacity="0.09" />
+          <stop offset="100%" stop-color="#fde68a" stop-opacity="0" />
+        </radialGradient>
+        <linearGradient id="spotCone" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#fffbeb" stop-opacity="0.22" />
+          <stop offset="75%" stop-color="#fef3c7" stop-opacity="0.04" />
+          <stop offset="100%" stop-color="#fef3c7" stop-opacity="0" />
+        </linearGradient>
+
+        <!-- Polished Maple Hardwood Court -->
+        <linearGradient id="courtFloor" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#c98e4e" />
+          <stop offset="42%" stop-color="#b87a3c" />
+          <stop offset="100%" stop-color="#8f5826" />
+        </linearGradient>
+        <linearGradient id="paintKey" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#1d3557" stop-opacity="0.88" />
+          <stop offset="100%" stop-color="#264773" stop-opacity="0.92" />
+        </linearGradient>
+        <linearGradient id="floorSheen" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#fffbeb" stop-opacity="0.22" />
+          <stop offset="100%" stop-color="#fffbeb" stop-opacity="0" />
+        </linearGradient>
+
+        <!-- Backboard Glass & Heavy Padded Stanchion -->
+        <linearGradient id="glassBoard" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#e0f2fe" stop-opacity="0.46" />
+          <stop offset="45%" stop-color="#f8fafc" stop-opacity="0.22" />
+          <stop offset="100%" stop-color="#94a3b8" stop-opacity="0.36" />
+        </linearGradient>
+        <linearGradient id="stanchionMetal" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#334155" />
+          <stop offset="40%" stop-color="#475569" />
+          <stop offset="100%" stop-color="#1e293b" />
+        </linearGradient>
+
+        <!-- 3D Shaded Basketball -->
+        <radialGradient id="ballGrad" cx="35%" cy="30%" r="68%">
+          <stop offset="0%" stop-color="#fb923c" />
+          <stop offset="52%" stop-color="#ea580c" />
+          <stop offset="88%" stop-color="#9a3412" />
+          <stop offset="100%" stop-color="#6c220a" />
+        </radialGradient>
+
+        <!-- Kid Jersey & Skin Shading -->
+        <linearGradient id="jerseyGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#2563eb" />
+          <stop offset="100%" stop-color="#1d4ed8" />
+        </linearGradient>
+        <linearGradient id="shortsGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#1e293b" />
+          <stop offset="100%" stop-color="#0f172a" />
+        </linearGradient>
+      </defs>
+
+      <!-- 1. ARENA BACKDROP -->
+      <rect width="1280" height="720" fill="url(#arenaBg)" />
+
+      <!-- Overhead Structural Trusses -->
+      <g stroke="#334155" stroke-width="2" opacity="0.45">
+        <line x1="0" y1="48" x2="1280" y2="48" />
+        <line x1="0" y1="74" x2="1280" y2="74" />
+        <path d="M0,48 L50,74 L100,48 L150,74 L200,48 L250,74 L300,48 L350,74 L400,48 L450,74 L500,48 L550,74 L600,48 L650,74 L700,48 L750,74 L800,48 L850,74 L900,48 L950,74 L1000,48 L1050,74 L1100,48 L1150,74 L1200,48 L1250,74 L1280,58" fill="none" />
+      </g>
+
+      <!-- Arena Spotlight Cones & Pendant Lamps -->
+      <g>
+        <polygon points="270,74 90,540 450,540" fill="url(#spotCone)" />
+        <polygon points="640,74 440,540 840,540" fill="url(#spotCone)" />
+        <polygon points="1010,74 830,540 1190,540" fill="url(#spotCone)" />
+        <g fill="#475569">
+          <path d="M254,74 L286,74 L280,86 L260,86 Z" />
+          <path d="M624,74 L656,74 L650,86 L630,86 Z" />
+          <path d="M994,74 L1026,74 L1020,86 L1000,86 Z" />
+        </g>
+        <g fill="#fef9c3">
+          <ellipse cx="270" cy="87" rx="11" ry="3.5" />
+          <ellipse cx="640" cy="87" rx="11" ry="3.5" />
+          <ellipse cx="1010" cy="87" rx="11" ry="3.5" />
+        </g>
+      </g>
+
+      <!-- Tiered Bleacher Silhouettes & Subtle Crowd -->
+      <g opacity="0.52">
+        <rect x="0" y="340" width="1280" height="190" fill="#131c2e" />
+        <line x1="0" y1="368" x2="1280" y2="368" stroke="#334155" stroke-width="2" />
+        <line x1="0" y1="402" x2="1280" y2="402" stroke="#334155" stroke-width="2" />
+        <line x1="0" y1="438" x2="1280" y2="438" stroke="#334155" stroke-width="2" />
+        <line x1="0" y1="476" x2="1280" y2="476" stroke="#334155" stroke-width="2" />
+        <!-- Padded Baseline Wall -->
+        <rect x="0" y="492" width="1280" height="44" fill="#1e3a5f" />
+        <g stroke="#0f172a" stroke-width="1.5" opacity="0.45">
+          <line x1="160" y1="492" x2="160" y2="536" /><line x1="320" y1="492" x2="320" y2="536" />
+          <line x1="480" y1="492" x2="480" y2="536" /><line x1="640" y1="492" x2="640" y2="536" />
+          <line x1="800" y1="492" x2="800" y2="536" /><line x1="960" y1="492" x2="960" y2="536" />
+          <line x1="1120" y1="492" x2="1120" y2="536" />
+        </g>
+      </g>
+
+      <!-- Wall Scoreboard -->
+      <g transform="translate(110, 210)">
+        <rect x="0" y="0" width="196" height="86" rx="8" fill="#0b1120" stroke="#475569" stroke-width="2.5" />
+        <rect x="10" y="10" width="176" height="66" rx="4" fill="#111827" />
+        <text x="98" y="29" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="700" letter-spacing="2">CHORE ARENA</text>
+        <text id="scoreHome" x="52" y="61" text-anchor="middle" fill="#f59e0b" font-size="28" font-weight="900">00</text>
+        <text x="98" y="57" text-anchor="middle" fill="#64748b" font-size="14" font-weight="800">:</text>
+        <text x="144" y="61" text-anchor="middle" fill="#38bdf8" font-size="28" font-weight="900">Q4</text>
+      </g>
+
+      <!-- 2. POLISHED MAPLE HARDWOOD COURT (Perspective Floor) -->
+      <g>
+        <rect x="0" y="534" width="1280" height="186" fill="url(#courtFloor)" />
+        <!-- Subtle hardwood plank strips -->
+        <g stroke="#7c471b" stroke-width="1" opacity="0.28">
+          <line x1="0" y1="554" x2="1280" y2="554" />
+          <line x1="0" y1="576" x2="1280" y2="576" />
+          <line x1="0" y1="600" x2="1280" y2="600" />
+          <line x1="0" y1="628" x2="1280" y2="628" />
+          <line x1="0" y1="660" x2="1280" y2="660" />
+          <line x1="0" y1="694" x2="1280" y2="694" />
+        </g>
+        <!-- Painted Key / Free-Throw Lane (Right Side under Hoop) -->
+        <polygon points="735,552 1170,552 1235,654 670,654" fill="url(#paintKey)" />
+        <!-- Crisp White Court Lines -->
+        <g stroke="#f8fafc" stroke-width="3" fill="none" opacity="0.88">
+          <line x1="0" y1="538" x2="1280" y2="538" stroke-width="3.5" />
+          <!-- Key Outline -->
+          <polygon points="735,552 1170,552 1235,654 670,654" />
+          <!-- Free-throw semi-circle -->
+          <path d="M735,552 C645,565 625,638 670,654" />
+          <!-- Three-point arc -->
+          <path d="M510,538 C395,585 385,672 475,720" stroke-width="3.2" />
+          <!-- Center court edge -->
+          <line x1="120" y1="538" x2="40" y2="720" opacity="0.55" />
+        </g>
+        <!-- Glossy arena overhead floor sheen -->
+        <rect x="0" y="534" width="1280" height="82" fill="url(#floorSheen)" />
+      </g>
+
+      <!-- 3. PRO BASKETBALL HOOP & STANCHION (Right Side, Rim Center at x=1018, y=262) -->
+      <g id="hoopRig">
+        <!-- Floor shadow under stanchion -->
+        <ellipse cx="1158" cy="596" rx="74" ry="15" fill="#1e130a" opacity="0.45" />
+        <!-- Heavy Padded Stanchion Base & Angled Arm -->
+        <path d="M1118,596 L1124,492 L1196,492 L1206,596 Z" fill="#1e3a5f" stroke="#0f172a" stroke-width="2" />
+        <rect x="1124" y="492" width="72" height="14" fill="#2563eb" opacity="0.7" />
+        <path d="M1152,492 L1152,218 L1082,218" stroke="url(#stanchionMetal)" stroke-width="20" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M1152,315 L1088,248" stroke="#334155" stroke-width="8" stroke-linecap="round" />
+
+        <!-- Backboard + Rim Assembly (slightly flexes on rim hit!) -->
+        <g id="backboardGroup" transform="translate(0, 0)">
+          <!-- Tempered Glass Backboard (slightly 3D perspective edge on right) -->
+          <rect x="1064" y="148" width="16" height="144" rx="3" fill="url(#glassBoard)" stroke="#e2e8f0" stroke-width="2.5" />
+          <rect x="1077" y="150" width="6" height="140" rx="1" fill="#64748b" />
+          <!-- Shooter's red/white square indicator -->
+          <rect x="1064" y="218" width="10" height="44" fill="none" stroke="#ef4444" stroke-width="2.2" opacity="0.85" />
+          <!-- Rim bracket -->
+          <rect x="1050" y="256" width="16" height="10" rx="2" fill="#c2410c" />
+          <!-- Back half of orange breakaway rim (behind ball when swishing) -->
+          <ellipse cx="1018" cy="262" rx="35" ry="6.5" fill="none" stroke="#c2410c" stroke-width="5.5" />
+        </g>
+      </g>
+
+      <!-- Dynamic Floor Shadows (Kid + Ball) -->
+      <ellipse id="kidShadow" cx="320" cy="596" rx="44" ry="10" fill="#1a0f07" opacity="0.45" />
+      <ellipse id="ballShadow" cx="360" cy="596" rx="20" ry="6" fill="#1a0f07" opacity="0.48" />
+
+      <!-- Floor Bounce Ring FX -->
+      <ellipse id="bounceRing" cx="360" cy="596" rx="10" ry="3" fill="none" stroke="#fef3c7" stroke-width="2.5" opacity="0" />
+
+      <!-- 4. ARTICULATED KID PLAYER (2-Joint Legs, Torso, Head, 2-Joint Arms) -->
+      <g id="kidGroup">
+        <!-- Far Arm (Behind torso) -->
+        <g id="kidFarArm">
+          <path id="farArmPath" d="M0,0" stroke="#c28b63" stroke-width="12" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+          <circle id="farHand" cx="0" cy="0" r="7" fill="#c28b63" />
+        </g>
+        <!-- Far Leg + Articulated Shorts Sleeve -->
+        <g id="kidFarLeg">
+          <path id="farLegPath" d="M0,0" stroke="#b8825a" stroke-width="13.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+          <path id="farShortsPath" d="M0,0" stroke="#0f172a" stroke-width="21" fill="none" stroke-linecap="butt" />
+          <g id="farShoe">
+            <path d="M-10,-4 L14,-4 Q22,-4 22,4 L-10,4 Z" fill="#1e293b" />
+            <rect x="-10" y="3" width="32" height="4" rx="2" fill="#f8fafc" />
+          </g>
+        </g>
+
+        <!-- Torso + Shorts Waistband + Jersey #26 -->
+        <g id="kidTorso">
+          <!-- Shorts Pelvis / Waistband -->
+          <path d="M-17,-54 L17,-54 L16,-35 L-16,-35 Z" fill="url(#shortsGrad)" />
+          <line x1="-17" y1="-50" x2="17" y2="-50" stroke="#f59e0b" stroke-width="3" />
+          <!-- Jersey -->
+          <path d="M-18,-108 Q0,-114 18,-108 L19,-51 L-19,-51 Z" fill="url(#jerseyGrad)" />
+          <!-- Jersey trim & number -->
+          <path d="M-12,-109 Q0,-100 12,-109" stroke="#f59e0b" stroke-width="3" fill="none" />
+          <text x="1" y="-73" text-anchor="middle" fill="#fef3c7" font-size="18" font-weight="900">26</text>
+        </g>
+
+        <!-- Near Leg + Articulated Shorts Sleeve -->
+        <g id="kidNearLeg">
+          <path id="nearLegPath" d="M0,0" stroke="#d99f74" stroke-width="14" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+          <path id="nearShortsPath" d="M0,0" stroke="#1e293b" stroke-width="22" fill="none" stroke-linecap="butt" />
+          <path id="nearShortsTrim" d="M0,0" stroke="#f59e0b" stroke-width="2.5" fill="none" stroke-linecap="round" />
+          <g id="nearShoe">
+            <path d="M-10,-4 L15,-4 Q23,-4 23,4 L-10,4 Z" fill="#2563eb" />
+            <path d="M0,-4 L10,-4 L14,2 L2,2 Z" fill="#f59e0b" />
+            <rect x="-10" y="3" width="33" height="4" rx="2" fill="#ffffff" />
+          </g>
+        </g>
+
+        <!-- Expressive Head (tracks ball/hoop, joyful smile on make!) -->
+        <g id="kidHead">
+          <rect x="-6" y="-120" width="12" height="14" rx="4" fill="#c98e64" />
+          <circle cx="2" cy="-136" r="22" fill="#dfa479" />
+          <!-- Athletic Headband -->
+          <path d="M-19,-144 Q2,-150 23,-144 L22,-138 Q2,-144 -18,-138 Z" fill="#f59e0b" />
+          <!-- Sculpted Hair -->
+          <path d="M-21,-143 C-22,-165 18,-168 23,-145 C14,-154 -8,-154 -21,-143 Z" fill="#1c1917" />
+          <path d="M-19,-143 C-24,-138 -22,-128 -16,-126 C-17,-134 -16,-140 -19,-143 Z" fill="#1c1917" />
+          <!-- Face -->
+          <circle cx="11" cy="-135" r="2.8" fill="#1c1917" />
+          <circle cx="12" cy="-136" r="0.9" fill="#ffffff" />
+          <path id="kidBrow" d="M6,-142 Q11,-144 16,-141" stroke="#1c1917" stroke-width="2" fill="none" stroke-linecap="round" />
+          <path id="kidMouth" d="M9,-125 Q15,-123 19,-126" stroke="#451a03" stroke-width="2.2" fill="none" stroke-linecap="round" />
+          <circle cx="14" cy="-129" r="3.5" fill="#ef4444" opacity="0.22" />
+        </g>
+
+        <!-- Near Arm (In front of torso) -->
+        <g id="kidNearArm">
+          <path id="nearArmPath" d="M0,0" stroke="#dfa479" stroke-width="12.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+          <circle id="nearHand" cx="0" cy="0" r="7.5" fill="#dfa479" />
+        </g>
+      </g>
+
+      <!-- 5. BASKETBALL (with 3D rotation & squash-stretch) -->
+      <g id="ballGroup" transform="translate(360, 500)">
+        <g id="ballSquash">
+          <g id="ballSpin">
+            <circle r="19" fill="url(#ballGrad)" stroke="#431407" stroke-width="1.4" />
+            <path d="M-19,0 H19 M0,-19 V19 M-12,-14 Q-4,0 -12,14 M12,-14 Q4,0 12,14" stroke="#291206" stroke-width="1.8" fill="none" opacity="0.82" />
+            <circle cx="-6" cy="-7" r="4.5" fill="#fed7aa" opacity="0.26" />
+          </g>
+        </g>
+      </g>
+
+      <!-- 6. FRONT RIM & DYNAMIC PROCEDURAL DIAMOND NET (drawn IN FRONT of ball on swish!) -->
+      <g id="netFrontGroup">
+        <!-- Procedural diamond mesh net updated at 60fps when swishing! -->
+        <path id="netMesh" d="" stroke="#f8fafc" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.92" />
+        <!-- Front half of orange rim -->
+        <path d="M983,262 A35,6.5 0 0,0 1053,262" fill="none" stroke="#f97316" stroke-width="6" stroke-linecap="round" />
+      </g>
+
+      <!-- Rim Clank Spark + Swish Confetti Layer -->
+      <g id="clankFx" opacity="0">
+        <path d="M985,256 L972,244 M990,250 L984,234 M978,262 L964,260" stroke="#fde047" stroke-width="2.6" stroke-linecap="round" />
+      </g>
+      <g id="confettiLayer"></g>
+    </svg>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    if (params.get('clean') === '1' || params.get('embed') === '1') {
+      document.getElementById('replayBtn').classList.add('hidden');
+    }
+    const soundEnabled = params.get('sound') !== '0';
+
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+    const elSVG = (tag, attrs = {}) => {
+      const n = document.createElementNS(SVG_NS, tag);
+      for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+      return n;
+    };
+
+    // DOM handles
+    const kidGroup       = document.getElementById('kidGroup');
+    const kidShadow      = document.getElementById('kidShadow');
+    const kidTorso       = document.getElementById('kidTorso');
+    const kidHead        = document.getElementById('kidHead');
+    const kidMouth       = document.getElementById('kidMouth');
+    const farLegPath     = document.getElementById('farLegPath');
+    const nearLegPath    = document.getElementById('nearLegPath');
+    const farShortsPath  = document.getElementById('farShortsPath');
+    const nearShortsPath = document.getElementById('nearShortsPath');
+    const nearShortsTrim = document.getElementById('nearShortsTrim');
+    const farShoe        = document.getElementById('farShoe');
+    const nearShoe       = document.getElementById('nearShoe');
+    const farArmPath     = document.getElementById('farArmPath');
+    const nearArmPath    = document.getElementById('nearArmPath');
+    const farHand        = document.getElementById('farHand');
+    const nearHand       = document.getElementById('nearHand');
+    const ballGroup      = document.getElementById('ballGroup');
+    const ballSquash     = document.getElementById('ballSquash');
+    const ballSpin       = document.getElementById('ballSpin');
+    const ballShadow     = document.getElementById('ballShadow');
+    const bounceRing     = document.getElementById('bounceRing');
+    const backboardGroup = document.getElementById('backboardGroup');
+    const netFrontGroup  = document.getElementById('netFrontGroup');
+    const netMesh        = document.getElementById('netMesh');
+    const clankFx        = document.getElementById('clankFx');
+    const scoreHome      = document.getElementById('scoreHome');
+    const victoryBanner  = document.getElementById('victoryBanner');
+    const confettiLayer  = document.getElementById('confettiLayer');
+    const replayBtn      = document.getElementById('replayBtn');
+
+    // =========================================================================
+    // LIGHTWEIGHT WEB AUDIO SFX (Soft dribble, rim clank, net swish, fanfare)
+    // =========================================================================
+    let audioCtx = null;
+    function getAudio() {
+      if (!soundEnabled) return null;
+      if (!audioCtx && (window.AudioContext || window.webkitAudioContext)) {
+        try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch {}
+      }
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+      return audioCtx;
+    }
+
+    function playDribbleSfx() {
+      const ctx = getAudio(); if (!ctx) return;
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(165, now);
+      osc.frequency.exponentialRampToValueAtTime(62, now + 0.085);
+      gain.gain.setValueAtTime(0.24, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.095);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now); osc.stop(now + 0.1);
+    }
+
+    function playRimClankSfx() {
+      const ctx = getAudio(); if (!ctx) return;
+      const now = ctx.currentTime;
+      [340, 515, 790].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now);
+        osc.frequency.exponentialRampToValueAtTime(freq * 0.92, now + 0.22);
+        gain.gain.setValueAtTime(0.11 / (i + 1), now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(now); osc.stop(now + 0.25);
+      });
+    }
+
+    function playSwishSfx() {
+      const ctx = getAudio(); if (!ctx) return;
+      const now = ctx.currentTime;
+      const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.26), ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * Math.sin(Math.PI * i / data.length);
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(2400, now);
+      filter.frequency.exponentialRampToValueAtTime(1100, now + 0.24);
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.28, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      src.connect(filter).connect(gain).connect(ctx.destination);
+      src.start(now);
+    }
+
+    function playVictoryChime() {
+      const ctx = getAudio(); if (!ctx) return;
+      const now = ctx.currentTime;
+      [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        const t = now + i * 0.085;
+        osc.frequency.setValueAtTime(freq, t);
+        gain.gain.setValueAtTime(0.14, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.42);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(t); osc.stop(t + 0.45);
+      });
+    }
+
+    // =========================================================================
+    // 2-JOINT IK SOLVER (Smooth anatomical elbows & knees!)
+    // =========================================================================
+    function solve2BoneIK(x0, y0, tx, ty, L1, L2, bendDir) {
+      let dx = tx - x0, dy = ty - y0;
+      let dist = Math.hypot(dx, dy) || 0.001;
+      const maxD = L1 + L2 - 0.5;
+      const minD = Math.abs(L1 - L2) + 0.5;
+      dist = Math.max(minD, Math.min(maxD, dist));
+      const baseAngle = Math.atan2(dy, dx);
+      const cosA = (L1 * L1 + dist * dist - L2 * L2) / (2 * L1 * dist);
+      const angleA = Math.acos(Math.max(-1, Math.min(1, cosA)));
+      const jointAngle = baseAngle + bendDir * angleA;
+      const jx = x0 + Math.cos(jointAngle) * L1;
+      const jy = y0 + Math.sin(jointAngle) * L1;
+      const ex = x0 + (dx / (Math.hypot(dx, dy) || 1)) * dist;
+      const ey = y0 + (dy / (Math.hypot(dx, dy) || 1)) * dist;
+      return { jx, jy, ex, ey };
+    }
+
+    // =========================================================================
+    // PROCEDURAL DIAMOND-MESH NET (whips & ripples on swish!)
+    // =========================================================================
+    function renderNet(swishPhase, swayAmp) {
+      const topY = 264;
+      const rows = 4;
+      const rimL = 986, rimR = 1050;
+      const cols = 6;
+      const pts = [];
+      for (let r = 0; r <= rows; r++) {
+        const frac = r / rows;
+        const row = [];
+        const halfW = (rimR - rimL) / 2 * (1 - frac * 0.34);
+        const cx = 1018 + Math.sin(swishPhase - frac * 2.2) * swayAmp * frac * 14;
+        const yLift = Math.max(0, Math.sin(swishPhase - frac * 1.4)) * swayAmp * frac * 16;
+        const y = topY + frac * 62 - yLift;
+        for (let c = 0; c <= cols; c++) {
+          const cf = c / cols;
+          const x = cx - halfW + cf * halfW * 2;
+          row.push([x, y]);
+        }
+        pts.push(row);
+      }
+      let d = '';
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const [x1, y1] = pts[r][c];
+          const [x2, y2] = pts[r][c + 1];
+          const [x3, y3] = pts[r + 1][c];
+          const [x4, y4] = pts[r + 1][c + 1];
+          d += `M${x1.toFixed(1)},${y1.toFixed(1)} L${x4.toFixed(1)},${y4.toFixed(1)} `;
+          d += `M${x2.toFixed(1)},${y2.toFixed(1)} L${x3.toFixed(1)},${y3.toFixed(1)} `;
+        }
+      }
+      netMesh.setAttribute('d', d);
+    }
+    renderNet(0, 0);
+
+    // =========================================================================
+    // CONFETTI BURST POOL (Zero allocations during animation!)
+    // =========================================================================
+    const confColors = ['#f59e0b', '#fbbf24', '#38bdf8', '#f97316', '#f8fafc', '#34d399'];
+    const confetti = Array.from({ length: 42 }, (_, i) => {
+      const r = elSVG('rect', { width: '9', height: '5', rx: '1.5', fill: confColors[i % confColors.length] });
+      r.style.display = 'none';
+      confettiLayer.appendChild(r);
+      const angle = -Math.PI * 0.88 + (i / 42) * Math.PI * 0.76 + (Math.sin(i * 7) * 0.12);
+      const speed = 190 + (i * 37 % 260);
+      return {
+        el: r,
+        x0: 1018 + (i % 5 - 2) * 14,
+        y0: 270,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 90,
+        rotSpeed: (i % 2 ? 1 : -1) * (180 + (i * 43 % 260)),
+      };
+    });
+
+    // =========================================================================
+    // PARABOLIC ARC HELPER
+    // =========================================================================
+    function arcPos(x0, y0, x1, y1, peakY, u) {
+      const x = x0 + (x1 - x0) * u;
+      // Quadratic bezier control point to hit exact peakY at u=0.5
+      const cy = 2 * peakY - 0.5 * (y0 + y1);
+      const y = (1 - u) * (1 - u) * y0 + 2 * (1 - u) * u * cy + u * u * y1;
+      return { x, y };
+    }
+
+    const clamp01 = v => Math.max(0, Math.min(1, v));
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const smoothstep = (e0, e1, x) => {
+      const t = clamp01((x - e0) / (e1 - e0));
+      return t * t * (3 - 2 * t);
+    };
+    const easeOut = t => 1 - Math.pow(1 - t, 3);
+    const easeInOut = t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+
+    // Floor Y baseline
+    const FLOOR_Y = 594;
+    const BALL_R = 19;
+    const BALL_FLOOR_Y = FLOOR_Y - BALL_R;
+
+    // One-shot SFX trigger tracker
+    let firedMarks = new Set();
+    function triggerOnce(key, fn) {
+      if (!firedMarks.has(key)) {
+        firedMarks.add(key);
+        fn();
+      }
+    }
+
+    // =========================================================================
+    // MASTER CHOREOGRAPHY AT TIME t (seconds, 0 -> 9.0s)
+    // =========================================================================
+    // 0.00 - 1.65 : Kid approaches & dribbles 3 times (x: 245 -> 455)
+    // 1.65 - 2.05 : Dip & jump-shot release #1
+    // 2.05 - 2.85 : Ball arcs to rim (x=988, y=254) -> CLANK!
+    // 2.85 - 3.65 : Ball rebounds off rim back toward x=635; kid hustles & catches!
+    // 3.65 - 4.95 : Kid catches rebound, cushions, takes 2 power dribbles (x: 635 -> 710)
+    // 4.95 - 5.35 : Dip & high confident jump-shot release #2
+    // 5.35 - 6.18 : Ball arcs high and SWISHES straight through rim (x=1018, y=262)!
+    // 6.18 - 7.40 : Net ripples, ball drops & bounces on court, kid celebrates + confetti!
+    // 6.35+       : "You hooped a chore !" victory banner springs in!
+
+    function renderAtTime(t) {
+      let kidX = 245, kidJump = 0, kidCrouch = 0, torsoLean = 6;
+      let runStride = 0, celebrate = 0;
+      let ballX = 290, ballY = 500, ballSpinDeg = 0;
+      let squashX = 1, squashY = 1;
+      let nearTarget = null, farTarget = null;
+      let rimFlexY = 0, clankOp = 0;
+      let netAmp = 0, netPhase = 0;
+      let ringOp = 0, ringRx = 14, ringX = 0;
+      let happySmile = false;
+
+      if (t < 1.65) {
+        // PHASE 1: Dribble approach (3 crisp bounces)
+        const u = t / 1.65;
+        kidX = lerp(245, 455, easeInOut(u));
+        const dribbleCycles = 3;
+        const dPhase = (u * dribbleCycles) % 1;
+        const bounceIdx = Math.floor(u * dribbleCycles);
+        const bounceH = Math.abs(Math.sin(dPhase * Math.PI)); // 0 at floor, 1 at hand
+        // Invert: start at hand (dPhase=0), hit floor at dPhase=0.5, return to hand at dPhase=1
+        const floorDist = Math.abs(Math.cos(dPhase * Math.PI));
+        ballX = kidX + 46;
+        ballY = lerp(BALL_FLOOR_Y, 486, Math.pow(floorDist, 0.72));
+        ballSpinDeg = t * 240;
+        runStride = Math.sin(t * 10.5);
+        kidCrouch = 12 + (1 - floorDist) * 10;
+        torsoLean = 12;
+
+        if (Math.abs(dPhase - 0.5) < 0.08) {
+          const hit = 1 - Math.abs(dPhase - 0.5) / 0.08;
+          squashX = 1 + hit * 0.22;
+          squashY = 1 - hit * 0.20;
+          ringOp = hit * 0.7; ringRx = 12 + (1 - hit) * 26; ringX = ballX;
+          triggerOnce('d1_' + bounceIdx, playDribbleSfx);
+        }
+        nearTarget = { x: ballX - 4, y: Math.min(FLOOR_Y - 54, ballY - 18) };
+        farTarget  = { x: kidX + 16, y: FLOOR_Y - 102 + kidCrouch };
+
+      } else if (t < 2.05) {
+        // PHASE 2A: Gather, bend knees, rise for Shot #1
+        const u = (t - 1.65) / 0.40;
+        kidX = 455;
+        if (u < 0.45) {
+          const d = u / 0.45;
+          kidCrouch = lerp(14, 34, easeOut(d));
+          torsoLean = lerp(12, 16, d);
+          ballX = kidX + 34;
+          ballY = FLOOR_Y - 118 + kidCrouch;
+        } else {
+          const j = (u - 0.45) / 0.55;
+          kidCrouch = lerp(34, 0, easeOut(j));
+          kidJump = Math.sin(j * Math.PI * 0.55) * 58;
+          torsoLean = lerp(16, -4, j);
+          ballX = kidX + lerp(34, 24, j);
+          ballY = FLOOR_Y - kidJump - lerp(118, 178, easeOut(j));
+        }
+        nearTarget = { x: ballX - 4, y: ballY + 8 };
+        farTarget  = { x: ballX + 4, y: ballY + 8 };
+        ballSpinDeg = 400 + u * 80;
+
+      } else if (t < 2.85) {
+        // PHASE 2B: Shot #1 in flight -> Rim front-iron CLANK!
+        const u = (t - 2.05) / 0.80;
+        kidX = 455;
+        kidJump = Math.max(0, (1 - u * 2.1) * 58);
+        torsoLean = lerp(-4, 6, clamp01(u * 2));
+        const pos = arcPos(479, FLOOR_Y - 58 - 178, 988, 252, 118, u);
+        ballX = pos.x; ballY = pos.y;
+        ballSpinDeg = 480 - u * 420; // backspin!
+        // Smooth follow-through lowering smoothly toward ready stance
+        const relax = smoothstep(0.68, 1.0, u);
+        nearTarget = {
+          x: lerp(kidX + 34, kidX + 26, relax),
+          y: lerp(FLOOR_Y - kidJump - 168, FLOOR_Y - 122, relax),
+        };
+        farTarget = {
+          x: lerp(kidX + 22, kidX + 16, relax),
+          y: lerp(FLOOR_Y - kidJump - 154, FLOOR_Y - 114, relax),
+        };
+
+      } else if (t < 3.65) {
+        // PHASE 3A: Rim clank rebound -> Kid sprints forward & reaches cleanly to snag it!
+        const u = (t - 2.85) / 0.80;
+        if (u < 0.16) {
+          triggerOnce('clank', playRimClankSfx);
+          const k = 1 - u / 0.16;
+          rimFlexY = Math.sin(u * 90) * k * 6;
+          clankOp = k;
+          squashX = 1 + k * 0.22; squashY = 1 - k * 0.18;
+        }
+        const pos = arcPos(988, 252, 652, 466, 175, u);
+        ballX = pos.x; ballY = pos.y;
+        ballSpinDeg = 60 + u * 260;
+
+        // Kid hustles from 455 -> 620 and leaps slightly to catch rebound!
+        kidX = lerp(455, 620, easeInOut(u));
+        runStride = Math.sin(t * 15) * (u < 0.82 ? 1 : 0.2);
+        kidJump = u > 0.72 ? Math.sin(((u - 0.72) / 0.28) * Math.PI * 0.6) * 26 : 0;
+        kidCrouch = u > 0.72 ? 4 : 10;
+        torsoLean = 14;
+        // Continuous arm blend: ready -> running pump -> reaching up to catch!
+        const reach = smoothstep(0.55, 0.96, u);
+        const runNear = { x: kidX + 26 + runStride * 10, y: FLOOR_Y - 110 };
+        const runFar  = { x: kidX + 12 - runStride * 10, y: FLOOR_Y - 108 };
+        nearTarget = { x: lerp(runNear.x, ballX - 4, reach), y: lerp(runNear.y, ballY + 4, reach) };
+        farTarget  = { x: lerp(runFar.x,  ballX + 4, reach), y: lerp(runFar.y,  ballY + 4, reach) };
+
+      } else if (t < 4.95) {
+        // PHASE 3B: Rebound catch cushion + 2 power dribbles toward the hoop!
+        const u = (t - 3.65) / 1.30;
+        if (u < 0.22) {
+          // Catch & land cleanly
+          const c = u / 0.22;
+          kidX = lerp(620, 636, c);
+          kidJump = (1 - c) * 24;
+          kidCrouch = Math.sin(c * Math.PI) * 22 + 10;
+          torsoLean = 10;
+          ballX = kidX + 34;
+          ballY = FLOOR_Y - kidJump - 118 + kidCrouch;
+          nearTarget = { x: ballX - 4, y: ballY + 4 };
+          farTarget  = { x: ballX + 4, y: ballY + 4 };
+          ballSpinDeg = 320;
+        } else {
+          // 2 crisp power dribbles from 636 -> 712
+          const du = (u - 0.22) / 0.78;
+          kidX = lerp(636, 712, easeInOut(du));
+          const dCycles = 2;
+          const dPhase = (du * dCycles) % 1;
+          const bIdx = Math.floor(du * dCycles);
+          const floorDist = Math.abs(Math.cos(dPhase * Math.PI));
+          ballX = kidX + 44;
+          ballY = lerp(BALL_FLOOR_Y, 484, Math.pow(floorDist, 0.72));
+          ballSpinDeg = 320 + du * 360;
+          runStride = Math.sin(t * 11.5);
+          kidCrouch = 14 + (1 - floorDist) * 12;
+          torsoLean = 13;
+          if (Math.abs(dPhase - 0.5) < 0.08) {
+            const hit = 1 - Math.abs(dPhase - 0.5) / 0.08;
+            squashX = 1 + hit * 0.24; squashY = 1 - hit * 0.22;
+            ringOp = hit * 0.75; ringRx = 12 + (1 - hit) * 26; ringX = ballX;
+            triggerOnce('d2_' + bIdx, playDribbleSfx);
+          }
+          // Smoothly transition left guide hand from catch to natural side guard (no snap!)
+          const guide = smoothstep(0.0, 0.24, du);
+          const dribbleNear = { x: ballX - 4, y: Math.min(FLOOR_Y - 54, ballY - 18) };
+          const dribbleFar  = { x: kidX + 16, y: FLOOR_Y - 102 + kidCrouch };
+          nearTarget = dribbleNear;
+          farTarget  = {
+            x: lerp(kidX + 38, dribbleFar.x, guide),
+            y: lerp(FLOOR_Y - 114 + kidCrouch, dribbleFar.y, guide),
+          };
+        }
+
+      } else if (t < 5.38) {
+        // PHASE 4A: Dip & high textbook jump-shot release #2!
+        const u = (t - 4.95) / 0.43;
+        kidX = 712;
+        if (u < 0.44) {
+          const d = u / 0.44;
+          kidCrouch = lerp(14, 38, easeOut(d));
+          torsoLean = lerp(13, 18, d);
+          ballX = kidX + 34;
+          ballY = FLOOR_Y - 116 + kidCrouch;
+        } else {
+          const j = (u - 0.44) / 0.56;
+          kidCrouch = lerp(38, 0, easeOut(j));
+          kidJump = Math.sin(j * Math.PI * 0.55) * 68;
+          torsoLean = lerp(18, -6, j);
+          ballX = kidX + lerp(34, 24, j);
+          ballY = FLOOR_Y - kidJump - lerp(116, 182, easeOut(j));
+        }
+        nearTarget = { x: ballX - 4, y: ballY + 8 };
+        farTarget  = { x: ballX + 4, y: ballY + 8 };
+        ballSpinDeg = 680 + u * 80;
+
+      } else if (t < 6.18) {
+        // PHASE 4B: Pure rainbow arc right into the center of the hoop (x=1018, y=262)!
+        const u = (t - 5.38) / 0.80;
+        kidX = 712;
+        kidJump = Math.max(0, (1 - u * 2.1) * 68);
+        torsoLean = lerp(-6, 3, clamp01(u * 2));
+        const pos = arcPos(736, FLOOR_Y - 68 - 182, 1018, 262, 86, u);
+        ballX = pos.x; ballY = pos.y;
+        ballSpinDeg = 760 - u * 480; // silky backspin
+        nearTarget = { x: kidX + 34, y: FLOOR_Y - kidJump - 172 };
+        farTarget  = { x: kidX + 20, y: FLOOR_Y - kidJump - 156 };
+
+      } else {
+        // PHASE 5: SWISH! Net whips, ball drops & bounces, kid celebrates, banner rises!
+        const dt = t - 6.18;
+        happySmile = true;
+        triggerOnce('swish', () => {
+          playSwishSfx();
+          scoreHome.textContent = '02';
+        });
+        if (dt > 0.22) {
+          triggerOnce('banner', () => {
+            playVictoryChime();
+            victoryBanner.classList.add('show');
+          });
+        }
+
+        // Net whip & decay
+        netAmp = Math.max(0, Math.exp(-dt * 2.4));
+        netPhase = dt * 16;
+
+        // Ball drops through net & bounces cleanly twice on the hardwood
+        if (dt < 0.52) {
+          const f = dt / 0.52;
+          ballX = 1018 + f * 12;
+          ballY = lerp(262, BALL_FLOOR_Y, f * f);
+          ballSpinDeg = 280 - dt * 260;
+        } else if (dt < 1.12) {
+          const b = (dt - 0.52) / 0.60;
+          if (b < 0.12) {
+            const h = 1 - b / 0.12;
+            squashX = 1 + h * 0.24; squashY = 1 - h * 0.22;
+            triggerOnce('make_b1', playDribbleSfx);
+          }
+          ballX = 1030 + b * 48;
+          ballY = BALL_FLOOR_Y - Math.sin(b * Math.PI) * 115;
+          ballSpinDeg = 145 + b * 140;
+        } else if (dt < 1.56) {
+          const b = (dt - 1.12) / 0.44;
+          if (b < 0.12) {
+            const h = 1 - b / 0.12;
+            squashX = 1 + h * 0.15; squashY = 1 - h * 0.14;
+            triggerOnce('make_b2', playDribbleSfx);
+          }
+          ballX = 1078 + b * 36;
+          ballY = BALL_FLOOR_Y - Math.sin(b * Math.PI) * 42;
+          ballSpinDeg = 285 + b * 90;
+        } else {
+          const roll = Math.min(1, (dt - 1.56) / 1.2);
+          ballX = 1114 + easeOut(roll) * 24;
+          ballY = BALL_FLOOR_Y;
+          ballSpinDeg = 375 + easeOut(roll) * 65;
+        }
+
+        // Kid celebrates with a clean, joyful victory fist-pump (face stays 100% clear!)
+        kidX = 712;
+        celebrate = clamp01(dt / 0.35);
+        const hopPhase = dt < 1.2 ? Math.abs(Math.sin(dt * 5.2)) : 0;
+        kidJump = hopPhase * 28;
+        torsoLean = -3;
+        const pump = Math.sin(dt * 7.5) * 6;
+        nearTarget = { x: kidX + 42, y: FLOOR_Y - kidJump - 174 - pump };
+        farTarget  = { x: kidX + 28, y: FLOOR_Y - kidJump - 186 + pump };
+
+        // Confetti burst from hoop
+        for (const c of confetti) {
+          if (dt > 2.8) {
+            c.el.style.display = 'none';
+            continue;
+          }
+          c.el.style.display = '';
+          const cx = c.x0 + c.vx * dt;
+          const cy = c.y0 + c.vy * dt + 0.5 * 440 * dt * dt;
+          const rot = c.rotSpeed * dt;
+          const op = dt > 1.9 ? Math.max(0, 1 - (dt - 1.9) / 0.9) : 1;
+          c.el.setAttribute('transform', `translate(${cx.toFixed(1)}, ${cy.toFixed(1)}) rotate(${rot.toFixed(1)})`);
+          c.el.setAttribute('opacity', op.toFixed(2));
+        }
+      }
+
+      // Reset confetti before swish
+      if (t < 6.18) {
+        for (const c of confetti) c.el.style.display = 'none';
+      }
+
+      // =======================================================================
+      // APPLY KID KINEMATICS (Hips, 2-Joint Knees, Torso, Head, 2-Joint Arms)
+      // =======================================================================
+      const hipY = FLOOR_Y - kidJump - 76 + kidCrouch;
+      const hipX = kidX;
+
+      kidTorso.setAttribute('transform', `translate(${hipX.toFixed(1)}, ${(hipY + 52).toFixed(1)}) rotate(${torsoLean.toFixed(1)} 0 -52)`);
+
+      const headRad = torsoLean * Math.PI / 180;
+      const neckX = hipX + Math.sin(headRad) * 58;
+      const neckY = hipY - Math.cos(headRad) * 58;
+      // Subtle head tilt toward ball/hoop
+      const lookAngle = Math.max(-24, Math.min(10, Math.atan2(ballY - (neckY - 24), Math.max(40, ballX - neckX)) * 180 / Math.PI * 0.45));
+      kidHead.setAttribute('transform', `translate(${neckX.toFixed(1)}, ${(neckY + 108).toFixed(1)}) rotate(${lookAngle.toFixed(1)} 0 -116)`);
+
+      kidMouth.setAttribute('d', happySmile
+        ? 'M6,-126 Q14,-117 21,-126'
+        : 'M9,-125 Q15,-123 19,-126');
+
+      // Feet targets (grounded during run/dribble, tucked naturally during jump)
+      const nearFootX = hipX + 10 + runStride * 24;
+      const nearFootY = kidJump > 2 ? FLOOR_Y - kidJump * 0.88 - 8 : FLOOR_Y - Math.max(0, -runStride) * 14;
+      const farFootX  = hipX - 10 - runStride * 24;
+      const farFootY  = kidJump > 2 ? FLOOR_Y - kidJump * 0.94 - 2 : FLOOR_Y - Math.max(0, runStride) * 14;
+
+      const nearLeg = solve2BoneIK(hipX + 5, hipY + 10, nearFootX, nearFootY - 4, 34, 34, -1);
+      const farLeg  = solve2BoneIK(hipX - 5, hipY + 10, farFootX,  farFootY - 4,  34, 34, -1);
+      nearLegPath.setAttribute('d', `M${(hipX + 5).toFixed(1)},${(hipY + 10).toFixed(1)} L${nearLeg.jx.toFixed(1)},${nearLeg.jy.toFixed(1)} L${nearLeg.ex.toFixed(1)},${nearLeg.ey.toFixed(1)}`);
+      farLegPath.setAttribute('d',  `M${(hipX - 5).toFixed(1)},${(hipY + 10).toFixed(1)} L${farLeg.jx.toFixed(1)},${farLeg.jy.toFixed(1)} L${farLeg.ex.toFixed(1)},${farLeg.ey.toFixed(1)}`);
+
+      // Articulated shorts sleeves follow each thigh cleanly without detaching
+      const nSx = hipX + 5 + (nearLeg.jx - (hipX + 5)) * 0.66;
+      const nSy = hipY + 10 + (nearLeg.jy - (hipY + 10)) * 0.66;
+      const fSx = hipX - 5 + (farLeg.jx - (hipX - 5)) * 0.66;
+      const fSy = hipY + 10 + (farLeg.jy - (hipY + 10)) * 0.66;
+      nearShortsPath.setAttribute('d', `M${(hipX + 5).toFixed(1)},${(hipY + 8).toFixed(1)} L${nSx.toFixed(1)},${nSy.toFixed(1)}`);
+      // Gold trim band perpendicular across the near shorts cuff
+      const sDx = nSx - (hipX + 5), sDy = nSy - (hipY + 8);
+      const sLen = Math.hypot(sDx, sDy) || 1;
+      const px = (-sDy / sLen) * 10.5, py = (sDx / sLen) * 10.5;
+      nearShortsTrim.setAttribute('d', `M${(nSx - px).toFixed(1)},${(nSy - py).toFixed(1)} L${(nSx + px).toFixed(1)},${(nSy + py).toFixed(1)}`);
+      farShortsPath.setAttribute('d',  `M${(hipX - 5).toFixed(1)},${(hipY + 8).toFixed(1)} L${fSx.toFixed(1)},${fSy.toFixed(1)}`);
+
+      nearShoe.setAttribute('transform', `translate(${nearLeg.ex.toFixed(1)}, ${(nearLeg.ey + 1).toFixed(1)})`);
+      farShoe.setAttribute('transform',  `translate(${farLeg.ex.toFixed(1)}, ${(farLeg.ey + 1).toFixed(1)})`);
+
+      // Shoulders + 2-Joint Arms (consistent right/left roles — never interchange!)
+      const shX = hipX + Math.sin(headRad) * 48;
+      const shY = hipY - Math.cos(headRad) * 48;
+      const nT = nearTarget || { x: shX + 26, y: shY + 30 };
+      const fT = farTarget  || { x: shX + 14, y: shY + 32 };
+      const nearArm = solve2BoneIK(shX - 2, shY, nT.x, nT.y, 28, 28, 1);
+      const farArm  = solve2BoneIK(shX + 8, shY, fT.x, fT.y, 28, 28, 1);
+      nearArmPath.setAttribute('d', `M${(shX - 2).toFixed(1)},${shY.toFixed(1)} L${nearArm.jx.toFixed(1)},${nearArm.jy.toFixed(1)} L${nearArm.ex.toFixed(1)},${nearArm.ey.toFixed(1)}`);
+      farArmPath.setAttribute('d',  `M${(shX + 8).toFixed(1)},${shY.toFixed(1)} L${farArm.jx.toFixed(1)},${farArm.jy.toFixed(1)} L${farArm.ex.toFixed(1)},${farArm.ey.toFixed(1)}`);
+      nearHand.setAttribute('cx', nearArm.ex.toFixed(1)); nearHand.setAttribute('cy', nearArm.ey.toFixed(1));
+      farHand.setAttribute('cx', farArm.ex.toFixed(1));   farHand.setAttribute('cy', farArm.ey.toFixed(1));
+
+      // Shadows
+      const kidScale = Math.max(0.45, 1 - kidJump / 160);
+      kidShadow.setAttribute('cx', kidX.toFixed(1));
+      kidShadow.setAttribute('rx', (44 * kidScale).toFixed(1));
+      kidShadow.setAttribute('opacity', (0.45 * kidScale).toFixed(2));
+
+      const ballH = Math.max(0, BALL_FLOOR_Y - ballY);
+      const ballScale = Math.max(0.28, 1 - ballH / 460);
+      ballShadow.setAttribute('cx', ballX.toFixed(1));
+      ballShadow.setAttribute('rx', (20 * ballScale).toFixed(1));
+      ballShadow.setAttribute('opacity', (0.48 * ballScale).toFixed(2));
+
+      // Bounce floor ring
+      bounceRing.setAttribute('cx', ringX.toFixed(1));
+      bounceRing.setAttribute('rx', ringRx.toFixed(1));
+      bounceRing.setAttribute('opacity', ringOp.toFixed(2));
+
+      // Ball transform
+      ballGroup.setAttribute('transform', `translate(${ballX.toFixed(1)}, ${ballY.toFixed(1)})`);
+      ballSquash.setAttribute('transform', `scale(${squashX.toFixed(3)}, ${squashY.toFixed(3)})`);
+      ballSpin.setAttribute('transform', `rotate(${ballSpinDeg.toFixed(1)})`);
+
+      // Rim flex, net swish & clank sparks
+      backboardGroup.setAttribute('transform', `translate(0, ${rimFlexY.toFixed(2)})`);
+      netFrontGroup.setAttribute('transform', `translate(0, ${rimFlexY.toFixed(2)})`);
+      clankFx.setAttribute('opacity', clankOp.toFixed(2));
+      renderNet(netPhase, netAmp);
+    }
+
+    // =========================================================================
+    // 60FPS ANIMATION LOOP & REPLAY CONTROLS
+    // =========================================================================
+    let startT = performance.now();
+    let rafId = 0;
+
+    function startAnimation() {
+      firedMarks.clear();
+      scoreHome.textContent = '00';
+      victoryBanner.classList.remove('show');
+      startT = performance.now();
+      if (rafId) cancelAnimationFrame(rafId);
+
+      const staticT = params.get('t');
+      if (staticT !== null) {
+        renderAtTime(Number(staticT));
+        return;
+      }
+
+      function tick(now) {
+        const elapsed = (now - startT) / 1000;
+        renderAtTime(elapsed);
+        if (elapsed < 10.5) {
+          rafId = requestAnimationFrame(tick);
+        } else {
+          rafId = 0;
+        }
+      }
+      rafId = requestAnimationFrame(tick);
+    }
+
+    replayBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      startAnimation();
+    });
+    document.getElementById('stageWrap').addEventListener('click', () => {
+      startAnimation();
+    });
+
+    startAnimation();
+  </script>
+</body>
+</html>
