@@ -377,6 +377,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
       endTimestamp,
       stage: getTimerStage(newRemaining),
     })
+    api.post('/api/timer/add', { seconds: extraSeconds }).catch(() => {})
   }, [])
 
   const cancelTimer = useCallback(() => {

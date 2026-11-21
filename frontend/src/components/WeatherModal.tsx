@@ -34,7 +34,11 @@ export default function WeatherModal({
             <div className="flex flex-wrap gap-x-6 gap-y-1 text-base text-ink-soft">
               {cur.feels_like != null && <span>Feels like <b className="text-ink">{cur.feels_like}°</b></span>}
               {cur.humidity != null && <span>Humidity <b className="text-ink">{cur.humidity}%</b></span>}
-              {cur.wind != null && <span>Wind <b className="text-ink">{cur.wind}</b></span>}
+              {cur.wind != null && (
+                <span>
+                  Wind <b className="text-ink">{cur.wind} {(cur as any).wind_unit ?? (weather.unit === 'fahrenheit' ? 'mph' : 'km/h')}</b>
+                </span>
+              )}
             </div>
           </div>
         )}

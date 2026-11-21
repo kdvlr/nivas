@@ -697,6 +697,8 @@ class PlayerEngine:
         self.is_playing = True
         self._has_advanced_current = False
         self._last_audio_at = time.monotonic()
+        self._last_sender_progress = None
+        self._sender_started_at = None
 
         self.queue = [
             normalized
@@ -720,8 +722,9 @@ class PlayerEngine:
             # For local tracks, seed recommendations using track title and artist
             seed_video_id = video_id
             if str(video_id).startswith("local:"):
-                track_title = self.current_track.get("title", "")
-                track_artist = self.current_track.get("artist", "")
+                cur = self.current_track or {}
+                track_title = cur.get("title", "")
+                track_artist = cur.get("artist", "")
                 search_seed = f"{track_artist} {track_title}".strip()
                 if search_seed:
                     yt_seed = await loop.run_in_executor(
@@ -740,7 +743,7 @@ class PlayerEngine:
                 ytmusic_service.get_autoplay_tracks,
                 seed_video_id,
             )
-            if not recommendations or self.current_track.get("videoId") != video_id:
+            if not recommendations or not self.current_track or self.current_track.get("videoId") != video_id:
                 return
 
             recent_ids = self.get_recently_played_ids(hours=4.0)
@@ -1081,6 +1084,7 @@ class PlayerEngine:
                 "direct local" if is_local else ("cached AAC" if str(audio_path).endswith(".m4a") else "cached audio"),
                 len(self.active_targets),
             )
+            was_paused_before_start = not self.is_playing
             started = await self._replace_sender(
                 audio_path,
                 track_info,
@@ -1094,10 +1098,12 @@ class PlayerEngine:
                 self.is_playing = False
                 self._broadcast_state()
             else:
-                if not self.is_playing:
+                if was_paused_before_start or not self.is_playing:
                     # Pause may have been pressed while the track was transcoding.
+                    self.is_playing = False
                     self._write_stream_command("pause")
                     self._paused_at = time.monotonic()
+                    self._broadcast_state()
                 # Spawn background non-blocking tasks for autoplay recommendations & next-track prefetch
                 loop.create_task(self._fetch_autoplay_recommendations(video_id))
                 self._schedule_prefetch()
@@ -1430,6 +1436,7 @@ class PlayerEngine:
                             def _apply_play():
                                 self.is_playing = True
                                 self._paused_at = None
+                                self._last_sender_progress = time.monotonic()
                                 self._broadcast_state()
                             self._event_loop.call_soon_threadsafe(_apply_play)
                     elif "REMOTE_EVENT: Next" in line_clean:
@@ -1713,6 +1720,7 @@ class PlayerEngine:
                 self._write_stream_command("resume")
                 self.is_playing = True
                 self._paused_at = None
+                self._last_sender_progress = time.monotonic()
             else:
                 video_id = self.current_track.get("videoId")
                 audio_path = self._resolve_audio_path(video_id, self.current_track)
@@ -1765,11 +1773,13 @@ class PlayerEngine:
                 self.elapsed_seconds = target_seconds
                 self.raw_elapsed_seconds = target_seconds
                 if was_paused:
+                    self.is_playing = False
                     self._write_stream_command("pause")
                     self._paused_at = time.monotonic()
                 else:
                     self.is_playing = True
                     self._paused_at = None
+                    self._last_sender_progress = time.monotonic()
 
         self._broadcast_state()
         return self.get_state()
@@ -1801,10 +1811,26 @@ class PlayerEngine:
             elif self.autoplay_enabled and self.current_track and self.current_track.get("videoId"):
                 video_id = self.current_track["videoId"]
                 loop = asyncio.get_running_loop()
-                recommendations = await loop.run_in_executor(
-                    None,
-                    ytmusic_service.get_autoplay_tracks,
-                    video_id,
+                seed_video_id = video_id
+                if str(video_id).startswith("local:"):
+                    search_seed = f"{self.current_track.get('artist', '')} {self.current_track.get('title', '')}".strip()
+                    yt_seed = (
+                        await loop.run_in_executor(
+                            None,
+                            lambda: (ytmusic_service.search(search_seed, "songs") or [])[:1],
+                        )
+                        if search_seed
+                        else []
+                    )
+                    seed_video_id = yt_seed[0]["videoId"] if (yt_seed and yt_seed[0].get("videoId")) else None
+                recommendations = (
+                    await loop.run_in_executor(
+                        None,
+                        ytmusic_service.get_autoplay_tracks,
+                        seed_video_id,
+                    )
+                    if seed_video_id
+                    else []
                 )
                 if recommendations:
                     next_t = recommendations.pop(0)
@@ -1980,8 +2006,11 @@ class PlayerEngine:
                 self.elapsed_seconds = current_offset
                 self.raw_elapsed_seconds = current_offset
                 if was_paused:
+                    self.is_playing = False
                     self._write_stream_command("pause")
                     self._paused_at = time.monotonic()
+                else:
+                    self._last_sender_progress = time.monotonic()
             else:
                 self.is_playing = False
             self._broadcast_state()

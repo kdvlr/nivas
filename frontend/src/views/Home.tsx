@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { api } from '../lib/api'
 import Avatar from '../components/Avatar'
@@ -141,6 +141,14 @@ export default function Home() {
   const now = useClock()
   const today = todayISO()
   const [scheduleStartDate, setScheduleStartDate] = useState(() => todayISO())
+  const prevTodayRef = useRef(today)
+  useEffect(() => {
+    if (today !== prevTodayRef.current) {
+      const prevToday = prevTodayRef.current
+      prevTodayRef.current = today
+      setScheduleStartDate((cur) => (cur === prevToday ? today : cur))
+    }
+  }, [today])
   const { data: events, loading: loadingEvents } = useData<CalEvent[]>(
     `/api/calendar/events?start=${scheduleStartDate}T00:00:00&end=${addDaysISO(scheduleStartDate, 3)}T00:00:00`,
     ['calendar'],
@@ -159,7 +167,7 @@ export default function Home() {
     '/api/setup/config',
     ['setup'],
   )
-  const { celebrate, celebrateSad, stop: stopCelebration } = useCelebration()
+  const { celebrate, celebrateSad } = useCelebration()
 
 
   // Reset completing/removed tracking when data reloads
@@ -283,59 +291,63 @@ export default function Home() {
     const itemId = `chore-${c.id}`
     if (completingIds.includes(itemId)) return
     setCompletingIds((prev) => [...prev, itemId])
-    setTimeout(() => {
+    const removeTimer = setTimeout(() => {
       setRemovedIds((prev) => [...prev, itemId])
     }, 450)
 
     const isPenalty = c.coins < 0
 
-    // Check if this chore moves assignee into the lead (only for positive rewards)
-    const assignee = (c.assigned_to || '').trim().toLowerCase()
-    const b = balances?.find((sb) => sb.person_name.toLowerCase() === assignee)
-    const uniqueBalances = Array.from(new Set((balances || []).map((sb) => sb.balance))).sort((x, y) => y - x)
-    const maxBalance = uniqueBalances[0] ?? 0
-    const currentBalance = b?.balance ?? 0
-    const leaders = (balances || []).filter((sb) => sb.balance === maxBalance)
-    const isSoleLeader = leaders.length === 1 && leaders[0].person_name.toLowerCase() === assignee
-    const willTakeLead = !isPenalty && !isSoleLeader && (currentBalance + c.coins >= maxBalance)
-
-    if (willTakeLead) {
-      stopCelebration(8000)
+    try {
+      await api.patch(`/api/chores/${c.id}`, { completed: true })
+      if (isPenalty) {
+        celebrateSad({
+          title: c.title,
+          coinsLost: Math.abs(c.coins),
+        })
+      } else {
+        celebrate()
+      }
+      reloadChores()
+    } catch {
+      clearTimeout(removeTimer)
+      setCompletingIds((prev) => prev.filter((id) => id !== itemId))
+      setRemovedIds((prev) => prev.filter((id) => id !== itemId))
     }
-
-    await api.patch(`/api/chores/${c.id}`, { completed: true })
-    if (isPenalty) {
-      celebrateSad({
-        title: c.title,
-        coinsLost: Math.abs(c.coins),
-      })
-    } else if (!willTakeLead) {
-      celebrate()
-    }
-    reloadChores()
   }
   // no celebration for to-dos on the home screen — they're grown-up chores
   const completeTask = async (t: Task) => {
     const itemId = `task-${t.source}-${t.id}`
     if (completingIds.includes(itemId)) return
     setCompletingIds((prev) => [...prev, itemId])
-    setTimeout(() => {
+    const removeTimer = setTimeout(() => {
       setRemovedIds((prev) => [...prev, itemId])
     }, 450)
 
-    await api.patch(`/api/tasks/${t.id}`, { completed: true })
-    reloadTasks()
+    try {
+      await api.patch(`/api/tasks/${t.id}`, { completed: true })
+      reloadTasks()
+    } catch {
+      clearTimeout(removeTimer)
+      setCompletingIds((prev) => prev.filter((id) => id !== itemId))
+      setRemovedIds((prev) => prev.filter((id) => id !== itemId))
+    }
   }
   const buyItem = async (i: ShoppingItem) => {
     const itemId = `shop-${i.id}`
     if (completingIds.includes(itemId)) return
     setCompletingIds((prev) => [...prev, itemId])
-    setTimeout(() => {
+    const removeTimer = setTimeout(() => {
       setRemovedIds((prev) => [...prev, itemId])
     }, 450)
 
-    await api.patch(`/api/shopping/${i.id}`, { completed: true })
-    reloadShopping()
+    try {
+      await api.patch(`/api/shopping/${i.id}`, { completed: true })
+      reloadShopping()
+    } catch {
+      clearTimeout(removeTimer)
+      setCompletingIds((prev) => prev.filter((id) => id !== itemId))
+      setRemovedIds((prev) => prev.filter((id) => id !== itemId))
+    }
   }
 
   const renderHeader = () => {

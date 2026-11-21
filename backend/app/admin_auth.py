@@ -48,6 +48,12 @@ def _valid_token(token: str | None, pin: str) -> bool:
     return expires_at >= int(time.time()) and hmac.compare_digest(supplied_signature, expected_signature)
 
 
+_PIN_MAX_LEN = 24
+_PIN_RATE_WINDOW_SEC = 60.0
+_PIN_MAX_FAILURES = 10
+_pin_failures: dict[str, list[float]] = {}
+
+
 def verify_pin_attempt(request: Request, pin: str) -> bool:
     """Accept the configured PIN embedded in the keypad's entered sequence.
 
@@ -57,12 +63,31 @@ def verify_pin_attempt(request: Request, pin: str) -> bool:
     expected = get_settings().setup_pin
     if not expected:
         return True
+
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.monotonic()
+    recent = [ts for ts in _pin_failures.get(client_ip, []) if now - ts < _PIN_RATE_WINDOW_SEC]
+    if len(recent) >= _PIN_MAX_FAILURES:
+        _pin_failures[client_ip] = recent
+        return False
+
+    if not pin or len(pin) > max(_PIN_MAX_LEN, len(expected) * 4):
+        recent.append(now)
+        _pin_failures[client_ip] = recent
+        return False
+
     # compare_digest checks exact values, so test every same-length slice
     # instead of using a normal substring comparison.
-    return any(
+    matched = any(
         hmac.compare_digest(expected, pin[index:index + len(expected)])
         for index in range(max(0, len(pin) - len(expected) + 1))
     )
+    if matched:
+        _pin_failures.pop(client_ip, None)
+        return True
+    recent.append(now)
+    _pin_failures[client_ip] = recent
+    return False
 
 
 def grant_admin_session(response: Response, request: Request) -> None:

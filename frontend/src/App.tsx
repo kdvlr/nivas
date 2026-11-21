@@ -410,7 +410,10 @@ function AppContent() {
     const onHash = () => setRoute(currentRoute())
     const handleAppChanged = (e: Event) => {
       const customEv = e as CustomEvent<Appearance>
-      if (customEv.detail) setAppearanceState(customEv.detail)
+      if (customEv.detail) {
+        setAppearanceState(customEv.detail)
+        applyTheme()
+      }
     }
     window.addEventListener('hashchange', onHash)
     window.addEventListener('appearance-changed', handleAppChanged)

@@ -69,3 +69,19 @@ def test_calendar_endpoints_admin_requirements():
     assert route_admin_map[("PUT", "/api/calendar/selections")] is True
     assert route_admin_map[("POST", "/api/calendar/sync")] is True
 
+
+def test_pin_rejects_oversized_payload_and_rate_limits(monkeypatch):
+    monkeypatch.setattr(admin_auth, "get_settings", lambda: SimpleNamespace(setup_pin="2468"))
+    admin_auth._pin_failures.clear()
+    req = _request()
+
+    # Oversized payload containing the valid PIN must be rejected (blocks De Bruijn bypass)
+    assert admin_auth.verify_pin_attempt(req, "0" * 50 + "2468") is False
+
+    # Exhaust rate-limit window with wrong attempts, then even the real PIN is blocked
+    for _ in range(admin_auth._PIN_MAX_FAILURES):
+        assert admin_auth.verify_pin_attempt(req, "9999") is False
+    assert admin_auth.verify_pin_attempt(req, "2468") is False
+    admin_auth._pin_failures.clear()
+
+

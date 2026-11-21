@@ -61,6 +61,17 @@ def cancel_timer():
     return {"ok": True}
 
 
+class AddTimerRequest(BaseModel):
+    seconds: int
+
+
+@router.post("/add")
+def add_timer_seconds(body: AddTimerRequest):
+    """Adds seconds to the currently active timer."""
+    timer = timer_service.add_seconds(body.seconds)
+    return {"ok": True, "timer": timer}
+
+
 @router.post("/dismiss")
 def dismiss_timer():
     """Dismisses the completed alarm state."""

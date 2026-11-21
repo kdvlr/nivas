@@ -85,13 +85,16 @@ async def weather(db: Session = Depends(get_db)):
     if _cache["data"] is not None and _cache["key"] == key and time.time() - _cache["at"] < CACHE_TTL:
         return _cache["data"]
 
+    unit = loc.get("unit", "fahrenheit")
+    wind_unit = "mph" if unit == "fahrenheit" else "kmh"
     params = {
         "latitude": loc["lat"],
         "longitude": loc["lon"],
         "current": "temperature_2m,weather_code,relative_humidity_2m,apparent_temperature,wind_speed_10m",
         "hourly": "temperature_2m,weather_code,precipitation_probability",
         "daily": "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset",
-        "temperature_unit": loc.get("unit", "fahrenheit"),
+        "temperature_unit": unit,
+        "wind_speed_unit": wind_unit,
         "timezone": get_settings().tz,
         "forecast_days": 14,
     }
@@ -132,6 +135,7 @@ async def weather(db: Session = Depends(get_db)):
             "feels_like": round(cur.get("apparent_temperature", cur.get("temperature_2m", 0))),
             "humidity": int(cur.get("relative_humidity_2m", 0) or 0),
             "wind": round(cur.get("wind_speed_10m", 0) or 0),
+            "wind_unit": "mph" if unit == "fahrenheit" else "km/h",
             **_describe(int(cur.get("weather_code", 0))),
         },
         "hourly": hourly,

@@ -1,5 +1,5 @@
 import logging
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -18,6 +18,10 @@ router = APIRouter(prefix="/api/rewards", tags=["rewards"])
 
 # Reasons written by a parent rather than earned/spent through normal play.
 MANUAL_REASONS = ("manual_adjust", "manual_reset")
+
+
+def _iso_utc(dt: datetime) -> str:
+    return (dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt.astimezone(timezone.utc)).isoformat()
 
 
 class StoreItemCreate(BaseModel):
@@ -297,7 +301,7 @@ async def redeem_reward(body: RedeemRequest, db: Session = Depends(get_db)):
         "reward_title": item.title,
         "reward_emoji": item.emoji,
         "coins_spent": item.coin_cost,
-        "redeemed_at": txn.created_at.isoformat(),
+        "redeemed_at": _iso_utc(txn.created_at),
     }
 
 
@@ -379,7 +383,7 @@ def transaction_history(person: str | None = None, db: Session = Depends(get_db)
             "amount": t.amount,
             "reason": t.reason,
             "reference_id": t.reference_id,
-            "created_at": t.created_at.isoformat(),
+            "created_at": _iso_utc(t.created_at),
         }
         for t in rows
     ]
@@ -405,7 +409,7 @@ def redemption_history(db: Session = Depends(get_db)):
             "reward_title": item.title if item else "Deleted Reward",
             "reward_emoji": item.emoji if item else "🎁",
             "coins_spent": abs(txn.amount),
-            "redeemed_at": txn.created_at.isoformat(),
+            "redeemed_at": _iso_utc(txn.created_at),
         }
         for txn, item in rows
     ]

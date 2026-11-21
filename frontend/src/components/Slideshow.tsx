@@ -5047,24 +5047,26 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
       }}
     >
       {mediaFailed ? (
-        <div className="w-full h-full flex items-center justify-center text-slate-400"><Icon name="broken_image" className="text-5xl" /></div>
-      ) : item.type === 'image' && (
+        item.type === 'live_photo' ? (
+          <VideoStill item={item} />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-slate-400"><Icon name="broken_image" className="text-5xl" /></div>
+        )
+      ) : item.type === 'image' ? (
         <img src={item.displayUrl || item.url} decoding="async" onError={() => setMediaFailed(true)} className="w-full h-full object-contain pointer-events-none" />
-      )}
-      {item.type === 'live_photo' && item.videoUrl && (
+      ) : item.type === 'live_photo' && item.videoUrl ? (
         autoplayable ? (
           <CleanVideo key={item.videoUrl} src={item.playbackUrl!} onError={() => setMediaFailed(true)} autoPlay muted playsInline loop className="w-full h-full object-contain pointer-events-none" />
         ) : (
           <VideoStill item={item} />
         )
-      )}
-      {item.type === 'video' && (
+      ) : item.type === 'video' ? (
         autoplayable ? (
           <CleanVideo key={item.url} src={item.playbackUrl!} onError={() => setMediaFailed(true)} autoPlay muted playsInline loop className="w-full h-full object-contain pointer-events-none" />
         ) : (
           <VideoStill item={item} />
         )
-      )}
+      ) : null}
       {(item.type === 'video' || item.type === 'live_photo') && (
         <div className="absolute bottom-2 right-2 z-10 w-8 h-8 rounded-full bg-black/45 border border-white/40 flex items-center justify-center pointer-events-none">
           <Icon name="play_arrow" className="text-white text-lg" />
@@ -5641,25 +5643,29 @@ export default function Slideshow({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIdx, slides.length, quality])
 
-  // Advance automatically, paused while a full video is being watched.
-  // When wrapping around at the end of the deck, re-shuffle so the next loop
-  // plays in a completely new random order.
+  // Advance automatically, paused while a full video is being watched or when photos are hidden
+  // (unless Harvest Express is active, where slide ticks advance the train to the next region).
   useEffect(() => {
     if (selectedVideo !== null) return
+    if (!showPhotos && !thanksgivingExpress) return
     if (slides.length <= 1 && !thanksgivingExpress) return
     const timer = setInterval(() => {
+      let wrapped = false
       setCurrentIdx((prev) => {
         if (slides.length <= 1) return prev + 1
         const next = prev + 1
         if (next >= slides.length) {
-          setShuffleSeed(Math.random())
+          wrapped = true
           return 0
         }
         return next
       })
+      if (wrapped) {
+        setShuffleSeed(Math.random())
+      }
     }, thanksgivingExpress ? 12500 : 9000)
     return () => clearInterval(timer)
-  }, [slides.length, selectedVideo, thanksgivingExpress])
+  }, [slides.length, selectedVideo, thanksgivingExpress, showPhotos])
 
   // Keep the seasonal scene mounted while the photo list loads.
   const activeSlide = slides[currentIdx] ?? slides[0]
@@ -5810,7 +5816,7 @@ export default function Slideshow({
             </div>
             <div>FPS: <span className={fps >= 45 ? 'text-emerald-400' : fps >= 30 ? 'text-amber-400' : 'text-rose-400 font-bold'}>{fps}</span> ({frameTimeMs}ms)</div>
             <div>Quality Tier: <span className="text-cyan-400 font-semibold">{quality.toUpperCase()}</span></div>
-            <div>Slide: <span className="text-white font-medium">{slides.length ? currentIdx + 1 : 0} / {slides.length}</span></div>
+            <div>Slide: <span className="text-white font-medium">{slides.length ? Math.min(currentIdx + 1, slides.length) : 0} / {slides.length}</span></div>
             {(performance as any)?.memory && (
               <div>JS Heap: <span className="text-purple-300">{Math.round((performance as any).memory.usedJSHeapSize / 1048576)} MB</span></div>
             )}

@@ -40,6 +40,11 @@ def test_next_due_date_monthly():
     assert next_due_date(today, "monthly:day", ref_date=date(2026, 8, 20)) == date(2026, 9, 20)
 
 
+def test_next_due_date_monthly_fifth_weekday_clamps_to_last_weekday():
+    # 2026-07-30 is the 5th Thursday of July 2026. August 2026 only has 4 Thursdays (last is Aug 27).
+    assert next_due_date(date(2026, 8, 1), "monthly:weekday", ref_date=date(2026, 7, 30)) == date(2026, 8, 27)
+
+
 def test_next_due_date_one_off():
     today = date(2026, 9, 17)
     # Past one-off chore returns today

@@ -50,10 +50,18 @@ def is_due_on(check_date: date, ref_date: date, recurrence: str) -> bool:
             return check_date.day == ref_date.day
             
     if recurrence == "monthly:weekday":
-        # Monthly on the same weekday pattern (e.g. 2nd Tuesday)
+        # Monthly on the same weekday pattern (e.g. 2nd Tuesday).
+        # If anchored on a 5th weekday, clamp to the last occurrence of that weekday in shorter months.
+        if check_date.weekday() != ref_date.weekday():
+            return False
         ref_occurrence = (ref_date.day - 1) // 7 + 1
         check_occurrence = (check_date.day - 1) // 7 + 1
-        return check_date.weekday() == ref_date.weekday() and check_occurrence == ref_occurrence
+        if check_occurrence == ref_occurrence:
+            return True
+        if ref_occurrence == 5:
+            last_day = calendar.monthrange(check_date.year, check_date.month)[1]
+            return check_date.day + 7 > last_day
+        return False
 
     return False
 
@@ -112,7 +120,7 @@ def next_due_date(today: date, recurrence: str, ref_date: date | None = None) ->
 
     if recurrence == "monthly:weekday":
         anchor = ref_date or today
-        for offset in range(35):
+        for offset in range(65):
             candidate = today + timedelta(days=offset)
             if is_due_on(candidate, anchor, recurrence):
                 return candidate

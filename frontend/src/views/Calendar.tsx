@@ -436,12 +436,14 @@ export default function Calendar() {
   }
 
   const onEventClickMobile = (e: CalEvent) => {
+    const parseInput = (val: string) =>
+      e.all_day && /^\d{4}-\d{2}-\d{2}$/.test(val) ? `${val}T00:00` : toLocalInput(new Date(val))
     setDraft({
       id: Number(e.id),
       selection_id: e.selection_id,
       title: e.title,
-      start: toLocalInput(new Date(e.start)),
-      end: e.end ? toLocalInput(new Date(e.end)) : toLocalInput(new Date(e.start)),
+      start: parseInput(e.start),
+      end: e.end ? parseInput(e.end) : parseInput(e.start),
       all_day: e.all_day,
       location: e.location || '',
       description: e.description || '',
@@ -734,18 +736,6 @@ export default function Calendar() {
     }
   }
 
-  if (status && !status.accounts.length) {
-    return (
-      <div className="flex h-full flex-col items-center justify-center gap-6 text-center">
-        <span className="text-7xl">📅</span>
-        <p className="text-2xl font-medium text-ink-soft">No Google account connected yet.</p>
-        <a href="#/setup" className="btn-primary px-5 py-2.5 lg:px-8 lg:py-4 text-base lg:text-xl">
-          Go to Setup
-        </a>
-      </div>
-    )
-  }
-
   const handleWeekClick = useCallback(() => {
     const calendarApi = calRef.current?.getApi()
     if (currentViewMode !== 'week') {
@@ -833,6 +823,18 @@ export default function Calendar() {
     setCurrentViewMode('schedule')
     setMobileStartDate(new Date())
   }, [])
+
+  if (status && !status.accounts.length) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-6 text-center">
+        <span className="text-7xl">📅</span>
+        <p className="text-2xl font-medium text-ink-soft">No Google account connected yet.</p>
+        <a href="#/setup" className="btn-primary px-5 py-2.5 lg:px-8 lg:py-4 text-base lg:text-xl">
+          Go to Setup
+        </a>
+      </div>
+    )
+  }
 
   const renderHeader = () => {
     const startD = mobileStartDate

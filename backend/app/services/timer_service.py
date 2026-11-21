@@ -186,5 +186,23 @@ class TimerService:
         self._broadcast()
         return {"ok": True}
 
+    def add_seconds(self, extra_seconds: int) -> Optional[Dict[str, Any]]:
+        if not self._state or extra_seconds <= 0:
+            return self.get_state()
+        state = self.get_state()
+        if not state:
+            return None
+        max_allowed = 23 * 3600 + 59 * 60
+        new_remaining = min(max_allowed, int(self._state.get("remainingSeconds", 0)) + extra_seconds)
+        new_total = min(max_allowed, int(self._state.get("totalSeconds", 0)) + extra_seconds)
+        self._state["remainingSeconds"] = new_remaining
+        self._state["totalSeconds"] = new_total
+        self._state["stage"] = _get_stage(new_remaining)
+        if self._state.get("status") == "running":
+            self._state["endTimestamp"] = int(time.time() * 1000) + new_remaining * 1000
+        self._persist()
+        self._broadcast()
+        return self.get_state()
+
 
 timer_service = TimerService()
