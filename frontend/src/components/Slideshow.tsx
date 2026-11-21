@@ -1722,107 +1722,386 @@ function SittingElf({
   )
 }
 
-function Elf({ variant = 'running', flip = false }: { variant?: 'running'; flip?: boolean }) {
+type ElfPhase = 'enter' | 'stare' | 'write' | 'glance' | 'nod' | 'exit'
+
+const SCOUT_ELF_CSS = `
+@keyframes scoutElfBell {
+  0%, 100% { transform: rotate(-6deg); }
+  50% { transform: rotate(9deg); }
+}
+@keyframes scoutElfBlink {
+  0%, 44%, 48%, 88%, 92%, 100% { transform: scaleY(1); }
+  46%, 90% { transform: scaleY(0.08); }
+}
+@keyframes scoutElfHeadInspect {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-3.5deg); }
+  70% { transform: rotate(3deg); }
+}
+@keyframes scoutElfScribble {
+  0%, 100% { transform: translate(0px, 0px) rotate(-18deg); }
+  20% { transform: translate(4.5px, -1.2px) rotate(-8deg); }
+  40% { transform: translate(1.2px, 1.4px) rotate(-22deg); }
+  60% { transform: translate(5.5px, 0.2px) rotate(-6deg); }
+  80% { transform: translate(2.0px, 2.2px) rotate(-20deg); }
+}
+@keyframes scoutElfNoteBounce {
+  0%, 100% { transform: translateY(0px) rotate(-5deg); }
+  50% { transform: translateY(-1.5px) rotate(-3deg); }
+}
+@keyframes scoutElfBreathe {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-1.6px); }
+}
+@keyframes scoutElfInkLine {
+  0% { stroke-dashoffset: 18; opacity: 0.35; }
+  100% { stroke-dashoffset: 0; opacity: 0.9; }
+}
+`
+
+function ScoutElfSvg({ phase }: { phase: ElfPhase }) {
+  const showNotebook = phase === 'write' || phase === 'glance'
+  const isWriting = phase === 'write'
+  const isGlancingUp = phase === 'glance'
+  const isStaring = phase === 'stare' || phase === 'nod' || phase === 'glance'
+  const lookingDown = isWriting
+
+  // Pupils: dead-center staring straight ahead at the room, or glancing down at the notebook while writing
+  const pupilY = lookingDown ? 64.8 : 61.5
+  const browYOffset = phase === 'stare' ? -1.4 : isGlancingUp ? -1.8 : 0
+
   return (
     <svg
-      width="64"
-      height="80"
-      viewBox="0 0 54 68"
-      className="pointer-events-none select-none filter drop-shadow-[0_3px_8px_rgba(0,0,0,0.35)]"
-      style={{ transform: flip ? 'scaleX(-1)' : undefined }}
+      width="148"
+      height="172"
+      viewBox="0 0 148 172"
+      className="pointer-events-none select-none overflow-visible"
+      style={{ filter: 'drop-shadow(0 6px 14px rgba(0, 0, 0, 0.42))' }}
       aria-hidden="true"
     >
-      <g>
-        <path d="M 20 44 L 10 56" stroke="#dc2626" strokeWidth="5" strokeLinecap="round" />
-        <path d="M 17 48 L 15 50" stroke="#ffffff" strokeWidth="5" />
-        <path d="M 8 56 Q 3 55 1 51 Q 3 48 7 51 Z" fill="#15803d" />
-        <circle cx="2" cy="50" r="1.5" fill="#facc15" />
+      <style>{SCOUT_ELF_CSS}</style>
+      <defs>
+        <linearGradient id="seSkin" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#fde4c8" />
+          <stop offset="100%" stopColor="#f5c69d" />
+        </linearGradient>
+        <linearGradient id="seTunic" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#16a34a" />
+          <stop offset="100%" stopColor="#14532d" />
+        </linearGradient>
+        <linearGradient id="seHat" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#15803d" />
+          <stop offset="100%" stopColor="#0f5132" />
+        </linearGradient>
+        <linearGradient id="seRed" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#ef4444" />
+          <stop offset="100%" stopColor="#b91c1c" />
+        </linearGradient>
+        <linearGradient id="seBook" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#991b1b" />
+          <stop offset="100%" stopColor="#7f1d1d" />
+        </linearGradient>
+      </defs>
 
-        <path d="M 30 44 L 40 56" stroke="#dc2626" strokeWidth="5" strokeLinecap="round" />
-        <path d="M 34 49 L 36 51" stroke="#ffffff" strokeWidth="5" />
-        <path d="M 40 56 Q 46 60 50 58 Q 51 55 46 54 Z" fill="#15803d" />
-        <circle cx="50" cy="57" r="1.5" fill="#facc15" />
+      <g style={{ animation: 'scoutElfBreathe 3.2s ease-in-out infinite' }}>
+        {/* Tunic & Shoulders */}
+        <path
+          d="M 42 104 C 36 122, 34 150, 36 172 L 112 172 C 114 150, 112 122, 106 104 C 98 96, 50 96, 42 104 Z"
+          fill="url(#seTunic)"
+          stroke="#052e16"
+          strokeWidth="1.4"
+        />
+        {/* Vertical tunic seam & gold buttons */}
+        <line x1="74" y1="112" x2="74" y2="168" stroke="#14532d" strokeWidth="1.6" />
+        <circle cx="74" cy="126" r="2.8" fill="#facc15" stroke="#a16207" strokeWidth="0.9" />
+        <circle cx="74" cy="140" r="2.8" fill="#facc15" stroke="#a16207" strokeWidth="0.9" />
+
+        {/* Leather Belt & Gold Buckle */}
+        <rect x="37" y="148" width="74" height="12" rx="2" fill="#18181b" />
+        <rect x="64" y="145.5" width="20" height="17" rx="3" fill="#facc15" stroke="#854d0e" strokeWidth="1.5" />
+        <rect x="69" y="149.5" width="10" height="9" rx="1.5" fill="#18181b" />
+
+        {/* Scalloped Festive Red Collar with Gold Bells */}
+        <path
+          d="M 44 100 L 53 117 L 64 106 L 74 119 L 84 106 L 95 117 L 104 100 C 90 95, 58 95, 44 100 Z"
+          fill="url(#seRed)"
+          stroke="#7f1d1d"
+          strokeWidth="1.2"
+          strokeLinejoin="round"
+        />
+        <circle cx="53" cy="118" r="2.4" fill="#fde047" />
+        <circle cx="74" cy="120" r="2.6" fill="#fde047" />
+        <circle cx="95" cy="118" r="2.4" fill="#fde047" />
+
+        {/* Head Group (subtle inspecting tilt while staring) */}
+        <g
+          style={{
+            transformOrigin: '74px 96px',
+            animation: phase === 'stare' ? 'scoutElfHeadInspect 2.8s ease-in-out infinite' : undefined,
+            transform: isWriting ? 'translateY(2px) rotate(-2deg)' : undefined,
+            transition: 'transform 0.35s ease-out',
+          }}
+        >
+          {/* Neck */}
+          <rect x="66" y="88" width="16" height="14" rx="5" fill="#f3bd8d" />
+
+          {/* Pointy Elf Ears */}
+          <path d="M 45 64 C 28 58, 23 48, 30 46 C 36 45, 44 52, 48 56 Z" fill="url(#seSkin)" stroke="#d4956a" strokeWidth="1.2" />
+          <path d="M 44 60 C 35 56, 31 51, 34 50" stroke="#e5a377" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+          <path d="M 103 64 C 120 58, 125 48, 118 46 C 112 45, 104 52, 100 56 Z" fill="url(#seSkin)" stroke="#d4956a" strokeWidth="1.2" />
+          <path d="M 104 60 C 113 56, 117 51, 114 50" stroke="#e5a377" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+
+          {/* Head */}
+          <ellipse cx="74" cy="64" rx="28" ry="30" fill="url(#seSkin)" stroke="#d4956a" strokeWidth="1.3" />
+
+          {/* Hair Tufts peeking under hat */}
+          <path
+            d="M 48 48 C 52 40, 62 39, 68 45 C 74 39, 86 40, 92 46 C 97 43, 100 47, 100 50 C 92 45, 82 47, 74 44 C 65 47, 56 46, 48 48 Z"
+            fill="#92400e"
+          />
+
+          {/* Rosy Cheeks */}
+          <ellipse cx="55" cy="72" rx="6.2" ry="3.8" fill="#fb7185" opacity="0.42" />
+          <ellipse cx="93" cy="72" rx="6.2" ry="3.8" fill="#fb7185" opacity="0.42" />
+
+          {/* Eyebrows (expressive raised/attentive while staring) */}
+          <path
+            d={`M 54 ${52 + browYOffset} Q 61 ${48.5 + browYOffset} 68 ${52 + browYOffset}`}
+            stroke="#78350f"
+            strokeWidth="2.3"
+            strokeLinecap="round"
+            fill="none"
+          />
+          <path
+            d={`M 80 ${52 + browYOffset} Q 87 ${48.5 + browYOffset} 94 ${52 + browYOffset}`}
+            stroke="#78350f"
+            strokeWidth="2.3"
+            strokeLinecap="round"
+            fill="none"
+          />
+
+          {/* Big Attentive Eyes Staring Straight Ahead */}
+          <g style={{ transformOrigin: '74px 61.5px', animation: 'scoutElfBlink 4.6s ease-in-out infinite' }}>
+            {/* Left Eye */}
+            <ellipse cx="61" cy="61.5" rx="6.5" ry="7.2" fill="#ffffff" stroke="#44403c" strokeWidth="1.1" />
+            <circle cx="61" cy={pupilY} r="3.9" fill="#1e3a8a" />
+            <circle cx="61" cy={pupilY} r="2.2" fill="#0f172a" />
+            <circle cx="62.7" cy={pupilY - 1.8} r="1.4" fill="#ffffff" />
+
+            {/* Right Eye */}
+            <ellipse cx="87" cy="61.5" rx="6.5" ry="7.2" fill="#ffffff" stroke="#44403c" strokeWidth="1.1" />
+            <circle cx="87" cy={pupilY} r="3.9" fill="#1e3a8a" />
+            <circle cx="87" cy={pupilY} r="2.2" fill="#0f172a" />
+            <circle cx="88.7" cy={pupilY - 1.8} r="1.4" fill="#ffffff" />
+          </g>
+
+          {/* Little Button Nose */}
+          <ellipse cx="74" cy="69.5" rx="3.2" ry="2.4" fill="#f0a875" />
+
+          {/* Mouth: focused pursed line while staring/writing, knowing little smirk on nod */}
+          {phase === 'nod' ? (
+            <path d="M 66 78 Q 74 84 82 77" stroke="#991b1b" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+          ) : isStaring ? (
+            <path d="M 67 79 Q 74 80.5 81 78.5" stroke="#991b1b" strokeWidth="2.1" strokeLinecap="round" fill="none" />
+          ) : (
+            <path d="M 68 79 Q 74 82.5 80 79" stroke="#991b1b" strokeWidth="2.1" strokeLinecap="round" fill="none" />
+          )}
+
+          {/* Classic Pointed Elf Hat with Red Brim & Jingle Bell */}
+          <path
+            d="M 43 46 C 46 24, 64 10, 92 12 C 110 14, 122 24, 125 38 C 114 33, 102 35, 96 44 Z"
+            fill="url(#seHat)"
+            stroke="#052e16"
+            strokeWidth="1.4"
+          />
+          {/* White / Red Hat Cuff */}
+          <path
+            d="M 41 48 Q 74 37 107 48 C 107 53, 102 55, 98 53 Q 74 44 50 53 C 46 55, 41 53, 41 48 Z"
+            fill="url(#seRed)"
+            stroke="#7f1d1d"
+            strokeWidth="1.3"
+          />
+          {/* Jingle Bell at Tip */}
+          <g style={{ transformOrigin: '124px 38px', animation: 'scoutElfBell 2.4s ease-in-out infinite' }}>
+            <circle cx="126" cy="41" r="6.5" fill="#facc15" stroke="#a16207" strokeWidth="1.3" />
+            <circle cx="124" cy="39" r="1.8" fill="#fef9c3" />
+            <path d="M 122 43 Q 126 45 130 43" stroke="#854d0e" strokeWidth="1.1" fill="none" />
+          </g>
+        </g>
+
+        {/* Resting Hands gripping the bottom edge when NOT holding the notebook */}
+        {!showNotebook && (
+          <g>
+            <ellipse cx="42" cy="144" rx="9" ry="7.5" fill="url(#seSkin)" stroke="#d4956a" strokeWidth="1.2" />
+            <ellipse cx="106" cy="144" rx="9" ry="7.5" fill="url(#seSkin)" stroke="#d4956a" strokeWidth="1.2" />
+          </g>
+        )}
+
+        {/* Open "Naughty or Nice" Notebook + Candy-Cane Pencil when writing */}
+        {showNotebook && (
+          <g
+            style={{
+              transformOrigin: '60px 136px',
+              animation: 'scoutElfNoteBounce 2.2s ease-in-out infinite',
+            }}
+          >
+            {/* Left arm lifting the notebook */}
+            <path d="M 44 118 Q 36 132 45 140" stroke="#15803d" strokeWidth="11" strokeLinecap="round" fill="none" />
+            {/* Red leather-bound open notebook */}
+            <g transform="translate(30, 114) rotate(-8)">
+              {/* Back cover */}
+              <rect x="0" y="0" width="56" height="40" rx="4" fill="url(#seBook)" stroke="#450a0a" strokeWidth="1.4" />
+              {/* Left & right cream pages */}
+              <rect x="3" y="3" width="24" height="34" rx="2" fill="#fefce8" stroke="#d6d3d1" strokeWidth="0.8" />
+              <rect x="29" y="3" width="24" height="34" rx="2" fill="#fefce8" stroke="#d6d3d1" strokeWidth="0.8" />
+              {/* Spine crease */}
+              <line x1="28" y1="2" x2="28" y2="38" stroke="#7f1d1d" strokeWidth="1.6" />
+              {/* Tiny gold header bar & list lines */}
+              <line x1="6" y1="8.5" x2="23" y2="8.5" stroke="#16a34a" strokeWidth="1.8" strokeLinecap="round" />
+              <line x1="6" y1="14" x2="22" y2="14" stroke="#94a3b8" strokeWidth="1.2" strokeLinecap="round" />
+              <line x1="6" y1="19" x2="20" y2="19" stroke="#94a3b8" strokeWidth="1.2" strokeLinecap="round" />
+              <line x1="6" y1="24" x2="23" y2="24" stroke="#94a3b8" strokeWidth="1.2" strokeLinecap="round" />
+              {/* Right page actively being written on */}
+              <line x1="32" y1="8.5" x2="49" y2="8.5" stroke="#dc2626" strokeWidth="1.8" strokeLinecap="round" />
+              <line
+                x1="32"
+                y1="14.5"
+                x2="48"
+                y2="14.5"
+                stroke="#1e293b"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+                strokeDasharray="18"
+                style={{ animation: isWriting ? 'scoutElfInkLine 1.1s ease-out forwards' : undefined }}
+              />
+              <line
+                x1="32"
+                y1="20"
+                x2="46"
+                y2="20"
+                stroke="#1e293b"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+                strokeDasharray="18"
+                style={{ animation: isWriting ? 'scoutElfInkLine 1.1s ease-out 0.7s forwards' : undefined }}
+              />
+              <line
+                x1="32"
+                y1="25.5"
+                x2="49"
+                y2="25.5"
+                stroke="#1e293b"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+                strokeDasharray="18"
+                style={{ animation: isWriting ? 'scoutElfInkLine 1.1s ease-out 1.4s forwards' : undefined }}
+              />
+            </g>
+            {/* Left hand thumb gripping notebook edge */}
+            <ellipse cx="38" cy="138" rx="6.5" ry="5.5" fill="url(#seSkin)" stroke="#d4956a" strokeWidth="1.1" />
+
+            {/* Right arm + Candy-Cane Pencil actively scribbling */}
+            <path d="M 104 118 Q 108 134 92 135" stroke="#15803d" strokeWidth="11" strokeLinecap="round" fill="none" />
+            <g
+              style={{
+                transformOrigin: '80px 131px',
+                animation: isWriting ? 'scoutElfScribble 0.55s ease-in-out infinite' : undefined,
+                transform: isGlancingUp ? 'translate(5px, -5px) rotate(-10deg)' : undefined,
+                transition: 'transform 0.25s ease-out',
+              }}
+            >
+              {/* Pencil body (festive red & white stripes) */}
+              <g transform="translate(72, 128) rotate(-32)">
+                <rect x="0" y="-3.2" width="28" height="6.4" rx="2" fill="#dc2626" stroke="#7f1d1d" strokeWidth="1" />
+                <line x1="6" y1="-3" x2="9" y2="3" stroke="#ffffff" strokeWidth="2.4" />
+                <line x1="14" y1="-3" x2="17" y2="3" stroke="#ffffff" strokeWidth="2.4" />
+                <line x1="22" y1="-3" x2="25" y2="3" stroke="#ffffff" strokeWidth="2.4" />
+                {/* Wood tip & graphite point */}
+                <polygon points="0,-3.2 -8,0 0,3.2" fill="#fde68a" stroke="#b45309" strokeWidth="0.8" />
+                <polygon points="-5,-1.2 -8,0 -5,1.2" fill="#18181b" />
+                {/* Eraser */}
+                <rect x="27" y="-3.2" width="4.5" height="6.4" rx="1.5" fill="#f472b6" />
+              </g>
+              {/* Right hand holding pencil */}
+              <ellipse cx="87" cy="130" rx="7" ry="6" fill="url(#seSkin)" stroke="#d4956a" strokeWidth="1.1" />
+            </g>
+          </g>
+        )}
       </g>
-
-      {/* Elf Tunic */}
-      <path d="M 18 34 Q 14 46 17 47 L 37 47 Q 40 46 36 34 Z" fill="#16a34a" />
-      <rect x="17" y="42" width="20" height="4.5" fill="#18181b" />
-      <rect x="24" y="41" width="6" height="6.5" rx="1" fill="#facc15" stroke="#18181b" strokeWidth="1" />
-
-      {/* Scalloped Collar */}
-      <path d="M 18 33 L 21 38 L 27 34 L 33 38 L 36 33 Z" fill="#dc2626" />
-      <circle cx="21" cy="38" r="1" fill="#facc15" />
-      <circle cx="33" cy="38" r="1" fill="#facc15" />
-
-      {/* Running Arms holding gift */}
-      <g>
-        <path d="M 22 36 L 30 40" stroke="#16a34a" strokeWidth="4" strokeLinecap="round" />
-        <rect x="30" y="34" width="11" height="11" rx="1.5" fill="#eab308" />
-        <path d="M 35.5 34 L 35.5 45 M 30 39.5 L 41 39.5" stroke="#dc2626" strokeWidth="1.8" />
-        <circle cx="35.5" cy="33" r="2" fill="#dc2626" />
-      </g>
-
-      {/* Head, Ears & Face */}
-      <path d="M 19 24 C 11 22, 9 17, 18 19 Z" fill="#fde68a" />
-      <path d="M 35 24 C 43 22, 45 17, 36 19 Z" fill="#fde68a" />
-      <ellipse cx="27" cy="25" rx="9.5" ry="10" fill="#fde68a" />
-      <circle cx="21" cy="27" r="2.5" fill="#f43f5e" opacity="0.45" />
-      <circle cx="33" cy="27" r="2.5" fill="#f43f5e" opacity="0.45" />
-      <path d="M 21 23 Q 23 21 25 23" stroke="#1c1917" strokeWidth="1.2" strokeLinecap="round" fill="none" />
-      <path d="M 29 23 Q 31 21 33 23" stroke="#1c1917" strokeWidth="1.2" strokeLinecap="round" fill="none" />
-      <circle cx="27" cy="25" r="1.1" fill="#f59e0b" />
-      <path d="M 24 28 Q 27 31 30 28" stroke="#b91c1c" strokeWidth="1.2" strokeLinecap="round" fill="none" />
-
-      {/* Hat */}
-      <path d="M 16 19 Q 27 16 38 19" stroke="#dc2626" strokeWidth="4.5" strokeLinecap="round" />
-      <path d="M 17 17 C 20 6, 32 3, 44 6 C 48 8, 49 12, 46 16 Z" fill="#16a34a" />
-      <circle cx="47" cy="16" r="3.2" fill="#facc15" stroke="#ca8a04" strokeWidth="0.8" />
     </svg>
   )
 }
 
 function RunningElf() {
-  const [running, setRunning] = useState(false)
-  const [direction, setDirection] = useState<1 | -1>(1)
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [phase, setPhase] = useState<ElfPhase | null>(null)
+  const [leftPct, setLeftPct] = useState(50)
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
 
   useEffect(() => {
-    timerRef.current = setTimeout(() => {
-      setDirection(Math.random() < 0.5 ? 1 : -1)
-      setRunning(true)
-    }, 20_000)
-
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current)
+    const clearAll = () => {
+      timersRef.current.forEach(clearTimeout)
+      timersRef.current = []
     }
+
+    const scheduleVisit = (delayMs: number) => {
+      const startTimer = setTimeout(() => {
+        if (document.hidden) {
+          scheduleVisit(15_000)
+          return
+        }
+        // Pick a clear bottom-edge spot away from the left/right HUD controls
+        setLeftPct(18 + Math.round(Math.random() * 58))
+        setPhase('enter')
+
+        const steps: Array<[number, ElfPhase | null]> = [
+          [900, 'stare'],    // Stare straight ahead at the room
+          [3800, 'write'],   // Pull out notebook & jot down notes
+          [6600, 'glance'],  // Quick suspicious glance back up at the room
+          [8100, 'write'],   // Finish writing a final note
+          [10200, 'nod'],    // Tuck notebook away, knowing little smirk
+          [11600, 'exit'],   // Duck back down below the bottom bezel
+          [12800, null],     // Unmount until next visit
+        ]
+
+        steps.forEach(([ms, nextPhase]) => {
+          const t = setTimeout(() => {
+            setPhase(nextPhase)
+            if (nextPhase === null) {
+              scheduleVisit(45_000 + Math.random() * 50_000)
+            }
+          }, ms)
+          timersRef.current.push(t)
+        })
+      }, delayMs)
+      timersRef.current.push(startTimer)
+    }
+
+    const immediate = getQueryParam('elf') === '1'
+    scheduleVisit(immediate ? 1_500 : 16_000)
+
+    return clearAll
   }, [])
 
-  const handleAnimationComplete = () => {
-    setRunning(false)
-    if (timerRef.current) clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(() => {
-      setDirection(Math.random() < 0.5 ? 1 : -1)
-      setRunning(true)
-    }, 40_000 + Math.random() * 50_000)
-  }
+  if (!phase) return null
 
-  if (!running) return null
+  const isExiting = phase === 'exit'
 
   return (
-    <motion.div
-      initial={{ x: direction === 1 ? -80 : window.innerWidth + 80 }}
-      animate={{ x: direction === 1 ? window.innerWidth + 80 : -80 }}
-      transition={{ duration: 7.5, ease: 'linear' }}
-      onAnimationComplete={handleAnimationComplete}
-      className="fixed bottom-1 pointer-events-none z-30 select-none"
+    <div
+      className="fixed bottom-0 pointer-events-none z-30 select-none -translate-x-1/2"
+      style={{ left: `${leftPct}%` }}
     >
       <motion.div
-        animate={{ y: [0, -5, 0] }}
-        transition={{ duration: 0.28, repeat: Infinity, ease: 'easeInOut' }}
+        initial={{ y: 185 }}
+        animate={{ y: isExiting ? 185 : 14 }}
+        transition={{
+          duration: isExiting ? 0.95 : 0.85,
+          ease: isExiting ? [0.4, 0, 1, 1] : [0.22, 1, 0.36, 1],
+        }}
       >
-        <Elf variant="running" flip={direction === -1} />
+        <ScoutElfSvg phase={phase} />
       </motion.div>
-    </motion.div>
+    </div>
   )
 }
 
