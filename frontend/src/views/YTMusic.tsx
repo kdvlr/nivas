@@ -274,6 +274,8 @@ export default function YTMusicView({
   // Local Library State (/Media/Music)
   const [localTab, setLocalTab] = useState<LocalTab>('albums')
   const [localAlbums, setLocalAlbums] = useState<AlbumItem[]>([])
+  const [localAlbumsLoading, setLocalAlbumsLoading] = useState(false)
+  const localLibraryReqIdRef = useRef(0)
   const [localArtists, setLocalArtists] = useState<any[]>([])
   const [localGenres, setLocalGenres] = useState<any[]>([])
   const [selectedArtist, setSelectedArtist] = useState<string | null>(null)
@@ -401,6 +403,8 @@ export default function YTMusicView({
 
   // Load Local Library (/Media/Music)
   const loadLocalLibrary = useCallback(async (artistFilter?: string | null, genreFilter?: string | null) => {
+    const reqId = ++localLibraryReqIdRef.current
+    setLocalAlbumsLoading(true)
     try {
       const activeArtist = artistFilter !== undefined ? artistFilter : selectedArtist
       const activeGenre = genreFilter !== undefined ? genreFilter : selectedGenre
@@ -416,6 +420,7 @@ export default function YTMusicView({
         api.get<any[]>('/api/ytmusic/local/artists').catch(() => []),
         api.get<any[]>('/api/ytmusic/local/genres').catch(() => []),
       ])
+      if (reqId !== localLibraryReqIdRef.current) return
       if (status) {
         setLocalStatus(status)
         setScanningStatus(status.isScanning)
@@ -440,6 +445,10 @@ export default function YTMusicView({
       }
     } catch (err) {
       console.error('Failed to load local music library:', err)
+    } finally {
+      if (reqId === localLibraryReqIdRef.current) {
+        setLocalAlbumsLoading(false)
+      }
     }
   }, [selectedArtist, selectedGenre])
 
@@ -756,10 +765,10 @@ export default function YTMusicView({
                   if (selectedAlbum.source === 'local') {
                     setSelectedAlbum(null)
                     setAlbumSongs([])
+                    setLocalAlbums([])
                     setSelectedArtist(selectedAlbum.artist)
                     setSelectedGenre(null)
                     setLocalTab('albums')
-                    loadLocalLibrary(selectedAlbum.artist, null)
                   }
                 }}
                 className={`mt-1.5 sm:mt-2 text-sm sm:text-lg font-semibold text-ink-soft ${
@@ -1576,10 +1585,10 @@ export default function YTMusicView({
                   <div className="flex rounded-xl bg-[var(--sc)] border border-[var(--outline-var)] p-1 overflow-x-auto max-w-full [scrollbar-width:none]">
                     <button
                       onClick={() => {
+                        if (selectedArtist || selectedGenre) setLocalAlbums([])
                         setSelectedArtist(null)
                         setSelectedGenre(null)
                         setLocalTab('albums')
-                        loadLocalLibrary(null, null)
                       }}
                       className={`px-3 sm:px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition whitespace-nowrap cursor-pointer ${
                         localTab === 'albums' && !selectedArtist && !selectedGenre
@@ -1698,8 +1707,8 @@ export default function YTMusicView({
 
                       <button
                         onClick={() => {
+                          setLocalAlbums([])
                           setSelectedArtist(null)
-                          loadLocalLibrary(null, selectedGenre)
                         }}
                         title="Show all albums"
                         className="flex items-center gap-1 rounded-full border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] px-3 py-2 text-xs sm:text-sm font-semibold text-ink-soft hover:text-ink transition active:scale-95 cursor-pointer shadow-sm ml-0"
@@ -1786,8 +1795,8 @@ export default function YTMusicView({
 
                       <button
                         onClick={() => {
+                          setLocalAlbums([])
                           setSelectedGenre(null)
-                          loadLocalLibrary(selectedArtist, null)
                         }}
                         title="Show all albums"
                         className="flex items-center gap-1 rounded-full border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] px-3 py-2 text-xs sm:text-sm font-semibold text-ink-soft hover:text-ink transition active:scale-95 cursor-pointer shadow-sm ml-0"
@@ -1803,7 +1812,12 @@ export default function YTMusicView({
               {/* Albums View */}
               {localTab === 'albums' && (
                 <div>
-                  {localAlbums.length === 0 ? (
+                  {localAlbumsLoading && localAlbums.length === 0 ? (
+                    <div className="py-24 text-center text-ink-soft">
+                      <Icon name="progress_activity" className="mx-auto text-4xl animate-spin text-[var(--primary)] mb-3" />
+                      <p className="text-sm font-medium">Loading albums…</p>
+                    </div>
+                  ) : localAlbums.length === 0 ? (
                     <div className="py-24 text-center text-ink-soft">
                       <Icon name="album" className="mx-auto text-5xl text-ink-soft/30 mb-3" />
                       <p className="text-base font-medium">No albums found in /Media/Music</p>
@@ -1893,10 +1907,10 @@ export default function YTMusicView({
                               <span
                                 onClick={(e) => {
                                   e.stopPropagation()
+                                  setLocalAlbums([])
                                   setSelectedArtist(album.artist)
                                   setSelectedGenre(null)
                                   setLocalTab('albums')
-                                  loadLocalLibrary(album.artist, null)
                                 }}
                                 className="hover:underline hover:text-[var(--primary)] cursor-pointer"
                                 title={`Filter by ${album.artist}`}
@@ -1929,10 +1943,10 @@ export default function YTMusicView({
                           <div
                             key={artistItem.artist}
                             onClick={() => {
+                              setLocalAlbums([])
                               setSelectedArtist(artistItem.artist)
                               setSelectedGenre(null)
                               setLocalTab('albums')
-                              loadLocalLibrary(artistItem.artist, null)
                             }}
                             className="flex items-center justify-between p-3.5 sm:p-4 rounded-2xl glass-inset border border-[var(--outline-var)] hover:bg-[var(--sc-high)] transition cursor-pointer group"
                           >
@@ -1999,10 +2013,10 @@ export default function YTMusicView({
                           <div
                             key={genreItem.genre}
                             onClick={() => {
+                              setLocalAlbums([])
                               setSelectedGenre(genreItem.genre)
                               setSelectedArtist(null)
                               setLocalTab('albums')
-                              loadLocalLibrary(null, genreItem.genre)
                             }}
                             className="flex items-center justify-between p-3.5 sm:p-4 rounded-2xl glass-inset border border-[var(--outline-var)] hover:bg-[var(--sc-high)] transition cursor-pointer group"
                           >
