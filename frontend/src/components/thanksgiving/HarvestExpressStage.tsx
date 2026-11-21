@@ -89,9 +89,9 @@ function HarvestExpressStageInner({ phase, paused, slideTick }: HarvestExpressSt
 
       {/* Coast-to-Coast Route Progress Pill (editorial railway timetable style) */}
       <div
-        className="absolute bottom-[20px] left-[28px] z-30 flex items-center gap-3.5 px-4 py-2 rounded-full pointer-events-none select-none backdrop-blur-md"
+        className="absolute bottom-[20px] left-[28px] z-30 flex items-center gap-3.5 px-4 py-2 rounded-full pointer-events-none select-none"
         style={{
-          background: 'rgba(18, 15, 13, 0.62)',
+          background: 'rgba(18, 15, 13, 0.78)',
           border: '1px solid rgba(212, 173, 82, 0.28)',
           color: '#f2e8d5',
           fontSize: '12px',

@@ -241,7 +241,8 @@ async def create_event(body: EventCreate, db: Session = Depends(get_db)):
     if sel is None:
         raise HTTPException(404, "calendar not found")
     try:
-        row = gcal.create_event(
+        row = await asyncio.to_thread(
+            gcal.create_event,
             db,
             sel,
             body.title,
@@ -264,7 +265,8 @@ async def update_event(event_id: int, body: EventUpdate, db: Session = Depends(g
     if row is None:
         raise HTTPException(404)
     try:
-        gcal.update_event(
+        await asyncio.to_thread(
+            gcal.update_event,
             db,
             row,
             body.title,
@@ -287,7 +289,7 @@ async def delete_event(event_id: int, db: Session = Depends(get_db)):
     if row is None:
         raise HTTPException(404)
     try:
-        gcal.delete_event(db, row)
+        await asyncio.to_thread(gcal.delete_event, db, row)
     except Exception as e:
         log.warning("delete event failed: %s", e)
         raise HTTPException(502, f"Google Calendar error: {e}")

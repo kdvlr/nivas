@@ -11,6 +11,7 @@ mimetypes.add_type("application/octet-stream", ".riv")
 os.environ["OAUTHLIB_RELAX_TOKEN_SCOPE"] = "1"
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 import httpx
@@ -52,6 +53,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Family Dashboard", lifespan=lifespan)
+app.add_middleware(GZipMiddleware, minimum_size=1024)
 
 for r in (calendar, tasks, chores, shopping, recipes, rewards, setup, weather, photos, ytmusic, kids_daily, timer):
     app.include_router(r.router)
@@ -123,9 +125,17 @@ async def proxy_scrypted(path: str, request: Request):
         background=BackgroundTask(resp.aclose),
     )
 
+class ImmutableStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        if response.status_code == 200:
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        return response
+
+
 # Serve the built frontend (present in the Docker image / after `npm run build`)
 if STATIC_DIR.exists():
-    app.mount("/assets", StaticFiles(directory=STATIC_DIR / "assets"), name="assets")
+    app.mount("/assets", ImmutableStaticFiles(directory=STATIC_DIR / "assets"), name="assets")
 
     # index.html points at content-hashed bundles, so it must never be cached:
     # a kiosk WebView that pins a stale copy keeps loading the old JS forever

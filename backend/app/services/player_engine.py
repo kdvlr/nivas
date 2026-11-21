@@ -411,7 +411,7 @@ class PlayerEngine:
         while True:
             try:
                 await self.scan_devices()
-                sleep_sec = 60 if self.is_playing else 15
+                sleep_sec = 90 if self.is_playing else 60
                 await asyncio.sleep(sleep_sec)
             except asyncio.CancelledError:
                 break
@@ -422,6 +422,10 @@ class PlayerEngine:
     async def scan_devices(self) -> List[Dict[str, Any]]:
         try:
             import pyatv
+            before_snapshot = {
+                dev_id: (d.name, d.port, d.model, d.is_selected, d.is_hidden)
+                for dev_id, d in self.devices.items()
+            }
             loop = asyncio.get_running_loop()
             results = await pyatv.scan(loop, timeout=3)
             
@@ -489,7 +493,12 @@ class PlayerEngine:
                     logger.info(f"Discovered AirPlay speaker: {name} ({addr}:{port}) with volume {saved_vol}")
 
             self._ensure_default_target()
-            self._broadcast_state()
+            after_snapshot = {
+                dev_id: (d.name, d.port, d.model, d.is_selected, d.is_hidden)
+                for dev_id, d in self.devices.items()
+            }
+            if after_snapshot != before_snapshot:
+                self._broadcast_state()
         except Exception as e:
             logger.error(f"AirPlay scan error: {e}")
         return self.get_state()["devices"]

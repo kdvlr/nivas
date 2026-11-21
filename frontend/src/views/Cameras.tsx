@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import PageHeader from '../components/PageHeader'
 import Icon from '../components/Icon'
 import { SCRYPTED_NVR_URL } from '../lib/cameras'
@@ -11,6 +11,15 @@ interface CamerasProps {
 export default function Cameras({ now = new Date(), config }: CamerasProps) {
   const [iframeKey, setIframeKey] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+
+  useEffect(() => {
+    return () => {
+      if (iframeRef.current) {
+        iframeRef.current.src = 'about:blank'
+      }
+    }
+  }, [])
 
   const handleReload = () => {
     setIsLoading(true)
@@ -52,6 +61,7 @@ export default function Cameras({ now = new Date(), config }: CamerasProps) {
         )}
 
         <iframe
+          ref={iframeRef}
           key={iframeKey}
           src={SCRYPTED_NVR_URL}
           title="Scrypted Camera View"

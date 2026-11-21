@@ -1200,6 +1200,11 @@ export function mountHarvestExpress(
     bandanaTail.setAttribute('d', `M-6,-3 Q-14,${(-7 + bf).toFixed(1)} -22,${(-4 - bf).toFixed(1)} L-17,${(3 + bf * 0.6).toFixed(1)} Z`);
   }
 
+  const farWorldEl = byId('farWorld');
+  const midWorldEl = byId('midWorld');
+  const isAndroidTablet = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
+  const frameBudgetMs = isAndroidTablet ? 35 : 0; // ~28fps cap on Android WebView (Mali-G52)
+
   function renderWorldAtCamera(camX, dt, tSec) {
     // Speed estimate -> wheel motion blur (spokes dissolve into a blurred disc at speed)
     let dCam = prevCamX === null ? 0 : camX - prevCamX;
@@ -1217,8 +1222,6 @@ export function mountHarvestExpress(
     cloudPlaneFar.setAttribute('transform', `translate(${-((camX * 0.08) % 1920 + 1920) % 1920}, 0)`);
     cloudPlane.setAttribute('transform', `translate(${-((camX * 0.14) % 1920 + 1920) % 1920}, 0)`);
 
-    const farWorld = byId('farWorld');
-    const midWorld = byId('midWorld');
     const visibleRegs = [];
     for (let i = 0; i < REGIONS.length; i++) {
       const delta = wrapSigned(camX - i * REGION_SPAN, TOTAL_LOOP);
@@ -1240,8 +1243,8 @@ export function mountHarvestExpress(
     if (orderKey !== lastOrderKey) {
       lastOrderKey = orderKey;
       for (const v of visibleRegs) {
-        farWorld.appendChild(farEls[v.i]);
-        midWorld.appendChild(midEls[v.i]);
+        farWorldEl.appendChild(farEls[v.i]);
+        midWorldEl.appendChild(midEls[v.i]);
       }
     }
 
@@ -1367,6 +1370,10 @@ export function mountHarvestExpress(
   function tick(now: number) {
     if (destroyed || isPaused) {
       rafId = 0;
+      return;
+    }
+    if (frameBudgetMs > 0 && now - lastT < frameBudgetMs) {
+      rafId = requestAnimationFrame(tick);
       return;
     }
     const dt = Math.min(0.05, Math.max(0, (now - lastT) / 1000));

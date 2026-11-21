@@ -134,24 +134,25 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     setIsFullScreen(Boolean(timer?.id))
   }, [timer?.id])
 
-  // Keep localStorage synchronized
+  // Keep localStorage synchronized on structural changes (not every 1s countdown tick)
   useEffect(() => {
-    if (!timer) {
+    const current = timerRef.current
+    if (!current) {
       localStorage.removeItem(STORAGE_KEY)
       return
     }
     const payload: StoredTimer = {
-      id: timer.id,
-      label: timer.label,
-      totalSeconds: timer.totalSeconds,
-      status: timer.status,
-      endTimestamp: timer.endTimestamp,
-      remainingSeconds: timer.remainingSeconds,
+      id: current.id,
+      label: current.label,
+      totalSeconds: current.totalSeconds,
+      status: current.status,
+      endTimestamp: current.endTimestamp,
+      remainingSeconds: current.remainingSeconds,
       savedAt: Date.now(),
-      source: timer.source,
+      source: current.source,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
-  }, [timer])
+  }, [timer?.id, timer?.label, timer?.totalSeconds, timer?.status, timer?.endTimestamp, timer?.source])
 
   // Ticker loop for running timers
   useEffect(() => {

@@ -5565,11 +5565,20 @@ export default function Slideshow({
     setPlayerReady(false)
     const v = playerRef.current
     if (!v) return
+    let poll: ReturnType<typeof setInterval> | undefined
     const check = () => {
-      if (v.readyState >= 3) setPlayerReady(true)
+      if (v.readyState >= 3) {
+        setPlayerReady(true)
+        if (poll) {
+          clearInterval(poll)
+          poll = undefined
+        }
+      }
     }
     check()
-    const poll = setInterval(check, 200)
+    if (v.readyState < 3) {
+      poll = setInterval(check, 200)
+    }
     // Last resort: never leave a spinner up, even if the browser goes quiet.
     const bail = setTimeout(() => setPlayerReady(true), 3000)
     // Blocked autoplay (common on kiosk browsers with sound) resolves to a
@@ -5727,7 +5736,7 @@ export default function Slideshow({
 
       {/* Clock & Date Ambient Glass Overlay */}
       <div className="absolute top-6 right-6 z-40 flex flex-col items-end select-none">
-        <div className="bg-black/30 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/15 text-white shadow-2xl flex flex-col items-end pointer-events-auto">
+        <div className="bg-black/55 px-5 py-3 rounded-2xl border border-white/15 text-white shadow-2xl flex flex-col items-end pointer-events-auto">
           <button
             type="button"
             onClick={(e) => {
@@ -5794,7 +5803,7 @@ export default function Slideshow({
         }}
       >
         {showDebug ? (
-          <div className="bg-black/85 backdrop-blur-md p-3 rounded-xl border border-white/20 text-white space-y-1 shadow-2xl pointer-events-auto min-w-[200px]">
+          <div className="bg-black/88 p-3 rounded-xl border border-white/20 text-white space-y-1 shadow-2xl pointer-events-auto min-w-[200px]">
             <div className="font-bold text-amber-400 border-b border-white/10 pb-1 mb-1 flex items-center justify-between">
               <span>⚡ Telemetry & HUD</span>
               <span className="text-[9px] text-white/40">Tap to close</span>
@@ -5984,7 +5993,7 @@ export default function Slideshow({
               e.stopPropagation()
               setCurrentIdx((i) => (i - 1 + slides.length) % slides.length)
             }}
-            className="p-3 rounded-full bg-black/45 hover:bg-black/60 active:scale-95 text-white transition backdrop-blur-md cursor-pointer"
+            className="p-3 rounded-full bg-black/60 hover:bg-black/75 active:scale-95 text-white transition cursor-pointer"
           >
             <Icon name="skip_previous" />
           </button>
@@ -5995,10 +6004,10 @@ export default function Slideshow({
               e.stopPropagation()
               setShowPhotos((value) => !value)
             }}
-            className={`p-3 rounded-full active:scale-95 text-white transition backdrop-blur-md cursor-pointer ${
+            className={`p-3 rounded-full active:scale-95 text-white transition cursor-pointer ${
               showPhotos
-                ? 'bg-black/45 hover:bg-black/60'
-                : 'bg-amber-500/35 hover:bg-amber-500/50 ring-1 ring-amber-300/60'
+                ? 'bg-black/60 hover:bg-black/75'
+                : 'bg-amber-600/75 hover:bg-amber-600/90 ring-1 ring-amber-300/60'
             }`}
           >
             <Icon name={showPhotos ? 'image' : 'hide_image'} />
@@ -6010,7 +6019,7 @@ export default function Slideshow({
               e.stopPropagation()
               setCurrentIdx((i) => (i + 1) % slides.length)
             }}
-            className="p-3 rounded-full bg-black/45 hover:bg-black/60 active:scale-95 text-white transition backdrop-blur-md cursor-pointer"
+            className="p-3 rounded-full bg-black/60 hover:bg-black/75 active:scale-95 text-white transition cursor-pointer"
           >
             <Icon name="skip_next" />
           </button>

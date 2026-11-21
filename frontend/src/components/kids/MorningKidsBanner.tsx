@@ -391,7 +391,7 @@ export default function MorningKidsBanner({
             exit={{ opacity: 0 }}
             onClick={handleDismiss}
             aria-label="Dismiss Brain Nuggets backdrop"
-            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm cursor-pointer"
+            className="fixed inset-0 z-40 bg-black/60 cursor-pointer"
           />
           {/* Wall-display card: designed to remain fully visible at 1920x1080. */}
           <motion.div
@@ -403,7 +403,7 @@ export default function MorningKidsBanner({
             data-testid="kids-nuggets-panel"
             data-density={density}
             ref={panelRef}
-            className={`glass fixed inset-x-2 sm:inset-x-4 lg:inset-x-8 top-[max(0.75rem,calc(env(safe-area-inset-top,0px)+0.5rem))] bottom-[max(0.75rem,calc(env(safe-area-inset-bottom,0px)+0.5rem))] z-40 mx-auto flex max-w-[1856px] flex-col p-3.5 text-ink backdrop-blur-2xl sm:p-4 lg:p-5 overflow-y-auto lg:overflow-hidden ${className}`}
+            className={`glass fixed inset-x-2 sm:inset-x-4 lg:inset-x-8 top-[max(0.75rem,calc(env(safe-area-inset-top,0px)+0.5rem))] bottom-[max(0.75rem,calc(env(safe-area-inset-bottom,0px)+0.5rem))] z-40 mx-auto flex max-w-[1856px] flex-col p-3.5 text-ink sm:p-4 lg:p-5 overflow-y-auto lg:overflow-hidden ${className}`}
             style={{
               border: '1px solid color-mix(in srgb, var(--outline) 38%, transparent)',
               boxShadow:

@@ -63,7 +63,7 @@ export default function FullScreenTimer({
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         transition={SPATIAL_EXPRESSIVE_DEFAULT}
-        className="fixed inset-0 z-[95] flex flex-col justify-between p-6 sm:p-10 select-none overflow-hidden bg-slate-950/96 backdrop-blur-2xl text-white dark"
+        className="fixed inset-0 z-[95] flex flex-col justify-between p-6 sm:p-10 select-none overflow-hidden bg-slate-950/97 text-white dark"
       >
         {/* Top Bar / Header */}
         <div className="flex items-center justify-between w-full max-w-5xl mx-auto z-10 shrink-0">
@@ -95,7 +95,7 @@ export default function FullScreenTimer({
                   whileTap={{ scale: 0.92 }}
                   transition={PRESS_SPRING}
                   onClick={() => addSeconds(60)}
-                  className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold backdrop-blur-md transition-colors cursor-pointer"
+                  className="px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-colors cursor-pointer"
                   title="Add 1 minute"
                 >
                   +1m
@@ -104,7 +104,7 @@ export default function FullScreenTimer({
                   whileTap={{ scale: 0.92 }}
                   transition={PRESS_SPRING}
                   onClick={() => addSeconds(300)}
-                  className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold backdrop-blur-md transition-colors cursor-pointer"
+                  className="px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-colors cursor-pointer"
                   title="Add 5 minutes"
                 >
                   +5m
@@ -175,9 +175,6 @@ export default function FullScreenTimer({
                 strokeLinecap="round"
                 fill="none"
                 className="transition-[stroke-dashoffset,stroke] duration-300 ease-out"
-                style={{
-                  filter: `drop-shadow(0 0 10px ${styles.strokeColor}) drop-shadow(0 0 20px ${styles.strokeColor}88)`,
-                }}
               />
             </svg>
 
@@ -202,7 +199,7 @@ export default function FullScreenTimer({
                         ? 'clamp(2.5rem, 6.5vw, 4.5rem)'
                         : 'clamp(3.75rem, 11vw, 7.25rem)',
                       color: styles.strokeColor,
-                      filter: `drop-shadow(0 0 14px ${styles.strokeColor}66)`,
+                      textShadow: `0 0 18px ${styles.strokeColor}55`,
                     }}
                   >
                     {timeInfo.formatted}
@@ -291,7 +288,7 @@ export default function FullScreenTimer({
               onSeek={onSeek ?? (() => {})}
               onOpenFullPlayer={() => {}}
               onClose={onClose}
-              className="pointer-events-auto shrink-0 bg-slate-900/90 text-white border-white/15 shadow-2xl backdrop-blur-xl"
+              className="pointer-events-auto shrink-0 bg-slate-900/95 text-white border-white/15 shadow-2xl"
             />
           </div>
         )}

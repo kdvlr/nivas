@@ -10,9 +10,8 @@ import {
 import { resetTabletConfetti } from '../../lib/confettiEngine'
 import { CELEBRATIONS, type Celebration, type CelebrationName } from './animations'
 import RiveCelebrationStage from './RiveCelebrationStage'
-import { prewarmRiveRuntime } from './riveRuntime'
 import { runSadAnimation, type SadAnimationName, type SadAnimationOptions } from './sad-animations'
-import StoryboardStage, { prewarmStoryboards } from './StoryboardStage'
+import StoryboardStage from './StoryboardStage'
 
 const DURATION_MS = 3800
 
@@ -55,11 +54,6 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
   const suppressedUntilRef = useRef<number>(0)
 
   const COOLDOWN_MS = 2 * 60 * 1000 // 2-minute non-repeat cooldown
-
-  useEffect(() => {
-    prewarmRiveRuntime()
-    prewarmStoryboards()
-  }, [])
 
   const stop = useCallback((suppressDurationMs = 0) => {
     if (suppressDurationMs > 0) {

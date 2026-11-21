@@ -569,9 +569,9 @@ def _resized_variant(decoded_path: str, orig_path: Path, cache_dir: Path, max_px
         except Exception as e:
             tmp_path.unlink(missing_ok=True)
             print(f"Failed to generate {max_px}px variant for {decoded_path}: {e}")
-            return FileResponse(orig_path)
+            return FileResponse(orig_path, headers={"Cache-Control": "public, max-age=86400"})
 
-    return FileResponse(out_path)
+    return FileResponse(out_path, headers={"Cache-Control": "public, max-age=86400"})
 
 
 @router.get("/thumbnail/{file_path:path}")
@@ -594,10 +594,10 @@ def get_poster(file_path: str):
     decoded_path, orig_path = _resolve_photo_path(file_path)
     out = derivatives.poster_path(orig_path)
     if out.exists():
-        return FileResponse(out, media_type="image/jpeg")
+        return FileResponse(out, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=86400"})
     built = derivatives.make_poster(orig_path)
     if built is not None:
-        return FileResponse(built, media_type="image/jpeg")
+        return FileResponse(built, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=86400"})
     raise HTTPException(status_code=404, detail="No poster available")
 
 

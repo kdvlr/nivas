@@ -97,6 +97,28 @@ def init_db() -> None:
             conn.execute(text("ALTER TABLE recipes ADD COLUMN nutrition JSON DEFAULT NULL"))
         except Exception:
             pass
+        # Performance indexes for hot dashboard queries
+        conn.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_calendar_events_sel_range "
+                "ON calendar_events (selection_id, start, end)"
+            )
+        )
+        conn.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_coin_transactions_person_created "
+                "ON coin_transactions (person_name, created_at)"
+            )
+        )
+        conn.execute(
+            text("CREATE INDEX IF NOT EXISTS ix_tasks_completed ON tasks (completed)")
+        )
+        conn.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_chores_assigned_completed "
+                "ON chores (assigned_to, completed)"
+            )
+        )
 
 
 def get_db() -> Generator[Session, None, None]:

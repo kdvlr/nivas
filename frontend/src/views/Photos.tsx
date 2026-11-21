@@ -38,9 +38,22 @@ const MediaTile = ({ item, onClick }: { item: MediaItem; onClick: () => void }) 
   const [isPlaying, setIsPlaying] = useState(false)
   const [imgError, setImgError] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
+  const fallbackVideoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // IntersectionObserver to auto-play Live Photos when they scroll into view
+  // Release hardware video decoder on unmount for fallback video preview (when no server poster exists)
+  useEffect(() => {
+    return () => {
+      const v = fallbackVideoRef.current
+      if (v) {
+        v.pause()
+        v.removeAttribute('src')
+        v.load()
+      }
+    }
+  }, [])
+
+  // IntersectionObserver to mount and auto-play Live Photos ONLY when scrolled into view
   useEffect(() => {
     if (item.type !== 'live_photo' || !item.videoUrl) return
 
@@ -48,15 +61,8 @@ const MediaTile = ({ item, onClick }: { item: MediaItem; onClick: () => void }) 
       ([entry]) => {
         if (entry.isIntersecting) {
           setIsPlaying(true)
-          if (activeGalleryLiveVideo && activeGalleryLiveVideo !== videoRef.current) {
-            activeGalleryLiveVideo.pause()
-          }
-          activeGalleryLiveVideo = videoRef.current
-          videoRef.current?.play().catch((err) => console.log('Live Photo autoplay blocked:', err))
         } else {
           setIsPlaying(false)
-          videoRef.current?.pause()
-          if (activeGalleryLiveVideo === videoRef.current) activeGalleryLiveVideo = null
         }
       },
       { threshold: 0.6 } // Play when 60% of the tile is visible in the viewport
@@ -67,15 +73,26 @@ const MediaTile = ({ item, onClick }: { item: MediaItem; onClick: () => void }) 
 
     return () => {
       if (currentRef) observer.unobserve(currentRef)
-      if (activeGalleryLiveVideo === videoRef.current) activeGalleryLiveVideo = null
-      const v = videoRef.current
-      if (v) {
-        v.pause()
-        v.removeAttribute('src')
-        v.load()
-      }
     }
   }, [item.type, item.videoUrl])
+
+  // Start playback when mounted and release hardware MediaCodec decoder immediately on stop/unmount
+  useEffect(() => {
+    if (!isPlaying) return
+    const v = videoRef.current
+    if (!v) return
+    if (activeGalleryLiveVideo && activeGalleryLiveVideo !== v) {
+      activeGalleryLiveVideo.pause()
+    }
+    activeGalleryLiveVideo = v
+    v.play().catch((err) => console.log('Live Photo autoplay blocked:', err))
+    return () => {
+      if (activeGalleryLiveVideo === v) activeGalleryLiveVideo = null
+      v.pause()
+      v.removeAttribute('src')
+      v.load()
+    }
+  }, [isPlaying])
 
   return (
     <motion.div
@@ -108,6 +125,7 @@ const MediaTile = ({ item, onClick }: { item: MediaItem; onClick: () => void }) 
             <img src={item.posterUrl} alt={item.name} loading="lazy" className="w-full h-full object-cover" />
           ) : (
             <video
+              ref={fallbackVideoRef}
               src={`${item.url}#t=0.1`} // Seek to 0.1s to force the browser to render a preview poster frame
               preload="metadata" // Download metadata only to conserve bandwidth and speed up layout
               muted
@@ -140,23 +158,21 @@ const MediaTile = ({ item, onClick }: { item: MediaItem; onClick: () => void }) 
             }`}
           />
 
-          {/* Inline auto-playing video layer */}
-          {item.videoUrl && (
+          {/* Inline auto-playing video layer (mounted only while visible to protect hardware decoders) */}
+          {isPlaying && item.videoUrl && (
             <video
               ref={videoRef}
               src={item.videoUrl}
-              preload="metadata"
+              preload="auto"
               muted
               playsInline
               loop
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
-                isPlaying ? 'opacity-100' : 'opacity-0 pointer-events-none'
-              }`}
+              className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300 opacity-100"
             />
           )}
 
           {/* Live Photo Circle Badge */}
-          <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-md text-white text-[9px] font-bold tracking-wider shadow-sm select-none pointer-events-none">
+          <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/65 text-white text-[9px] font-bold tracking-wider shadow-sm select-none pointer-events-none">
             <Icon name="adjust" className="text-[10px] animate-pulse text-indigo-400" />
             <span>LIVE</span>
           </div>
@@ -386,7 +402,7 @@ export default function Photos({ onStartSlideshow }: { onStartSlideshow?: () => 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[110] bg-neutral-950/98 backdrop-blur-md flex flex-col"
+            className="fixed inset-0 z-[110] bg-neutral-950/98 flex flex-col"
           >
             {/* Top Toolbar */}
             <div className="flex items-start justify-between p-4 z-10 text-white gap-4 w-full">
