@@ -12,12 +12,33 @@ export const HARVEST_EXPRESS_CSS = `.harvest-express-stage {
 .harvest-express-stage.is-paused * {
   animation-play-state: paused !important;
 }
+.harvest-express-stage .region-hidden,
+.harvest-express-stage .region-hidden * {
+  animation-play-state: paused !important;
+}
+.harvest-express-stage .harvest-stage-canvas {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1920px;
+  height: 1080px;
+  transform-origin: center center;
+  overflow: hidden;
+  contain: strict;
+}
 .harvest-express-stage svg.scene {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
   display: block;
+}
+.harvest-express-stage svg.harvest-scene-layer {
+  position: absolute;
+  display: block;
+  overflow: visible;
+  pointer-events: none;
 }
 .harvest-express-stage.theme-day {
     --sky-1: #2b4c7e;

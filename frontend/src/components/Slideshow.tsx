@@ -5915,11 +5915,23 @@ export default function Slideshow({
     }
   }, [])
 
+  const starsHidden = autumnScene || thanksgivingExpress
+  const fxHidden = thanksgivingExpress && kind !== 'rainy' && kind !== 'stormy' && kind !== 'snowy'
+  const starsHiddenRef = useRef(starsHidden)
+  starsHiddenRef.current = starsHidden
+  const fxHiddenRef = useRef(fxHidden)
+  fxHiddenRef.current = fxHidden
+
   // Keep the engines alive across quality changes. They read the current tier
   // from stateRef, preserving active fireworks and their launch schedule.
+  // Pause hidden canvas loops during Thanksgiving/Autumn stages to save tablet GPU/CPU.
   useEffect(() => {
-    const stopStars = starRef.current ? startStarCanvas(starRef.current, () => stateRef.current) : undefined
-    const stopFx = fxRef.current ? startFxCanvas(fxRef.current, () => stateRef.current, bgFxRef.current) : undefined
+    const stopStars = starRef.current
+      ? startStarCanvas(starRef.current, () => ({ ...stateRef.current, paused: stateRef.current.paused || starsHiddenRef.current }))
+      : undefined
+    const stopFx = fxRef.current
+      ? startFxCanvas(fxRef.current, () => ({ ...stateRef.current, paused: stateRef.current.paused || fxHiddenRef.current }), bgFxRef.current)
+      : undefined
     return () => {
       stopStars?.()
       stopFx?.()

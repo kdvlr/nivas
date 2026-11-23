@@ -22,6 +22,7 @@ function phaseToThemeClass(phase: HarvestExpressPhase): string {
 }
 
 function HarvestExpressStageInner({ phase, paused, slideTick }: HarvestExpressStageProps) {
+  const stageRef = useRef<HTMLDivElement>(null)
   const hostRef = useRef<HTMLDivElement>(null)
   const controllerRef = useRef<HarvestExpressController | null>(null)
   const lastTickRef = useRef<number>(slideTick)
@@ -35,6 +36,39 @@ function HarvestExpressStageInner({ phase, paused, slideTick }: HarvestExpressSt
   const [regionIdx, setRegionIdx] = useState<number>(initialRegion)
   const regionIdxRef = useRef<number>(initialRegion)
   regionIdxRef.current = regionIdx
+
+  // Inject scoped stylesheet once per document so region HUD re-renders never re-parse CSS
+  useEffect(() => {
+    const styleId = 'nivas-harvest-express-css'
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement('style')
+      style.id = styleId
+      style.textContent = HARVEST_EXPRESS_CSS
+      document.head.appendChild(style)
+    }
+  }, [])
+
+  // Keep the 1920x1080 stage canvas scaled identically to preserveAspectRatio="xMidYMid slice"
+  // via ResizeObserver (cached outside rAF to prevent layout thrashing).
+  useEffect(() => {
+    const stage = stageRef.current
+    const host = hostRef.current
+    if (!stage || !host) return
+    const updateScale = () => {
+      const w = stage.clientWidth || window.innerWidth || 1920
+      const h = stage.clientHeight || window.innerHeight || 1080
+      const scale = Math.max(w / 1920, h / 1080)
+      host.style.transform = `translate3d(-50%, -50%, 0) scale(${scale})`
+    }
+    updateScale()
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(updateScale) : null
+    ro?.observe(stage)
+    window.addEventListener('resize', updateScale)
+    return () => {
+      ro?.disconnect()
+      window.removeEventListener('resize', updateScale)
+    }
+  }, [])
 
   // Mount the procedural SVG scene & 60fps kinematics engine once
   useEffect(() => {
@@ -80,12 +114,12 @@ function HarvestExpressStageInner({ phase, paused, slideTick }: HarvestExpressSt
 
   return (
     <div
+      ref={stageRef}
       className={`harvest-express-stage ${phaseToThemeClass(phase)} ${paused ? 'is-paused' : ''}`}
       style={{ zIndex: 1 }}
       aria-hidden="true"
     >
-      <style>{HARVEST_EXPRESS_CSS}</style>
-      <div ref={hostRef} className="absolute inset-0 w-full h-full" />
+      <div ref={hostRef} className="harvest-stage-canvas" />
 
       {/* Coast-to-Coast Route Progress Pill (editorial railway timetable style) */}
       <div

@@ -1065,9 +1065,22 @@ export function mountHarvestExpress(
     return `M${hx},${hy} L${kx.toFixed(1)},${ky.toFixed(1)} L${fx.toFixed(1)},${fy.toFixed(1)}`;
   }
 
-  function updateFluidCreatures(tSec) {
+  function tagRegionOwner(el) {
+    const owner = el && typeof el.closest === 'function' ? el.closest('[id^="far-"], [id^="mid-"]') : null;
+    if (!owner || !owner.id) return { regionIdx: -1, isFar: false };
+    return { regionIdx: Number(owner.id.split('-')[1]), isFar: owner.id.startsWith('far-') };
+  }
+  for (const b of animatedBirds) Object.assign(b, tagRegionOwner(b.g));
+  for (const ch of animatedChases) Object.assign(ch, tagRegionOwner(ch.roam));
+  for (const d of animatedDeer) Object.assign(d, tagRegionOwner(d.roam));
+  for (const e of animatedElk) Object.assign(e, tagRegionOwner(e.roam));
+
+  function updateFluidCreatures(tSec, farVis, midVis) {
+    const isRegVis = (item) => item.regionIdx < 0 || (item.isFar ? farVis[item.regionIdx] : midVis[item.regionIdx]);
+
     // 1. Multi-joint aerodynamic birds (shoulder + delayed wingtip wave!)
     for (const b of animatedBirds) {
+      if (!isRegVis(b)) continue;
       const spd = b.slow ? 3.2 : 6.8;
       const ph = tSec * spd - b.phase;
       const shoulder = Math.sin(ph);
@@ -1109,6 +1122,7 @@ export function mountHarvestExpress(
     const runW = tSec * 15.5;
 
     for (const ch of animatedChases) {
+      if (!isRegVis(ch)) continue;
       ch.roam.setAttribute('transform', `translate(${roamX.toFixed(1)}, 0) scale(${dir}, 1)`);
 
       const gPh = tSec * 13.5;
@@ -1153,6 +1167,7 @@ export function mountHarvestExpress(
     const pitch = -Math.cos(bp) * Math.sign(Math.sin(bp) || 1) * 9;
     const air2 = Math.abs(Math.sin(bp - 0.25));
     for (const d of animatedDeer) {
+      if (!isRegVis(d)) continue;
       d.roam.setAttribute('transform', `translate(${dX.toFixed(1)}, 0) scale(${dDir}, 1)`);
       d.g.setAttribute('transform', `translate(0, ${(-air * 18).toFixed(1)}) rotate(${pitch.toFixed(1)} 0 -18)`);
       d.legFn.setAttribute('d', deerLegs(air, 11, -14, true));
@@ -1173,6 +1188,7 @@ export function mountHarvestExpress(
     const wp = walking ? tSec * 6.5 : Math.PI / 2;
     const eStride = walking ? 6.5 : 0, eLift = walking ? 4.5 : 0;
     for (const e of animatedElk) {
+      if (!isRegVis(e)) continue;
       e.roam.setAttribute('transform', `translate(${ex.toFixed(1)}, 0) scale(${eDir}, 1)`);
       e.g.setAttribute('transform', `translate(0, ${(walking ? -Math.abs(Math.sin(wp)) * 1.3 : 0).toFixed(1)})`);
       e.lFn.setAttribute('d', twoJointLeg(13, -17, wp, eStride, eLift, 17));
@@ -1202,8 +1218,153 @@ export function mountHarvestExpress(
 
   const farWorldEl = byId('farWorld');
   const midWorldEl = byId('midWorld');
-  const isAndroidTablet = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
-  const frameBudgetMs = isAndroidTablet ? 35 : 0; // ~28fps cap on Android WebView (Mali-G52)
+  const stageHost = svg.parentElement;
+
+  // Promote parallax & static planes out of the monolithic 2,100-node SVG into
+  // independent GPU-composited <svg> layers so Mali-G52 / Chromium translates
+  // them on the compositor thread with zero per-frame vector re-rasterization.
+  let gpuLayersReady = false;
+  let cloudFarLayer: SVGSVGElement | null = null;
+  let cloudLayer: SVGSVGElement | null = null;
+  let telegraphLayer: SVGSVGElement | null = null;
+  let embankmentLayer: SVGSVGElement | null = null;
+  let tiesGpuLayer: SVGSVGElement | null = null;
+  let foregroundLayer: SVGSVGElement | null = null;
+  const farLayers: (SVGSVGElement | null)[] = REGIONS.map(() => null);
+  const midLayers: (SVGSVGElement | null)[] = REGIONS.map(() => null);
+
+  function promoteNodeToLayer(
+    node: SVGGraphicsElement | null,
+    zIndex: number,
+    opts: { pad?: number; yOffset?: number; promoteGpu?: boolean; fullStage?: boolean } = {},
+  ): SVGSVGElement | null {
+    if (!node || !stageHost) return null;
+    const pad = opts.pad ?? 20;
+    const yOffset = opts.yOffset ?? 0;
+    let bx = 0, by = 0, bw = 1920, bh = 1080;
+    if (!opts.fullStage) {
+      const bb = node.getBBox();
+      if (!bb || (bb.width <= 0 && bb.height <= 0)) return null;
+      bx = Math.floor(bb.x - pad);
+      by = Math.floor(bb.y - pad);
+      bw = Math.ceil(bb.width + pad * 2);
+      bh = Math.ceil(bb.height + pad * 2);
+    }
+    const layerSvg = elSVG('svg', {
+      class: 'harvest-scene-layer',
+      viewBox: `${bx} ${by} ${bw} ${bh}`,
+    }) as SVGSVGElement;
+    layerSvg.style.left = `${bx}px`;
+    layerSvg.style.top = `${by + yOffset}px`;
+    layerSvg.style.width = `${bw}px`;
+    layerSvg.style.height = `${bh}px`;
+    layerSvg.style.zIndex = String(zIndex);
+    if (opts.promoteGpu) {
+      layerSvg.style.willChange = 'transform';
+    }
+    // Clear ineffective inner will-change so Blink doesn't allocate redundant software surfaces
+    if (node.style && node.style.willChange) {
+      node.style.willChange = '';
+    }
+    layerSvg.appendChild(node);
+    stageHost.appendChild(layerSvg);
+    return layerSvg;
+  }
+
+  try {
+    if (stageHost && typeof cloudPlaneFar?.getBBox === 'function') {
+      const probe = cloudPlaneFar.getBBox();
+      if (probe && probe.width > 0) {
+        svg.style.zIndex = '1';
+        const horizonHazeRect = farWorldEl?.nextElementSibling as SVGGraphicsElement | null;
+        const nightDimRect = midWorldEl?.nextElementSibling as SVGGraphicsElement | null;
+        const trackGroup = tiesLayer?.parentElement as SVGGraphicsElement | null;
+        const trackChildren = trackGroup ? Array.from(trackGroup.children) : [];
+        const roadbedRect = trackChildren[0] as SVGGraphicsElement | null;
+        const railRects = trackChildren.filter(c => c !== roadbedRect && c !== tiesLayer) as SVGGraphicsElement[];
+
+        cloudFarLayer = promoteNodeToLayer(cloudPlaneFar, 2, { pad: 16, promoteGpu: true });
+        cloudLayer = promoteNodeToLayer(cloudPlane, 3, { pad: 16, promoteGpu: true });
+
+        for (let i = 0; i < REGIONS.length; i++) {
+          farLayers[i] = promoteNodeToLayer(farEls[i], 4, { pad: 120, promoteGpu: false });
+        }
+        if (horizonHazeRect && horizonHazeRect.tagName.toLowerCase() === 'rect') {
+          promoteNodeToLayer(horizonHazeRect, 6, { fullStage: true });
+        }
+
+        telegraphLayer = promoteNodeToLayer(telegraphPlane, 7, { pad: 16, promoteGpu: true });
+
+        for (let i = 0; i < REGIONS.length; i++) {
+          midLayers[i] = promoteNodeToLayer(midEls[i], 8, { pad: 120, promoteGpu: false });
+        }
+        if (nightDimRect && nightDimRect.tagName.toLowerCase() === 'rect') {
+          promoteNodeToLayer(nightDimRect, 10, { fullStage: true });
+        }
+
+        embankmentLayer = promoteNodeToLayer(embankmentPlane, 11, { pad: 16, promoteGpu: true });
+
+        if (roadbedRect) {
+          promoteNodeToLayer(roadbedRect, 12, { pad: 4, yOffset: 962 });
+        }
+        tiesGpuLayer = promoteNodeToLayer(tiesLayer, 13, { pad: 8, yOffset: 962, promoteGpu: true });
+        if (railRects.length > 0) {
+          const railsSvg = elSVG('svg', {
+            class: 'harvest-scene-layer',
+            viewBox: '0 0 1920 30',
+          }) as SVGSVGElement;
+          railsSvg.style.left = '0px';
+          railsSvg.style.top = '962px';
+          railsSvg.style.width = '1920px';
+          railsSvg.style.height = '30px';
+          railsSvg.style.zIndex = '14';
+          for (const r of railRects) railsSvg.appendChild(r);
+          stageHost.appendChild(railsSvg);
+        }
+
+        // Dynamic Train + Steam + Sparks + Leaves layer (the ONLY layer that mutates per frame)
+        const dynamicSvg = elSVG('svg', {
+          class: 'harvest-scene-layer',
+          viewBox: '0 0 1920 1080',
+        }) as SVGSVGElement;
+        dynamicSvg.style.left = '0px';
+        dynamicSvg.style.top = '0px';
+        dynamicSvg.style.width = '1920px';
+        dynamicSvg.style.height = '1080px';
+        dynamicSvg.style.zIndex = '15';
+        dynamicSvg.appendChild(worldSteamLayer);
+        dynamicSvg.appendChild(worldSparkLayer);
+        dynamicSvg.appendChild(worldLeafLayer);
+        dynamicSvg.appendChild(trainGroup);
+        dynamicSvg.appendChild(worldCockLayer);
+        stageHost.appendChild(dynamicSvg);
+
+        foregroundLayer = promoteNodeToLayer(foregroundPlane, 16, { pad: 16, promoteGpu: true });
+
+        // Remove now-empty wrapper groups from base static sky SVG
+        farWorldEl?.remove();
+        midWorldEl?.remove();
+        trackGroup?.remove();
+
+        gpuLayersReady = true;
+      }
+    }
+  } catch {
+    gpuLayersReady = false;
+  }
+
+  const farVis = REGIONS.map(() => false);
+  const midVis = REGIONS.map(() => false);
+  const farWasVis = REGIONS.map(() => null as boolean | null);
+  const midWasVis = REGIONS.map(() => null as boolean | null);
+  const setLayerX = (gpuEl: SVGSVGElement | null, svgEl: SVGGraphicsElement, x: number) => {
+    const xr = x.toFixed(1);
+    if (gpuLayersReady && gpuEl) {
+      gpuEl.style.transform = `translate3d(${xr}px, 0, 0)`;
+    } else {
+      svgEl.setAttribute('transform', `translate(${xr}, 0)`);
+    }
+  };
 
   function renderWorldAtCamera(camX, dt, tSec) {
     // Speed estimate -> wheel motion blur (spokes dissolve into a blurred disc at speed)
@@ -1219,39 +1380,95 @@ export function mountHarvestExpress(
       dwSpokes.forEach(s => s.setAttribute('opacity', (1 - blurK * 0.85).toFixed(2)));
       dwBlur.forEach(s => s.setAttribute('opacity', (blurK * 0.65).toFixed(2)));
     }
-    cloudPlaneFar.setAttribute('transform', `translate(${-((camX * 0.08) % 1920 + 1920) % 1920}, 0)`);
-    cloudPlane.setAttribute('transform', `translate(${-((camX * 0.14) % 1920 + 1920) % 1920}, 0)`);
+    setLayerX(cloudFarLayer, cloudPlaneFar, -(((camX * 0.08) % 1920 + 1920) % 1920));
+    setLayerX(cloudLayer, cloudPlane, -(((camX * 0.14) % 1920 + 1920) % 1920));
 
-    const visibleRegs = [];
+    const visibleFar: { i: number; delta: number }[] = [];
+    const visibleMid: { i: number; delta: number }[] = [];
     for (let i = 0; i < REGIONS.length; i++) {
       const delta = wrapSigned(camX - i * REGION_SPAN, TOTAL_LOOP);
-      if (Math.abs(delta) < REGION_SPAN * 1.05) {
-        visibleRegs.push({ i, delta });
-        farEls[i].style.display = '';
-        midEls[i].style.display = '';
-        farEls[i].setAttribute('transform', `translate(${(-delta * P_FAR).toFixed(1)}, 0)`);
-        midEls[i].setAttribute('transform', `translate(${(-delta * P_MID).toFixed(1)}, 0)`);
-      } else {
-        farEls[i].style.display = 'none';
-        midEls[i].style.display = 'none';
+      const isFarVisible = Math.abs(delta) < 5800;
+      const isMidVisible = Math.abs(delta) < 3800;
+      farVis[i] = isFarVisible;
+      midVis[i] = isMidVisible;
+
+      if (isFarVisible) {
+        visibleFar.push({ i, delta });
+        if (farWasVis[i] !== true) {
+          farWasVis[i] = true;
+          if (gpuLayersReady && farLayers[i]) {
+            farLayers[i]!.style.visibility = 'visible';
+            farLayers[i]!.classList.remove('region-hidden');
+            farLayers[i]!.style.willChange = 'transform';
+          } else {
+            farEls[i].style.display = '';
+          }
+        }
+        setLayerX(farLayers[i], farEls[i], -delta * P_FAR);
+      } else if (farWasVis[i] !== false) {
+        farWasVis[i] = false;
+        if (gpuLayersReady && farLayers[i]) {
+          farLayers[i]!.style.visibility = 'hidden';
+          farLayers[i]!.classList.add('region-hidden');
+          farLayers[i]!.style.willChange = 'auto';
+        } else {
+          farEls[i].style.display = 'none';
+        }
       }
-    }
-    visibleRegs.sort((a, b) => b.delta - a.delta);
-    // Re-inserting a node restarts every CSS animation inside it (mist, fireflies, waving bear...),
-    // which caused flicker/frozen animations. Only re-order when the visible set actually changes.
-    const orderKey = visibleRegs.map(v => v.i).join(',');
-    if (orderKey !== lastOrderKey) {
-      lastOrderKey = orderKey;
-      for (const v of visibleRegs) {
-        farWorldEl.appendChild(farEls[v.i]);
-        midWorldEl.appendChild(midEls[v.i]);
+
+      if (isMidVisible) {
+        visibleMid.push({ i, delta });
+        if (midWasVis[i] !== true) {
+          midWasVis[i] = true;
+          if (gpuLayersReady && midLayers[i]) {
+            midLayers[i]!.style.visibility = 'visible';
+            midLayers[i]!.classList.remove('region-hidden');
+            midLayers[i]!.style.willChange = 'transform';
+          } else {
+            midEls[i].style.display = '';
+          }
+        }
+        setLayerX(midLayers[i], midEls[i], -delta * P_MID);
+      } else if (midWasVis[i] !== false) {
+        midWasVis[i] = false;
+        if (gpuLayersReady && midLayers[i]) {
+          midLayers[i]!.style.visibility = 'hidden';
+          midLayers[i]!.classList.add('region-hidden');
+          midLayers[i]!.style.willChange = 'auto';
+        } else {
+          midEls[i].style.display = 'none';
+        }
       }
     }
 
-    telegraphPlane.setAttribute('transform', `translate(${(-((camX * 0.56) % 380 + 380) % 380).toFixed(1)}, 0)`);
-    embankmentPlane.setAttribute('transform', `translate(${(-((camX) % 640 + 640) % 640).toFixed(1)}, 0)`);
-    tiesLayer.setAttribute('transform', `translate(${(-((camX) % 70 + 70) % 70).toFixed(1)}, 0)`);
-    foregroundPlane.setAttribute('transform', `translate(${(-((camX * 1.65) % 960 + 960) % 960).toFixed(1)}, 0)`);
+    if (gpuLayersReady) {
+      // Order visible regions via z-index without ever detaching/re-attaching DOM subtrees
+      visibleFar.sort((a, b) => b.delta - a.delta);
+      for (let k = 0; k < visibleFar.length; k++) {
+        const layer = farLayers[visibleFar[k].i];
+        if (layer) layer.style.zIndex = String(4 + Math.min(k, 1));
+      }
+      visibleMid.sort((a, b) => b.delta - a.delta);
+      for (let k = 0; k < visibleMid.length; k++) {
+        const layer = midLayers[visibleMid[k].i];
+        if (layer) layer.style.zIndex = String(8 + Math.min(k, 1));
+      }
+    } else {
+      visibleFar.sort((a, b) => b.delta - a.delta);
+      const orderKey = visibleFar.map(v => v.i).join(',');
+      if (orderKey !== lastOrderKey) {
+        lastOrderKey = orderKey;
+        for (const v of visibleFar) {
+          farWorldEl.appendChild(farEls[v.i]);
+          midWorldEl.appendChild(midEls[v.i]);
+        }
+      }
+    }
+
+    setLayerX(telegraphLayer, telegraphPlane, -(((camX * 0.56) % 380 + 380) % 380));
+    setLayerX(embankmentLayer, embankmentPlane, -(((camX) % 640 + 640) % 640));
+    setLayerX(tiesGpuLayer, tiesLayer, -(((camX) % 70 + 70) % 70));
+    setLayerX(foregroundLayer, foregroundPlane, -(((camX * 1.65) % 960 + 960) % 960));
 
     // Exact Walschaerts / Piston Crank Kinematics!
     const driveRad = (camX / 25);
@@ -1352,7 +1569,7 @@ export function mountHarvestExpress(
       lf.el.setAttribute('transform', `translate(${sx.toFixed(1)}, ${lf.y.toFixed(1)}) rotate(${lf.rot.toFixed(1)})`);
     }
 
-    updateFluidCreatures(tSec);
+    updateFluidCreatures(tSec, farVis, midVis);
   }
 
   updateHUD(activeIdx);
@@ -1372,10 +1589,6 @@ export function mountHarvestExpress(
       rafId = 0;
       return;
     }
-    if (frameBudgetMs > 0 && now - lastT < frameBudgetMs) {
-      rafId = requestAnimationFrame(tick);
-      return;
-    }
     const dt = Math.min(0.05, Math.max(0, (now - lastT) / 1000));
     lastT = now;
     simTime += dt;
@@ -1385,12 +1598,14 @@ export function mountHarvestExpress(
       cameraX = surgeStartCam + (surgeEndCam - surgeStartCam) * easeInOutCubic(surgeT);
       if (surgeT >= 1) {
         surging = false;
-        cameraX = ((cameraX % TOTAL_LOOP) + TOTAL_LOOP) % TOTAL_LOOP;
+        cameraX = surgeEndCam;
         updateHUD(pendingIdx);
         setScissor(true);
       }
     } else {
-      cameraX = (cameraX + CRUISE_SPEED * dt) % TOTAL_LOOP;
+      // Keep cameraX monotonic/unwrapped so clouds, poles, embankment, ties, steam,
+      // sparks, and leaves never jump or vanish when looping from Stop 7 back to Stop 1.
+      cameraX += CRUISE_SPEED * dt;
     }
 
     renderWorldAtCamera(cameraX, dt, simTime);
@@ -1414,9 +1629,11 @@ export function mountHarvestExpress(
       surgeDelayTimer = null;
       if (destroyed) return;
       surgeStartCam = cameraX;
-      let dest = pendingIdx * REGION_SPAN - 450;
-      while (dest <= surgeStartCam + 600) dest += TOTAL_LOOP;
-      surgeEndCam = dest;
+      const curMod = ((cameraX % TOTAL_LOOP) + TOTAL_LOOP) % TOTAL_LOOP;
+      const targetMod = (((pendingIdx * REGION_SPAN - 450) % TOTAL_LOOP) + TOTAL_LOOP) % TOTAL_LOOP;
+      let diff = targetMod - curMod;
+      while (diff <= 600) diff += TOTAL_LOOP;
+      surgeEndCam = surgeStartCam + diff;
       surgeT = 0;
       surging = true;
     }, 320);
