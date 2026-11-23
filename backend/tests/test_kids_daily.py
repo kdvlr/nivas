@@ -488,3 +488,18 @@ def test_dynamic_kid_birthdays_auto_aging(client):
 
     today_resp = client.get("/api/kids-daily/today?date=2026-12-10").json()
     assert today_resp["age_groups"] == [6, 10]
+
+
+def test_curriculum_uses_age_calibrated_lenses_and_unique_subdomains():
+    from app.services.kids_curriculum import LENSES_FUN_FACT, LENSES_OLDER, LENSES_YOUNG
+
+    all_subs = [sub for subs in CURRICULUM_PILLARS.values() for sub in subs]
+    assert len(all_subs) == 160
+    assert len(set(all_subs)) == 160
+
+    state = {}
+    for day in range(1, 10):
+        state, assign = draw_daily_curriculum(state, f"2026-11-{day:02d}")
+        assert assign["fun_fact"]["lens"] in LENSES_FUN_FACT
+        assert assign["stem_5yo"]["lens"] in LENSES_YOUNG
+        assert assign["stem_9yo"]["lens"] in LENSES_OLDER
