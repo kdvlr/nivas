@@ -7,6 +7,20 @@ import { AutumnLeafTopper, DiyaTopper, ThanksgivingTopper } from './SeasonalPhot
 import { WoodlandBackdrop } from './fall/WoodlandBackdrop'
 import { WoodlandStage, GratitudeNote } from './fall/WoodlandStage'
 import { HarvestExpressStage } from './thanksgiving/HarvestExpressStage'
+import { WinterVillageStage } from './winter/WinterVillageStage'
+import {
+  ChristmasRibbon,
+  GingerbreadTopper,
+  HollyBowTopper,
+  JingleBellTopper,
+  SnowflakeWreathTopper,
+} from './winter/HolidayToppers'
+import {
+  christmasPhotoYear,
+  computeDailyChoresComplete,
+  isChristmasEveEvening,
+} from '../lib/decemberMagic'
+import type { ChoreScheduleItem } from '../lib/chores'
 import { CornHuskTopper, MiniPumpkinTopper, PineConeTopper, ThanksgivingRibbon } from './fall/FallToppers'
 import { isAutumnScene, isFrostyWoodland, isWindyWoodland, thanksgivingPhotoYear } from './fall/fallDates'
 import { DiwaliHorizon } from './DiwaliHorizon'
@@ -2225,32 +2239,67 @@ function RunningElf() {
     return clearAll
   }, [])
 
-  if (!phase) return null
+  const [sparklePoof, setSparklePoof] = useState(false)
+  const isEveFarewell = isChristmasEveEvening(getSeasonalDate(), null, getQueryParam('holiday') || getQueryParam('season'))
+
+  if (!phase && !sparklePoof) return null
 
   const isExiting = phase === 'exit'
   const offX = spot.enterFrom.x ?? 0
   const offY = spot.enterFrom.y ?? 0
 
+  const handleTapElf = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (sparklePoof) return
+    setSparklePoof(true)
+    setPhase('exit')
+    setTimeout(() => {
+      setSparklePoof(false)
+      setPhase(null)
+    }, 650)
+  }
+
   return (
     <div
-      className="fixed pointer-events-none z-30 select-none"
+      className="fixed z-30 select-none pointer-events-auto cursor-pointer"
       style={spot.style}
+      onClick={handleTapElf}
+      title="Tap the Scout Elf!"
     >
-      <motion.div
-        key={spot.id}
-        initial={{ x: offX, y: offY, opacity: 0.2 }}
-        animate={{
-          x: isExiting ? offX : 0,
-          y: isExiting ? offY : 0,
-          opacity: isExiting ? 0 : 1,
-        }}
-        transition={{
-          duration: isExiting ? 0.9 : 0.8,
-          ease: isExiting ? [0.4, 0, 1, 1] : [0.22, 1, 0.36, 1],
-        }}
-      >
-        <ScoutElfSvg phase={phase} mood={mood} hasLedge={spot.hasLedge} />
-      </motion.div>
+      {sparklePoof && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <motion.span
+            initial={{ scale: 0.4, opacity: 1 }}
+            animate={{ scale: 1.9, opacity: 0 }}
+            transition={{ duration: 0.55 }}
+            className="text-4xl"
+          >
+            ✨❄️✨
+          </motion.span>
+        </div>
+      )}
+      {phase && (
+        <motion.div
+          key={spot.id}
+          initial={{ x: offX, y: offY, opacity: 0.2 }}
+          animate={{
+            x: isExiting ? offX : 0,
+            y: isExiting ? offY : 0,
+            opacity: isExiting ? 0 : 1,
+          }}
+          transition={{
+            duration: isExiting ? 0.55 : 0.8,
+            ease: isExiting ? [0.4, 0, 1, 1] : [0.22, 1, 0.36, 1],
+          }}
+        >
+          <ScoutElfSvg phase={phase} mood={mood} hasLedge={spot.hasLedge} />
+          {isEveFarewell && (
+            <div className="absolute -bottom-1 right-0 text-xl pointer-events-none" title="Heading back to the North Pole!">
+              🧳
+            </div>
+          )}
+        </motion.div>
+      )}
     </div>
   )
 }
@@ -5548,6 +5597,7 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
   const elfFlip = pair ? pairIdx === 0 : false
   const bowPosition = pair ? (pairIdx === 0 ? 'right' : 'left') : 'right'
   const tgPhotoYear = (autumnCard || harvestExpress) ? thanksgivingPhotoYear(item.date_taken, seasonalNow) : null
+  const xmasPhotoYear = isChristmasSeason(seasonalNow) ? christmasPhotoYear(item.date_taken, seasonalNow) : null
 
   const card = (
     <div
@@ -5595,6 +5645,7 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
         </div>
       )}
       {(autumnCard || harvestExpress) && tgPhotoYear !== null && <ThanksgivingRibbon year={tgPhotoYear} />}
+      {xmasPhotoYear !== null && <ChristmasRibbon year={xmasPhotoYear} />}
       {media}
       {caption}
     </div>
@@ -5655,9 +5706,16 @@ function PhotoRig({ item, phase, kind, index, pair, pairIdx, quality, seasonalDa
       </div>
     )
   } else if (isChristmasSeason(seasonalNow)) {
+    const HolidayTopper = [
+      CandyCane,
+      HollyBowTopper,
+      GingerbreadTopper,
+      JingleBellTopper,
+      SnowflakeWreathTopper,
+    ][Math.abs(seedOffset) % 5]
     topElement = (
       <div className="absolute bottom-[calc(100%-12px)] pointer-events-none select-none z-10">
-        <CandyCane seed={seedOffset} />
+        <HolidayTopper seed={seedOffset} />
       </div>
     )
   } else if (kind === 'snowy') {
@@ -5844,8 +5902,16 @@ export default function Slideshow({
   const seasonalDate = useMemo(() => getSeasonalDate(now), [now])
   const thanksgivingExpress = isThanksgivingWeek(seasonalDate)
   const autumnScene = isAutumnScene(seasonalDate) && !thanksgivingExpress
+  const winterVillage = isChristmasSeason(seasonalDate) && !thanksgivingExpress && !autumnScene
   const { data: gratitudeData } = useData<{ notes: GratitudeNote[] }>('/api/setup/gratitude', ['gratitude'])
   const gratitudeNotes = useMemo(() => (autumnScene ? gratitudeData?.notes ?? [] : []), [autumnScene, gratitudeData])
+  // Live daily chores status for the December Eiffel Tower Christmas Tree shimmer!
+  const { data: choresList } = useData<Array<ChoreScheduleItem & { completed?: boolean }>>('/api/chores', ['chores'], 5 * 60 * 1000)
+  const todayLocalStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  const dailyChoresStatus = useMemo(
+    () => (winterVillage && choresList ? computeDailyChoresComplete(choresList, todayLocalStr) : { total: 0, done: 0, allDone: false }),
+    [winterVillage, choresList, todayLocalStr],
+  )
   const [isOverlayOpen, setIsOverlayOpen] = useState(false)
 
   useEffect(() => {
@@ -5915,7 +5981,7 @@ export default function Slideshow({
     }
   }, [])
 
-  const starsHidden = autumnScene || thanksgivingExpress
+  const starsHidden = autumnScene || thanksgivingExpress || winterVillage
   const fxHidden = thanksgivingExpress && kind !== 'rainy' && kind !== 'stormy' && kind !== 'snowy'
   const starsHiddenRef = useRef(starsHidden)
   starsHiddenRef.current = starsHidden
@@ -5959,6 +6025,16 @@ export default function Slideshow({
         list.length = 0
         while (tg.length || rest.length) {
           if (tg.length) list.push(tg.shift()!)
+          list.push(...rest.splice(0, 2))
+        }
+      }
+    } else if (isChristmasSeason(seasonalNow)) {
+      const xmas = list.filter((p) => christmasPhotoYear(p.date_taken, seasonalNow) !== null)
+      if (xmas.length) {
+        const rest = list.filter((p) => christmasPhotoYear(p.date_taken, seasonalNow) === null)
+        list.length = 0
+        while (xmas.length || rest.length) {
+          if (xmas.length) list.push(xmas.shift()!)
           list.push(...rest.splice(0, 2))
         }
       }
@@ -6287,12 +6363,12 @@ export default function Slideshow({
         style={{ background: 'radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.26) 100%)' }}
       />
 
-      {!autumnScene && !thanksgivingExpress && <MemoCelestialGlow phase={phase} kind={kind} />}
+      {!autumnScene && !thanksgivingExpress && !winterVillage && <MemoCelestialGlow phase={phase} kind={kind} />}
 
-      {/* Stars + shooting stars (behind photos; woodland & Harvest Express paint their own sky) */}
-      <canvas ref={starRef} className={`absolute inset-0 w-full h-full pointer-events-none ${autumnScene || thanksgivingExpress ? 'hidden' : ''}`} />
+      {/* Stars + shooting stars (behind photos; woodland, Harvest Express & Winter Village paint their own sky) */}
+      <canvas ref={starRef} className={`absolute inset-0 w-full h-full pointer-events-none ${autumnScene || thanksgivingExpress || winterVillage ? 'hidden' : ''}`} />
 
-      {!autumnScene && !thanksgivingExpress && <MemoCloudLayer phase={phase} kind={kind} quality={quality} />}
+      {!autumnScene && !thanksgivingExpress && !winterVillage && <MemoCloudLayer phase={phase} kind={kind} quality={quality} />}
 
       {/* Thanksgiving Week Coast-to-Coast Harvest Express Stage */}
       {thanksgivingExpress && (
@@ -6300,6 +6376,18 @@ export default function Slideshow({
           phase={phase}
           paused={!!skyState.paused}
           slideTick={currentIdx}
+        />
+      )}
+
+      {/* December Storybook Winter Village & 24-Day Growing Tree (with Eiffel Tower chore shimmer!) */}
+      {winterVillage && (
+        <WinterVillageStage
+          phase={phase}
+          paused={!!skyState.paused}
+          seasonalDate={seasonalDate}
+          choresAllDone={dailyChoresStatus.allDone}
+          choresDoneCount={dailyChoresStatus.done}
+          choresTotalCount={dailyChoresStatus.total}
         />
       )}
 
@@ -6531,7 +6619,7 @@ export default function Slideshow({
         </div>
       )}
 
-      {!thanksgivingExpress && (
+      {!thanksgivingExpress && !winterVillage && (
         <div className="absolute bottom-6 left-6 text-white/35 text-xs font-light tracking-wider z-30 pointer-events-none">
           Tap screen to return
         </div>

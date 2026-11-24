@@ -75,6 +75,9 @@ export function getSeasonalDate(now: Date = new Date()): Date {
     if (o === 'december' || o === 'dec' || o === 'elves' || o === 'elf') {
       return new Date(2026, 11, 15)
     }
+    if (o === 'xmaseve' || o === 'christmaseve') {
+      return new Date(2026, 11, 24, 20, 0, 0)
+    }
     if (o === 'christmas' || o === 'dec25' || o === 'santa') {
       return new Date(2026, 11, 25)
     }
@@ -134,15 +137,15 @@ export function isDecember(d?: Date): boolean {
 export function isChristmasSeason(d?: Date): boolean {
   const date = d ?? getSeasonalDate()
   const override = getHolidayOverride()?.toLowerCase()
-  if (override === 'christmas' || override === 'santa') return true
-  // Christmas season with string lights runs Dec 1 through Dec 25 (removed on Dec 26)
+  if (override === 'christmas' || override === 'santa' || override === 'xmaseve' || override === 'christmaseve') return true
+  // Christmas season with string lights & winter village runs Dec 1 through Dec 25 (removed on Dec 26)
   return date.getMonth() === 11 && date.getDate() >= 1 && date.getDate() <= 25
 }
 
 export function isElfSeason(d?: Date): boolean {
   const date = d ?? getSeasonalDate()
   const override = getHolidayOverride()?.toLowerCase()
-  if (override === 'elves' || override === 'elf') return true
+  if (override === 'elves' || override === 'elf' || override === 'xmaseve' || override === 'christmaseve') return true
   // Elves run Dec 1 through Dec 24, strictly removed on Dec 25/26
   return date.getMonth() === 11 && date.getDate() >= 1 && date.getDate() <= 24
 }

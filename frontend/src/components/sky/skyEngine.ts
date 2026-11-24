@@ -27,8 +27,10 @@ import {
   isNovember,
   isDiwaliSeason,
   isChristmasDay,
+  isChristmasSeason,
   isNewYearSeason,
 } from './queryParam'
+import { isChristmasEveEvening } from '../../lib/decemberMagic'
 
 // Cap the frame rate: full-screen 60fps canvas work is wasted on ambient
 // weather. rAF still schedules, we just skip paints.
@@ -2302,6 +2304,8 @@ export function startFxCanvas(
     november: boolean
     diwali: boolean
     christmasDay: boolean
+    christmasSeason: boolean
+    christmasEveEvening: boolean
     newYearSeason: boolean
   } | null = null
 
@@ -2333,31 +2337,36 @@ export function startFxCanvas(
         november: isNovember(seasonalDate),
         diwali: isDiwaliSeason(seasonalDate),
         christmasDay: isChristmasDay(seasonalDate),
+        christmasSeason: isChristmasSeason(seasonalDate),
+        christmasEveEvening: isChristmasEveEvening(seasonalDate, null, getQueryParam('holiday') || getQueryParam('season')),
         newYearSeason: isNewYearSeason(seasonalDate),
       }
     }
-    const { swaraBirthday, october, november, diwali, christmasDay, newYearSeason } = season
+    const { swaraBirthday, october, november, diwali, christmasDay, christmasSeason, christmasEveEvening, newYearSeason } = season
 
     // Decide whether this layer has anything to render at all. A clear day has
     // no weather and no fireflies, so the canvas would otherwise clear and
     // composite a full-screen transparent layer 30x/sec for nothing. Hide the
     // element entirely in that case so the compositor skips it.
     const wantsWeather = kind === 'rainy' || kind === 'stormy' || kind === 'snowy'
-    const wantsFlies = (phase === 'night' || phase === 'dusk') && calm
+    const wantsAmbientDecSnow = christmasSeason && !wantsWeather
+    const wantsFlies = (phase === 'night' || phase === 'dusk') && calm && !christmasSeason
     const wantsLeaves = november && !diwali && calm
     const wantsLanterns = diwali && (phase === 'night' || phase === 'dusk') && calm
     const wantsDiwaliGround = diwali && calm
     const wantsDiwaliFireworks = diwali && calm
     const wantsSwaraFireworks = swaraBirthday && (phase === 'dusk' || phase === 'night') && calm
     const batsPossible = october && calm
-    const creaturesPossible = !diwali && calm && (daylight || november)
+    const creaturesPossible = !diwali && !christmasSeason && calm && (daylight || november)
     const witchPossible = october && calm
-    const santaPossible = christmasDay && calm
+    // Santa flies on Christmas Eve evening and all Christmas Day in any weather!
+    const santaPossible = christmasDay || christmasEveEvening
     const wantsCandy = daylight && (swaraBirthday || getQueryParam('candy') === '1') && calm
     const batCakePossible = (swaraBirthday || Boolean(getQueryParam('batcake'))) && calm
 
     const active =
       wantsWeather ||
+      wantsAmbientDecSnow ||
       wantsFlies ||
       wantsLeaves ||
       wantsLanterns ||
@@ -4096,19 +4105,22 @@ export function startFxCanvas(
       }
     }
 
-    // Snow.
-    if (kind === 'snowy') {
-      ctx.fillStyle = 'rgba(255,255,255,0.85)'
-      for (const f of flakes) {
-        f.y += f.speed * dt
+    // Snow (full storm on snowy weather, or gentle ambient flurries during December Christmas season).
+    if (kind === 'snowy' || wantsAmbientDecSnow) {
+      const gentle = kind !== 'snowy'
+      const count = gentle ? Math.min(flakes.length, 28) : flakes.length
+      ctx.fillStyle = gentle ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.85)'
+      for (let i = 0; i < count; i++) {
+        const f = flakes[i]
+        f.y += f.speed * (gentle ? 0.55 : 1) * dt
         if (f.y - 4 > h) {
           f.y = -4
           f.x = Math.random() * w
         }
         const x = f.x + Math.sin(t / 1400 + f.offset) * f.sway * 0.4
-        ctx.globalAlpha = 0.4 + (f.r - 1.2) / 2.2 * 0.5
+        ctx.globalAlpha = (0.4 + (f.r - 1.2) / 2.2 * 0.5) * (gentle ? 0.8 : 1)
         ctx.beginPath()
-        ctx.arc(x, f.y, f.r, 0, Math.PI * 2)
+        ctx.arc(x, f.y, gentle ? f.r * 0.85 : f.r, 0, Math.PI * 2)
         ctx.fill()
       }
       ctx.globalAlpha = 1
