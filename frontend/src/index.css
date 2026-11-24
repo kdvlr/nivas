@@ -2,9 +2,9 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
-}
+/* Note: Do not globally disable animations under prefers-reduced-motion, because
+   Android kiosks with animator_duration_scale=0 report prefers-reduced-motion: reduce
+   in WebView and would otherwise freeze slideshow & train animations. */
 
 @theme {
   --font-sans: var(--app-font);

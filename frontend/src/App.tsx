@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback, lazy, Suspense } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, MotionConfig } from 'framer-motion'
 import {
   PRESS_SPRING,
   EXPRESSIVE_ENTER,
@@ -1070,12 +1070,14 @@ function AppContent() {
 
 export default function App() {
   return (
-    <CelebrationProvider>
-      <RewardCelebrationProvider>
-        <TimerProvider>
-          <AppContent />
-        </TimerProvider>
-      </RewardCelebrationProvider>
-    </CelebrationProvider>
+    <MotionConfig reducedMotion="never">
+      <CelebrationProvider>
+        <RewardCelebrationProvider>
+          <TimerProvider>
+            <AppContent />
+          </TimerProvider>
+        </RewardCelebrationProvider>
+      </CelebrationProvider>
+    </MotionConfig>
   )
 }
