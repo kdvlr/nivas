@@ -318,8 +318,10 @@ function AppContent() {
     api.post<any>('/api/ytmusic/player/prev').catch(() => {})
   }
 
+  // Disabled: ambient light fluctuations on the wall tablet's Rockchip lux sensor
+  // trigger phantom next/resume requests even when playback is paused/stopped.
   const waveGestureFeedback = useWaveGesture({
-    enabled: Boolean(currentTrack),
+    enabled: false,
     isPlaying,
     onWave: handleNextTrack,
     onHover: handleTogglePlay,
