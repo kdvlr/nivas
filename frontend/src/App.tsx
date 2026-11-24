@@ -11,6 +11,7 @@ import { CelebrationProvider } from './components/celebrations/CelebrationContex
 import { RewardCelebrationProvider } from './components/celebrations/RewardCelebrationContext'
 import Icon from './components/Icon'
 import { useClock, useData } from './lib/hooks'
+import { useWaveGesture } from './lib/useWaveGesture'
 import {
   applyTheme,
   getAppearance,
@@ -316,6 +317,13 @@ function AppContent() {
   const handlePrevTrack = () => {
     api.post<any>('/api/ytmusic/player/prev').catch(() => {})
   }
+
+  const waveGestureFeedback = useWaveGesture({
+    enabled: Boolean(currentTrack),
+    isPlaying,
+    onWave: handleNextTrack,
+    onHover: handleTogglePlay,
+  })
 
   const seekDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
@@ -1041,6 +1049,21 @@ function AppContent() {
           onClose={handleStopPlayer}
         />
         <MiniTimerCapsule />
+        <AnimatePresence>
+          {waveGestureFeedback && (
+            <motion.div
+              key={waveGestureFeedback.label}
+              initial={{ opacity: 0, y: -16, scale: 0.94 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -12, scale: 0.94 }}
+              transition={EXPRESSIVE_ENTER}
+              className="pointer-events-none fixed top-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-2.5 rounded-full bg-slate-900/90 dark:bg-slate-100/95 text-white dark:text-slate-950 px-5 py-2.5 shadow-xl backdrop-blur-md text-sm font-medium tracking-wide"
+            >
+              <Icon name={waveGestureFeedback.icon} className="text-lg" />
+              <span>{waveGestureFeedback.label}</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </>
   )
 }
