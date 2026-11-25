@@ -199,7 +199,7 @@ export default function Shopping() {
 
         <LayoutGroup>
           {(active.length > 0 || done.length > 0) && (
-            <div className="columns-1 sm:columns-2 md:columns-3 2xl:columns-4 gap-4 h-auto lg:h-[calc(100vh-245px)] [column-fill:auto]">
+            <div className="columns-1 sm:columns-2 md:columns-3 2xl:columns-4 gap-4 h-auto lg:h-[calc(100dvh-245px)] [column-fill:auto]">
               <AnimatePresence initial={false}>
                 {active.map((item) => (
                   <ActiveShoppingItem key={item.id} item={item} toggle={toggle} />
