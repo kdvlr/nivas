@@ -63,8 +63,16 @@ for r in (calendar, tasks, chores, shopping, recipes, rewards, setup, weather, p
 async def websocket_endpoint(ws: WebSocket):
     await manager.connect(ws)
     try:
+        # Immediately push current player state so newly connected / resumed
+        # PWA clients never stay stuck on a stale previous track.
+        try:
+            await ws.send_json({"type": "player_state", "payload": player_engine.get_state()})
+        except Exception:
+            pass
         while True:
-            await ws.receive_text()  # keepalive pings from the client
+            text = await ws.receive_text()  # keepalive pings from the client
+            if text == "ping":
+                await ws.send_text('{"type":"pong"}')
     except WebSocketDisconnect:
         manager.disconnect(ws)
 

@@ -22,7 +22,7 @@ import {
   type Appearance,
   type ThemeStyle,
 } from './lib/theme'
-import { onWsMessage, startWs } from './lib/ws'
+import { ensureWsConnected, onWsMessage, onWsOpen, startWs } from './lib/ws'
 import Home from './views/Home'
 const Calendar = lazy(() => import('./views/Calendar'))
 const Chores = lazy(() => import('./views/Chores'))
@@ -262,10 +262,17 @@ function AppContent() {
 
   useEffect(() => {
     syncPlayerState()
-    return onWsMessage((message) => {
+    const unsubMsg = onWsMessage((message) => {
       if (message.type !== 'player_state' || !message.payload) return
       applyPlayerState(message.payload)
     })
+    const unsubOpen = onWsOpen(() => {
+      syncPlayerState()
+    })
+    return () => {
+      unsubMsg()
+      unsubOpen()
+    }
   }, [applyPlayerState, syncPlayerState])
 
   const handleDismissPlaybackError = useCallback(async () => {
@@ -403,16 +410,31 @@ function AppContent() {
     }
   }, [config?.appearance])
 
-  // WebSocket refreshes keep config current; reconcile once when returning to a visible tab.
+  // WebSocket refreshes keep config and player state current; reconcile immediately
+  // when returning to a visible tab / unlocking an iOS PWA, and verify WS liveness.
   useEffect(() => {
-    const onVis = () => {
-      if (document.visibilityState === 'visible') reloadConfig()
+    const reconcile = () => {
+      if (document.visibilityState === 'visible') {
+        reloadConfig()
+        syncPlayerState()
+        ensureWsConnected()
+      }
     }
-    document.addEventListener('visibilitychange', onVis)
+    const onFocusOrPageShow = () => {
+      syncPlayerState()
+      ensureWsConnected()
+    }
+    document.addEventListener('visibilitychange', reconcile)
+    window.addEventListener('pageshow', onFocusOrPageShow)
+    window.addEventListener('focus', onFocusOrPageShow)
+    window.addEventListener('online', onFocusOrPageShow)
     return () => {
-      document.removeEventListener('visibilitychange', onVis)
+      document.removeEventListener('visibilitychange', reconcile)
+      window.removeEventListener('pageshow', onFocusOrPageShow)
+      window.removeEventListener('focus', onFocusOrPageShow)
+      window.removeEventListener('online', onFocusOrPageShow)
     }
-  }, [reloadConfig])
+  }, [reloadConfig, syncPlayerState])
 
   useEffect(() => {
     applyTheme()
@@ -903,7 +925,7 @@ function AppContent() {
 
           {/* Floating Dock: MiniPlayerBar (left of FAB on both mobile & desktop) + Themed FAB */}
           <div
-            className={`fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] right-4 lg:bottom-6 lg:right-6 z-30 flex flex-row items-end gap-3 pointer-events-none transition-opacity duration-200 ${
+            className={`fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] right-3 sm:right-4 lg:bottom-6 lg:right-6 z-30 flex flex-row items-end gap-2 sm:gap-3 pointer-events-none transition-opacity duration-200 ${
               moreOpen ? 'opacity-0' : 'opacity-100'
             }`}
           >
