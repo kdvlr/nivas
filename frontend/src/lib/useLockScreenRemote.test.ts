@@ -8,9 +8,9 @@ import {
 } from './lockScreenRemoteHelpers.ts'
 
 describe('useLockScreenRemote helpers', () => {
-  it('generates a valid silent 16-bit mono PCM WAV header and zeroed payload', () => {
-    const wav = createSilentWavBytes(1, 8000)
-    assert.equal(wav.byteLength, 44 + 8000 * 2)
+  it('generates a valid 30s 16-bit mono PCM WAV header with imperceptible 1-LSB dither', () => {
+    const wav = createSilentWavBytes(30, 8000)
+    assert.equal(wav.byteLength, 44 + 30 * 8000 * 2)
 
     const view = new DataView(wav.buffer)
     const riff = String.fromCharCode(wav[0], wav[1], wav[2], wav[3])
@@ -20,14 +20,12 @@ describe('useLockScreenRemote helpers', () => {
     assert.equal(view.getUint16(20, true), 1) // PCM
     assert.equal(view.getUint16(22, true), 1) // mono
     assert.equal(view.getUint32(24, true), 8000) // sample rate
-    assert.equal(view.getUint32(40, true), 16000) // data bytes
+    assert.equal(view.getUint32(40, true), 30 * 8000 * 2) // data bytes
 
-    // All PCM samples should be silent zeroes
-    let nonZero = 0
-    for (let i = 44; i < wav.length; i++) {
-      if (wav[i] !== 0) nonZero++
-    }
-    assert.equal(nonZero, 0)
+    // All PCM samples should be imperceptible +/-1 LSB (-90 dBFS)
+    assert.equal(view.getInt16(44, true), 1)
+    assert.equal(view.getInt16(46, true), -1)
+    assert.equal(view.getInt16(48, true), 1)
   })
 
   it('resolves relative local artwork paths and upgrades YouTube thumbnails', () => {

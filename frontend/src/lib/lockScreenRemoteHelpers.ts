@@ -1,11 +1,15 @@
 export const LOCK_SCREEN_REMOTE_STORAGE_KEY = 'nivas_lockscreen_remote'
 
 /**
- * Generates a valid 1-second 8 kHz 16-bit mono silent PCM WAV buffer.
- * Uncompressed PCM WAV activates iOS Safari's MediaSession reliably with
- * zero network overhead and no codec spin-up glitches.
+ * Generates a valid 16-bit mono PCM WAV buffer with imperceptible 1-LSB dither
+ * (-90 dBFS, completely inaudible).
+ *
+ * iOS Safari / WebKit suppresses Lock Screen Now Playing cards for audio
+ * shorter than ~5 seconds (to ignore UI sound effects) and may deprioritize
+ * all-zero buffers. Using a 30-second 8 kHz PCM WAV (~480 KB in memory) with
+ * 1-LSB alternating samples ensures iOS promotes the Lock Screen card reliably.
  */
-export function createSilentWavBytes(durationSeconds = 1, sampleRate = 8000): Uint8Array {
+export function createSilentWavBytes(durationSeconds = 30, sampleRate = 8000): Uint8Array {
   const numChannels = 1
   const bitsPerSample = 16
   const numSamples = Math.max(1, Math.floor(durationSeconds * sampleRate))
@@ -32,6 +36,12 @@ export function createSilentWavBytes(durationSeconds = 1, sampleRate = 8000): Ui
   view.setUint16(34, bitsPerSample, true)
   writeAscii(36, 'data')
   view.setUint32(40, dataByteLength, true)
+
+  // Write imperceptible +/-1 LSB dither (-90 dBFS) so iOS AVAudioSession
+  // recognizes non-silent playback and promotes the Lock Screen card.
+  for (let i = 0; i < numSamples; i++) {
+    view.setInt16(44 + i * 2, i % 2 === 0 ? 1 : -1, true)
+  }
 
   return new Uint8Array(buffer)
 }

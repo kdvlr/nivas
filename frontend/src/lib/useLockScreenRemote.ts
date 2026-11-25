@@ -137,19 +137,22 @@ export function useLockScreenRemote({
     if (!supported) return null
     if (audioRef.current) return audioRef.current
 
-    const wavBytes = createSilentWavBytes(1, 8000)
+    const wavBytes = createSilentWavBytes(30, 8000)
     const blob = new Blob([wavBytes.buffer as ArrayBuffer], { type: 'audio/wav' })
     const url = URL.createObjectURL(blob)
     blobUrlRef.current = url
 
-    const audio = new Audio(url)
+    const audio = document.createElement('audio')
+    audio.src = url
     audio.loop = true
     audio.preload = 'auto'
+    audio.muted = false
+    audio.volume = 1.0
     audio.setAttribute('playsinline', '')
     audio.setAttribute('webkit-playsinline', '')
-    // Keep volume non-zero so iOS Safari grants MediaSession focus; the WAV
-    // itself is 100% digital silence (all zero PCM samples).
-    audio.volume = 0.01
+    audio.setAttribute('aria-hidden', 'true')
+    audio.style.display = 'none'
+    document.body.appendChild(audio)
 
     audio.addEventListener('pause', () => {
       const msSinceAction =
@@ -170,9 +173,14 @@ export function useLockScreenRemote({
       programmaticPauseRef.current = false
     })
 
+    // Re-apply MediaPositionState whenever the 30s silent loop wraps or loads
+    // so iOS Safari never resets the Lock Screen scrubber back to 30s.
+    audio.addEventListener('loadedmetadata', () => syncPositionState(true))
+    audio.addEventListener('seeked', () => syncPositionState(true))
+
     audioRef.current = audio
     return audio
-  }, [supported])
+  }, [supported, syncPositionState])
 
   const teardownAudio = useCallback(() => {
     const audio = audioRef.current
@@ -182,6 +190,7 @@ export function useLockScreenRemote({
         audio.pause()
         audio.src = ''
         audio.load()
+        audio.remove()
       } catch {
         // ignore
       }
