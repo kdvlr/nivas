@@ -6214,6 +6214,9 @@ export default function Slideshow({
   }, [])
 
   const handleRootClick = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement | null)?.closest('[data-no-slideshow-dismiss]')) {
+      return
+    }
     // If a balloon was just popped (within the last 800ms), ignore this click
     // so popping a balloon never dismisses the slideshow, while tapping anywhere
     // else on screen continues to exit back to the dashboard as normal.

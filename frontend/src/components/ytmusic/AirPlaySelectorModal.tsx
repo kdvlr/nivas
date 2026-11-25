@@ -518,13 +518,22 @@ export default function AirPlaySelectorModal({ isOpen, onClose, anchorRef, ancho
   const modalContent = (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[150] pointer-events-auto" onPointerDown={onClose}>
+        <div
+          data-no-slideshow-dismiss="true"
+          className="fixed inset-0 z-[150] pointer-events-auto"
+          onPointerDown={(event) => {
+            event.stopPropagation()
+            onClose()
+          }}
+          onClick={(event) => event.stopPropagation()}
+        >
           <motion.div
             initial={{ opacity: 0, scale: 0.94, y: position.bottom ? 6 : -6 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: position.bottom ? 6 : -6 }}
             transition={{ duration: 0.16, ease: 'easeOut' }}
             onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
             style={{
               top: position.top,
               bottom: position.bottom,

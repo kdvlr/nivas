@@ -86,11 +86,14 @@ export default function MiniPlayerBar({
   return (
     <>
       <motion.div
+        data-no-slideshow-dismiss="true"
         initial={{ y: 20, opacity: 0, scale: 0.95 }}
         animate={{ y: 0, opacity: 1, scale: 1 }}
         exit={{ y: 20, opacity: 0, scale: 0.95 }}
         transition={{ duration: 0.2, ease: 'easeOut' }}
         onClick={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+        onTouchEnd={(e) => e.stopPropagation()}
         className={`${
           docked
             ? (slideshowMode
