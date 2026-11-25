@@ -1206,10 +1206,15 @@ class PlayerEngine:
             url = source if (source.startswith("http://") or source.startswith("https://")) else f"https://music.youtube.com/watch?v={source}"
             tmp_base = f"{output_path}.{os.getpid()}_{threading.get_ident()}_{int(time.time() * 1000)}.tmp"
 
+            pot_url = os.environ.get("POT_PROVIDER_URL", "http://192.168.100.229:4416")
             ydl_opts = {
                 "format": "141/140/bestaudio[ext=m4a]/bestaudio/best",
                 "outtmpl": f"{tmp_base}.%(ext)s",
                 "remote_components": ["ejs:github"],
+                "extractor_args": {
+                    "youtube": {"player_client": ["web_music", "web", "tv"]},
+                    "youtubepot-bgutilhttp": {"base_url": [pot_url]},
+                },
                 "quiet": True,
                 "no_warnings": True,
             }
