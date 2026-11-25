@@ -22,7 +22,7 @@ export function getPlayerElapsed() {
   return elapsed
 }
 
-function subscribe(listener: () => void) {
+export function subscribePlayerElapsed(listener: () => void) {
   listeners.add(listener)
   return () => {
     listeners.delete(listener)
@@ -30,5 +30,5 @@ function subscribe(listener: () => void) {
 }
 
 export function usePlayerElapsed() {
-  return useSyncExternalStore(subscribe, getPlayerElapsed, getPlayerElapsed)
+  return useSyncExternalStore(subscribePlayerElapsed, getPlayerElapsed, getPlayerElapsed)
 }

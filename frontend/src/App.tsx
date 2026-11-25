@@ -12,6 +12,7 @@ import { RewardCelebrationProvider } from './components/celebrations/RewardCeleb
 import Icon from './components/Icon'
 import { useClock, useData } from './lib/hooks'
 import { useWaveGesture } from './lib/useWaveGesture'
+import { useLockScreenRemote } from './lib/useLockScreenRemote'
 import {
   applyTheme,
   getAppearance,
@@ -284,7 +285,20 @@ function AppContent() {
     }
   }, [])
 
+  const handlePlay = () => {
+    api.post<any>('/api/ytmusic/player/resume').then((res) => {
+      if (res) setIsPlaying(res.isPlaying)
+    }).catch(() => {})
+  }
+
+  const handlePause = () => {
+    api.post<any>('/api/ytmusic/player/pause').then((res) => {
+      if (res) setIsPlaying(res.isPlaying)
+    }).catch(() => {})
+  }
+
   const handlePlayTrack = (track: Track, queue?: Track[]) => {
+    if (lockScreenRemote.enabled && !lockScreenRemote.isArmed) lockScreenRemote.arm()
     api.post<any>('/api/ytmusic/player/play', {
       videoId: track.videoId,
       title: track.title,
@@ -306,6 +320,7 @@ function AppContent() {
   }
 
   const handleTogglePlay = () => {
+    if (lockScreenRemote.enabled && !lockScreenRemote.isArmed) lockScreenRemote.arm()
     const endpoint = isPlaying ? '/api/ytmusic/player/pause' : '/api/ytmusic/player/resume'
     api.post<any>(endpoint).then((res) => {
       if (res) setIsPlaying(res.isPlaying)
@@ -313,6 +328,7 @@ function AppContent() {
   }
 
   const handleNextTrack = () => {
+    if (lockScreenRemote.enabled && !lockScreenRemote.isArmed) lockScreenRemote.arm()
     api.post<any>('/api/ytmusic/player/next').then((res) => {
       if (res) {
         setIsPlaying(res.isPlaying)
@@ -323,6 +339,7 @@ function AppContent() {
   }
 
   const handlePrevTrack = () => {
+    if (lockScreenRemote.enabled && !lockScreenRemote.isArmed) lockScreenRemote.arm()
     api.post<any>('/api/ytmusic/player/prev').catch(() => {})
   }
 
@@ -365,6 +382,18 @@ function AppContent() {
       setCurrentTrack(null)
     })
   }
+
+  const lockScreenRemote = useLockScreenRemote({
+    currentTrack,
+    isPlaying,
+    durationSeconds,
+    onPlay: handlePlay,
+    onPause: handlePause,
+    onNext: handleNextTrack,
+    onPrev: handlePrevTrack,
+    onSeek: handleSeek,
+    onStop: handleStopPlayer,
+  })
 
   const handleQueueTrack = (track: Track, playNext: boolean) => {
     api.post<any>(playNext ? '/api/ytmusic/player/queue/next' : '/api/ytmusic/player/queue', track)
@@ -917,6 +946,7 @@ function AppContent() {
                     onSeek={handleSeek}
                     onQueueTrack={handleQueueTrack}
                     onQueueChange={handleQueueChange}
+                    lockScreenRemote={lockScreenRemote}
                   />
                 </Suspense>
               </motion.div>
