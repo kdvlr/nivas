@@ -51,6 +51,7 @@ class PlayRequest(BaseModel):
     source: Optional[str] = "youtube"
     isPureAudio: Optional[bool] = None
     filePath: Optional[str] = None
+    fileFormat: Optional[str] = None
     queue: Optional[List[Dict[str, Any]]] = None
 
 class QueueRequest(BaseModel):
@@ -63,6 +64,7 @@ class QueueRequest(BaseModel):
     source: Optional[str] = "youtube"
     isPureAudio: Optional[bool] = None
     filePath: Optional[str] = None
+    fileFormat: Optional[str] = None
 
 class QueueUpdateRequest(BaseModel):
     queue: List[Dict[str, Any]]

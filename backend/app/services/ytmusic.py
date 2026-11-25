@@ -736,7 +736,16 @@ class YTMusicService:
         is_local = vid.startswith("local:")
         source = item.get("source") or ("local" if is_local else "youtube")
         is_pure = True if is_local else (item.get("isPureAudio") if item.get("isPureAudio") is not None else YTMusicService.is_pure_audio(item))
-        return {
+        file_format = item.get("fileFormat") or item.get("file_format")
+        if is_local and not file_format:
+            try:
+                from .local_music import local_music_service
+                local_trk = local_music_service.get_track(vid.split("local:", 1)[1])
+                if local_trk:
+                    file_format = local_trk.get("fileFormat")
+            except Exception:
+                pass
+        res = {
             "videoId": vid,
             "title": item.get("title") or "Unknown Title",
             "artist": artist or "Unknown Artist",
@@ -746,6 +755,9 @@ class YTMusicService:
             "isPureAudio": is_pure,
             "source": source,
         }
+        if file_format:
+            res["fileFormat"] = file_format
+        return res
 
     @staticmethod
     def normalize_album(item: Dict[str, Any]) -> Optional[Dict[str, Any]]:

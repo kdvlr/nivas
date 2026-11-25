@@ -287,6 +287,7 @@ function AppContent() {
       duration: track.duration,
       isPureAudio: track.isPureAudio,
       source: track.source,
+      fileFormat: track.fileFormat,
       queue,
     }).then((res) => {
       if (res) {

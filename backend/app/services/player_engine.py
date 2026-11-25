@@ -679,6 +679,15 @@ class PlayerEngine:
                     pass
 
         is_local = str(video_id).startswith("local:")
+        file_format = track.get("fileFormat") or track.get("file_format")
+        if is_local and not file_format:
+            try:
+                from .local_music import local_music_service
+                local_trk = local_music_service.get_track(str(video_id).split("local:", 1)[1])
+                if local_trk:
+                    file_format = local_trk.get("fileFormat")
+            except Exception:
+                pass
         self.current_track = {
             "videoId": video_id,
             "title": track.get("title", "Unknown Title"),
@@ -689,6 +698,7 @@ class PlayerEngine:
             "isPureAudio": True if is_local else track.get("isPureAudio", False),
             "source": "local" if is_local else track.get("source", "youtube"),
             "filePath": track.get("filePath"),
+            "fileFormat": file_format,
         }
         self.played_history[video_id] = time.time()
         self.elapsed_seconds = 0

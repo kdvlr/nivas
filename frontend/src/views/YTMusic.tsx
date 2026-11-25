@@ -146,6 +146,23 @@ function getDateRandom(date: Date) {
   }
 }
 
+function FileFormatBadge({ track }: { track: { source?: string; fileFormat?: string } }) {
+  const label = track.source === 'local' ? track.fileFormat : track.source === 'youtube' ? 'YT' : track.fileFormat
+  if (!label) return null
+  const isLossless = label === 'FLAC' || label === 'ALAC' || label === 'WAV' || label === 'AIFF'
+  return (
+    <span
+      className={`shrink-0 rounded px-1 sm:px-1.5 py-0.5 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider border ${
+        isLossless
+          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+          : 'bg-[var(--sc-high)] text-ink-soft border-[var(--outline-var)]'
+      }`}
+    >
+      {label}
+    </span>
+  )
+}
+
 function SongRow({
   track,
   index,
@@ -187,6 +204,7 @@ function SongRow({
         <div className="flex items-center gap-1 sm:gap-1.5 min-w-0">
           <MusicSourceIcon source={track.source} size={12} />
           <p className="truncate text-xs sm:text-[0.95rem] font-semibold text-ink leading-tight">{track.title}</p>
+          <FileFormatBadge track={track} />
           {track.isPureAudio === false && (
             <span className="inline-flex items-center gap-0.5 sm:gap-1 shrink-0 rounded px-1 sm:px-1.5 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/30">
               <Icon name="smart_display" className="text-[10px] sm:text-xs" /> <span className="hidden xs:inline">Video</span>
@@ -2352,9 +2370,13 @@ export default function YTMusicView({
                     )}
                   </div>
                   <div className="min-w-0 flex-1 pr-1">
-                    <h1 className="line-clamp-2 sm:truncate text-sm sm:text-base font-bold text-ink leading-tight">
-                      {currentTrack.title}
-                    </h1>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <MusicSourceIcon source={currentTrack.source} size={13} />
+                      <h1 className="line-clamp-2 sm:truncate text-sm sm:text-base font-bold text-ink leading-tight">
+                        {currentTrack.title}
+                      </h1>
+                      <FileFormatBadge track={currentTrack} />
+                    </div>
                     <p className="mt-1 truncate text-xs text-ink-soft">
                       {currentTrack.artist}
                       {currentTrack.album ? ` · ${currentTrack.album}` : ''}
@@ -2456,7 +2478,11 @@ export default function YTMusicView({
               <div className="hidden border-b border-[var(--outline-var)] px-6 py-5 xl:block">
                 <div className="flex items-center gap-4">
                   <div className="min-w-0 flex-1">
-                    <h1 className="truncate text-xl font-bold text-ink">{currentTrack.title}</h1>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <MusicSourceIcon source={currentTrack.source} size={14} />
+                      <h1 className="truncate text-xl font-bold text-ink">{currentTrack.title}</h1>
+                      <FileFormatBadge track={currentTrack} />
+                    </div>
                     <p className="mt-1 truncate text-sm text-ink-soft">
                       {currentTrack.artist}
                       {currentTrack.album ? ` · ${currentTrack.album}` : ''}
