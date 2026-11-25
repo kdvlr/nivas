@@ -1,6 +1,29 @@
 export const LOCK_SCREEN_REMOTE_STORAGE_KEY = 'nivas_lockscreen_remote'
 
 /**
+ * Returns true on iPhone / iPad (including iPadOS desktop-mode Safari where
+ * navigator.platform is "MacIntel" with touch points > 1), and false on
+ * desktop Macs/PCs and Fully Kiosk wall tablets.
+ */
+export function isIOSDevice(params?: {
+  userAgent?: string
+  platform?: string
+  maxTouchPoints?: number
+  isFullyKiosk?: boolean
+}): boolean {
+  const isFully = params?.isFullyKiosk ?? (typeof window !== 'undefined' && Boolean((window as any).fully))
+  if (isFully) return false
+
+  const ua = params?.userAgent ?? (typeof navigator !== 'undefined' ? navigator.userAgent : '')
+  const platform = params?.platform ?? (typeof navigator !== 'undefined' ? navigator.platform : '')
+  const touchPoints = params?.maxTouchPoints ?? (typeof navigator !== 'undefined' ? navigator.maxTouchPoints : 0)
+
+  if (/iPhone|iPad|iPod/i.test(ua)) return true
+  if (platform === 'MacIntel' && touchPoints > 1) return true
+  return false
+}
+
+/**
  * Generates a valid 16-bit mono PCM WAV buffer with imperceptible 1-LSB dither
  * (-90 dBFS, completely inaudible).
  *

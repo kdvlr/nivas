@@ -2,18 +2,18 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Track } from '../components/ytmusic/MiniPlayerBar'
 import { getPlayerElapsed, subscribePlayerElapsed } from './playerProgress'
 import {
-  LOCK_SCREEN_REMOTE_STORAGE_KEY,
   buildPositionState,
   createSilentWavBytes,
   isExternalAudioInterruption,
+  isIOSDevice,
   resolveArtworkUrl,
 } from './lockScreenRemoteHelpers'
 
 export {
-  LOCK_SCREEN_REMOTE_STORAGE_KEY,
   buildPositionState,
   createSilentWavBytes,
   isExternalAudioInterruption,
+  isIOSDevice,
   resolveArtworkUrl,
 }
 
@@ -21,7 +21,6 @@ export interface LockScreenRemoteState {
   supported: boolean
   enabled: boolean
   isArmed: boolean
-  toggle: () => void
   arm: () => void
 }
 
@@ -35,25 +34,6 @@ export interface UseLockScreenRemoteOptions {
   onPrev: () => void
   onSeek: (seconds: number) => void
   onStop?: () => void
-}
-
-function readStoredEnabled(): boolean {
-  try {
-    return typeof localStorage !== 'undefined' && localStorage.getItem(LOCK_SCREEN_REMOTE_STORAGE_KEY) === '1'
-  } catch {
-    return false
-  }
-}
-
-function writeStoredEnabled(enabled: boolean) {
-  try {
-    if (typeof localStorage !== 'undefined') {
-      if (enabled) localStorage.setItem(LOCK_SCREEN_REMOTE_STORAGE_KEY, '1')
-      else localStorage.removeItem(LOCK_SCREEN_REMOTE_STORAGE_KEY)
-    }
-  } catch {
-    // ignore storage quota / privacy mode errors
-  }
 }
 
 function supportsMediaSession(): boolean {
@@ -72,7 +52,7 @@ export function useLockScreenRemote({
   onStop,
 }: UseLockScreenRemoteOptions): LockScreenRemoteState {
   const supported = supportsMediaSession()
-  const [enabled, setEnabled] = useState<boolean>(() => (supported ? readStoredEnabled() : false))
+  const enabled = supported && isIOSDevice()
   const [isArmed, setIsArmed] = useState<boolean>(false)
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -228,7 +208,7 @@ export function useLockScreenRemote({
   }, [supported])
 
   const arm = useCallback(() => {
-    if (!supported) return
+    if (!enabled) return
     const audio = ensureAudioElement()
     if (!audio) return
 
@@ -250,20 +230,7 @@ export function useLockScreenRemote({
       setIsArmed(true)
       syncPositionState(true)
     }
-  }, [supported, ensureAudioElement, syncPositionState])
-
-  const toggle = useCallback(() => {
-    if (!supported) return
-    if (enabled && isArmed) {
-      setEnabled(false)
-      writeStoredEnabled(false)
-      teardownAudio()
-    } else {
-      setEnabled(true)
-      writeStoredEnabled(true)
-      arm()
-    }
-  }, [supported, enabled, isArmed, teardownAudio, arm])
+  }, [enabled, ensureAudioElement, syncPositionState])
 
   // Sync silent <audio> play/pause with Nivas playback state while armed.
   useEffect(() => {
@@ -390,7 +357,6 @@ export function useLockScreenRemote({
     supported,
     enabled,
     isArmed,
-    toggle,
     arm,
   }
 }

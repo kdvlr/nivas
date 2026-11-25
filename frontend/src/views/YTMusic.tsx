@@ -6,7 +6,6 @@ import AirPlaySelectorModal from '../components/ytmusic/AirPlaySelectorModal'
 import TopClockHeader from '../components/TopClockHeader'
 import MusicSourceIcon from '../components/ytmusic/MusicSourceIcon'
 import { usePlayerElapsed } from '../lib/playerProgress'
-import type { LockScreenRemoteState } from '../lib/useLockScreenRemote'
 
 interface YTMusicViewProps {
   now?: Date
@@ -23,7 +22,6 @@ interface YTMusicViewProps {
   onSeek: (seconds: number) => void
   onQueueTrack: (track: Track, playNext: boolean) => void
   onQueueChange: (queue: Track[]) => void
-  lockScreenRemote?: LockScreenRemoteState
 }
 
 type PlayerTab = 'queue' | 'lyrics'
@@ -260,7 +258,6 @@ export default function YTMusicView({
   onSeek,
   onQueueTrack,
   onQueueChange,
-  lockScreenRemote,
 }: YTMusicViewProps) {
   const getSubViewFromHash = useCallback((): { view: MusicView; search: string } => {
     const hash = window.location.hash
@@ -2413,33 +2410,6 @@ export default function YTMusicView({
                     >
                       <Icon name="skip_next" className="text-2xl" />
                     </button>
-                    {lockScreenRemote?.supported && (
-                      <button
-                        onClick={lockScreenRemote.toggle}
-                        title={
-                          lockScreenRemote.enabled && lockScreenRemote.isArmed
-                            ? 'Lock Screen remote active (tap to turn off)'
-                            : lockScreenRemote.enabled
-                              ? 'Tap to re-arm Lock Screen remote'
-                              : 'Enable Lock Screen remote on this device'
-                        }
-                        aria-label="Toggle Lock Screen remote"
-                        aria-pressed={lockScreenRemote.enabled && lockScreenRemote.isArmed}
-                        className={`flex h-10 w-10 items-center justify-center rounded-full transition cursor-pointer ${
-                          lockScreenRemote.enabled && lockScreenRemote.isArmed
-                            ? 'bg-[var(--primary)]/15 text-[var(--primary)] ring-1 ring-[var(--primary)]/35'
-                            : lockScreenRemote.enabled
-                              ? 'text-[var(--primary)] hover:bg-[var(--sc-high)]'
-                              : 'text-ink-soft hover:bg-[var(--sc-high)] hover:text-ink'
-                        }`}
-                      >
-                        <Icon
-                          name="screen_lock_portrait"
-                          filled={lockScreenRemote.enabled && lockScreenRemote.isArmed}
-                          className="text-xl"
-                        />
-                      </button>
-                    )}
                     <button
                       onClick={(e) => {
                         setAirPlayAnchorEl(e.currentTarget)
@@ -2453,47 +2423,18 @@ export default function YTMusicView({
                     </button>
                   </div>
 
-                  {/* Mobile-only Lock Screen + AirPlay buttons on top-right */}
-                  <div className="flex sm:hidden shrink-0 items-center gap-1.5">
-                    {lockScreenRemote?.supported && (
-                      <button
-                        onClick={lockScreenRemote.toggle}
-                        title={
-                          lockScreenRemote.enabled && lockScreenRemote.isArmed
-                            ? 'Lock Screen remote active (tap to turn off)'
-                            : lockScreenRemote.enabled
-                              ? 'Tap to re-arm Lock Screen remote'
-                              : 'Enable Lock Screen remote on this device'
-                        }
-                        aria-label="Toggle Lock Screen remote"
-                        aria-pressed={lockScreenRemote.enabled && lockScreenRemote.isArmed}
-                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition active:scale-95 cursor-pointer ${
-                          lockScreenRemote.enabled && lockScreenRemote.isArmed
-                            ? 'border-[var(--primary)]/40 bg-[var(--primary)]/15 text-[var(--primary)]'
-                            : lockScreenRemote.enabled
-                              ? 'border-[var(--outline-var)] bg-[var(--sc)] text-[var(--primary)] hover:bg-[var(--sc-high)]'
-                              : 'border-[var(--outline-var)] bg-[var(--sc)] text-ink-soft hover:bg-[var(--sc-high)] hover:text-ink'
-                        }`}
-                      >
-                        <Icon
-                          name="screen_lock_portrait"
-                          filled={lockScreenRemote.enabled && lockScreenRemote.isArmed}
-                          className="text-xl"
-                        />
-                      </button>
-                    )}
-                    <button
-                      onClick={(e) => {
-                        setAirPlayAnchorEl(e.currentTarget)
-                        setShowAirPlayModal(true)
-                      }}
-                      title="Choose AirPlay rooms"
-                      aria-label="Choose AirPlay rooms"
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] text-ink-soft hover:text-ink cursor-pointer transition active:scale-95"
-                    >
-                      <Icon name="airplay" className="text-xl" />
-                    </button>
-                  </div>
+                  {/* Mobile-only AirPlay button on top-right */}
+                  <button
+                    onClick={(e) => {
+                      setAirPlayAnchorEl(e.currentTarget)
+                      setShowAirPlayModal(true)
+                    }}
+                    title="Choose AirPlay rooms"
+                    aria-label="Choose AirPlay rooms"
+                    className="flex sm:hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--outline-var)] bg-[var(--sc)] hover:bg-[var(--sc-high)] text-ink-soft hover:text-ink cursor-pointer transition active:scale-95"
+                  >
+                    <Icon name="airplay" className="text-xl" />
+                  </button>
                 </div>
 
                 {/* Progress Bar */}
@@ -2573,33 +2514,6 @@ export default function YTMusicView({
                     >
                       <Icon name="skip_next" className="text-3xl" />
                     </button>
-                    {lockScreenRemote?.supported && (
-                      <button
-                        onClick={lockScreenRemote.toggle}
-                        title={
-                          lockScreenRemote.enabled && lockScreenRemote.isArmed
-                            ? 'Lock Screen remote active (tap to turn off)'
-                            : lockScreenRemote.enabled
-                              ? 'Tap to re-arm Lock Screen remote'
-                              : 'Enable Lock Screen remote on this device'
-                        }
-                        aria-label="Toggle Lock Screen remote"
-                        aria-pressed={lockScreenRemote.enabled && lockScreenRemote.isArmed}
-                        className={`flex h-12 w-12 items-center justify-center rounded-full transition cursor-pointer ${
-                          lockScreenRemote.enabled && lockScreenRemote.isArmed
-                            ? 'bg-[var(--primary)]/15 text-[var(--primary)] ring-1 ring-[var(--primary)]/35'
-                            : lockScreenRemote.enabled
-                              ? 'text-[var(--primary)] hover:bg-[var(--sc-high)]'
-                              : 'text-ink-soft hover:bg-[var(--sc-high)] hover:text-ink'
-                        }`}
-                      >
-                        <Icon
-                          name="screen_lock_portrait"
-                          filled={lockScreenRemote.enabled && lockScreenRemote.isArmed}
-                          className="text-2xl"
-                        />
-                      </button>
-                    )}
                     <button
                       ref={airPlayButtonRef}
                       onClick={(e) => {

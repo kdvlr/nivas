@@ -4,6 +4,7 @@ import {
   buildPositionState,
   createSilentWavBytes,
   isExternalAudioInterruption,
+  isIOSDevice,
   resolveArtworkUrl,
 } from './lockScreenRemoteHelpers.ts'
 
@@ -92,5 +93,12 @@ describe('useLockScreenRemote helpers', () => {
       }),
       false,
     )
+  })
+
+  it('detects iPhone/iPad while excluding Mac desktop and Fully Kiosk wall tablet', () => {
+    assert.equal(isIOSDevice({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0)', platform: 'iPhone', maxTouchPoints: 5, isFullyKiosk: false }), true)
+    assert.equal(isIOSDevice({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)', platform: 'MacIntel', maxTouchPoints: 5, isFullyKiosk: false }), true)
+    assert.equal(isIOSDevice({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)', platform: 'MacIntel', maxTouchPoints: 0, isFullyKiosk: false }), false)
+    assert.equal(isIOSDevice({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0)', platform: 'iPhone', maxTouchPoints: 5, isFullyKiosk: true }), false)
   })
 })

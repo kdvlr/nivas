@@ -359,6 +359,7 @@ function AppContent() {
     }
   }, [])
   const handleSeek = (secs: number) => {
+    if (lockScreenRemote.enabled && !lockScreenRemote.isArmed) lockScreenRemote.arm()
     setPlayerElapsed(secs)
     if (seekDebounceRef.current) {
       clearTimeout(seekDebounceRef.current)
@@ -394,6 +395,24 @@ function AppContent() {
     onSeek: handleSeek,
     onStop: handleStopPlayer,
   })
+
+  // Auto-arm iOS Lock Screen remote on any tap inside the Music view when
+  // playback is active (e.g., after another device starts a song, or after
+  // watching a local video on this phone).
+  useEffect(() => {
+    if (!lockScreenRemote.enabled || lockScreenRemote.isArmed) return
+    if (!isPlaying || !currentTrack || route !== 'ytmusic') return
+
+    const handleGesture = () => {
+      lockScreenRemote.arm()
+    }
+    window.addEventListener('pointerdown', handleGesture, { passive: true, once: true })
+    window.addEventListener('touchstart', handleGesture, { passive: true, once: true })
+    return () => {
+      window.removeEventListener('pointerdown', handleGesture)
+      window.removeEventListener('touchstart', handleGesture)
+    }
+  }, [lockScreenRemote.enabled, lockScreenRemote.isArmed, lockScreenRemote.arm, isPlaying, currentTrack, route])
 
   const handleQueueTrack = (track: Track, playNext: boolean) => {
     api.post<any>(playNext ? '/api/ytmusic/player/queue/next' : '/api/ytmusic/player/queue', track)
@@ -946,7 +965,6 @@ function AppContent() {
                     onSeek={handleSeek}
                     onQueueTrack={handleQueueTrack}
                     onQueueChange={handleQueueChange}
-                    lockScreenRemote={lockScreenRemote}
                   />
                 </Suspense>
               </motion.div>
