@@ -165,9 +165,9 @@ export const HARVEST_EXPRESS_CSS = `.harvest-express-stage {
     25%, 45%      { transform: rotate(10deg) translateY(-2px); }
   }
   @keyframes bigfootLurk {
-    0%, 16%, 100% { transform: translate(2px, 10px) rotate(2deg); }
-    34%, 64%      { transform: translate(-2px, -9px) rotate(-2deg); }
-    82%           { transform: translate(1px, 7px) rotate(1deg); }
+    0%, 20%, 100% { transform: translate(2px, 34px) scaleY(0.82) rotate(2deg); }
+    38%, 64%      { transform: translate(-2px, -6px) scaleY(1) rotate(-2deg); }
+    82%           { transform: translate(2px, 34px) scaleY(0.82) rotate(2deg); }
   }
   @keyframes whaleSpout {
     0%, 20%, 100% { transform: scaleY(0.1); opacity: 0; }

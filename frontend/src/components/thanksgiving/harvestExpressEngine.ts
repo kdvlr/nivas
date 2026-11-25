@@ -384,7 +384,7 @@ export function mountHarvestExpress(
     buildForestBand(host, { x0: -320, x1: 2220, y: 722, hMin: 18, hMax: 34, fill: '#2f5a45', seed: 7, opacity: 0.92 });
     sprinkleCrowns(host, () => 712, { seed: 71, count: 46, colors: ['#facc15', '#eab308', '#f59e0b'], top: -6, depth: 14, rMin: 4, rRange: 4, opacity: 0.9 });
     // Far-background Easter Egg: Bumble-style Abominable Snowman lurking between the mountain pine bands
-    const yetiAnchor = elSVG('g', { transform: 'translate(1365, 735) scale(1.18)' });
+    const yetiAnchor = elSVG('g', { transform: 'translate(1365, 742) scale(0.68)' });
     const yeti = elSVG('g', { class: 'bigfoot-lurk' });
     // Big fluffy pear-shaped white furry body + thick shoulders (no spiky crown!)
     yeti.appendChild(elSVG('path', {
