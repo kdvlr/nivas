@@ -164,6 +164,11 @@ export const HARVEST_EXPRESS_CSS = `.harvest-express-stage {
     0%, 65%, 100% { transform: rotate(0deg); }
     25%, 45%      { transform: rotate(10deg) translateY(-2px); }
   }
+  @keyframes bigfootLurk {
+    0%, 14%, 100% { transform: translate(8px, 0px) rotate(3deg); }
+    32%, 64%      { transform: translate(-8px, -1px) rotate(-3deg); }
+    82%           { transform: translate(6px, 0px) rotate(2deg); }
+  }
   @keyframes whaleSpout {
     0%, 20%, 100% { transform: scaleY(0.1); opacity: 0; }
     45%           { transform: scaleY(1.05); opacity: 0.88; }
@@ -202,6 +207,7 @@ export const HARVEST_EXPRESS_CSS = `.harvest-express-stage {
   .cub-bounce { animation: cubBounce 1.1s ease-in-out infinite; }
   .bison-head { transform-box: fill-box; transform-origin: 85% 40%; animation: bisonGraze 6.5s ease-in-out infinite; }
   .elk-head { transform-box: fill-box; transform-origin: 80% 75%; animation: elkLift 7.2s ease-in-out infinite; }
+  .bigfoot-lurk { transform-box: fill-box; transform-origin: 50% 100%; animation: bigfootLurk 8.5s ease-in-out infinite; }
   .whale-spout { transform-box: fill-box; transform-origin: 50% 100%; animation: whaleSpout 5.2s ease-out infinite; }
   .firefly { animation: fireflyGlow 3.6s ease-in-out infinite; }
   .candle-flame { transform-box: fill-box; transform-origin: 50% 100%; animation: candleFlicker 0.65s ease-in-out infinite; }
@@ -715,8 +721,40 @@ export const HARVEST_EXPRESS_SVG = `<svg class="scene" viewBox="0 0 1920 1080" p
         <!-- Procedural Bull Elk: walks the lakeshore, pauses to graze, turns back -->
         <g data-elk="1" transform="translate(1095, 790) scale(1.25)"></g>
         <use href="#aspenTreeRich" transform="translate(1510, 792) scale(0.86)" />
-        <use href="#pineTreeRich" transform="translate(1575, 792) scale(1.05)" />
-        <use href="#pineTreeRich" transform="translate(1645, 795) scale(1.18)" />
+        <use href="#pineTreeRich" transform="translate(1572, 792) scale(1.05)" />
+        <!-- Cryptid Easter Egg: Bigfoot lurking & peeking out between the Rocky Mountain pines -->
+        <g transform="translate(1614, 795)">
+          <g class="bigfoot-lurk">
+            <!-- Ground shadow -->
+            <ellipse cx="0" cy="0" rx="15" ry="3.5" fill="#182717" opacity="0.55" />
+            <!-- Back leg & big foot -->
+            <path d="M1,-22 L7,-2 L16,-1 C17,-3 14,-5 11,-5 L9,-22 Z" fill="#23160f" />
+            <!-- Front striding leg & iconic big foot -->
+            <path d="M-8,-22 L-11,-2 L-19,-1 C-20,-3 -16,-5 -13,-5 L-3,-22 Z" fill="#2f1e14" />
+            <!-- Broad hunched shaggy torso -->
+            <path d="M-12,-46 C-15,-38 -14,-26 -10,-19 L8,-19 C13,-27 14,-39 10,-47 C5,-51 -7,-51 -12,-46 Z" fill="#2f1e14" />
+            <!-- Shaggy shoulder & chest fur tufts -->
+            <path d="M-13,-43 L-16,-40 L-12,-37 L-15,-33 L-11,-30 M11,-43 L14,-39 L10,-36 L13,-32 L10,-29" stroke="#23160f" stroke-width="2" stroke-linecap="round" fill="none" />
+            <ellipse cx="-2" cy="-34" rx="5.5" ry="7.5" fill="#462e20" opacity="0.6" />
+            <!-- Long hanging back arm -->
+            <path d="M8,-44 C14,-38 16,-27 14,-16 C13,-13 10,-13 10,-17 C11,-26 9,-34 5,-40 Z" fill="#23160f" />
+            <!-- Long front arm reaching slightly out to grip the pine bough -->
+            <path d="M-10,-44 C-16,-37 -18,-26 -15,-16 C-14,-13 -10,-14 -11,-18 C-13,-26 -11,-34 -6,-40 Z" fill="#3a2519" />
+            <!-- Conical shaggy head + brow ridge -->
+            <path d="M-9,-47 C-10,-57 -6,-63 0,-64 C6,-63 9,-57 8,-47 Z" fill="#2f1e14" />
+            <path d="M-7,-60 L-9,-63 L-4,-62 L0,-66 L4,-62 L8,-63 L7,-59" fill="#2f1e14" />
+            <!-- Face patch + curious blinking eyes peering at the train -->
+            <ellipse cx="-2" cy="-53" rx="5.2" ry="4.2" fill="#5c3e2b" />
+            <path d="M-7,-56 Q-2,-58 3,-55" stroke="#1e120b" stroke-width="1.8" stroke-linecap="round" fill="none" />
+            <g class="blink-eye">
+              <circle cx="-4.2" cy="-54.2" r="1.2" fill="#fef3c7" />
+              <circle cx="0.2" cy="-54.2" r="1.2" fill="#fef3c7" />
+              <circle cx="-4.4" cy="-54.2" r="0.6" fill="#09090b" />
+              <circle cx="0.0" cy="-54.2" r="0.6" fill="#09090b" />
+            </g>
+          </g>
+        </g>
+        <use href="#pineTreeRich" transform="translate(1652, 795) scale(1.18)" />
         <g transform="translate(1245, 778)">
           <rect x="6" y="0" width="6" height="64" fill="#231914" /><rect x="174" y="0" width="6" height="64" fill="#231914" />
           <rect x="-10" y="-38" width="206" height="44" rx="4" fill="#1e1a17" stroke="#c9a55c" stroke-width="1.5" />
