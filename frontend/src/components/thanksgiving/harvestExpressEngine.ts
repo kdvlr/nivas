@@ -383,6 +383,62 @@ export function mountHarvestExpress(
     mistBand(host, 668, 54, 'mist-1', 0.8);
     buildForestBand(host, { x0: -320, x1: 2220, y: 722, hMin: 18, hMax: 34, fill: '#2f5a45', seed: 7, opacity: 0.92 });
     sprinkleCrowns(host, () => 712, { seed: 71, count: 46, colors: ['#facc15', '#eab308', '#f59e0b'], top: -6, depth: 14, rMin: 4, rRange: 4, opacity: 0.9 });
+    // Far-background Easter Egg: Abominable Snowman (Yeti) lurking between the mountain pine bands
+    const yetiAnchor = elSVG('g', { transform: 'translate(1365, 732)' });
+    const yeti = elSVG('g', { class: 'bigfoot-lurk' });
+    // Shaggy snow-white Yeti torso & spiky fur silhouette
+    yeti.appendChild(elSVG('path', {
+      d: 'M-15,-4 L-18,-18 L-14,-21 L-19,-32 L-13,-35 L-16,-44 L-9,-48 C-11,-57 -6,-65 0,-66 C6,-65 11,-57 9,-48 L16,-44 L13,-35 L19,-32 L14,-21 L18,-18 L15,-4 Z',
+      fill: '#f8fafc',
+      stroke: '#cbd5e1',
+      'stroke-width': 1,
+      'stroke-linejoin': 'round',
+    }));
+    // Icy-blue fur shading on right side & spiky crown crest
+    yeti.appendChild(elSVG('path', {
+      d: 'M2,-65 C7,-63 11,-56 9,-48 L16,-44 L13,-35 L19,-32 L14,-21 L18,-18 L15,-4 L4,-4 C7,-18 7,-42 2,-65 Z',
+      fill: '#cbd5e1',
+      opacity: 0.65,
+    }));
+    yeti.appendChild(elSVG('path', {
+      d: 'M-8,-61 L-10,-66 L-4,-64 L0,-70 L4,-64 L10,-66 L8,-61 Z',
+      fill: '#f8fafc',
+    }));
+    // Long shaggy arms — left arm raised slightly as he peers over the pines
+    yeti.appendChild(elSVG('path', {
+      d: 'M-13,-42 C-22,-40 -26,-32 -25,-22 C-24,-18 -19,-19 -19,-23 C-20,-29 -17,-34 -11,-36 Z',
+      fill: '#f1f5f9',
+      stroke: '#94a3b8',
+      'stroke-width': 0.8,
+    }));
+    yeti.appendChild(elSVG('path', {
+      d: 'M13,-42 C21,-36 24,-25 22,-15 C21,-12 17,-13 17,-17 C18,-24 16,-31 11,-36 Z',
+      fill: '#e2e8f0',
+      stroke: '#94a3b8',
+      'stroke-width': 0.8,
+    }));
+    // Pale icy-blue Yeti face, heavy snowy brow, blinking eyes & little tusk grin
+    yeti.appendChild(elSVG('ellipse', { cx: 0, cy: -52, rx: 7.2, ry: 5.8, fill: '#93c5fd' }));
+    yeti.appendChild(elSVG('ellipse', { cx: 0, cy: -51, rx: 6.2, ry: 4.6, fill: '#bfdbfe', opacity: 0.75 }));
+    yeti.appendChild(elSVG('path', {
+      d: 'M-8.5,-56 Q0,-60 8.5,-56 Q4,-54 0,-55 Q-4,-54 -8.5,-56 Z',
+      fill: '#ffffff',
+    }));
+    // Curious blinking eyes
+    const yetiEyes = elSVG('g', { class: 'blink-eye' });
+    yetiEyes.appendChild(elSVG('circle', { cx: -2.8, cy: -53.2, r: 1.5, fill: '#0f172a' }));
+    yetiEyes.appendChild(elSVG('circle', { cx: 2.8, cy: -53.2, r: 1.5, fill: '#0f172a' }));
+    yetiEyes.appendChild(elSVG('circle', { cx: -3.2, cy: -53.6, r: 0.5, fill: '#ffffff' }));
+    yetiEyes.appendChild(elSVG('circle', { cx: 2.4, cy: -53.6, r: 0.5, fill: '#ffffff' }));
+    yeti.appendChild(yetiEyes);
+    // Classic Abominable Snowman grin + two tiny white fangs
+    yeti.appendChild(elSVG('path', { d: 'M-4.2,-48.2 Q0,-46.4 4.2,-48.2', stroke: '#1e3a5f', 'stroke-width': 1.3, fill: 'none', 'stroke-linecap': 'round' }));
+    yeti.appendChild(elSVG('polygon', { points: '-3.4,-48 -2.1,-48 -2.8,-46.1', fill: '#ffffff' }));
+    yeti.appendChild(elSVG('polygon', { points: '2.1,-48 3.4,-48 2.8,-46.1', fill: '#ffffff' }));
+    // Icy-blue hand peeking on left arm
+    yeti.appendChild(elSVG('circle', { cx: -22, cy: -21, r: 2.8, fill: '#93c5fd' }));
+    yetiAnchor.appendChild(yeti);
+    host.appendChild(yetiAnchor);
     buildForestBand(host, { x0: -320, x1: 2220, y: 738, hMin: 26, hMax: 50, fill: '#163a2a', seed: 19 });
   })();
 
