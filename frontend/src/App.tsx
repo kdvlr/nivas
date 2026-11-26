@@ -40,6 +40,7 @@ import FloatingActionButton from './components/FloatingActionButton'
 // The screensaver is ~7k lines of seasonal scenery that only appears after
 // 3 idle minutes; keep it out of the startup bundle the tablet must parse.
 const Slideshow = lazy(() => import('./components/Slideshow'))
+const FullscreenLyrics = lazy(() => import('./components/FullscreenLyrics'))
 import { hasSkyOverride } from './components/sky/overrides'
 import { getQueryParam } from './components/sky/queryParam'
 import { TimerProvider, useIsTimerActive } from './context/TimerContext'
@@ -173,6 +174,9 @@ function AppContent() {
   const [kidsNuggetsDisplayed, setKidsNuggetsDisplayed] = useState(false)
   const kidsNuggetsDisplayedRef = useRef(false)
   kidsNuggetsDisplayedRef.current = kidsNuggetsDisplayed
+  const [lyricsFullscreen, setLyricsFullscreen] = useState(false)
+  const lyricsFullscreenRef = useRef(false)
+  lyricsFullscreenRef.current = lyricsFullscreen
 
   useEffect(() => {
     const handleToggle = () => setKidsHubOpen((prev) => !prev)
@@ -184,15 +188,16 @@ function AppContent() {
   // Strictly suppressed whenever:
   // 1. A timer is active (countdown or ringing).
   // 2. Kids Brain Nuggets is displayed.
+  // 3. Fullscreen Sing-Along Lyrics is open.
   const armSlideshowTimer = useCallback(() => {
     if (slideshowTimerRef.current) {
       clearTimeout(slideshowTimerRef.current)
       slideshowTimerRef.current = null
     }
-    if (isTimerActiveRef.current || kidsNuggetsDisplayedRef.current) return
+    if (isTimerActiveRef.current || kidsNuggetsDisplayedRef.current || lyricsFullscreenRef.current) return
 
     slideshowTimerRef.current = setTimeout(() => {
-      if (isTimerActiveRef.current || kidsNuggetsDisplayedRef.current) return
+      if (isTimerActiveRef.current || kidsNuggetsDisplayedRef.current || lyricsFullscreenRef.current) return
       setSlideshowActive(true)
       if (currentRoute() !== 'home') location.hash = '#/home'
     }, 3 * 60 * 1000)
@@ -559,10 +564,32 @@ function AppContent() {
       if (currentRoute() !== 'home') {
         location.hash = '#/home'
       }
-    } else if (!isTimerActiveRef.current) {
+    } else if (!isTimerActiveRef.current && !lyricsFullscreenRef.current) {
       armSlideshowTimer()
     }
   }, [kidsNuggetsDisplayed, slideshowActive, armSlideshowTimer])
+
+  // Fullscreen Sing-Along Lyrics lifecycle:
+  // Dismiss and suppress the photo slideshow while active; re-arm inactivity timer on close.
+  useEffect(() => {
+    if (lyricsFullscreen) {
+      if (slideshowActive) {
+        setSlideshowActive(false)
+      }
+      if (slideshowTimerRef.current) {
+        clearTimeout(slideshowTimerRef.current)
+        slideshowTimerRef.current = null
+      }
+    } else if (!isTimerActiveRef.current && !kidsNuggetsDisplayedRef.current) {
+      armSlideshowTimer()
+    }
+  }, [lyricsFullscreen, slideshowActive, armSlideshowTimer])
+
+  useEffect(() => {
+    if (!currentTrack && lyricsFullscreen) {
+      setLyricsFullscreen(false)
+    }
+  }, [currentTrack, lyricsFullscreen])
 
   // Jump straight into the slideshow if sky override, ?slideshow=1, ?peacock, or ?bday=1 / ?zombie / ?cake is present
   useEffect(() => {
@@ -991,6 +1018,7 @@ function AppContent() {
                     onQueueChange={handleQueueChange}
                     masterVolume={masterVolume}
                     onMasterVolumeChange={handleMasterVolumeChange}
+                    onOpenLyricsFullscreen={() => setLyricsFullscreen(true)}
                   />
                 </Suspense>
               </motion.div>
@@ -1148,6 +1176,21 @@ function AppContent() {
           onClose={handleStopPlayer}
         />
         <MiniTimerCapsule />
+        {lyricsFullscreen && currentTrack && (
+          <Suspense fallback={null}>
+            <FullscreenLyrics
+              track={currentTrack}
+              isPlaying={isPlaying}
+              isBuffering={isBuffering}
+              durationSeconds={durationSeconds}
+              onClose={() => setLyricsFullscreen(false)}
+              onTogglePlay={handleTogglePlay}
+              onNextTrack={handleNextTrack}
+              onPrevTrack={handlePrevTrack}
+              onSeek={handleSeek}
+            />
+          </Suspense>
+        )}
         <AnimatePresence>
           {waveGestureFeedback && (
             <motion.div

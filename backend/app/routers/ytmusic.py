@@ -9,6 +9,7 @@ import httpx
 from ..services.ytmusic import ytmusic_service
 from ..services.player_engine import player_engine
 from ..services.local_music import local_music_service
+from ..services.lyrics_service import lyrics_service
 from ..admin_auth import require_admin
 
 logger = logging.getLogger(__name__)
@@ -271,9 +272,43 @@ def get_playlist_songs(playlist_id: str, limit: int = Query(12, ge=1, le=50)):
         raise HTTPException(status_code=404, detail="Playlist not found")
     return data
 
+class LyricsSettingsRequest(BaseModel):
+    syncOffset: Optional[float] = None
+    visualMode: Optional[str] = None
+    bouncingStar: Optional[bool] = None
+
+
+@router.get("/lyrics/settings")
+def get_lyrics_settings():
+    return lyrics_service.get_settings_dict()
+
+
+@router.put("/lyrics/settings")
+def update_lyrics_settings(req: LyricsSettingsRequest):
+    return lyrics_service.update_settings(
+        sync_offset=req.syncOffset,
+        visual_mode=req.visualMode,
+        bouncing_star=req.bouncingStar,
+    )
+
+
 @router.get("/lyrics/{video_id}")
-def get_lyrics(video_id: str):
-    return ytmusic_service.get_lyrics(video_id)
+def get_lyrics(
+    video_id: str,
+    title: str = Query(""),
+    artist: str = Query(""),
+    album: str = Query(""),
+    duration: float = Query(0.0),
+    refresh: bool = Query(False),
+):
+    return lyrics_service.get_lyrics(
+        video_id,
+        title=title,
+        artist=artist,
+        album=album,
+        duration=duration,
+        refresh=refresh,
+    )
 
 # --- Server-Side AirPlay & Synchronized Player Engine APIs ---
 

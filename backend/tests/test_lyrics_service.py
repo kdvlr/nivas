@@ -1,0 +1,126 @@
+import pytest
+from unittest.mock import patch
+from fastapi.testclient import TestClient
+
+from app.main import app
+from app.services.lyrics_service import LyricsService, parse_lrc
+
+
+def test_parse_lrc_standard_and_multi_timestamp():
+    lrc = """[ti:Test Song]
+[00:10.50]First line
+[00:20.00][01:05.25]Chorus line
+[00:15.125]Second line
+"""
+    lines = parse_lrc(lrc)
+    assert lines == [
+        {"time": 10.5, "text": "First line"},
+        {"time": 15.125, "text": "Second line"},
+        {"time": 20.0, "text": "Chorus line"},
+        {"time": 65.25, "text": "Chorus line"},
+    ]
+
+
+def test_lyrics_local_lrc_and_cache(tmp_path):
+    svc = LyricsService(data_dir=str(tmp_path / "data"))
+    audio_file = tmp_path / "01 - Roja.flac"
+    audio_file.write_bytes(b"fake")
+    lrc_file = tmp_path / "01 - Roja.lrc"
+    lrc_file.write_text("[00:05.00]Chinna chinna aasai\n[00:10.00]Siragadikkum aasai\n", encoding="utf-8")
+
+    fake_track = {
+        "id": "trk1",
+        "filePath": str(audio_file),
+        "title": "Chinna Chinna Aasai",
+        "artist": "Minmini",
+        "album": "Roja",
+        "duration": 290,
+    }
+    with patch("app.services.lyrics_service.local_music_service.get_track", return_value=fake_track):
+        res = svc.get_lyrics("local:trk1")
+        assert res["synced"] is True
+        assert res["source"] == "local_lrc"
+        assert len(res["lines"]) == 2
+        assert res["lines"][0]["text"] == "Chinna chinna aasai"
+
+    # Remove .lrc file and verify SQLite cache still serves it
+    lrc_file.unlink()
+    res_cached = svc.get_lyrics("local:trk1")
+    assert res_cached["synced"] is True
+    assert res_cached["source"] == "local_lrc"
+
+
+def test_lyrics_lrclib_search_fallback(tmp_path):
+    svc = LyricsService(data_dir=str(tmp_path / "data"))
+
+    def fake_get_json(url):
+        if "/api/get?" in url:
+            raise RuntimeError("404 Not Found")
+        return [
+            {
+                "trackName": "Tum Hi Ho",
+                "artistName": "Arijit Singh",
+                "duration": 262,
+                "syncedLyrics": "[00:11.20] Hum tere bin ab reh nahi sakte\n[00:15.55] Tere bina kya wajood mera",
+                "plainLyrics": "Hum tere bin ab reh nahi sakte\nTere bina kya wajood mera",
+            }
+        ]
+
+    svc._http_get_json = fake_get_json
+    res = svc.get_lyrics("yt123", title="Tum Hi Ho", artist="Arijit Singh", duration=262)
+    assert res["synced"] is True
+    assert res["source"] == "lrclib"
+    assert len(res["lines"]) == 2
+    assert res["lines"][0]["time"] == 11.2
+
+
+def test_lyrics_settings_persist_across_restarts(tmp_path):
+    data_dir = str(tmp_path / "data")
+    svc = LyricsService(data_dir=data_dir)
+    assert svc.get_settings_dict() == {
+        "syncOffset": 0.0,
+        "visualMode": "ambient",
+        "bouncingStar": True,
+    }
+
+    updated = svc.update_settings(sync_offset=-1.5, visual_mode="starlight", bouncing_star=False)
+    assert updated == {
+        "syncOffset": -1.5,
+        "visualMode": "starlight",
+        "bouncingStar": False,
+    }
+
+    # Re-instantiate service to verify SQLite persistence across restarts
+    svc2 = LyricsService(data_dir=data_dir)
+    assert svc2.get_settings_dict() == updated
+
+
+def test_lyrics_settings_and_fetch_endpoints(tmp_path, monkeypatch):
+    from app.routers import ytmusic as ytmusic_router
+
+    svc = LyricsService(data_dir=str(tmp_path / "data"))
+    svc._http_get_json = lambda url: {
+        "syncedLyrics": "[00:01.00]Hello world",
+        "plainLyrics": "Hello world",
+    }
+    monkeypatch.setattr(ytmusic_router, "lyrics_service", svc)
+
+    client = TestClient(app)
+
+    res = client.put(
+        "/api/ytmusic/lyrics/settings",
+        json={"syncOffset": -2.0, "visualMode": "party", "bouncingStar": True},
+    )
+    assert res.status_code == 200
+    assert res.json() == {"syncOffset": -2.0, "visualMode": "party", "bouncingStar": True}
+
+    res2 = client.get("/api/ytmusic/lyrics/settings")
+    assert res2.status_code == 200
+    assert res2.json()["visualMode"] == "party"
+
+    res3 = client.get("/api/ytmusic/lyrics/abc123?title=Hello&artist=World&duration=180")
+    assert res3.status_code == 200
+    body = res3.json()
+    assert body["synced"] is True
+    assert body["source"] == "lrclib"
+    assert body["lines"] == [{"time": 1.0, "text": "Hello world"}]

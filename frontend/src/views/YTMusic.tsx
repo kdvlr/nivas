@@ -24,6 +24,7 @@ interface YTMusicViewProps {
   onQueueChange: (queue: Track[]) => void
   masterVolume?: number
   onMasterVolumeChange?: (volume: number) => void
+  onOpenLyricsFullscreen?: () => void
 }
 
 type PlayerTab = 'queue' | 'lyrics'
@@ -262,6 +263,7 @@ export default function YTMusicView({
   onQueueChange,
   masterVolume = 50,
   onMasterVolumeChange,
+  onOpenLyricsFullscreen,
 }: YTMusicViewProps) {
   const getSubViewFromHash = useCallback((): { view: MusicView; search: string } => {
     const hash = window.location.hash
@@ -1060,12 +1062,18 @@ export default function YTMusicView({
     setLyrics('')
     if (!currentTrack || playerTab !== 'lyrics') return
     setLoadingLyrics(true)
+    const params = new URLSearchParams()
+    if (currentTrack.title) params.set('title', currentTrack.title)
+    if (currentTrack.artist) params.set('artist', currentTrack.artist)
+    if (currentTrack.album) params.set('album', currentTrack.album)
+    const dur = durationSeconds || Number(currentTrack.duration) || 0
+    if (dur > 0) params.set('duration', String(Math.round(dur)))
     api
-      .get<any>(`/api/ytmusic/lyrics/${currentTrack.videoId}`)
-      .then((res) => setLyrics(res?.lyrics || res?.text || ''))
+      .get<any>(`/api/ytmusic/lyrics/${encodeURIComponent(currentTrack.videoId)}?${params.toString()}`)
+      .then((res) => setLyrics(res?.plain || res?.lyrics || res?.text || ''))
       .catch(() => setLyrics(''))
       .finally(() => setLoadingLyrics(false))
-  }, [currentTrack?.videoId, playerTab])
+  }, [currentTrack?.videoId, currentTrack?.title, currentTrack?.artist, currentTrack?.album, currentTrack?.duration, durationSeconds, playerTab])
 
   // Compute daily randomized layout presentation
   const dailyDateKey = now.toDateString()
@@ -2552,6 +2560,16 @@ export default function YTMusicView({
                     >
                       <Icon name="airplay" className="text-2xl" />
                     </button>
+                    {onOpenLyricsFullscreen && (
+                      <button
+                        onClick={onOpenLyricsFullscreen}
+                        title="Fullscreen Sing-Along Lyrics"
+                        aria-label="Fullscreen Sing-Along Lyrics"
+                        className="flex h-12 w-12 items-center justify-center rounded-full text-ink-soft hover:bg-[var(--sc-high)] hover:text-[var(--primary)] cursor-pointer transition"
+                      >
+                        <Icon name="lyrics" className="text-2xl" />
+                      </button>
+                    )}
                   </div>
                 </div>
                 <PlaybackProgress className="mt-4 flex items-center gap-3 text-xs tabular-nums text-ink-soft" duration={effectiveDuration} onSeek={onSeek} />
@@ -2658,6 +2676,17 @@ export default function YTMusicView({
 
               {playerTab === 'lyrics' && (
                 <div className="px-3 sm:px-4 py-4 sm:py-7">
+                  {onOpenLyricsFullscreen && currentTrack && (
+                    <div className="mb-4 flex justify-end">
+                      <button
+                        onClick={onOpenLyricsFullscreen}
+                        className="inline-flex items-center gap-2 rounded-full bg-[var(--primary)] px-4 py-2 text-xs sm:text-sm font-semibold text-[var(--on-primary)] shadow-sm hover:brightness-110 transition cursor-pointer"
+                      >
+                        <Icon name="fullscreen" className="text-lg" />
+                        <span>Fullscreen Sing-Along</span>
+                      </button>
+                    </div>
+                  )}
                   {loadingLyrics ? (
                     <div className="flex items-center gap-2 text-ink-soft">
                       <Icon name="progress_activity" className="animate-spin text-[var(--primary)]" /> Loading lyrics…
