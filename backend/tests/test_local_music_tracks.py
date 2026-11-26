@@ -98,3 +98,74 @@ def test_api_local_artist_and_genre_tracks(temp_local_service, monkeypatch):
     res = client.get("/api/ytmusic/local/tracks?genre=Disco")
     assert res.status_code == 200
     assert res.json()["trackCount"] == 1
+
+
+def test_split_artists_preserves_band_names_and_splits_collaborators():
+    from app.services.local_music import _split_artists
+
+    assert _split_artists("A.R. Rahman, S.P. Balasubrahmanyam & K.S. Chithra") == [
+        "A.R. Rahman",
+        "S.P. Balasubrahmanyam",
+        "K.S. Chithra",
+    ]
+    assert _split_artists("AC/DC, Simon & Garfunkel feat. Earth, Wind & Fire") == [
+        "AC/DC",
+        "Simon & Garfunkel",
+        "Earth, Wind & Fire",
+    ]
+    assert _split_artists("Hariharan (feat. Sadhana Sargam)") == [
+        "Hariharan",
+        "Sadhana Sargam",
+    ]
+
+
+def test_multi_artist_indexing_and_queries(tmp_path):
+    music_dir = str(tmp_path / "music")
+    data_dir = str(tmp_path / "data")
+    Path(music_dir).mkdir(parents=True, exist_ok=True)
+    Path(data_dir).mkdir(parents=True, exist_ok=True)
+
+    service = LocalMusicService(music_dir=music_dir, data_dir=data_dir)
+    service._commit_track_batch([
+        {
+            "id": "t_roja",
+            "file_path": "/tmp/roja/01.flac",
+            "title": "Chinna Chinna Aasai",
+            "artist": "Minmini, A.R. Rahman",
+            "album_artist": "A.R. Rahman",
+            "composer": "A.R. Rahman",
+            "album": "Roja",
+            "album_id": "alb_roja",
+            "track_number": 1,
+            "disc_number": 1,
+            "duration": 290,
+            "year": "1992",
+            "genre": "Soundtrack",
+            "file_format": "FLAC",
+            "file_size": 1000,
+            "mtime": 1.0,
+            "has_artwork": 1,
+        }
+    ])
+    with service._get_conn() as conn:
+        conn.execute(
+            "INSERT INTO albums (id, title, artist, year, track_count, has_artwork, folder_path) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            ("alb_roja", "Roja", "A.R. Rahman", "1992", 1, 1, "/tmp/roja"),
+        )
+        conn.commit()
+
+    artists = {a["artist"]: a for a in service.get_artists()}
+    assert "A.R. Rahman" in artists
+    assert "Minmini" in artists
+    assert artists["Minmini"]["trackCount"] == 1
+    assert artists["Minmini"]["albumCount"] == 1
+
+    minmini_tracks = service.get_artist_tracks("Minmini")
+    assert len(minmini_tracks) == 1
+    assert minmini_tracks[0]["title"] == "Chinna Chinna Aasai"
+    assert minmini_tracks[0]["artists"] == ["Minmini", "A.R. Rahman"]
+    assert minmini_tracks[0]["composer"] == "A.R. Rahman"
+
+    minmini_albums = service.get_albums(artist="Minmini")
+    assert len(minmini_albums) == 1
+    assert minmini_albums[0]["title"] == "Roja"

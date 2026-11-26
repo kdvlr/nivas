@@ -15,6 +15,83 @@ logger = logging.getLogger(__name__)
 SUPPORTED_EXTENSIONS = {".m4a", ".flac", ".mp3", ".aac", ".wav", ".alac", ".ogg", ".aiff", ".aif"}
 ARTWORK_NAMES = {"cover.jpg", "cover.png", "cover.jpeg", "folder.jpg", "folder.png", "folder.jpeg", "albumart.jpg", "front.jpg", "front.png"}
 
+_PROTECTED_ARTISTS = (
+    "Crosby, Stills, Nash & Young",
+    "Crosby, Stills & Nash",
+    "Earth, Wind & Fire",
+    "Emerson, Lake & Palmer",
+    "Blood, Sweat & Tears",
+    "Peter, Paul & Mary",
+    "Daryl Hall & John Oates",
+    "Tom Petty & the Heartbreakers",
+    "Bruce Springsteen & the E Street Band",
+    "Bob Marley & the Wailers",
+    "Nick Cave & the Bad Seeds",
+    "Sly & the Family Stone",
+    "Hootie & the Blowfish",
+    "Gladys Knight & the Pips",
+    "Martha & the Vandellas",
+    "Huey Lewis & the News",
+    "KC & the Sunshine Band",
+    "Echo & the Bunnymen",
+    "Florence + the Machine",
+    "Simon & Garfunkel",
+    "Kool & the Gang",
+    "Hall & Oates",
+    "Mumford & Sons",
+    "Iron & Wine",
+    "She & Him",
+    "Ike & Tina Turner",
+    "Sonny & Cher",
+    "Sam & Dave",
+    "Brooks & Dunn",
+    "Above & Beyond",
+    "Chase & Status",
+    "Macklemore & Ryan Lewis",
+    "AC/DC",
+)
+_PROTECTED_RE = re.compile(
+    "|".join(re.escape(name) for name in _PROTECTED_ARTISTS),
+    re.IGNORECASE,
+)
+_FEAT_PAREN_RE = re.compile(r"[\(\[]\s*(?:feat\.?|ft\.?|featuring)\s+([^\)\]]+)[\)\]]", re.IGNORECASE)
+_ARTIST_SPLIT_RE = re.compile(r"\s*(?:;|,|&|\b(?:feat|ft)\.(?=\s)|\b(?:feat|ft|featuring|with)\b|\/)\s*", re.IGNORECASE)
+
+
+def _split_artists(raw: str) -> List[str]:
+    """Split a multi-artist tag string into individual deduplicated artist names."""
+    if not raw:
+        return []
+    text = raw.strip()
+    if not text:
+        return []
+
+    placeholders: Dict[str, str] = {}
+
+    def _protect(match: re.Match) -> str:
+        key = f"__ARTIST_PROT_{len(placeholders)}__"
+        placeholders[key] = match.group(0)
+        return key
+
+    text = _PROTECTED_RE.sub(_protect, text)
+    text = _FEAT_PAREN_RE.sub(r", \1", text)
+
+    parts = _ARTIST_SPLIT_RE.split(text)
+    seen = set()
+    result: List[str] = []
+    for part in parts:
+        p = part.strip(" \t\r\n()[]")
+        for key, orig in placeholders.items():
+            if key in p:
+                p = p.replace(key, orig)
+        if not p:
+            continue
+        norm = p.casefold()
+        if norm not in seen:
+            seen.add(norm)
+            result.append(p)
+    return result
+
 class LocalMusicService:
     def __init__(self, music_dir: Optional[str] = None, data_dir: Optional[str] = None):
         self.music_dir = music_dir or os.getenv("MUSIC_DIR", str(get_settings().music_dir))
@@ -48,6 +125,7 @@ class LocalMusicService:
                         title TEXT,
                         artist TEXT,
                         album_artist TEXT,
+                        composer TEXT,
                         album TEXT,
                         album_id TEXT,
                         track_number INTEGER,
@@ -73,15 +151,29 @@ class LocalMusicService:
                         is_compilation INTEGER DEFAULT 0
                     )
                 """)
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS track_artists (
+                        track_id TEXT NOT NULL,
+                        artist TEXT NOT NULL,
+                        role TEXT NOT NULL DEFAULT 'artist',
+                        PRIMARY KEY (track_id, artist, role)
+                    )
+                """)
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_tracks_album ON tracks(album_id)")
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_tracks_artist ON tracks(artist)")
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_tracks_title ON tracks(title)")
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_albums_artist ON albums(artist)")
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_albums_title ON albums(title)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_track_artists_artist ON track_artists(artist COLLATE NOCASE)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_track_artists_track ON track_artists(track_id)")
                 
                 # Migrations for existing databases
                 try:
                     cursor.execute("ALTER TABLE tracks ADD COLUMN album_artist TEXT")
+                except Exception:
+                    pass
+                try:
+                    cursor.execute("ALTER TABLE tracks ADD COLUMN composer TEXT")
                 except Exception:
                     pass
                 try:
@@ -116,7 +208,14 @@ class LocalMusicService:
                 self._total_tracks = cursor.fetchone()[0]
                 cursor.execute("SELECT COUNT(*) FROM albums")
                 self._total_albums = cursor.fetchone()[0]
-                cursor.execute("SELECT COUNT(DISTINCT artist) FROM tracks WHERE artist IS NOT NULL AND artist != ''")
+                cursor.execute("""
+                    SELECT COUNT(DISTINCT artist) FROM (
+                        SELECT artist FROM track_artists
+                        UNION
+                        SELECT COALESCE(NULLIF(album_artist, ''), artist) AS artist FROM tracks
+                        WHERE NOT EXISTS (SELECT 1 FROM track_artists ta WHERE ta.track_id = tracks.id)
+                    ) WHERE artist IS NOT NULL AND artist != ''
+                """)
                 self._total_artists = cursor.fetchone()[0]
         except Exception as e:
             logger.error(f"Error updating local music counts: {e}")
@@ -253,10 +352,13 @@ class LocalMusicService:
                         logger.info(f"Pruning {len(deleted_ids)} deleted tracks from database.")
                         for chunk_start in range(0, len(deleted_ids), 500):
                             chunk = list(deleted_ids)[chunk_start:chunk_start + 500]
-                            cursor.execute(f"DELETE FROM tracks WHERE id IN ({','.join('?' for _ in chunk)})", chunk)
+                            placeholders = ','.join('?' for _ in chunk)
+                            cursor.execute(f"DELETE FROM tracks WHERE id IN ({placeholders})", chunk)
+                            cursor.execute(f"DELETE FROM track_artists WHERE track_id IN ({placeholders})", chunk)
 
                 # Purge any dot-underscore or orphaned records
                 cursor.execute("DELETE FROM tracks WHERE file_path LIKE '%/._%' OR file_path LIKE '%/.%'")
+                cursor.execute("DELETE FROM track_artists WHERE track_id NOT IN (SELECT id FROM tracks)")
                 cursor.execute("DELETE FROM albums WHERE id NOT IN (SELECT DISTINCT album_id FROM tracks)")
 
                 conn.commit()
@@ -284,7 +386,7 @@ class LocalMusicService:
                 track_rows = [
                     (
                         t["id"], t["file_path"], t["title"], t["artist"],
-                        t.get("album_artist", t["artist"]), t["album"],
+                        t.get("album_artist", t["artist"]), t.get("composer", ""), t["album"],
                         t["album_id"], t["track_number"], t["disc_number"], t["duration"],
                         t["year"], t["genre"], t["file_format"], t["file_size"], t["mtime"],
                         t["has_artwork"]
@@ -293,11 +395,31 @@ class LocalMusicService:
                 ]
                 cursor.executemany("""
                     INSERT OR REPLACE INTO tracks (
-                        id, file_path, title, artist, album_artist, album, album_id,
+                        id, file_path, title, artist, album_artist, composer, album, album_id,
                         track_number, disc_number, duration, year, genre,
                         file_format, file_size, mtime, has_artwork
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, track_rows)
+
+                track_ids = [t["id"] for t in tracks]
+                for chunk_start in range(0, len(track_ids), 500):
+                    chunk = track_ids[chunk_start:chunk_start + 500]
+                    cursor.execute(f"DELETE FROM track_artists WHERE track_id IN ({','.join('?' for _ in chunk)})", chunk)
+
+                artist_rows = []
+                for t in tracks:
+                    tid = t["id"]
+                    for a in _split_artists(t.get("artist", "")):
+                        artist_rows.append((tid, a, "artist"))
+                    for aa in _split_artists(t.get("album_artist", "")):
+                        artist_rows.append((tid, aa, "album_artist"))
+                    for comp in _split_artists(t.get("composer", "")):
+                        artist_rows.append((tid, comp, "composer"))
+                if artist_rows:
+                    cursor.executemany(
+                        "INSERT OR IGNORE INTO track_artists (track_id, artist, role) VALUES (?, ?, ?)",
+                        artist_rows,
+                    )
                 conn.commit()
         except Exception as e:
             logger.error(f"Failed to commit track batch: {e}")
@@ -341,6 +463,7 @@ class LocalMusicService:
         else:
             file_format = ext_clean
 
+        composer = ""
         if mutagen_mod:
             try:
                 if ext in (".m4a", ".alac", ".mp4"):
@@ -363,15 +486,20 @@ class LocalMusicService:
                             title = str(tags["title"][0])
 
                         if "\xa9ART" in tags:
-                            artist = str(tags["\xa9ART"][0])
+                            artist = ", ".join(str(x).strip() for x in tags["\xa9ART"] if str(x).strip()) or artist
                         elif "artist" in tags:
-                            artist = str(tags["artist"][0])
+                            artist = ", ".join(str(x).strip() for x in tags["artist"] if str(x).strip()) or artist
 
                         # iTunes Album Artist (aART)
                         if "aART" in tags:
-                            album_artist = str(tags["aART"][0])
+                            album_artist = ", ".join(str(x).strip() for x in tags["aART"] if str(x).strip())
                         elif "albumartist" in tags:
-                            album_artist = str(tags["albumartist"][0])
+                            album_artist = ", ".join(str(x).strip() for x in tags["albumartist"] if str(x).strip())
+
+                        if "\xa9wrt" in tags:
+                            composer = ", ".join(str(x).strip() for x in tags["\xa9wrt"] if str(x).strip())
+                        elif "composer" in tags:
+                            composer = ", ".join(str(x).strip() for x in tags["composer"] if str(x).strip())
 
                         # iTunes Compilation Flag (cpil)
                         if "cpil" in tags:
@@ -422,12 +550,16 @@ class LocalMusicService:
                         if "title" in tags:
                             title = str(tags["title"][0])
                         if "artist" in tags:
-                            artist = str(tags["artist"][0])
+                            artist = ", ".join(str(x).strip() for x in tags["artist"] if str(x).strip()) or artist
 
                         # FLAC Album Artist & Compilation
                         for aak in ("albumartist", "album artist", "ALBUMARTIST", "ALBUM ARTIST", "album_artist"):
                             if aak in tags:
-                                album_artist = str(tags[aak][0])
+                                album_artist = ", ".join(str(x).strip() for x in tags[aak] if str(x).strip())
+                                break
+                        for ck in ("composer", "COMPOSER"):
+                            if ck in tags:
+                                composer = ", ".join(str(x).strip() for x in tags[ck] if str(x).strip())
                                 break
                         for ck in ("compilation", "COMPILATION"):
                             if ck in tags:
@@ -465,11 +597,27 @@ class LocalMusicService:
                                     break
                             for a_k in ("TPE1", "artist"):
                                 if a_k in tags:
-                                    artist = str(tags[a_k])
+                                    tag_val = tags[a_k]
+                                    if hasattr(tag_val, "text") and tag_val.text:
+                                        artist = ", ".join(str(x).strip() for x in tag_val.text if str(x).strip()) or artist
+                                    else:
+                                        artist = str(tag_val)
                                     break
                             for aa_k in ("TPE2", "albumartist", "ALBUMARTIST", "ALBUM ARTIST"):
                                 if aa_k in tags:
-                                    album_artist = str(tags[aa_k])
+                                    tag_val = tags[aa_k]
+                                    if hasattr(tag_val, "text") and tag_val.text:
+                                        album_artist = ", ".join(str(x).strip() for x in tag_val.text if str(x).strip())
+                                    else:
+                                        album_artist = str(tag_val)
+                                    break
+                            for c_k in ("TCOM", "composer", "COMPOSER"):
+                                if c_k in tags:
+                                    tag_val = tags[c_k]
+                                    if hasattr(tag_val, "text") and tag_val.text:
+                                        composer = ", ".join(str(x).strip() for x in tag_val.text if str(x).strip())
+                                    else:
+                                        composer = str(tag_val)
                                     break
                             for c_k in ("TCMP", "compilation", "COMPILATION"):
                                 if c_k in tags:
@@ -528,6 +676,7 @@ class LocalMusicService:
             "title": title.strip(),
             "artist": artist.strip(),
             "album_artist": resolved_album_artist,
+            "composer": composer.strip(),
             "album": album.strip(),
             "album_id": album_id,
             "track_number": track_number,
@@ -564,7 +713,8 @@ class LocalMusicService:
                 cursor = conn.cursor()
                 cursor.execute("""
                     SELECT * FROM tracks
-                    WHERE title LIKE ? OR artist LIKE ? OR album LIKE ?
+                    WHERE title LIKE ? OR artist LIKE ? OR album LIKE ? OR album_artist LIKE ? OR composer LIKE ?
+                       OR id IN (SELECT track_id FROM track_artists WHERE artist LIKE ?)
                     ORDER BY 
                         CASE 
                             WHEN title LIKE ? THEN 1
@@ -573,7 +723,7 @@ class LocalMusicService:
                         END,
                         artist, album, disc_number, track_number
                     LIMIT ?
-                """, (pattern, pattern, pattern, f"{query}%", f"{query}%", limit))
+                """, (pattern, pattern, pattern, pattern, pattern, pattern, f"{query}%", f"{query}%", limit))
                 
                 for row in cursor.fetchall():
                     results.append(self._format_track_dict(row))
@@ -613,10 +763,22 @@ class LocalMusicService:
             with self._get_conn() as conn:
                 cursor = conn.cursor()
                 cursor.execute("""
-                    SELECT COALESCE(NULLIF(album_artist, ''), artist) as artist_name, COUNT(DISTINCT album_id) as album_count, COUNT(*) as track_count
-                    FROM tracks
-                    WHERE (album_artist IS NOT NULL AND album_artist != '') OR (artist IS NOT NULL AND artist != '')
-                    GROUP BY artist_name
+                    SELECT
+                        MIN(artist_name) AS artist_name,
+                        COUNT(DISTINCT album_id) AS album_count,
+                        COUNT(DISTINCT track_id) AS track_count
+                    FROM (
+                        SELECT ta.artist AS artist_name, t.album_id AS album_id, ta.track_id AS track_id
+                        FROM track_artists ta
+                        JOIN tracks t ON t.id = ta.track_id
+                        WHERE ta.artist IS NOT NULL AND ta.artist != ''
+                        UNION ALL
+                        SELECT COALESCE(NULLIF(album_artist, ''), artist) AS artist_name, album_id, id AS track_id
+                        FROM tracks
+                        WHERE NOT EXISTS (SELECT 1 FROM track_artists ta WHERE ta.track_id = tracks.id)
+                          AND ((album_artist IS NOT NULL AND album_artist != '') OR (artist IS NOT NULL AND artist != ''))
+                    )
+                    GROUP BY artist_name COLLATE NOCASE
                     ORDER BY artist_name COLLATE NOCASE ASC
                 """)
                 for row in cursor.fetchall():
@@ -639,9 +801,16 @@ class LocalMusicService:
                 if artist:
                     cursor.execute("""
                         SELECT * FROM albums
-                        WHERE artist = ? OR id IN (SELECT DISTINCT album_id FROM tracks WHERE artist = ? OR album_artist = ?)
+                        WHERE artist = ? COLLATE NOCASE
+                           OR id IN (
+                               SELECT DISTINCT t.album_id FROM tracks t
+                               WHERE t.artist = ? COLLATE NOCASE
+                                  OR t.album_artist = ? COLLATE NOCASE
+                                  OR t.composer = ? COLLATE NOCASE
+                                  OR t.id IN (SELECT track_id FROM track_artists WHERE artist = ? COLLATE NOCASE)
+                           )
                         ORDER BY year DESC, title COLLATE NOCASE ASC
-                    """, (artist, artist, artist))
+                    """, (artist, artist, artist, artist, artist))
                 elif genre:
                     cursor.execute("""
                         SELECT * FROM albums
@@ -770,17 +939,21 @@ class LocalMusicService:
                 cursor = conn.cursor()
                 cursor.execute("""
                     SELECT * FROM tracks
-                    WHERE artist = ? COLLATE NOCASE OR album_artist = ? COLLATE NOCASE
+                    WHERE artist = ? COLLATE NOCASE
+                       OR album_artist = ? COLLATE NOCASE
+                       OR composer = ? COLLATE NOCASE
+                       OR id IN (SELECT track_id FROM track_artists WHERE artist = ? COLLATE NOCASE)
                     ORDER BY album COLLATE NOCASE ASC, disc_number ASC, track_number ASC, title COLLATE NOCASE ASC
-                """, (artist, artist))
+                """, (artist, artist, artist, artist))
                 rows = cursor.fetchall()
                 if not rows:
                     pattern = f"%{artist}%"
                     cursor.execute("""
                         SELECT * FROM tracks
-                        WHERE artist LIKE ? OR album_artist LIKE ?
+                        WHERE artist LIKE ? OR album_artist LIKE ? OR composer LIKE ?
+                           OR id IN (SELECT track_id FROM track_artists WHERE artist LIKE ?)
                         ORDER BY album COLLATE NOCASE ASC, disc_number ASC, track_number ASC, title COLLATE NOCASE ASC
-                    """, (pattern, pattern))
+                    """, (pattern, pattern, pattern, pattern))
                     rows = cursor.fetchall()
                 for row in rows:
                     tracks.append(self._format_track_dict(row))
@@ -1003,12 +1176,15 @@ class LocalMusicService:
         thumbnail = f"/api/ytmusic/local/artwork/{album_id}"
         row_keys = row.keys() if hasattr(row, "keys") else []
         album_artist = row["album_artist"] if "album_artist" in row_keys and row["album_artist"] else row["artist"]
+        composer = row["composer"] if "composer" in row_keys and row["composer"] else ""
         return {
             "videoId": f"local:{row['id']}",
             "id": row["id"],
             "title": row["title"],
             "artist": row["artist"],
+            "artists": _split_artists(row["artist"] or ""),
             "albumArtist": album_artist,
+            "composer": composer,
             "album": row["album"],
             "albumId": album_id,
             "trackNumber": row["track_number"],
