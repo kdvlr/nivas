@@ -63,27 +63,29 @@ interface Firefly {
   size: number
 }
 
-const NUM_BARS = 32
+const NUM_BARS = 24
+const TARGET_FRAME_MS = 33 // Smooth locked 30fps for Android kiosk tablets
+const RENDER_SCALE = 0.5 // Half-res canvas (4x-9x fewer pixels, GPU-friendly)
 
 function createStars(): Star[] {
-  return Array.from({ length: 70 }, (_, i) => ({
+  return Array.from({ length: 42 }, (_, i) => ({
     nx: ((i * 37 + 13) % 98) / 100 + 0.01,
     ny: ((i * 53 + 7) % 88) / 100 + 0.02,
-    size: 1.1 + (i % 4) * 0.65,
+    size: 1.5 + (i % 3) * 0.9,
     phase: (i * 1.7) % (Math.PI * 2),
     band: 8 + (i % 8),
   }))
 }
 
 function createFireflies(): Firefly[] {
-  return Array.from({ length: 22 }, (_, i) => ({
+  return Array.from({ length: 14 }, (_, i) => ({
     nx: ((i * 43 + 17) % 92) / 100 + 0.04,
     ny: ((i * 29 + 23) % 82) / 100 + 0.08,
-    vx: (((i * 19) % 11) - 5) * 0.00018,
-    vy: (((i * 23) % 11) - 5) * 0.00014,
+    vx: (((i * 19) % 11) - 5) * 0.00028,
+    vy: (((i * 23) % 11) - 5) * 0.00022,
     phase: (i * 0.9) % (Math.PI * 2),
     hue: i % 3 === 0 ? 45 : i % 3 === 1 ? 168 : 285,
-    size: 2.5 + (i % 3) * 1.4,
+    size: 2.2 + (i % 3) * 1.1,
   }))
 }
 
@@ -94,7 +96,7 @@ export default function AudioReactiveCanvas({
   spectrum,
 }: AudioReactiveCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  const sizeRef = useRef<{ w: number; h: number; dpr: number }>({ w: 0, h: 0, dpr: 1 })
+  const sizeRef = useRef<{ w: number; h: number }>({ w: 0, h: 0 })
   const spectrumRef = useRef<SpectrumData | null>(spectrum)
   spectrumRef.current = spectrum
 
@@ -107,8 +109,8 @@ export default function AudioReactiveCanvas({
     peakCaps: new Float32Array(NUM_BARS),
     peakVels: new Float32Array(NUM_BARS),
     rollingBass: 0.18,
-    rollingFlux: 0.05,
     lastBeatMs: 0,
+    lastRenderMs: 0,
     huePhase: 0,
     rings: [] as ShockRing[],
     sparks: [] as Spark[],
@@ -117,17 +119,16 @@ export default function AudioReactiveCanvas({
     fireflies: createFireflies(),
   })
 
-  // Cache canvas size on mount & window resize only (zero layout thrashing in rAF)
+  // Cache half-resolution canvas size on mount & window resize only (zero layout thrashing)
   useEffect(() => {
     const updateSize = () => {
       const canvas = canvasRef.current
       if (!canvas) return
-      const dpr = Math.min(window.devicePixelRatio || 1, 1.5)
-      const w = window.innerWidth
-      const h = window.innerHeight
-      sizeRef.current = { w, h, dpr }
-      canvas.width = Math.max(1, Math.floor(w * dpr))
-      canvas.height = Math.max(1, Math.floor(h * dpr))
+      const w = Math.max(320, Math.floor(window.innerWidth * RENDER_SCALE))
+      const h = Math.max(200, Math.floor(window.innerHeight * RENDER_SCALE))
+      sizeRef.current = { w, h }
+      canvas.width = w
+      canvas.height = h
     }
     updateSize()
     window.addEventListener('resize', updateSize)
@@ -138,7 +139,7 @@ export default function AudioReactiveCanvas({
     if (mode === 'ambient') return
     const canvas = canvasRef.current
     if (!canvas) return
-    const ctx = canvas.getContext('2d')
+    const ctx = canvas.getContext('2d', { alpha: true, desynchronized: true })
     if (!ctx) return
 
     let rafId = 0
@@ -160,36 +161,32 @@ export default function AudioReactiveCanvas({
           const v1 = spec.bytes[off1 + i] / 255
           const raw = v0 + (v1 - v0) * frac
 
-          // Adaptive per-band floor & peak (Winamp AGC) so dynamic highs/mids pop
-          // while quiet breakdowns stay genuinely calm.
           st.bandFloor[i] =
             raw < st.bandFloor[i]
-              ? st.bandFloor[i] * 0.94 + raw * 0.06
-              : st.bandFloor[i] * 0.996 + raw * 0.004
+              ? st.bandFloor[i] * 0.92 + raw * 0.08
+              : st.bandFloor[i] * 0.992 + raw * 0.008
           st.bandPeak[i] =
             raw > st.bandPeak[i]
-              ? st.bandPeak[i] * 0.78 + raw * 0.22
-              : Math.max(0.16, st.bandPeak[i] * 0.994 + raw * 0.006)
+              ? st.bandPeak[i] * 0.72 + raw * 0.28
+              : Math.max(0.16, st.bandPeak[i] * 0.99 + raw * 0.01)
 
           const span = Math.max(0.1, st.bandPeak[i] - st.bandFloor[i] * 0.55)
           const agc = Math.max(0, Math.min(1, (raw - st.bandFloor[i] * 0.55) / span))
-          // Preserve true silence: scale by overall raw presence so silent parts drop to 0
           const presence = Math.min(1, raw * 6.5)
           const dynamicVal = Math.pow(agc, 1.35) * presence
 
           const flux = Math.max(0, dynamicVal - st.prevBands[i])
           st.prevBands[i] = dynamicVal
-          st.fluxBands[i] = st.fluxBands[i] * 0.72 + flux * 0.9
+          st.fluxBands[i] = st.fluxBands[i] * 0.68 + flux * 0.95
 
           const target = Math.min(1, dynamicVal + st.fluxBands[i] * 0.45)
           const cur = st.smoothBands[i]
-          st.smoothBands[i] = target > cur ? cur + (target - cur) * 0.62 : cur + (target - cur) * 0.22
+          st.smoothBands[i] = target > cur ? cur + (target - cur) * 0.68 : cur + (target - cur) * 0.28
         }
       } else {
-        // Gentle calm state while spectrum loads
         for (let i = 0; i < 16; i++) {
           const target = isPlaying ? 0.06 + 0.04 * Math.sin(t * (1.4 + i * 0.2) + i) ** 2 : 0.02
-          st.smoothBands[i] += (target - st.smoothBands[i]) * 0.15
+          st.smoothBands[i] += (target - st.smoothBands[i]) * 0.2
           st.fluxBands[i] *= 0.8
         }
       }
@@ -204,151 +201,125 @@ export default function AudioReactiveCanvas({
       const bassFlux = (st.fluxBands[0] + st.fluxBands[1] + st.fluxBands[2]) / 3
       const totalFlux = (bassFlux + st.fluxBands[5] + st.fluxBands[9] + st.fluxBands[12]) * 0.25
 
-      st.rollingBass = st.rollingBass * 0.9 + bass * 0.1
-      st.rollingFlux = st.rollingFlux * 0.9 + totalFlux * 0.1
-      st.huePhase = (st.huePhase + 0.2 + totalFlux * 4.5 + mid * 1.1) % 360
+      st.rollingBass = st.rollingBass * 0.88 + bass * 0.12
+      st.huePhase = (st.huePhase + 0.4 + totalFlux * 7.5 + mid * 1.8) % 360
 
-      const focalX = w >= 1024 ? w * 0.2 : w * 0.5
-      const focalY = w >= 1024 ? h * 0.44 : h * 0.22
+      const focalX = w >= 512 ? w * 0.2 : w * 0.5
+      const focalY = w >= 512 ? h * 0.44 : h * 0.22
 
-      // Trigger MilkDrop shockwave ring specifically on sharp bass/transient kicks
+      // Bass-kick shockwave rings (lightweight single-stroke arcs, max 5)
       if (
         isPlaying &&
         (bassFlux > 0.16 || bass > Math.max(0.38, st.rollingBass * 1.32)) &&
-        nowMs - st.lastBeatMs > 240
+        nowMs - st.lastBeatMs > 260
       ) {
         st.lastBeatMs = nowMs
         st.rings.push({
           x: focalX,
           y: focalY,
-          r: 42,
+          r: 22,
           maxR: Math.max(w, h) * 0.65,
           hue: (st.huePhase + bass * 140) % 360,
-          alpha: Math.min(0.75, 0.35 + bass * 0.4 + bassFlux * 0.5),
-          speed: 5.0 + bass * 8.5,
+          alpha: Math.min(0.7, 0.32 + bass * 0.4),
+          speed: 3.5 + bass * 5.5,
         })
-        if (st.rings.length > 8) st.rings.shift()
+        if (st.rings.length > 5) st.rings.shift()
       }
 
-      // 1. Expanding bass shockwave rings
-      ctx.save()
-      ctx.globalCompositeOperation = 'lighter'
       for (let i = st.rings.length - 1; i >= 0; i--) {
         const ring = st.rings[i]
         ring.r += ring.speed
-        ring.alpha *= 0.962
-        if (ring.alpha < 0.015 || ring.r > ring.maxR) {
+        ring.alpha *= 0.93
+        if (ring.alpha < 0.02 || ring.r > ring.maxR) {
           st.rings.splice(i, 1)
           continue
         }
         ctx.beginPath()
         ctx.arc(ring.x, ring.y, ring.r, 0, Math.PI * 2)
-        ctx.strokeStyle = `hsla(${ring.hue}, 95%, 64%, ${ring.alpha})`
-        ctx.lineWidth = 2.5 + bass * 5
+        ctx.strokeStyle = `hsla(${Math.round(ring.hue)}, 95%, 64%, ${ring.alpha.toFixed(2)})`
+        ctx.lineWidth = 1.5 + bass * 2.5
         ctx.stroke()
       }
 
-      // 2. Flowing Winamp / MilkDrop dual waveform ribbons
-      for (let r = 0; r < 2; r++) {
-        ctx.beginPath()
-        const baseY = h * (0.64 + r * 0.08)
-        const amp = (28 + bass * 78 + mid * 52) * (r === 0 ? 1 : 0.72)
-        const steps = 64
-        for (let s = 0; s <= steps; s++) {
-          const nx = s / steps
-          const bandPos = nx * 15
-          const bi = Math.min(14, Math.floor(bandPos))
-          const bVal = sb[bi] + (sb[bi + 1] - sb[bi]) * (bandPos - bi)
-          const wave =
-            Math.sin(nx * Math.PI * (3 + r * 2) + t * (2.6 + r * 1.1)) * amp * (0.35 + bVal * 0.9) +
-            Math.cos(nx * Math.PI * 7 - t * 3.8) * (treble * 26)
-          const x = nx * w
-          const y = baseY + wave
-          if (s === 0) ctx.moveTo(x, y)
-          else ctx.lineTo(x, y)
-        }
-        const grad = ctx.createLinearGradient(0, baseY - amp, w, baseY + amp)
-        grad.addColorStop(0, `hsla(${(st.huePhase + r * 90) % 360}, 95%, 62%, ${0.14 + mid * 0.25})`)
-        grad.addColorStop(0.5, `hsla(${(st.huePhase + 110 + r * 90) % 360}, 98%, 68%, ${0.22 + bass * 0.3})`)
-        grad.addColorStop(1, `hsla(${(st.huePhase + 220 + r * 90) % 360}, 95%, 62%, ${0.14 + treble * 0.25})`)
-        ctx.strokeStyle = grad
-        ctx.lineWidth = 2.5 + bass * 3.5
-        ctx.stroke()
+      // Single sleek Winamp/MilkDrop waveform ribbon (32 steps, zero gradients)
+      ctx.beginPath()
+      const baseY = h * 0.66
+      const amp = 14 + bass * 42 + mid * 28
+      const steps = 32
+      for (let s = 0; s <= steps; s++) {
+        const nx = s / steps
+        const bi = Math.min(14, Math.floor(nx * 15))
+        const bVal = sb[bi]
+        const wave =
+          Math.sin(nx * Math.PI * 4 + t * 2.8) * amp * (0.3 + bVal * 0.95) +
+          Math.cos(nx * Math.PI * 7 - t * 3.8) * (treble * 14)
+        const x = nx * w
+        const y = baseY + wave
+        if (s === 0) ctx.moveTo(x, y)
+        else ctx.lineTo(x, y)
       }
+      ctx.strokeStyle = `hsla(${Math.round((st.huePhase + 100) % 360)}, 95%, 66%, ${(0.28 + bass * 0.35).toFixed(2)})`
+      ctx.lineWidth = 1.8 + bass * 2
+      ctx.stroke()
 
-      // 3. 32-bar Winamp Spectrum Equalizer + falling peak-hold caps
-      const padX = Math.max(16, w * 0.03)
+      // 24-bar Winamp Spectrum Equalizer using fast fillRect (zero per-bar gradients)
+      const padX = Math.max(8, w * 0.03)
       const availW = w - padX * 2
-      const gap = Math.max(4, availW * 0.008)
-      const barW = Math.max(4, (availW - gap * (NUM_BARS - 1)) / NUM_BARS)
-      const maxBarH = Math.min(h * 0.26, 210)
+      const gap = Math.max(2, availW * 0.01)
+      const barW = Math.max(3, (availW - gap * (NUM_BARS - 1)) / NUM_BARS)
+      const maxBarH = Math.min(h * 0.27, 115)
 
       for (let i = 0; i < NUM_BARS; i++) {
         const pos = (i / (NUM_BARS - 1)) * 15
         const i0 = Math.floor(pos)
         const i1 = Math.min(15, i0 + 1)
         const val = sb[i0] + (sb[i1] - sb[i0]) * (pos - i0)
-        const barH = Math.max(4, val * maxBarH)
+        const barH = Math.max(2, val * maxBarH)
         const x = padX + i * (barW + gap)
         const y = h - barH
-        const hue = (st.huePhase + (i / NUM_BARS) * 260) % 360
+        const hue = Math.round((st.huePhase + (i / NUM_BARS) * 260) % 360)
 
-        // Peak-hold physics (classic Winamp)
         if (barH >= st.peakCaps[i]) {
           st.peakCaps[i] = barH
           st.peakVels[i] = 0
         } else {
-          st.peakVels[i] += 0.24
-          st.peakCaps[i] = Math.max(4, st.peakCaps[i] - st.peakVels[i])
+          st.peakVels[i] += 0.35
+          st.peakCaps[i] = Math.max(2, st.peakCaps[i] - st.peakVels[i])
         }
 
-        const barGrad = ctx.createLinearGradient(x, h, x, y)
-        barGrad.addColorStop(0, `hsla(${hue}, 92%, 52%, 0.72)`)
-        barGrad.addColorStop(0.65, `hsla(${(hue + 35) % 360}, 95%, 64%, 0.62)`)
-        barGrad.addColorStop(1, `hsla(${(hue + 70) % 360}, 100%, 78%, 0.85)`)
-        ctx.fillStyle = barGrad
-        ctx.beginPath()
-        ctx.roundRect(x, y, barW, barH, [6, 6, 0, 0])
-        ctx.fill()
+        ctx.fillStyle = `hsla(${hue}, 92%, 58%, 0.72)`
+        ctx.fillRect(x, y, barW, barH)
 
-        // Falling peak cap
-        const capY = h - st.peakCaps[i] - 5
-        ctx.fillStyle = `hsla(${(hue + 50) % 360}, 100%, 88%, 0.92)`
-        ctx.beginPath()
-        ctx.roundRect(x, capY, barW, 3.5, 2)
-        ctx.fill()
+        // Bright Winamp peak-hold cap
+        ctx.fillStyle = `hsla(${(hue + 45) % 360}, 100%, 86%, 0.92)`
+        ctx.fillRect(x, h - st.peakCaps[i] - 3, barW, 2)
 
-        // Launch treble sparks on lively highs
-        if (isPlaying && val > 0.62 && Math.random() < 0.08 + treble * 0.14 && st.sparks.length < 48) {
+        if (isPlaying && val > 0.65 && Math.random() < 0.08 + treble * 0.1 && st.sparks.length < 24) {
           st.sparks.push({
             x: x + barW * 0.5,
             y,
-            vx: (Math.random() - 0.5) * 1.8,
-            vy: -(1.8 + Math.random() * 3.2),
+            vx: (Math.random() - 0.5) * 1.4,
+            vy: -(1.4 + Math.random() * 2.2),
             hue,
             alpha: 0.9,
-            size: 2 + Math.random() * 2.5,
+            size: 1.8 + Math.random() * 1.4,
           })
         }
       }
 
-      // 4. Rising treble sparks
+      // Fast square treble sparks
       for (let i = st.sparks.length - 1; i >= 0; i--) {
         const sp = st.sparks[i]
         sp.x += sp.vx
         sp.y += sp.vy
-        sp.vy *= 0.985
-        sp.alpha -= 0.022
-        if (sp.alpha <= 0.02) {
+        sp.alpha -= 0.04
+        if (sp.alpha <= 0.03) {
           st.sparks.splice(i, 1)
           continue
         }
-        ctx.fillStyle = `hsla(${sp.hue}, 100%, 78%, ${sp.alpha})`
-        ctx.beginPath()
-        ctx.arc(sp.x, sp.y, sp.size, 0, Math.PI * 2)
-        ctx.fill()
+        ctx.fillStyle = `hsla(${sp.hue}, 100%, 78%, ${sp.alpha.toFixed(2)})`
+        ctx.fillRect(sp.x, sp.y, sp.size, sp.size)
       }
-      ctx.restore()
     }
 
     const drawStarlight = (w: number, h: number, nowMs: number, t: number) => {
@@ -358,67 +329,42 @@ export default function AudioReactiveCanvas({
       const mid = (sb[4] + sb[5] + sb[6] + sb[7] + sb[8] + sb[9]) / 6
       const treble = (sb[10] + sb[11] + sb[12] + sb[13] + sb[14] + sb[15]) / 6
 
-      st.rollingBass = st.rollingBass * 0.93 + bass * 0.07
-      st.huePhase = (st.huePhase + 0.12 + mid * 0.45) % 360
+      st.rollingBass = st.rollingBass * 0.9 + bass * 0.1
+      st.huePhase = (st.huePhase + 0.25 + mid * 0.8) % 360
 
-      ctx.save()
-      ctx.globalCompositeOperation = 'lighter'
-
-      // 1. Bass-reactive Aurora Borealis curtain in upper sky
-      for (let a = 0; a < 2; a++) {
-        const baseY = h * (0.2 + a * 0.14)
-        const swell = 35 + bass * 95 + mid * 45
-        ctx.beginPath()
-        ctx.moveTo(0, 0)
-        const steps = 40
-        for (let s = 0; s <= steps; s++) {
-          const nx = s / steps
-          const bi = Math.min(15, Math.floor(nx * 10))
-          const wave =
-            Math.sin(nx * Math.PI * (2.2 + a) + t * (0.7 + a * 0.35)) * swell * (0.45 + sb[bi] * 0.7) +
-            Math.cos(nx * Math.PI * 5 - t * 1.1) * (mid * 25)
-          ctx.lineTo(nx * w, baseY + wave)
-        }
-        ctx.lineTo(w, 0)
-        ctx.closePath()
-        const auroraHue = (158 + a * 95 + st.huePhase * 0.25) % 360
-        const grad = ctx.createLinearGradient(0, 0, 0, baseY + swell + 40)
-        grad.addColorStop(0, `hsla(${auroraHue}, 85%, 55%, 0.0)`)
-        grad.addColorStop(0.55, `hsla(${auroraHue}, 90%, 60%, ${0.08 + bass * 0.18})`)
-        grad.addColorStop(1, `hsla(${(auroraHue + 45) % 360}, 90%, 66%, 0.0)`)
-        ctx.fillStyle = grad
-        ctx.fill()
+      // 1. Lightweight bass-reactive Aurora wave (single pass, 20 steps, zero gradients)
+      const baseY = h * 0.24
+      const swell = 18 + bass * 50 + mid * 24
+      ctx.beginPath()
+      ctx.moveTo(0, 0)
+      const steps = 20
+      for (let s = 0; s <= steps; s++) {
+        const nx = s / steps
+        const bi = Math.min(15, Math.floor(nx * 10))
+        const wave = Math.sin(nx * Math.PI * 2.5 + t * 0.8) * swell * (0.45 + sb[bi] * 0.7)
+        ctx.lineTo(nx * w, baseY + wave)
       }
+      ctx.lineTo(w, 0)
+      ctx.closePath()
+      const auroraHue = Math.round((162 + st.huePhase * 0.3) % 360)
+      ctx.fillStyle = `hsla(${auroraHue}, 88%, 58%, ${(0.07 + bass * 0.14).toFixed(2)})`
+      ctx.fill()
 
-      // 2. Treble-reactive twinkling starfield
+      // 2. Fast fillRect twinkling stars (treble-reactive)
       for (const star of st.stars) {
         const bVal = sb[star.band] || 0
         const twinkle = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * 2.2 + star.phase))
-        const alpha = Math.min(1, twinkle * (0.35 + bVal * 0.9 + treble * 0.5))
-        const r = star.size * (0.85 + bVal * 0.9)
-        const sx = star.nx * w
-        const sy = star.ny * h
-        ctx.fillStyle = `rgba(255, 252, 240, ${alpha})`
-        ctx.beginPath()
-        ctx.arc(sx, sy, r, 0, Math.PI * 2)
-        ctx.fill()
-        if (bVal > 0.52) {
-          ctx.strokeStyle = `rgba(255, 244, 200, ${alpha * 0.5})`
-          ctx.lineWidth = 1
-          ctx.beginPath()
-          ctx.moveTo(sx - r * 2.8, sy)
-          ctx.lineTo(sx + r * 2.8, sy)
-          ctx.moveTo(sx, sy - r * 2.8)
-          ctx.lineTo(sx, sy + r * 2.8)
-          ctx.stroke()
-        }
+        const alpha = Math.min(1, twinkle * (0.35 + bVal * 0.85 + treble * 0.45))
+        const sz = star.size * (0.85 + bVal * 0.7)
+        ctx.fillStyle = `rgba(255, 252, 240, ${alpha.toFixed(2)})`
+        ctx.fillRect(star.nx * w, star.ny * h, sz, sz)
       }
 
-      // 3. Melody/vocal-reactive glowing fireflies
-      const speedMul = isPlaying ? 1 + mid * 2.6 : 0.2
+      // 3. Melody/vocal-reactive fireflies (2 concentric circles, zero radialGradient allocations)
+      const speedMul = isPlaying ? 1 + mid * 2.8 : 0.15
       for (const f of st.fireflies) {
         f.nx += f.vx * speedMul
-        f.ny += f.vy * speedMul + Math.sin(t * 1.4 + f.phase) * 0.00018 * speedMul
+        f.ny += f.vy * speedMul + Math.sin(t * 1.4 + f.phase) * 0.00025 * speedMul
         if (f.nx < 0.02) f.nx = 0.98
         if (f.nx > 0.98) f.nx = 0.02
         if (f.ny < 0.04) f.ny = 0.92
@@ -427,38 +373,37 @@ export default function AudioReactiveCanvas({
         const fx = f.nx * w
         const fy = f.ny * h
         const pulse = 0.5 + 0.5 * Math.sin(t * 2.6 + f.phase)
-        const glowR = f.size * (2.6 + mid * 4.5 + pulse * 1.8)
-        const alpha = Math.min(0.92, 0.25 + mid * 0.6 + pulse * 0.25)
+        const haloR = f.size * (2.2 + mid * 3.4 + pulse * 1.2)
+        const alpha = Math.min(0.9, 0.25 + mid * 0.55 + pulse * 0.2)
 
-        const g = ctx.createRadialGradient(fx, fy, 0, fx, fy, glowR)
-        g.addColorStop(0, `hsla(${f.hue}, 100%, 82%, ${alpha})`)
-        g.addColorStop(0.4, `hsla(${f.hue}, 95%, 65%, ${alpha * 0.45})`)
-        g.addColorStop(1, `hsla(${f.hue}, 95%, 55%, 0)`)
-        ctx.fillStyle = g
+        ctx.fillStyle = `hsla(${f.hue}, 95%, 65%, ${(alpha * 0.22).toFixed(2)})`
         ctx.beginPath()
-        ctx.arc(fx, fy, glowR, 0, Math.PI * 2)
+        ctx.arc(fx, fy, haloR, 0, Math.PI * 2)
+        ctx.fill()
+
+        ctx.fillStyle = `hsla(${f.hue}, 100%, 84%, ${alpha.toFixed(2)})`
+        ctx.beginPath()
+        ctx.arc(fx, fy, f.size * 0.85, 0, Math.PI * 2)
         ctx.fill()
       }
 
-      // 4. Beat/accent-triggered shooting stars (driven by real transient flux)
+      // 4. Beat/accent-triggered shooting stars
       const hiFlux = (st.fluxBands[8] + st.fluxBands[11] + st.fluxBands[14]) / 3
       const loFlux = (st.fluxBands[0] + st.fluxBands[1] + st.fluxBands[2]) / 3
       if (
         isPlaying &&
         (loFlux > 0.18 || hiFlux > 0.16 || bass > Math.max(0.45, st.rollingBass * 1.38)) &&
-        nowMs - st.lastBeatMs > 600 &&
-        st.shootingStars.length < 5
+        nowMs - st.lastBeatMs > 650 &&
+        st.shootingStars.length < 4
       ) {
         st.lastBeatMs = nowMs
-        const startX = w * (0.28 + Math.random() * 0.68)
-        const startY = h * (0.04 + Math.random() * 0.28)
-        const speed = 11 + bass * 10
+        const speed = 7 + bass * 6
         st.shootingStars.push({
-          x: startX,
-          y: startY,
+          x: w * (0.3 + Math.random() * 0.65),
+          y: h * (0.05 + Math.random() * 0.25),
           vx: -speed,
           vy: speed * 0.52,
-          len: 75 + bass * 90,
+          len: 36 + bass * 42,
           alpha: 0.95,
           hue: Math.random() > 0.4 ? 46 : 195,
         })
@@ -468,40 +413,35 @@ export default function AudioReactiveCanvas({
         const ss = st.shootingStars[i]
         ss.x += ss.vx
         ss.y += ss.vy
-        ss.alpha -= 0.024
-        if (ss.alpha <= 0.02 || ss.x < -120 || ss.y > h + 120) {
+        ss.alpha -= 0.045
+        if (ss.alpha <= 0.03 || ss.x < -60 || ss.y > h + 60) {
           st.shootingStars.splice(i, 1)
           continue
         }
-        const tailX = ss.x - (ss.vx / 14) * ss.len
-        const tailY = ss.y - (ss.vy / 14) * ss.len
-        const grad = ctx.createLinearGradient(ss.x, ss.y, tailX, tailY)
-        grad.addColorStop(0, `hsla(${ss.hue}, 100%, 92%, ${ss.alpha})`)
-        grad.addColorStop(0.4, `hsla(${ss.hue}, 95%, 72%, ${ss.alpha * 0.5})`)
-        grad.addColorStop(1, `hsla(${ss.hue}, 95%, 65%, 0)`)
-        ctx.strokeStyle = grad
-        ctx.lineWidth = 2.6
-        ctx.lineCap = 'round'
+        ctx.strokeStyle = `hsla(${ss.hue}, 100%, 86%, ${ss.alpha.toFixed(2)})`
+        ctx.lineWidth = 1.6
         ctx.beginPath()
         ctx.moveTo(ss.x, ss.y)
-        ctx.lineTo(tailX, tailY)
+        ctx.lineTo(ss.x - ss.vx * 3.5, ss.y - ss.vy * 3.5)
         ctx.stroke()
       }
-      ctx.restore()
     }
 
     const renderFrame = (nowMs: number) => {
       if (!running) return
-      const { w, h, dpr } = sizeRef.current
-      if (w > 0 && h > 0) {
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-        ctx.clearRect(0, 0, w, h)
-        const t = Math.max(0, timeRef.current)
-        sampleBands(t)
-        if (mode === 'party') {
-          drawParty(w, h, nowMs, t)
-        } else if (mode === 'starlight') {
-          drawStarlight(w, h, nowMs, t)
+      const st = stateRef.current
+      if (nowMs - st.lastRenderMs >= TARGET_FRAME_MS || !isPlaying) {
+        st.lastRenderMs = nowMs
+        const { w, h } = sizeRef.current
+        if (w > 0 && h > 0) {
+          ctx.clearRect(0, 0, w, h)
+          const t = Math.max(0, timeRef.current)
+          sampleBands(t)
+          if (mode === 'party') {
+            drawParty(w, h, nowMs, t)
+          } else if (mode === 'starlight') {
+            drawStarlight(w, h, nowMs, t)
+          }
         }
       }
       if (isPlaying) {

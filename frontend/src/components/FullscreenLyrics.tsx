@@ -324,35 +324,20 @@ export default function FullscreenLyrics({
         }
       `}</style>
 
-      {/* Living Blurred Album-Art Backdrop */}
+      {/* Static GPU-light Blurred Album-Art Backdrop (no animated CSS blur / mix-blend for tablet smoothness) */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         {track.thumbnail && (
-          <>
-            <img
-              src={track.thumbnail}
-              alt=""
-              className="absolute -inset-24 h-[calc(100%+12rem)] w-[calc(100%+12rem)] object-cover opacity-55 blur-[72px] saturate-150 transition-opacity duration-700"
-              style={{
-                animation: 'flAuroraA 26s ease-in-out infinite',
-                animationPlayState: animState,
-              }}
-            />
-            <img
-              src={track.thumbnail}
-              alt=""
-              className="absolute -inset-20 h-[calc(100%+10rem)] w-[calc(100%+10rem)] object-cover opacity-35 mix-blend-screen blur-[96px] saturate-200 transition-opacity duration-700"
-              style={{
-                animation: 'flAuroraB 34s ease-in-out infinite',
-                animationPlayState: animState,
-              }}
-            />
-          </>
+          <img
+            src={track.thumbnail}
+            alt=""
+            className="absolute inset-0 h-full w-full scale-110 object-cover opacity-40 blur-2xl saturate-150"
+          />
         )}
         <div
-          className={`absolute inset-0 transition-colors duration-700 ${
+          className={`absolute inset-0 ${
             visualMode === 'starlight'
               ? 'bg-gradient-to-b from-[#060918]/85 via-[#090d22]/78 to-[#050713]/92'
-              : 'bg-gradient-to-br from-black/72 via-black/62 to-black/82'
+              : 'bg-gradient-to-br from-black/75 via-black/65 to-black/85'
           }`}
         />
 
@@ -368,7 +353,7 @@ export default function FullscreenLyrics({
       {/* Top Bar: Visual Mode Switcher + Bouncing Star Toggle + Close */}
       <header className="relative z-10 flex shrink-0 flex-wrap items-center justify-between gap-2 px-4 pt-4 pb-2 sm:px-8 sm:pt-6">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex items-center rounded-full bg-white/10 p-1 backdrop-blur-md border border-white/10">
+          <div className="inline-flex items-center rounded-full bg-black/50 p-1 border border-white/15">
             {(
               [
                 ['ambient', 'Ambient', 'blur_on'],
@@ -395,10 +380,10 @@ export default function FullscreenLyrics({
           <button
             type="button"
             onClick={handleToggleStar}
-            className={`flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs sm:text-sm font-medium backdrop-blur-md border transition cursor-pointer ${
+            className={`flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs sm:text-sm font-medium border transition cursor-pointer ${
               bouncingStar
                 ? 'bg-amber-300/25 border-amber-300/50 text-amber-200'
-                : 'bg-white/10 border-white/10 text-white/70 hover:text-white'
+                : 'bg-black/50 border-white/15 text-white/70 hover:text-white'
             }`}
             title="Toggle Follow-the-Bouncing-Star"
           >
@@ -409,7 +394,7 @@ export default function FullscreenLyrics({
 
         <div className="flex items-center gap-2">
           {lyricsData?.source && lyricsData.source !== 'none' && (
-            <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white/75 backdrop-blur-md">
+            <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-black/50 px-3 py-1.5 text-xs font-medium text-white/75 border border-white/10">
               <span
                 className={`h-2 w-2 rounded-full ${
                   isSynced ? 'bg-emerald-400' : 'bg-amber-300'
@@ -422,7 +407,7 @@ export default function FullscreenLyrics({
             type="button"
             onClick={onClose}
             aria-label="Close fullscreen lyrics"
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-md hover:bg-white/25 transition cursor-pointer"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-black/55 text-white border border-white/15 hover:bg-white/25 transition cursor-pointer"
           >
             <Icon name="close" className="text-2xl" />
           </button>
@@ -508,7 +493,7 @@ export default function FullscreenLyrics({
 
             {/* Sync Offset + Refresh */}
             <div className="mt-3 lg:mt-5 hidden sm:flex flex-wrap items-center justify-start lg:justify-center gap-2 text-xs text-white/75">
-              <div className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 backdrop-blur-md">
+              <div className="inline-flex items-center gap-1 rounded-full bg-black/50 px-2.5 py-1 border border-white/10">
                 <button
                   type="button"
                   onClick={() => adjustOffset(-0.5)}
@@ -642,9 +627,9 @@ export default function FullscreenLyrics({
                       )}
 
                       <span
-                        className={`block font-bold leading-snug tracking-tight transition-all duration-500 ${
+                        className={`block font-bold leading-snug tracking-tight transition-opacity duration-300 ${
                           isActive
-                            ? 'text-2xl sm:text-4xl lg:text-5xl drop-shadow-[0_4px_24px_rgba(255,255,255,0.28)]'
+                            ? 'text-2xl sm:text-4xl lg:text-5xl'
                             : 'text-xl sm:text-3xl lg:text-4xl'
                         }`}
                       >
