@@ -1,4 +1,5 @@
 import base64
+from difflib import SequenceMatcher
 import json
 import logging
 import math
@@ -59,6 +60,23 @@ def parse_lrc(lrc_text: str) -> List[Dict[str, Any]]:
 def _clean_query_title(title: str) -> str:
     cleaned = _CLEAN_TITLE_RE.sub("", title or "").strip()
     return cleaned or (title or "").strip()
+
+
+def _norm_match(text: str) -> str:
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", (text or "").lower()).split())
+
+
+def _title_similarity(a: str, b: str) -> float:
+    na, nb = _norm_match(a), _norm_match(b)
+    if not na or not nb:
+        return 0.0
+    if na == nb:
+        return 1.0
+    # Strip spaces too so "arabickadaloram" matches "arabi kadaloram"
+    sa, sb = na.replace(" ", ""), nb.replace(" ", "")
+    if sa == sb:
+        return 0.98
+    return max(SequenceMatcher(None, na, nb).ratio(), SequenceMatcher(None, sa, sb).ratio())
 
 
 class LyricsService:
@@ -281,10 +299,11 @@ class LyricsService:
             search_queries.append((f"{words[0]} {album}".strip(), 10.0))
 
         seen_q = set()
+        norm_album = _norm_match(album)
         best_synced = None
-        best_synced_key = (2, 9999.0)
+        best_synced_key = (2, 2, 1, 9999.0)
         best_plain = None
-        best_plain_key = (2, 9999.0)
+        best_plain_key = (2, 2, 1, 9999.0)
 
         for q, max_dur_diff in search_queries:
             q_norm = q.lower()
@@ -299,24 +318,31 @@ class LyricsService:
                 for item in results:
                     if not isinstance(item, dict) or item.get("instrumental"):
                         continue
+                    item_title = _clean_query_title(item.get("trackName") or "")
+                    tsim = _title_similarity(clean_title, item_title)
+                    if tsim < 0.65:
+                        continue
                     item_dur = float(item.get("duration") or 0)
                     diff = abs(item_dur - duration) if (duration > 0 and item_dur > 0) else 0.0
                     if duration > 0 and item_dur > 0 and diff > max_dur_diff:
                         continue
+                    item_album = _norm_match(item.get("albumName") or "")
+                    album_mismatch = 0 if (norm_album and norm_album in item_album) else 1
+                    title_bucket = 0 if tsim >= 0.88 else 1
                     synced = (item.get("syncedLyrics") or "").strip()
                     plain = (item.get("plainLyrics") or "").strip()
                     if synced:
-                        key = (0 if is_mostly_latin(synced) else 1, diff)
+                        key = (title_bucket, 0 if is_mostly_latin(synced) else 1, album_mismatch, diff)
                         if key < best_synced_key:
                             best_synced = (synced, plain)
                             best_synced_key = key
                     if plain:
-                        key = (0 if is_mostly_latin(plain) else 1, diff)
+                        key = (title_bucket, 0 if is_mostly_latin(plain) else 1, album_mismatch, diff)
                         if key < best_plain_key:
                             best_plain = ("", plain)
                             best_plain_key = key
-                # Stop early once we have a high-confidence Latin synced match
-                if best_synced and best_synced_key[0] == 0 and best_synced_key[1] <= 8.0:
+                # Stop early once we have an exact-title Latin synced match
+                if best_synced and best_synced_key[0] == 0 and best_synced_key[1] == 0 and best_synced_key[3] <= 8.0:
                     return best_synced
             except Exception as e:
                 logger.debug("LRCLIB search error for '%s': %s", q, e)

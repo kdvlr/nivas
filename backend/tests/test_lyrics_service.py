@@ -179,12 +179,28 @@ def test_tamil_and_hindi_lyrics_transliterated_to_english_letters(tmp_path):
         if "/api/get?" in url:
             return {"syncedLyrics": "[00:05.00] சின்ன சின்ன ஆசை", "plainLyrics": "சின்ன சின்ன ஆசை"}
         return [
-            {"duration": 290, "syncedLyrics": "[00:05.00] சின்ன சின்ன ஆசை", "plainLyrics": "சின்ன சின்ன ஆசை"},
-            {"duration": 290, "syncedLyrics": "[00:05.00] Chinna chinna aasai", "plainLyrics": "Chinna chinna aasai"},
+            {"trackName": "Chinna Chinna Aasai", "duration": 290, "syncedLyrics": "[00:05.00] சின்ன சின்ன ஆசை", "plainLyrics": "சின்ன சின்ன ஆசை"},
+            {"trackName": "Chinna Chinna Aasai", "duration": 290, "syncedLyrics": "[00:05.00] Chinna chinna aasai", "plainLyrics": "Chinna chinna aasai"},
         ]
 
     svc._http_get_json = fake_get_json
     res = svc.get_lyrics("yt_roja", title="Chinna Chinna Aasai", artist="A.R. Rahman", duration=290)
     assert res["lines"][0]["text"] == "Chinna chinna aasai"
+
+
+def test_lrclib_search_rejects_wrong_title_with_closer_duration(tmp_path):
+    svc = LyricsService(data_dir=str(tmp_path / "data"))
+
+    def fake_get_json(url):
+        if "/api/get?" in url:
+            raise RuntimeError("404")
+        return [
+            {"trackName": "Ennuyire", "albumName": "Uyire", "duration": 437, "syncedLyrics": "[00:03.00] Ennuyire ennuyire"},
+            {"trackName": "Uyire Uyire", "albumName": "Bombay", "duration": 438, "syncedLyrics": "[00:05.00] Uyire uyire vandhu ennodu"},
+        ]
+
+    svc._http_get_json = fake_get_json
+    res = svc.get_lyrics("local:uyire", title="Uyire uyire", artist="Hariharan", album="Bombay", duration=436)
+    assert res["lines"][0]["text"] == "Uyire uyire vandhu ennodu"
 
 
