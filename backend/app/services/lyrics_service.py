@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from ..config import get_settings
 from .local_music import local_music_service
 from .media_cache import media_cache
+from .transliterate import is_mostly_latin, transliterate_to_latin
 from .ytmusic import ytmusic_service
 
 logger = logging.getLogger(__name__)
@@ -244,7 +245,8 @@ class LyricsService:
 
         primary_artist = (artist or "").split(",")[0].split("&")[0].strip()
 
-        # 1. Exact /api/get
+        # 1. Exact /api/get (if result is non-Latin, still check /api/search for a Romanized synced version)
+        exact_fallback: Optional[Tuple[str, str]] = None
         if primary_artist:
             params: Dict[str, Any] = {
                 "track_name": clean_title,
@@ -260,21 +262,23 @@ class LyricsService:
                 if isinstance(data, dict) and not data.get("instrumental"):
                     synced = (data.get("syncedLyrics") or "").strip()
                     plain = (data.get("plainLyrics") or "").strip()
-                    if synced or plain:
+                    if synced and is_mostly_latin(synced):
                         return synced, plain
+                    if synced or plain:
+                        exact_fallback = (synced, plain)
             except Exception:
                 pass
 
-        # 2. Fuzzy /api/search fallback
+        # 2. Fuzzy /api/search fallback (strongly prefer Latin/Romanized synced lyrics)
         q = f"{clean_title} {primary_artist}".strip()
         search_url = f"https://lrclib.net/api/search?{urllib.parse.urlencode({'q': q})}"
         try:
             results = self._http_get_json(search_url)
             if isinstance(results, list) and results:
                 best_synced = None
-                best_synced_diff = 9999.0
+                best_synced_key = (2, 9999.0)
                 best_plain = None
-                best_plain_diff = 9999.0
+                best_plain_key = (2, 9999.0)
                 for item in results:
                     if not isinstance(item, dict) or item.get("instrumental"):
                         continue
@@ -282,25 +286,38 @@ class LyricsService:
                     diff = abs(item_dur - duration) if (duration > 0 and item_dur > 0) else 0.0
                     synced = (item.get("syncedLyrics") or "").strip()
                     plain = (item.get("plainLyrics") or "").strip()
-                    if synced and (duration <= 0 or diff <= 12.0) and diff < best_synced_diff:
-                        best_synced = (synced, plain)
-                        best_synced_diff = diff
-                    if plain and diff < best_plain_diff:
-                        best_plain = ("", plain)
-                        best_plain_diff = diff
+                    if synced and (duration <= 0 or diff <= 12.0):
+                        key = (0 if is_mostly_latin(synced) else 1, diff)
+                        if key < best_synced_key:
+                            best_synced = (synced, plain)
+                            best_synced_key = key
+                    if plain:
+                        key = (0 if is_mostly_latin(plain) else 1, diff)
+                        if key < best_plain_key:
+                            best_plain = ("", plain)
+                            best_plain_key = key
                 if best_synced:
                     return best_synced
+                if exact_fallback:
+                    return exact_fallback
                 if best_plain:
                     return best_plain
         except Exception as e:
             logger.debug("LRCLIB search error for '%s': %s", q, e)
 
+        if exact_fallback:
+            return exact_fallback
         return "", ""
 
     def _format_response(self, video_id: str, synced_lrc: str, plain_lyrics: str, source: str) -> Dict[str, Any]:
-        lines = parse_lrc(synced_lrc) if synced_lrc else []
+        raw_lines = parse_lrc(synced_lrc) if synced_lrc else []
+        lines = [
+            {"time": line["time"], "text": transliterate_to_latin(line["text"])}
+            for line in raw_lines
+        ]
         synced = len(lines) > 0
-        plain = plain_lyrics or ("\n".join(line["text"] for line in lines if line["text"]) if lines else "")
+        raw_plain = plain_lyrics or ("\n".join(line["text"] for line in lines if line["text"]) if lines else "")
+        plain = transliterate_to_latin(raw_plain)
         return {
             "videoId": video_id,
             "synced": synced,

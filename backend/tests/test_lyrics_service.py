@@ -159,3 +159,32 @@ def test_lyrics_spectrum_extraction_and_cache(tmp_path, monkeypatch):
     assert r2.json()["data"] == d1["data"]
     assert call_count["n"] == 1
 
+
+def test_tamil_and_hindi_lyrics_transliterated_to_english_letters(tmp_path):
+    from app.services.transliterate import transliterate_to_latin
+
+    tamil_out = transliterate_to_latin("சின்ன சின்ன ஆசை")
+    assert tamil_out.isascii()
+    assert "chinna" in tamil_out.lower()
+    assert "aasai" in tamil_out.lower()
+
+    hindi_out = transliterate_to_latin("हम तेरे बिन")
+    assert hindi_out.isascii()
+    assert "ham" in hindi_out.lower()
+
+    # Verify LRCLIB search prefers Latin/Romanized syncedLyrics over Tamil script
+    svc = LyricsService(data_dir=str(tmp_path / "data"))
+
+    def fake_get_json(url):
+        if "/api/get?" in url:
+            return {"syncedLyrics": "[00:05.00] சின்ன சின்ன ஆசை", "plainLyrics": "சின்ன சின்ன ஆசை"}
+        return [
+            {"duration": 290, "syncedLyrics": "[00:05.00] சின்ன சின்ன ஆசை", "plainLyrics": "சின்ன சின்ன ஆசை"},
+            {"duration": 290, "syncedLyrics": "[00:05.00] Chinna chinna aasai", "plainLyrics": "Chinna chinna aasai"},
+        ]
+
+    svc._http_get_json = fake_get_json
+    res = svc.get_lyrics("yt_roja", title="Chinna Chinna Aasai", artist="A.R. Rahman", duration=290)
+    assert res["lines"][0]["text"] == "Chinna chinna aasai"
+
+
