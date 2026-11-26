@@ -9,7 +9,7 @@ import signal
 import subprocess
 import threading
 import time
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 from pathlib import Path
 
 import httpx
@@ -56,8 +56,11 @@ class AirPlayDevice:
         }
 
 class PlayerEngine:
+    MAX_CONSECUTIVE_FETCH_ERRORS = 3
+
     def __init__(self):
         self.is_playing: bool = False
+        self._consecutive_fetch_errors: int = 0
         self.current_track: Optional[Dict[str, Any]] = None
         self.queue: List[Dict[str, Any]] = []
         self.elapsed_seconds: float = 0
@@ -641,10 +644,13 @@ class PlayerEngine:
                         self.active_targets.append(first_dev.id)
         self._update_master_volume_from_devices()
 
-    async def play_track(self, track: Dict[str, Any], queue: Optional[List[Dict[str, Any]]] = None, is_back: bool = False):
+    async def play_track(self, track: Dict[str, Any], queue: Optional[List[Dict[str, Any]]] = None, is_back: bool = False, _from_error_skip: bool = False):
         video_id = track.get("videoId")
         if not video_id:
             return self.get_state()
+
+        if not _from_error_skip:
+            self._consecutive_fetch_errors = 0
 
         # Save currently playing track to history before switching to a new track
         if not is_back and self.current_track and self.current_track.get("videoId"):
@@ -1025,13 +1031,32 @@ class PlayerEngine:
                     return
 
                 if not audio_path_obj.exists() or audio_path_obj.stat().st_size <= 44:
+                    self._consecutive_fetch_errors += 1
+                    if self._consecutive_fetch_errors >= self.MAX_CONSECUTIVE_FETCH_ERRORS:
+                        logger.error(
+                            "Audio fetch failed %d consecutive times (last: %s / %s); stopping playback instead of skipping remaining queue",
+                            self._consecutive_fetch_errors,
+                            track_info.get("title"),
+                            video_id,
+                        )
+                        self.is_playing = False
+                        self.is_buffering = False
+                        self._playback_error = (
+                            f"Playback stopped after {self._consecutive_fetch_errors} consecutive tracks failed to load."
+                        )
+                        self._broadcast_state()
+                        return
                     logger.warning(
-                        "Audio fetch produced unplayable file for %s (%s); advancing to next track",
+                        "Audio fetch produced unplayable file for %s (%s) (%d/%d); advancing to next track",
                         track_info.get("title"),
                         video_id,
+                        self._consecutive_fetch_errors,
+                        self.MAX_CONSECUTIVE_FETCH_ERRORS,
                     )
-                    await self.next_track(auto=True, from_generation=generation_id)
+                    await self.next_track(auto=True, from_generation=generation_id, from_error_skip=True)
                     return
+
+                self._consecutive_fetch_errors = 0
 
                 self._media_cache.pin([video_id, *[str(track.get("videoId")) for track in self.queue[:2] if not str(track.get("videoId")).startswith("local:")]])
                 self._media_cache.touch(audio_path_obj)
@@ -1200,41 +1225,70 @@ class PlayerEngine:
                 logger.info(f"Transcoded direct audio URL successfully to {output_path}")
                 return
 
-            # 2. Strict yt-dlp download: Prefer ITAG 141 (256kbps AAC), fallback to ITAG 140 (128kbps AAC), then best audio
+            # 2. Strict yt-dlp download: Prefer 256kbps Opus (774) / 256kbps AAC (141),
+            # then ~145kbps Opus (251), 128kbps AAC (140), then best audio.
             import yt_dlp
             settings = get_settings()
             url = source if (source.startswith("http://") or source.startswith("https://")) else f"https://music.youtube.com/watch?v={source}"
             tmp_base = f"{output_path}.{os.getpid()}_{threading.get_ident()}_{int(time.time() * 1000)}.tmp"
 
             pot_url = os.environ.get("POT_PROVIDER_URL", "http://192.168.100.229:4416")
-            ydl_opts = {
-                "format": "141/140/bestaudio[ext=m4a]/bestaudio/best",
+            base_opts: Dict[str, Any] = {
+                "format": "774/141/251/140/bestaudio[ext=m4a]/bestaudio/best",
                 "outtmpl": f"{tmp_base}.%(ext)s",
                 "remote_components": ["ejs:github"],
-                "extractor_args": {
-                    "youtube": {"player_client": ["web_music", "web", "tv"]},
-                    "youtubepot-bgutilhttp": {"base_url": [pot_url]},
-                },
                 "quiet": True,
                 "no_warnings": True,
             }
 
-            if settings.youtube_cookies_file.exists():
-                ydl_opts["cookiefile"] = str(settings.youtube_cookies_file)
-
             deno_path = shutil.which("deno")
             node_path = shutil.which("node")
             if deno_path:
-                ydl_opts["js_runtimes"] = {"deno": {"path": deno_path}}
+                base_opts["js_runtimes"] = {"deno": {"path": deno_path}}
             elif node_path:
-                ydl_opts["js_runtimes"] = {"node": {"path": node_path}}
+                base_opts["js_runtimes"] = {"node": {"path": node_path}}
+
+            attempts: List[Tuple[str, Dict[str, Any]]] = []
+            if settings.youtube_cookies_file.exists():
+                premium_opts = {
+                    **base_opts,
+                    "cookiefile": str(settings.youtube_cookies_file),
+                    "extractor_args": {
+                        "youtube": {"player_client": ["web_music", "web", "tv"]},
+                        "youtubepot-bgutilhttp": {"base_url": [pot_url]},
+                    },
+                }
+                attempts.append(("web_music+cookies+pot", premium_opts))
+            # Always include default yt-dlp extractor fallback (avoids web_music SABR 403s)
+            attempts.append(("default", dict(base_opts)))
 
             try:
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    ydl.download([url])
+                completed: List[str] = []
+                last_err: Optional[Exception] = None
+                for attempt_name, ydl_opts in attempts:
+                    for stale in glob.glob(f"{tmp_base}.*"):
+                        try:
+                            os.remove(stale)
+                        except OSError:
+                            pass
+                    try:
+                        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                            ydl.download([url])
+                        matches = glob.glob(f"{tmp_base}.*")
+                        completed = [m for m in matches if not (m.endswith(".part") or m.endswith(".ytdl") or m.endswith(".tmp"))]
+                        if completed:
+                            break
+                    except Exception as attempt_err:
+                        last_err = attempt_err
+                        logger.warning(
+                            "yt-dlp attempt '%s' failed for %s: %s",
+                            attempt_name,
+                            source,
+                            attempt_err,
+                        )
 
-                matches = glob.glob(f"{tmp_base}.*")
-                completed = [m for m in matches if not (m.endswith(".part") or m.endswith(".ytdl") or m.endswith(".tmp"))]
+                if not completed and last_err is not None:
+                    raise last_err
 
                 if completed:
                     downloaded_file = completed[0]
@@ -1822,7 +1876,7 @@ class PlayerEngine:
         self._broadcast_state()
         return self.get_state()
 
-    async def next_track(self, auto: bool = False, from_generation: Optional[int] = None):
+    async def next_track(self, auto: bool = False, from_generation: Optional[int] = None, from_error_skip: bool = False):
         if auto:
             if from_generation is not None and from_generation != self._play_generation_id:
                 logger.info(
@@ -1845,7 +1899,7 @@ class PlayerEngine:
             if self.queue:
                 next_t = self.queue.pop(0)
                 remaining = list(self.queue)
-                await self.play_track(next_t, remaining)
+                await self.play_track(next_t, remaining, _from_error_skip=from_error_skip)
             elif self.autoplay_enabled and self.current_track and self.current_track.get("videoId"):
                 video_id = self.current_track["videoId"]
                 loop = asyncio.get_running_loop()

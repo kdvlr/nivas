@@ -1157,3 +1157,94 @@ def test_toggle_device_hot_adds_and_removes_without_restarting():
         assert fake_proc.stdin.lines[-1] == "remove_target 192.168.100.11\n"
 
 
+@pytest.mark.asyncio
+async def test_consecutive_fetch_errors_stops_auto_skipping_after_limit(tmp_path):
+    engine = PlayerEngine()
+    engine._broadcast_state = lambda: None
+    engine._media_cache = SimpleNamespace(
+        audio_path=lambda vid: tmp_path / f"{vid}.m4a",
+        pin=lambda ids: None,
+        touch=lambda p: None,
+    )
+    engine._ensure_audio_cached = AsyncMock(return_value=None)
+
+    tracks = [{"videoId": f"vid{i}", "title": f"Song {i}", "duration": 180} for i in range(10)]
+    engine.current_track = tracks[0]
+    engine.queue = tracks[1:]
+    engine.is_playing = True
+    engine._play_generation_id = 1
+
+    # Simulate 3 consecutive fetch failures (should advance twice and stop on the 3rd)
+    advance_calls = []
+
+    async def fake_next_track(auto=False, from_generation=None, from_error_skip=False):
+        advance_calls.append((auto, from_error_skip))
+        nxt = engine.queue.pop(0)
+        engine.current_track = nxt
+        engine._play_generation_id += 1
+        await engine._orchestrate_playback(nxt["videoId"], nxt, engine._play_generation_id)
+
+    engine.next_track = fake_next_track
+
+    await engine._orchestrate_playback(tracks[0]["videoId"], tracks[0], 1)
+
+    assert len(advance_calls) == PlayerEngine.MAX_CONSECUTIVE_FETCH_ERRORS - 1
+    assert all(auto and from_err for auto, from_err in advance_calls)
+    assert engine.is_playing is False
+    assert engine.is_buffering is False
+    assert engine._playback_error is not None
+    assert "3 consecutive tracks" in engine._playback_error
+    # Remaining queue was NOT drained
+    assert len(engine.queue) == 7
+
+    # Manual play_track resets the consecutive error counter
+    engine._ensure_default_target = lambda: None
+    engine._write_stream_command = lambda cmd: None
+    engine._orchestrate_playback = AsyncMock(return_value=None)
+    await engine.play_track(tracks[5], tracks[6:])
+    assert engine._consecutive_fetch_errors == 0
+    if engine._play_task and not engine._play_task.done():
+        engine._play_task.cancel()
+
+
+def test_ytdlp_falls_back_to_default_client_on_403(tmp_path):
+    engine = PlayerEngine()
+    cookies_file = tmp_path / "youtube_cookies.txt"
+    cookies_file.write_text("# Netscape HTTP Cookie File\n", encoding="utf-8")
+    out_file = tmp_path / "out.m4a"
+
+    seen_opts = []
+
+    class FakeYDL:
+        def __init__(self, opts):
+            self.opts = opts
+            seen_opts.append(opts)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def download(self, urls):
+            if "extractor_args" in self.opts:
+                raise RuntimeError("HTTP Error 403: Forbidden")
+            # Fallback attempt succeeds and creates the .m4a file
+            out_path = self.opts["outtmpl"].replace("%(ext)s", "m4a")
+            with open(out_path, "wb") as fp:
+                fp.write(b"0" * 1024)
+
+    fake_settings = SimpleNamespace(youtube_cookies_file=cookies_file)
+    with patch("app.services.player_engine.get_settings", return_value=fake_settings), \
+         patch.dict("sys.modules", {"yt_dlp": SimpleNamespace(YoutubeDL=FakeYDL)}):
+        engine._fetch_audio("eZfz31Jgu98", str(out_file))
+
+    assert len(seen_opts) == 2
+    assert seen_opts[0]["format"].startswith("774/141/251/140/")
+    assert "extractor_args" in seen_opts[0]
+    assert "extractor_args" not in seen_opts[1]
+    assert "cookiefile" not in seen_opts[1]
+    assert out_file.exists() and out_file.stat().st_size == 1024
+
+
+
