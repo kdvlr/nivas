@@ -99,7 +99,7 @@ export default function MiniPlayerBar({
             ? (slideshowMode
                 ? 'relative w-auto max-w-[calc(100vw-2rem)] sm:max-w-[320px] sm:w-[310px]'
                 : 'relative w-auto max-w-[calc(100vw-6.5rem)] sm:max-w-[320px] sm:w-[310px]')
-            : 'fixed bottom-[calc(4.25rem+env(safe-area-inset-bottom,0px))] inset-x-3 sm:inset-x-auto sm:right-6 sm:bottom-6 w-auto max-w-[320px] mx-auto sm:mx-0 sm:w-[310px]'
+            : 'fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px)*0.45)] inset-x-3 sm:inset-x-auto sm:right-6 sm:bottom-6 w-auto max-w-[320px] mx-auto sm:mx-0 sm:w-[310px]'
         } select-none glass border border-[var(--outline-var)] p-3 text-ink shadow-2xl transition-all ${
           slideshowMode ? 'z-[110]' : 'z-40'
         } ${className}`}

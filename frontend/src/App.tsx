@@ -801,7 +801,7 @@ function AppContent() {
             FullCalendar keeps its measured layout) but skips paint and
             compositing for the whole app — the slideshow gets the GPU. */}
         <div
-          className="flex h-full max-h-full flex-col lg:flex-row gap-2 p-2 pt-[calc(0.5rem+env(safe-area-inset-top,0px))] pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] pl-[calc(0.5rem+env(safe-area-inset-left,0px))] pr-[calc(0.5rem+env(safe-area-inset-right,0px))] lg:gap-4 lg:p-4 lg:pt-[calc(1rem+env(safe-area-inset-top,0px))] lg:pb-[calc(1rem+env(safe-area-inset-bottom,0px))] lg:pl-[calc(1rem+env(safe-area-inset-left,0px))] lg:pr-[calc(1rem+env(safe-area-inset-right,0px))] overflow-hidden"
+          className="flex h-full max-h-full flex-col lg:flex-row gap-2 p-2 pt-[max(0.5rem,env(safe-area-inset-top,0px))] pb-[max(0.5rem,calc(env(safe-area-inset-bottom,0px)*0.45))] pl-[calc(0.5rem+env(safe-area-inset-left,0px))] pr-[calc(0.5rem+env(safe-area-inset-right,0px))] lg:gap-4 lg:p-4 lg:pt-[calc(1rem+env(safe-area-inset-top,0px))] lg:pb-[calc(1rem+env(safe-area-inset-bottom,0px))] lg:pl-[calc(1rem+env(safe-area-inset-left,0px))] lg:pr-[calc(1rem+env(safe-area-inset-right,0px))] overflow-hidden"
           ref={dashboardRef}
           style={slideshowActive ? { visibility: 'hidden' } : undefined}
         >
@@ -973,7 +973,7 @@ function AppContent() {
 
           {/* Floating Dock: MiniPlayerBar (left of FAB on both mobile & desktop) + Themed FAB */}
           <div
-            className={`fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] right-3 sm:right-4 lg:bottom-6 lg:right-6 z-30 flex flex-row items-end gap-2 sm:gap-3 pointer-events-none transition-opacity duration-200 ${
+            className={`fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px)*0.45)] right-3 sm:right-4 lg:bottom-6 lg:right-6 z-30 flex flex-row items-end gap-2 sm:gap-3 pointer-events-none transition-opacity duration-200 ${
               moreOpen ? 'opacity-0' : 'opacity-100'
             }`}
           >

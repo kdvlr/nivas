@@ -922,7 +922,7 @@ export default function Home() {
       )
     }
     return (
-      <div key={id} className="min-h-[calc(100dvh-5.25rem)] w-full flex flex-col p-2 sm:p-4 overflow-hidden">
+      <div key={id} className="min-h-full shrink-0 w-full flex flex-col p-2 sm:p-4 overflow-hidden">
         {content}
       </div>
     )
@@ -946,7 +946,7 @@ export default function Home() {
       {/* Mobile view */}
       <div className="flex lg:hidden h-full w-full flex-col overflow-y-auto">
         {/* Slide 1: Header + Schedule */}
-        <div className="min-h-[calc(100dvh-5.25rem)] w-full flex flex-col p-2 sm:p-4 gap-2 sm:gap-3 overflow-hidden">
+        <div className="min-h-full shrink-0 w-full flex flex-col p-2 sm:p-4 gap-2 sm:gap-3 overflow-hidden">
           {renderHeader()}
           <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
             {renderSchedule(false)}
