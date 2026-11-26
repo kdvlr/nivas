@@ -256,19 +256,32 @@ export default function FullscreenLyrics({
     return null
   }, [isSynced, lines, activeIndex, effectiveTime])
 
-  // Smoothly center active line when it changes
+  // Smoothly center active line when it changes (synced), or gently scroll plain lyrics proportionally
   useEffect(() => {
-    if (!isSynced || activeIndex < 0) return
     if (Date.now() < userScrollingUntilRef.current) return
     const container = scrollContainerRef.current
-    const el = lineRefs.current[activeIndex]
-    if (!container || !el) return
-    const targetTop = el.offsetTop - container.clientHeight * 0.38 + el.clientHeight / 2
-    container.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' })
+    if (!container) return
+    if (isSynced && activeIndex >= 0) {
+      const el = lineRefs.current[activeIndex]
+      if (!el) return
+      const targetTop = el.offsetTop - container.clientHeight * 0.38 + el.clientHeight / 2
+      container.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' })
+    }
   }, [activeIndex, isSynced])
 
   const effectiveDuration = durationSeconds || Number(track.duration) || 0
   const animState = isPlaying ? 'running' : 'paused'
+
+  useEffect(() => {
+    if (isSynced || !lyricsData?.plain || !isPlaying || effectiveDuration <= 0) return
+    if (Date.now() < userScrollingUntilRef.current) return
+    const container = scrollContainerRef.current
+    if (!container) return
+    const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight)
+    if (maxScroll <= 0) return
+    const progress = Math.max(0, Math.min(1, effectiveTime / effectiveDuration))
+    container.scrollTo({ top: maxScroll * progress, behavior: 'smooth' })
+  }, [isSynced, lyricsData?.plain, isPlaying, Math.floor(effectiveTime / 2), effectiveDuration])
 
   return (
     <div

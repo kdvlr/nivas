@@ -269,24 +269,43 @@ class LyricsService:
             except Exception:
                 pass
 
-        # 2. Fuzzy /api/search fallback (strongly prefer Latin/Romanized synced lyrics)
-        q = f"{clean_title} {primary_artist}".strip()
-        search_url = f"https://lrclib.net/api/search?{urllib.parse.urlencode({'q': q})}"
-        try:
-            results = self._http_get_json(search_url)
-            if isinstance(results, list) and results:
-                best_synced = None
-                best_synced_key = (2, 9999.0)
-                best_plain = None
-                best_plain_key = (2, 9999.0)
+        # 2. Multi-step /api/search fallback (strongly prefer Latin/Romanized synced lyrics)
+        search_queries: List[Tuple[str, float]] = []
+        if primary_artist:
+            search_queries.append((f"{clean_title} {primary_artist}".strip(), 18.0))
+        if album:
+            search_queries.append((f"{clean_title} {album}".strip(), 18.0))
+        search_queries.append((clean_title, 15.0))
+        words = clean_title.split()
+        if album and words and len(words[0]) >= 3:
+            search_queries.append((f"{words[0]} {album}".strip(), 10.0))
+
+        seen_q = set()
+        best_synced = None
+        best_synced_key = (2, 9999.0)
+        best_plain = None
+        best_plain_key = (2, 9999.0)
+
+        for q, max_dur_diff in search_queries:
+            q_norm = q.lower()
+            if not q or q_norm in seen_q:
+                continue
+            seen_q.add(q_norm)
+            search_url = f"https://lrclib.net/api/search?{urllib.parse.urlencode({'q': q})}"
+            try:
+                results = self._http_get_json(search_url)
+                if not isinstance(results, list) or not results:
+                    continue
                 for item in results:
                     if not isinstance(item, dict) or item.get("instrumental"):
                         continue
                     item_dur = float(item.get("duration") or 0)
                     diff = abs(item_dur - duration) if (duration > 0 and item_dur > 0) else 0.0
+                    if duration > 0 and item_dur > 0 and diff > max_dur_diff:
+                        continue
                     synced = (item.get("syncedLyrics") or "").strip()
                     plain = (item.get("plainLyrics") or "").strip()
-                    if synced and (duration <= 0 or diff <= 12.0):
+                    if synced:
                         key = (0 if is_mostly_latin(synced) else 1, diff)
                         if key < best_synced_key:
                             best_synced = (synced, plain)
@@ -296,17 +315,18 @@ class LyricsService:
                         if key < best_plain_key:
                             best_plain = ("", plain)
                             best_plain_key = key
-                if best_synced:
+                # Stop early once we have a high-confidence Latin synced match
+                if best_synced and best_synced_key[0] == 0 and best_synced_key[1] <= 8.0:
                     return best_synced
-                if exact_fallback:
-                    return exact_fallback
-                if best_plain:
-                    return best_plain
-        except Exception as e:
-            logger.debug("LRCLIB search error for '%s': %s", q, e)
+            except Exception as e:
+                logger.debug("LRCLIB search error for '%s': %s", q, e)
 
+        if best_synced:
+            return best_synced
         if exact_fallback:
             return exact_fallback
+        if best_plain:
+            return best_plain
         return "", ""
 
     def _format_response(self, video_id: str, synced_lrc: str, plain_lyrics: str, source: str) -> Dict[str, Any]:
