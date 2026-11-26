@@ -100,9 +100,14 @@ export default function AudioReactiveCanvas({
 
   const stateRef = useRef({
     smoothBands: new Float32Array(16),
+    prevBands: new Float32Array(16),
+    bandFloor: new Float32Array(16).fill(0.08),
+    bandPeak: new Float32Array(16).fill(0.35),
+    fluxBands: new Float32Array(16),
     peakCaps: new Float32Array(NUM_BARS),
     peakVels: new Float32Array(NUM_BARS),
-    rollingBass: 0.15,
+    rollingBass: 0.18,
+    rollingFlux: 0.05,
     lastBeatMs: 0,
     huePhase: 0,
     rings: [] as ShockRing[],
@@ -153,17 +158,39 @@ export default function AudioReactiveCanvas({
         for (let i = 0; i < 16; i++) {
           const v0 = spec.bytes[off0 + i] / 255
           const v1 = spec.bytes[off1 + i] / 255
-          const target = v0 + (v1 - v0) * frac
+          const raw = v0 + (v1 - v0) * frac
+
+          // Adaptive per-band floor & peak (Winamp AGC) so dynamic highs/mids pop
+          // while quiet breakdowns stay genuinely calm.
+          st.bandFloor[i] =
+            raw < st.bandFloor[i]
+              ? st.bandFloor[i] * 0.94 + raw * 0.06
+              : st.bandFloor[i] * 0.996 + raw * 0.004
+          st.bandPeak[i] =
+            raw > st.bandPeak[i]
+              ? st.bandPeak[i] * 0.78 + raw * 0.22
+              : Math.max(0.16, st.bandPeak[i] * 0.994 + raw * 0.006)
+
+          const span = Math.max(0.1, st.bandPeak[i] - st.bandFloor[i] * 0.55)
+          const agc = Math.max(0, Math.min(1, (raw - st.bandFloor[i] * 0.55) / span))
+          // Preserve true silence: scale by overall raw presence so silent parts drop to 0
+          const presence = Math.min(1, raw * 6.5)
+          const dynamicVal = Math.pow(agc, 1.35) * presence
+
+          const flux = Math.max(0, dynamicVal - st.prevBands[i])
+          st.prevBands[i] = dynamicVal
+          st.fluxBands[i] = st.fluxBands[i] * 0.72 + flux * 0.9
+
+          const target = Math.min(1, dynamicVal + st.fluxBands[i] * 0.45)
           const cur = st.smoothBands[i]
-          st.smoothBands[i] = target > cur ? cur + (target - cur) * 0.48 : cur + (target - cur) * 0.18
+          st.smoothBands[i] = target > cur ? cur + (target - cur) * 0.62 : cur + (target - cur) * 0.22
         }
       } else {
-        // Gentle harmonic fallback while spectrum finishes extracting
+        // Gentle calm state while spectrum loads
         for (let i = 0; i < 16; i++) {
-          const target = isPlaying
-            ? 0.14 + 0.12 * Math.sin(t * (1.8 + i * 0.27) + i * 0.7) ** 2
-            : 0.04
+          const target = isPlaying ? 0.06 + 0.04 * Math.sin(t * (1.4 + i * 0.2) + i) ** 2 : 0.02
           st.smoothBands[i] += (target - st.smoothBands[i]) * 0.15
+          st.fluxBands[i] *= 0.8
         }
       }
     }
@@ -174,24 +201,31 @@ export default function AudioReactiveCanvas({
       const bass = (sb[0] + sb[1] + sb[2] + sb[3]) * 0.25
       const mid = (sb[4] + sb[5] + sb[6] + sb[7] + sb[8] + sb[9]) / 6
       const treble = (sb[10] + sb[11] + sb[12] + sb[13] + sb[14] + sb[15]) / 6
+      const bassFlux = (st.fluxBands[0] + st.fluxBands[1] + st.fluxBands[2]) / 3
+      const totalFlux = (bassFlux + st.fluxBands[5] + st.fluxBands[9] + st.fluxBands[12]) * 0.25
 
-      st.rollingBass = st.rollingBass * 0.92 + bass * 0.08
-      st.huePhase = (st.huePhase + 0.35 + mid * 1.4) % 360
+      st.rollingBass = st.rollingBass * 0.9 + bass * 0.1
+      st.rollingFlux = st.rollingFlux * 0.9 + totalFlux * 0.1
+      st.huePhase = (st.huePhase + 0.2 + totalFlux * 4.5 + mid * 1.1) % 360
 
       const focalX = w >= 1024 ? w * 0.2 : w * 0.5
       const focalY = w >= 1024 ? h * 0.44 : h * 0.22
 
-      // Trigger MilkDrop bass-kick shockwave ring
-      if (isPlaying && bass > Math.max(0.24, st.rollingBass * 1.24) && nowMs - st.lastBeatMs > 230) {
+      // Trigger MilkDrop shockwave ring specifically on sharp bass/transient kicks
+      if (
+        isPlaying &&
+        (bassFlux > 0.16 || bass > Math.max(0.38, st.rollingBass * 1.32)) &&
+        nowMs - st.lastBeatMs > 240
+      ) {
         st.lastBeatMs = nowMs
         st.rings.push({
           x: focalX,
           y: focalY,
-          r: 40,
+          r: 42,
           maxR: Math.max(w, h) * 0.65,
-          hue: (st.huePhase + bass * 120) % 360,
-          alpha: Math.min(0.65, 0.32 + bass * 0.45),
-          speed: 4.5 + bass * 7.5,
+          hue: (st.huePhase + bass * 140) % 360,
+          alpha: Math.min(0.75, 0.35 + bass * 0.4 + bassFlux * 0.5),
+          speed: 5.0 + bass * 8.5,
         })
         if (st.rings.length > 8) st.rings.shift()
       }
@@ -406,11 +440,13 @@ export default function AudioReactiveCanvas({
         ctx.fill()
       }
 
-      // 4. Beat/accent-triggered shooting stars
+      // 4. Beat/accent-triggered shooting stars (driven by real transient flux)
+      const hiFlux = (st.fluxBands[8] + st.fluxBands[11] + st.fluxBands[14]) / 3
+      const loFlux = (st.fluxBands[0] + st.fluxBands[1] + st.fluxBands[2]) / 3
       if (
         isPlaying &&
-        (bass > Math.max(0.28, st.rollingBass * 1.28) || treble > 0.55) &&
-        nowMs - st.lastBeatMs > 650 &&
+        (loFlux > 0.18 || hiFlux > 0.16 || bass > Math.max(0.45, st.rollingBass * 1.38)) &&
+        nowMs - st.lastBeatMs > 600 &&
         st.shootingStars.length < 5
       ) {
         st.lastBeatMs = nowMs
