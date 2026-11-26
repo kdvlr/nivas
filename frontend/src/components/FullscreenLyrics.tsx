@@ -3,6 +3,7 @@ import Icon from './Icon'
 import { api } from '../lib/api'
 import { Track } from './ytmusic/MiniPlayerBar'
 import { usePlayerElapsed } from '../lib/playerProgress'
+import AudioReactiveCanvas, { SpectrumData } from './AudioReactiveCanvas'
 
 export type LyricsVisualMode = 'ambient' | 'party' | 'starlight'
 
@@ -32,45 +33,20 @@ interface FullscreenLyricsProps {
   onSeek: (seconds: number) => void
 }
 
-const EQ_BARS = Array.from({ length: 28 }, (_, i) => {
-  const hue = Math.round((i / 28) * 320 + 180) % 360
-  const dur = 0.55 + ((i * 37) % 11) * 0.065
-  const delay = ((i * 19) % 13) * -0.09
-  const minScale = 0.12 + ((i * 13) % 5) * 0.04
-  const maxScale = 0.65 + ((i * 23) % 7) * 0.055
-  return { id: i, hue, dur, delay, minScale, maxScale }
-})
-
-const STARS = Array.from({ length: 30 }, (_, i) => ({
-  id: i,
-  left: ((i * 31 + 7) % 96) + 2,
-  top: ((i * 47 + 11) % 92) + 4,
-  size: 2 + (i % 3) * 1.4,
-  dur: 2.4 + (i % 5) * 0.7,
-  delay: (i % 7) * -0.6,
-}))
-
-const FIREFLIES = Array.from({ length: 14 }, (_, i) => ({
-  id: i,
-  left: ((i * 41 + 13) % 90) + 5,
-  top: ((i * 29 + 19) % 82) + 8,
-  size: 5 + (i % 3) * 2.5,
-  dur: 6.5 + (i % 5) * 1.6,
-  delay: (i % 6) * -1.1,
-  hue: i % 2 === 0 ? 46 : 165,
-}))
-
-const SHOOTING_STARS = [
-  { id: 0, top: 12, left: 18, delay: 0.8, dur: 6.8 },
-  { id: 1, top: 26, left: 55, delay: 3.9, dur: 8.2 },
-  { id: 2, top: 8, left: 72, delay: 6.4, dur: 9.5 },
-]
-
 function formatTime(sec: number): string {
   const s = Math.max(0, Math.floor(sec || 0))
   const m = Math.floor(s / 60)
   const r = s % 60
   return `${m}:${r.toString().padStart(2, '0')}`
+}
+
+function decodeBase64ToBytes(b64: string): Uint8Array {
+  const bin = window.atob(b64)
+  const out = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) {
+    out[i] = bin.charCodeAt(i)
+  }
+  return out
 }
 
 export default function FullscreenLyrics({
@@ -92,11 +68,13 @@ export default function FullscreenLyrics({
   })
 
   const [lyricsData, setLyricsData] = useState<LyricsPayload | null>(null)
+  const [spectrum, setSpectrum] = useState<SpectrumData | null>(null)
   const [loading, setLoading] = useState(true)
   const [syncOffset, setSyncOffset] = useState(0)
   const [visualMode, setVisualMode] = useState<LyricsVisualMode>('ambient')
   const [bouncingStar, setBouncingStar] = useState(true)
 
+  const effectiveTimeRef = useRef(rawElapsed)
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
   const lineRefs = useRef<(HTMLButtonElement | null)[]>([])
   const userScrollingUntilRef = useRef(0)
@@ -195,6 +173,33 @@ export default function FullscreenLyrics({
     fetchLyrics(false)
   }, [fetchLyrics])
 
+  // Fetch real FFT audio spectrum for Winamp-style Dance Party & Starlight visuals
+  useEffect(() => {
+    if (visualMode === 'ambient') return
+    let cancelled = false
+    setSpectrum(null)
+    api
+      .get<{ available?: boolean; fps?: number; bands?: number; data?: string }>(
+        `/api/ytmusic/lyrics/spectrum/${encodeURIComponent(track.videoId)}`,
+      )
+      .then((res) => {
+        if (cancelled || !res?.available || !res.data) return
+        const bytes = decodeBase64ToBytes(res.data)
+        const bands = res.bands || 16
+        const fps = res.fps || 12
+        setSpectrum({
+          fps,
+          bands,
+          bytes,
+          frameCount: Math.floor(bytes.length / bands),
+        })
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [track.videoId, visualMode])
+
   // Close on Escape
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -205,6 +210,7 @@ export default function FullscreenLyrics({
   }, [onClose])
 
   const effectiveTime = Math.max(0, smoothElapsed + syncOffset)
+  effectiveTimeRef.current = effectiveTime
   const lines = lyricsData?.lines || []
   const isSynced = Boolean(lyricsData?.synced && lines.length > 0)
 
@@ -337,74 +343,13 @@ export default function FullscreenLyrics({
           }`}
         />
 
-        {/* Starlight Mode: Twinkling Stars, Fireflies & Shooting Stars */}
-        {visualMode === 'starlight' && (
-          <div className="absolute inset-0 overflow-hidden">
-            {STARS.map((s) => (
-              <span
-                key={s.id}
-                className="absolute rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]"
-                style={{
-                  left: `${s.left}%`,
-                  top: `${s.top}%`,
-                  width: `${s.size}px`,
-                  height: `${s.size}px`,
-                  animation: `flTwinkle ${s.dur}s ease-in-out ${s.delay}s infinite`,
-                  animationPlayState: animState,
-                }}
-              />
-            ))}
-            {FIREFLIES.map((f) => (
-              <span
-                key={f.id}
-                className="absolute rounded-full blur-[1px]"
-                style={{
-                  left: `${f.left}%`,
-                  top: `${f.top}%`,
-                  width: `${f.size}px`,
-                  height: `${f.size}px`,
-                  backgroundColor: `hsl(${f.hue}, 95%, 72%)`,
-                  boxShadow: `0 0 14px 3px hsla(${f.hue}, 95%, 65%, 0.7)`,
-                  animation: `flFirefly ${f.dur}s ease-in-out ${f.delay}s infinite`,
-                  animationPlayState: animState,
-                }}
-              />
-            ))}
-            {SHOOTING_STARS.map((st) => (
-              <span
-                key={st.id}
-                className="absolute h-[2px] w-28 rounded-full bg-gradient-to-r from-white via-amber-200/80 to-transparent"
-                style={{
-                  top: `${st.top}%`,
-                  left: `${st.left}%`,
-                  animation: `flShoot ${st.dur}s ease-out ${st.delay}s infinite`,
-                  animationPlayState: animState,
-                }}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Dance Party Mode: Rainbow Equalizer Bars along bottom edge */}
-        {visualMode === 'party' && (
-          <div className="absolute inset-x-0 bottom-0 flex h-28 items-end justify-center gap-1.5 px-6 pb-2 opacity-65 sm:h-36 sm:gap-2.5 sm:px-10">
-            {EQ_BARS.map((bar) => (
-              <div
-                key={bar.id}
-                className="h-full flex-1 max-w-[26px] origin-bottom rounded-t-full"
-                style={{
-                  background: `linear-gradient(to top, hsla(${bar.hue}, 92%, 58%, 0.9), hsla(${(bar.hue + 45) % 360}, 95%, 72%, 0.55))`,
-                  boxShadow: `0 0 16px hsla(${bar.hue}, 92%, 60%, 0.45)`,
-                  ['--eq-min' as any]: bar.minScale,
-                  ['--eq-max' as any]: bar.maxScale,
-                  transform: isPlaying ? undefined : `scaleY(${bar.minScale})`,
-                  animation: `flEqBounce ${bar.dur}s ease-in-out ${bar.delay}s infinite`,
-                  animationPlayState: animState,
-                }}
-              />
-            ))}
-          </div>
-        )}
+        {/* Audio-Reactive Winamp-style Canvas (Dance Party & Starlight) */}
+        <AudioReactiveCanvas
+          mode={visualMode}
+          isPlaying={isPlaying}
+          timeRef={effectiveTimeRef}
+          spectrum={spectrum}
+        />
       </div>
 
       {/* Top Bar: Visual Mode Switcher + Bouncing Star Toggle + Close */}

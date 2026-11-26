@@ -1,8 +1,12 @@
+import base64
 import json
 import logging
+import math
 import os
 import re
 import sqlite3
+import struct
+import subprocess
 import time
 import urllib.parse
 import urllib.request
@@ -11,6 +15,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from ..config import get_settings
 from .local_music import local_music_service
+from .media_cache import media_cache
 from .ytmusic import ytmusic_service
 
 logger = logging.getLogger(__name__)
@@ -82,6 +87,15 @@ class LyricsService:
                 CREATE TABLE IF NOT EXISTS lyrics_settings (
                     key TEXT PRIMARY KEY,
                     value TEXT NOT NULL
+                )
+            """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS spectrum_cache (
+                    video_id TEXT PRIMARY KEY,
+                    fps INTEGER NOT NULL,
+                    bands INTEGER NOT NULL,
+                    data BLOB NOT NULL,
+                    created_at REAL NOT NULL
                 )
             """)
             conn.commit()
@@ -351,6 +365,99 @@ class LyricsService:
 
         self._write_cache(video_id, "", "", "none")
         return self._format_response(video_id, "", "", "none")
+
+    def _resolve_audio_file(self, video_id: str) -> str:
+        if video_id.startswith("local:"):
+            track = local_music_service.get_track(video_id[len("local:"):])
+            fp = (track or {}).get("filePath") or ""
+            return fp if fp and os.path.isfile(fp) else ""
+        cached = media_cache.audio_path(video_id)
+        if cached.exists() and cached.stat().st_size > 44:
+            return str(cached)
+        return ""
+
+    @staticmethod
+    def _compute_spectrum_bytes(audio_path: str, fps: int = 12) -> bytes:
+        """Decode audio to 8kHz mono PCM via ffmpeg and extract 16 log-spaced Goertzel bands (uint8)."""
+        proc = subprocess.run(
+            ["ffmpeg", "-v", "error", "-i", audio_path, "-vn", "-ac", "1", "-ar", "8000", "-f", "s16le", "pipe:1"],
+            capture_output=True,
+            check=True,
+            timeout=25,
+        )
+        raw = proc.stdout
+        n_samples = len(raw) // 2
+        win = 128
+        hop = max(1, 8000 // fps)
+        if n_samples < win:
+            return b""
+        # 16 log-spaced bins from 62.5Hz (bin 1) to 3875Hz (bin 62)
+        bins = (1, 2, 3, 4, 5, 6, 8, 10, 13, 16, 20, 25, 32, 40, 50, 62)
+        cos_t = tuple(2.0 * math.cos(2.0 * math.pi * k / win) for k in bins)
+        # Gentle perceptual weighting: boost highs slightly so treble bands stay lively
+        gains = (1.0, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.35, 1.45, 1.6, 1.75, 1.9, 2.1, 2.3, 2.5, 2.7)
+        inv_norm = 1.0 / (win * 16384.0)
+        log_denom = math.log1p(45.0)
+
+        out = bytearray()
+        for start in range(0, n_samples - win, hop):
+            chunk = struct.unpack_from(f"<{win}h", raw, start * 2)
+            for idx, c in enumerate(cos_t):
+                s1 = 0.0
+                s2 = 0.0
+                for x in chunk:
+                    s0 = x + c * s1 - s2
+                    s2 = s1
+                    s1 = s0
+                mag = math.sqrt(max(0.0, s1 * s1 + s2 * s2 - c * s1 * s2)) * inv_norm * gains[idx]
+                v = int(min(255, max(0, (math.log1p(mag * 45.0) / log_denom) * 255.0)))
+                out.append(v)
+        return bytes(out)
+
+    def get_spectrum(self, video_id: str) -> Dict[str, Any]:
+        fps = 12
+        bands = 16
+        try:
+            with self._get_conn() as conn:
+                row = conn.execute(
+                    "SELECT fps, bands, data FROM spectrum_cache WHERE video_id = ?",
+                    (video_id,),
+                ).fetchone()
+                if row and row["data"]:
+                    return {
+                        "videoId": video_id,
+                        "fps": int(row["fps"]),
+                        "bands": int(row["bands"]),
+                        "available": True,
+                        "data": base64.b64encode(row["data"]).decode("ascii"),
+                    }
+        except Exception as e:
+            logger.error("Error reading spectrum cache for %s: %s", video_id, e)
+
+        audio_path = self._resolve_audio_file(video_id)
+        if not audio_path:
+            return {"videoId": video_id, "fps": fps, "bands": bands, "available": False, "data": ""}
+
+        try:
+            raw_bytes = self._compute_spectrum_bytes(audio_path, fps=fps)
+            if not raw_bytes:
+                return {"videoId": video_id, "fps": fps, "bands": bands, "available": False, "data": ""}
+            with self._get_conn() as conn:
+                conn.execute(
+                    "INSERT OR REPLACE INTO spectrum_cache (video_id, fps, bands, data, created_at) VALUES (?, ?, ?, ?, ?)",
+                    (video_id, fps, bands, raw_bytes, time.time()),
+                )
+                conn.commit()
+            return {
+                "videoId": video_id,
+                "fps": fps,
+                "bands": bands,
+                "available": True,
+                "data": base64.b64encode(raw_bytes).decode("ascii"),
+            }
+        except Exception as e:
+            logger.warning("Spectrum extraction failed for %s: %s", video_id, e)
+            return {"videoId": video_id, "fps": fps, "bands": bands, "available": False, "data": ""}
 
 
 lyrics_service = LyricsService()

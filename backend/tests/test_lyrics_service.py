@@ -124,3 +124,38 @@ def test_lyrics_settings_and_fetch_endpoints(tmp_path, monkeypatch):
     assert body["synced"] is True
     assert body["source"] == "lrclib"
     assert body["lines"] == [{"time": 1.0, "text": "Hello world"}]
+
+
+def test_lyrics_spectrum_extraction_and_cache(tmp_path, monkeypatch):
+    import base64
+    from app.routers import ytmusic as ytmusic_router
+
+    svc = LyricsService(data_dir=str(tmp_path / "data"))
+    audio_file = tmp_path / "song.flac"
+    audio_file.write_bytes(b"fake")
+
+    call_count = {"n": 0}
+
+    def fake_compute(path, fps=12):
+        call_count["n"] += 1
+        return bytes([10, 20, 30, 40] * 4 * 5)  # 5 frames * 16 bands
+
+    svc._resolve_audio_file = lambda vid: str(audio_file)
+    svc._compute_spectrum_bytes = fake_compute
+    monkeypatch.setattr(ytmusic_router, "lyrics_service", svc)
+
+    client = TestClient(app)
+    r1 = client.get("/api/ytmusic/lyrics/spectrum/local:trk1")
+    assert r1.status_code == 200
+    d1 = r1.json()
+    assert d1["available"] is True
+    assert d1["bands"] == 16
+    assert len(base64.b64decode(d1["data"])) == 16 * 5
+    assert call_count["n"] == 1
+
+    # Second request should hit SQLite cache without recomputing
+    r2 = client.get("/api/ytmusic/lyrics/spectrum/local:trk1")
+    assert r2.status_code == 200
+    assert r2.json()["data"] == d1["data"]
+    assert call_count["n"] == 1
+

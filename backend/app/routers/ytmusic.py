@@ -292,6 +292,11 @@ def update_lyrics_settings(req: LyricsSettingsRequest):
     )
 
 
+@router.get("/lyrics/spectrum/{video_id}")
+def get_lyrics_spectrum(video_id: str):
+    return lyrics_service.get_spectrum(video_id)
+
+
 @router.get("/lyrics/{video_id}")
 def get_lyrics(
     video_id: str,
