@@ -82,9 +82,12 @@ const toTrack = (item: any): Track | null => {
   return {
     videoId: item.videoId,
     title: item.title || 'Unknown Track',
-    artist: Array.isArray(item.artists)
-      ? item.artists.map((artist: any) => artist.name).filter(Boolean).join(', ')
-      : item.artist?.name || item.artist || 'Unknown Artist',
+    artist: (Array.isArray(item.artists)
+      ? item.artists
+          .map((artist: any) => (typeof artist === 'string' ? artist : artist?.name))
+          .filter(Boolean)
+          .join(', ')
+      : '') || item.artist?.name || (typeof item.artist === 'string' ? item.artist : '') || 'Unknown Artist',
     thumbnail: thumbnailUrl(item),
     album: item.album?.name || item.album || '',
     duration,
