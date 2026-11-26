@@ -22,6 +22,8 @@ interface YTMusicViewProps {
   onSeek: (seconds: number) => void
   onQueueTrack: (track: Track, playNext: boolean) => void
   onQueueChange: (queue: Track[]) => void
+  masterVolume?: number
+  onMasterVolumeChange?: (volume: number) => void
 }
 
 type PlayerTab = 'queue' | 'lyrics'
@@ -258,6 +260,8 @@ export default function YTMusicView({
   onSeek,
   onQueueTrack,
   onQueueChange,
+  masterVolume = 50,
+  onMasterVolumeChange,
 }: YTMusicViewProps) {
   const getSubViewFromHash = useCallback((): { view: MusicView; search: string } => {
     const hash = window.location.hash
@@ -2468,6 +2472,28 @@ export default function YTMusicView({
                     <Icon name="skip_next" className="text-3xl" />
                   </button>
                 </div>
+
+                {/* Inline All-Speakers Master Volume (Mobile & Tablet) */}
+                {onMasterVolumeChange && (
+                  <div className="mt-2.5 flex items-center gap-2.5 px-1">
+                    <Icon
+                      name={masterVolume <= 0 ? 'volume_off' : masterVolume < 50 ? 'volume_down' : 'volume_up'}
+                      className="text-lg text-ink-soft shrink-0"
+                    />
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={masterVolume}
+                      onChange={(e) => onMasterVolumeChange(Number(e.target.value))}
+                      aria-label="All speakers volume"
+                      className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-[var(--sc-high)] accent-[var(--primary)]"
+                    />
+                    <span className="w-9 text-right text-[11px] font-medium tabular-nums text-ink-soft shrink-0">
+                      {masterVolume}%
+                    </span>
+                  </div>
+                )}
               </>
             )}
           </section>
@@ -2529,6 +2555,26 @@ export default function YTMusicView({
                   </div>
                 </div>
                 <PlaybackProgress className="mt-4 flex items-center gap-3 text-xs tabular-nums text-ink-soft" duration={effectiveDuration} onSeek={onSeek} />
+                {onMasterVolumeChange && (
+                  <div className="mt-3 flex items-center gap-3">
+                    <Icon
+                      name={masterVolume <= 0 ? 'volume_off' : masterVolume < 50 ? 'volume_down' : 'volume_up'}
+                      className="text-lg text-ink-soft shrink-0"
+                    />
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={masterVolume}
+                      onChange={(e) => onMasterVolumeChange(Number(e.target.value))}
+                      aria-label="All speakers volume"
+                      className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-[var(--sc-high)] accent-[var(--primary)]"
+                    />
+                    <span className="w-9 text-right text-xs font-medium tabular-nums text-ink-soft shrink-0">
+                      {masterVolume}%
+                    </span>
+                  </div>
+                )}
               </div>
             )}
 

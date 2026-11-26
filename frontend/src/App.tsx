@@ -236,6 +236,9 @@ function AppContent() {
   const [isBuffering, setIsBuffering] = useState<boolean>(false)
   const [playbackError, setPlaybackError] = useState<string | null>(null)
   const [playQueue, setPlayQueue] = useState<Track[]>([])
+  const [masterVolume, setMasterVolume] = useState<number>(50)
+  const masterVolInteractingRef = useRef<number>(0)
+  const masterVolTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // The server re-sends the full player state every second while playing.
   // Keep the previous track/queue objects when their content is unchanged so
@@ -250,6 +253,9 @@ function AppContent() {
     setDurationSeconds(state.durationSeconds || 0)
     const nextQueue: Track[] = Array.isArray(state.queue) ? state.queue : []
     setPlayQueue((prev) => (sameJson(prev, nextQueue) ? prev : nextQueue))
+    if (typeof state.masterVolume === 'number' && Date.now() - masterVolInteractingRef.current > 700) {
+      setMasterVolume(Math.round(state.masterVolume))
+    }
   }, [])
 
   const syncPlayerState = useCallback(() => {
@@ -426,6 +432,16 @@ function AppContent() {
       .then((res) => setPlayQueue(Array.isArray(res?.queue) ? res.queue : []))
       .catch(() => syncPlayerState())
   }
+
+  const handleMasterVolumeChange = useCallback((volume: number) => {
+    const clamped = Math.max(0, Math.min(100, Math.round(volume)))
+    masterVolInteractingRef.current = Date.now()
+    setMasterVolume(clamped)
+    if (masterVolTimerRef.current) clearTimeout(masterVolTimerRef.current)
+    masterVolTimerRef.current = setTimeout(() => {
+      api.post<any>('/api/ytmusic/airplay/volume/master', { volume: clamped }).catch(() => {})
+    }, 60)
+  }, [])
 
   // Touch gestures for pull-to-refresh (using ref for touchStart to avoid 60fps state re-renders on touchmove)
   const touchStartRef = useRef<{ x: number; y: number } | null>(null)
@@ -965,6 +981,8 @@ function AppContent() {
                     onSeek={handleSeek}
                     onQueueTrack={handleQueueTrack}
                     onQueueChange={handleQueueChange}
+                    masterVolume={masterVolume}
+                    onMasterVolumeChange={handleMasterVolumeChange}
                   />
                 </Suspense>
               </motion.div>

@@ -128,6 +128,10 @@ export function useLockScreenRemote({
     audio.preload = 'auto'
     audio.muted = false
     audio.volume = 1.0
+    if ('disableRemotePlayback' in audio) {
+      audio.disableRemotePlayback = true
+    }
+    audio.setAttribute('x-webkit-airplay', 'deny')
     audio.setAttribute('playsinline', '')
     audio.setAttribute('webkit-playsinline', '')
     audio.setAttribute('aria-hidden', 'true')
