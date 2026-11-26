@@ -821,10 +821,10 @@ function AppContent() {
           ref={dashboardRef}
           style={slideshowActive ? { visibility: 'hidden' } : undefined}
         >
-          <nav className="glass group/nav order-last lg:order-first flex flex-row lg:flex-col w-full lg:w-16 hover:lg:w-48 transition-[width] duration-300 ease-in-out h-auto lg:h-full shrink-0 items-center lg:items-start justify-around lg:justify-start gap-1 lg:gap-4 !rounded-none lg:!rounded-[var(--shape-card)] border-t border-[var(--outline-var)]/60 lg:border-t-0 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pl-[max(0.5rem,env(safe-area-inset-left,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))] lg:py-4 lg:px-2 z-20">
+          <nav className="glass group/nav order-last lg:order-first flex flex-col w-full lg:w-16 hover:lg:w-48 transition-[width] duration-300 ease-in-out lg:h-full shrink-0 lg:items-start lg:justify-start lg:gap-4 !rounded-none lg:!rounded-[var(--shape-card)] border-t border-[var(--outline-var)]/60 lg:border-t-0 pb-[max(0.25rem,env(safe-area-inset-bottom,0px))] pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)] lg:py-4 lg:px-2 z-20">
 
-            {/* Main Nav Items */}
-            <div className="flex flex-row lg:flex-col items-center justify-around lg:justify-start gap-0.5 lg:gap-3 flex-1 lg:flex-none w-full">
+            {/* Main Nav Items: fixed-height row so icons stay vertically centered above the home indicator */}
+            <div className="flex flex-row lg:flex-col items-center justify-around lg:justify-start gap-0.5 lg:gap-3 w-full h-[3.25rem] sm:h-16 lg:h-auto">
               {NAV.filter(n => n.id !== 'setup').map((n, index) => {
                 const isActive = activeNav === n.id
                 const mobileHidden = index > 4 ? 'hidden lg:flex' : 'flex'
@@ -832,20 +832,21 @@ function AppContent() {
                   <a
                     key={n.id}
                     href={`#/${n.id}`}
-                    className={`${mobileHidden} flex-col lg:flex-row items-center lg:justify-start justify-center gap-0.5 lg:gap-0 transition-all duration-200 group text-center lg:text-left flex-1 lg:flex-none lg:w-full overflow-hidden`}
+                    className={`${mobileHidden} h-full lg:h-auto flex-col items-center justify-center lg:justify-start gap-0.5 transition-all duration-200 group text-center lg:text-left flex-1 lg:flex-none lg:w-full overflow-hidden`}
                   >
                     <motion.div
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       transition={PRESS_SPRING}
-                      className={`flex flex-col lg:flex-row items-center lg:justify-start justify-center gap-1 lg:gap-3 rounded-full lg:rounded-2xl w-14 lg:w-full py-1 lg:py-2.5 lg:px-3 transition-all duration-200 ${
+                      className={`flex flex-col sm:flex-row items-center lg:justify-start justify-center gap-1 sm:gap-2 lg:gap-3 rounded-full lg:rounded-2xl w-14 sm:w-auto lg:w-full py-1 sm:py-2 sm:px-4 lg:py-2.5 lg:px-3 transition-all duration-200 ${
                         isActive ? n.active : 'text-ink-soft group-hover:text-ink group-hover:bg-slate-300/15 dark:group-hover:bg-slate-700/15'
                       }`}
                     >
-                      <Icon name={n.icon} filled={isActive} className="text-[1.3rem] lg:text-[1.55rem] shrink-0" />
+                      <Icon name={n.icon} filled={isActive} className="text-[1.35rem] sm:text-[1.45rem] lg:text-[1.55rem] shrink-0" />
+                      <span className={`hidden sm:inline lg:hidden text-[0.95rem] leading-none whitespace-nowrap ${isActive ? 'font-semibold' : 'font-medium'}`}>{n.label}</span>
                       <span className="hidden text-[0.65rem] lg:text-sm font-semibold lg:block tracking-tight leading-none whitespace-nowrap opacity-0 group-hover/nav:opacity-100 transition-opacity duration-300 w-0 group-hover/nav:w-auto">{n.label}</span>
                     </motion.div>
-                    <span className={`lg:hidden text-[10px] leading-tight tracking-tight ${isActive ? 'font-semibold text-ink' : 'font-medium text-ink-soft'}`}>
+                    <span className={`sm:hidden text-[11px] leading-tight tracking-tight ${isActive ? 'font-semibold text-ink' : 'font-medium text-ink-soft'}`}>
                       {n.label}
                     </span>
                   </a>
@@ -855,7 +856,7 @@ function AppContent() {
               {/* Mobile only: quick-settings sheet trigger (desktop has the sidebar tools) */}
               <button
                 onClick={() => setMoreOpen(true)}
-                className={`lg:hidden flex flex-col items-center justify-center gap-0.5 transition-all duration-200 group text-center flex-1 ${
+                className={`lg:hidden h-full flex flex-col items-center justify-center gap-0.5 transition-all duration-200 group text-center flex-1 ${
                   moreOpen || activeNav === 'setup' ? 'text-ink' : 'text-ink-soft hover:text-ink'
                 }`}
                 title="Settings"
@@ -863,15 +864,16 @@ function AppContent() {
                 <motion.div
                   whileTap={{ scale: 0.92 }}
                   transition={PRESS_SPRING}
-                  className={`flex items-center justify-center w-14 py-1 rounded-full transition-all duration-200 ${
+                  className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 w-14 sm:w-auto py-1 sm:py-2 sm:px-4 rounded-full transition-all duration-200 ${
                     moreOpen || activeNav === 'setup'
                       ? 'bg-slate-300 text-slate-950 dark:bg-slate-700 dark:text-slate-100'
                       : ''
                   }`}
                 >
-                  <Icon name="more_vert" filled={moreOpen || activeNav === 'setup'} className="text-[1.3rem]" />
+                  <Icon name="more_vert" filled={moreOpen || activeNav === 'setup'} className="text-[1.35rem] sm:text-[1.45rem]" />
+                  <span className={`hidden sm:inline text-[0.95rem] leading-none ${moreOpen || activeNav === 'setup' ? 'font-semibold' : 'font-medium'}`}>More</span>
                 </motion.div>
-                <span className={`text-[10px] leading-tight tracking-tight ${moreOpen || activeNav === 'setup' ? 'font-semibold text-ink' : 'font-medium text-ink-soft'}`}>
+                <span className={`sm:hidden text-[11px] leading-tight tracking-tight ${moreOpen || activeNav === 'setup' ? 'font-semibold text-ink' : 'font-medium text-ink-soft'}`}>
                   More
                 </span>
               </button>
@@ -997,7 +999,7 @@ function AppContent() {
 
           {/* Floating Dock: MiniPlayerBar (left of FAB on both mobile & desktop) + Themed FAB */}
           <div
-            className={`fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] right-3 sm:right-4 lg:bottom-6 lg:right-6 z-30 flex flex-row items-end gap-2 sm:gap-3 pointer-events-none transition-opacity duration-200 ${
+            className={`fixed bottom-[calc(4.75rem+max(0.25rem,env(safe-area-inset-bottom,0px)))] sm:bottom-[calc(6rem+max(0.25rem,env(safe-area-inset-bottom,0px)))] right-6 sm:right-8 lg:bottom-6 lg:right-6 z-30 flex flex-row items-end gap-2 sm:gap-3 pointer-events-none transition-opacity duration-200 ${
               moreOpen ? 'opacity-0' : 'opacity-100'
             }`}
           >
