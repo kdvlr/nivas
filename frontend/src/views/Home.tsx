@@ -352,18 +352,18 @@ export default function Home() {
 
   const renderHeader = () => {
     return (
-    <header className="glass flex items-center justify-between gap-x-2 px-3.5 py-3 sm:px-4 sm:py-2.5 lg:px-6 lg:py-2.5 flex-nowrap">
+    <header className="glass flex min-h-[4.75rem] sm:min-h-[5.5rem] items-center justify-between gap-x-2 px-4 py-3.5 sm:px-5 sm:py-3.5 lg:min-h-0 lg:px-6 lg:py-3 flex-nowrap">
       <div className="flex items-center gap-x-2 sm:gap-x-3 lg:gap-x-4 min-w-0">
         {weather?.current && (
           <button
             onClick={() => setWeatherOpen(true)}
-            className="flex items-center gap-2 sm:gap-2.5 lg:gap-3 rounded-2xl px-1.5 py-1 sm:px-2.5 sm:py-1.5 transition-transform active:scale-95 lg:px-3 shrink-0"
+            className="flex items-center gap-2.5 sm:gap-3 rounded-2xl px-1 py-0.5 sm:px-2 sm:py-1 transition-transform active:scale-95 lg:px-3 shrink-0"
             title="Weather details"
           >
-            <span className="text-3xl sm:text-4xl lg:text-4xl leading-none select-none shrink-0">{weather.current.icon}</span>
+            <span className="text-[2.25rem] sm:text-4xl lg:text-4xl leading-none select-none shrink-0">{weather.current.icon}</span>
             <div className="text-left min-w-0">
               <div className="flex items-baseline gap-1.5">
-                <span className="text-2xl sm:text-2xl lg:text-2xl font-bold text-ink leading-none">
+                <span className="text-2xl sm:text-3xl lg:text-2xl font-bold tracking-tight text-ink leading-none">
                   {weather.current.temp}°
                 </span>
                 <span className="truncate max-w-[5.5rem] sm:max-w-none text-xs sm:text-sm lg:text-base font-medium text-ink-soft leading-none">
@@ -371,8 +371,8 @@ export default function Home() {
                 </span>
               </div>
               {todayWeather && (
-                <div className="text-xs text-ink-faint mt-1 leading-none font-medium whitespace-nowrap">
-                  H {todayWeather.tmax}° L {todayWeather.tmin}°
+                <div className="text-xs sm:text-sm lg:text-xs text-ink-faint mt-1.5 leading-none font-medium whitespace-nowrap">
+                  H {todayWeather.tmax}° · L {todayWeather.tmin}°
                 </div>
               )}
             </div>

@@ -22,7 +22,7 @@ export default function MiniTimerCapsule() {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 20, scale: 0.9 }}
         transition={SPATIAL_EXPRESSIVE_DEFAULT}
-        className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px)*0.45)] left-4 lg:bottom-6 lg:left-24 z-30 pointer-events-auto select-none"
+        className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] left-4 lg:bottom-6 lg:left-24 z-30 pointer-events-auto select-none"
       >
         <motion.button
           whileHover={{ scale: 1.04 }}

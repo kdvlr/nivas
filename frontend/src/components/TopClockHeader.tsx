@@ -100,12 +100,12 @@ export default function TopClockHeader({ now, config, className = '' }: TopClock
             <span>{formatTimerDisplay(activeTimer.remainingSeconds).formatted}</span>
           </span>
         )}
-        <div className="text-lg sm:text-4xl lg:text-5xl font-bold tabular-nums tracking-tight text-[var(--primary)] leading-none group-hover/clock:opacity-90">
+        <div className="text-2xl sm:text-4xl lg:text-5xl font-bold tabular-nums tracking-tight text-[var(--primary)] leading-none group-hover/clock:opacity-90">
           {cachedFormatter(undefined, { hour: 'numeric', minute: '2-digit' }).format(now)}
         </div>
       </button>
 
-      <div className="mt-0.5 sm:mt-1 flex items-center justify-end gap-1 sm:gap-2 text-[10px] sm:text-sm lg:text-base font-medium sm:font-semibold text-ink-soft whitespace-nowrap">
+      <div className="mt-1 sm:mt-1.5 flex items-center justify-end gap-1.5 sm:gap-2 text-xs sm:text-sm lg:text-base font-medium sm:font-semibold text-ink-soft whitespace-nowrap">
         <span>{cachedFormatter(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' }).format(now)}</span>
         <span className="opacity-40">•</span>
         <span>
