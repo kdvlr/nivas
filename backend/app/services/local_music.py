@@ -440,7 +440,7 @@ class LocalMusicService:
         album_artist = ""
         is_compilation = False
         album = folder_name or "Unknown Album"
-        track_number = 1
+        track_number = 0
         disc_number = 1
         duration = 0.0
         year = ""
@@ -892,7 +892,7 @@ class LocalMusicService:
                 cursor.execute("""
                     SELECT * FROM tracks
                     WHERE album_id = ?
-                    ORDER BY disc_number ASC, track_number ASC, title ASC
+                    ORDER BY disc_number ASC, CASE WHEN track_number <= 0 THEN 9999 ELSE track_number END ASC, title COLLATE NOCASE ASC
                 """, (album_id,))
                 track_rows = cursor.fetchall()
                 if not track_rows and not alb_row:

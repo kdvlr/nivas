@@ -74,16 +74,22 @@ export default function FullscreenLyrics({
   const [visualMode, setVisualMode] = useState<LyricsVisualMode>('ambient')
   const [bouncingStar, setBouncingStar] = useState(true)
 
-  const effectiveTimeRef = useRef(rawElapsed)
+  const clockRef = useRef({ elapsed: rawElapsed, perfMs: performance.now(), syncOffset: 0 })
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
   const lineRefs = useRef<(HTMLButtonElement | null)[]>([])
   const userScrollingUntilRef = useRef(0)
 
   // Keep smooth sub-second clock synced with server elapsed without layout thrashing
   useEffect(() => {
-    lastSyncRef.current = { elapsed: rawElapsed, at: performance.now() }
+    const now = performance.now()
+    lastSyncRef.current = { elapsed: rawElapsed, at: now }
+    clockRef.current = { elapsed: rawElapsed, perfMs: now, syncOffset }
     setSmoothElapsed(rawElapsed)
   }, [rawElapsed, track.videoId])
+
+  useEffect(() => {
+    clockRef.current.syncOffset = syncOffset
+  }, [syncOffset])
 
   useEffect(() => {
     if (!isPlaying) return
@@ -145,16 +151,29 @@ export default function FullscreenLyrics({
     })
   }, [persistSettings])
 
-  // Fetch lyrics on-demand for current track
+  // Fetch lyrics on-demand ONLY when track.videoId changes (avoid resetting on duration updates)
+  const trackMetaRef = useRef({
+    title: track.title,
+    artist: track.artist,
+    album: track.album,
+    duration: durationSeconds || Number(track.duration) || 0,
+  })
+  trackMetaRef.current = {
+    title: track.title,
+    artist: track.artist,
+    album: track.album,
+    duration: durationSeconds || Number(track.duration) || 0,
+  }
+
   const fetchLyrics = useCallback(
     (refresh = false) => {
       setLoading(true)
+      const meta = trackMetaRef.current
       const params = new URLSearchParams()
-      if (track.title) params.set('title', track.title)
-      if (track.artist) params.set('artist', track.artist)
-      if (track.album) params.set('album', track.album)
-      const dur = durationSeconds || Number(track.duration) || 0
-      if (dur > 0) params.set('duration', String(Math.round(dur)))
+      if (meta.title) params.set('title', meta.title)
+      if (meta.artist) params.set('artist', meta.artist)
+      if (meta.album) params.set('album', meta.album)
+      if (meta.duration > 0) params.set('duration', String(Math.round(meta.duration)))
       if (refresh) params.set('refresh', 'true')
 
       api
@@ -165,7 +184,7 @@ export default function FullscreenLyrics({
         .catch(() => setLyricsData(null))
         .finally(() => setLoading(false))
     },
-    [track.videoId, track.title, track.artist, track.album, track.duration, durationSeconds],
+    [track.videoId],
   )
 
   useEffect(() => {
@@ -210,7 +229,6 @@ export default function FullscreenLyrics({
   }, [onClose])
 
   const effectiveTime = Math.max(0, smoothElapsed + syncOffset)
-  effectiveTimeRef.current = effectiveTime
   const lines = lyricsData?.lines || []
   const isSynced = Boolean(lyricsData?.synced && lines.length > 0)
 
@@ -256,18 +274,21 @@ export default function FullscreenLyrics({
     return null
   }, [isSynced, lines, activeIndex, effectiveTime])
 
-  // Smoothly center active line when it changes (synced), or gently scroll plain lyrics proportionally
+  // Smoothly center active line when it changes (using scrollIntoView for exact centering)
+  const hasCenteredInitialRef = useRef(false)
   useEffect(() => {
+    hasCenteredInitialRef.current = false
+  }, [track.videoId, lyricsData])
+
+  useEffect(() => {
+    if (!isSynced || activeIndex < 0) return
     if (Date.now() < userScrollingUntilRef.current) return
-    const container = scrollContainerRef.current
-    if (!container) return
-    if (isSynced && activeIndex >= 0) {
-      const el = lineRefs.current[activeIndex]
-      if (!el) return
-      const targetTop = el.offsetTop - container.clientHeight * 0.38 + el.clientHeight / 2
-      container.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' })
-    }
-  }, [activeIndex, isSynced])
+    const el = lineRefs.current[activeIndex]
+    if (!el) return
+    const behavior: ScrollBehavior = hasCenteredInitialRef.current ? 'smooth' : 'auto'
+    hasCenteredInitialRef.current = true
+    el.scrollIntoView({ behavior, block: 'center', inline: 'nearest' })
+  }, [activeIndex, isSynced, lyricsData])
 
   const effectiveDuration = durationSeconds || Number(track.duration) || 0
   const animState = isPlaying ? 'running' : 'paused'
@@ -322,6 +343,10 @@ export default function FullscreenLyrics({
           0%, 100% { transform: translateY(0px) rotate(-8deg) scale(1); }
           50% { transform: translateY(-9px) rotate(12deg) scale(1.18); }
         }
+        @keyframes flLineFadeIn {
+          from { opacity: 0.25; transform: translateY(4px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
       `}</style>
 
       {/* Static GPU-light Blurred Album-Art Backdrop (no animated CSS blur / mix-blend for tablet smoothness) */}
@@ -345,7 +370,7 @@ export default function FullscreenLyrics({
         <AudioReactiveCanvas
           mode={visualMode}
           isPlaying={isPlaying}
-          timeRef={effectiveTimeRef}
+          clockRef={clockRef}
           spectrum={spectrum}
         />
       </div>
@@ -415,7 +440,7 @@ export default function FullscreenLyrics({
       </header>
 
       {/* Main Stage: Left Artwork/Controls + Right Lyrics */}
-      <div className="relative z-10 flex min-h-0 flex-1 flex-col lg:flex-row lg:items-center lg:gap-10 px-5 pb-6 sm:px-10">
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col lg:flex-row lg:items-stretch lg:gap-10 px-5 pb-6 sm:px-10">
         {/* Left Column: Album Art, Metadata & Controls */}
         <section className="flex shrink-0 flex-row items-center gap-4 py-2 lg:w-[35%] lg:max-w-[440px] lg:flex-col lg:items-center lg:justify-center lg:gap-6">
           <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl shadow-[0_24px_60px_rgba(0,0,0,0.65)] ring-1 ring-white/15 sm:h-24 sm:w-24 lg:h-72 lg:w-72 xl:h-80 xl:w-80 lg:rounded-3xl">
@@ -535,126 +560,154 @@ export default function FullscreenLyrics({
           </div>
         </section>
 
-        {/* Right Column: Masked Lyrics Stage */}
-        <section className="relative flex min-h-0 flex-1 flex-col">
-          <div
-            ref={scrollContainerRef}
-            onWheel={() => {
-              userScrollingUntilRef.current = Date.now() + 4500
-            }}
-            onTouchMove={() => {
-              userScrollingUntilRef.current = Date.now() + 4500
-            }}
-            className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-24 sm:px-6 lg:py-36"
-            style={{
-              maskImage:
-                'linear-gradient(to bottom, transparent 0%, black 13%, black 85%, transparent 100%)',
-              WebkitMaskImage:
-                'linear-gradient(to bottom, transparent 0%, black 13%, black 85%, transparent 100%)',
-            }}
-          >
-            {loading ? (
-              <div className="flex h-full flex-col items-center justify-center gap-3 text-white/70">
-                <Icon name="progress_activity" className="animate-spin text-4xl text-white" />
-                <p className="text-lg font-medium">Finding lyrics…</p>
-              </div>
-            ) : isSynced ? (
-              <div className="mx-auto flex max-w-3xl flex-col gap-5 sm:gap-7">
-                {/* Instrumental Intro / Break Dots */}
-                {interludeProgress !== null && (
-                  <div className="flex items-center gap-3 py-2 pl-2">
-                    {[0, 1, 2].map((dot) => {
-                      const active = interludeProgress >= dot / 3
-                      return (
-                        <span
-                          key={dot}
-                          className={`h-3.5 w-3.5 rounded-full transition-all duration-300 ${
-                            active
-                              ? 'bg-amber-300 scale-110 shadow-[0_0_12px_rgba(252,211,77,0.85)]'
-                              : 'bg-white/25 scale-90'
-                          }`}
-                        />
-                      )
-                    })}
-                  </div>
-                )}
+        {/* Right Column: Fixed No-Scroll Lyric Stage (fade transition, heavily dimmed context lines) */}
+        <section className="relative flex h-full min-h-0 flex-1 flex-col justify-center px-2 sm:px-6">
+          {loading ? (
+            <div className="flex h-full flex-col items-center justify-center gap-3 text-white/70">
+              <Icon name="progress_activity" className="animate-spin text-4xl text-white" />
+              <p className="text-lg font-medium">Finding lyrics…</p>
+            </div>
+          ) : isSynced ? (
+            (() => {
+              // Filter out empty break lines for clean stage slots while keeping real timestamps
+              const nonEmpty = lines
+                .map((l, origIdx) => ({ ...l, origIdx }))
+                .filter((l) => Boolean(l.text))
+              const stageIdx = nonEmpty.reduce(
+                (acc, item, idx) => (item.origIdx <= activeIndex ? idx : acc),
+                -1,
+              )
+              const prevLine = stageIdx > 0 ? nonEmpty[stageIdx - 1] : null
+              const currLine = stageIdx >= 0 ? nonEmpty[stageIdx] : null
+              const nextLine = stageIdx + 1 < nonEmpty.length ? nonEmpty[stageIdx + 1] : null
+              const next2Line = stageIdx + 2 < nonEmpty.length ? nonEmpty[stageIdx + 2] : null
 
-                {lines.map((line, idx) => {
-                  const isActive = idx === activeIndex
-                  const isPast = idx < activeIndex
-                  const isNext = idx === activeIndex + 1
+              return (
+                <div className="mx-auto flex w-full max-w-3xl flex-col justify-center gap-5 sm:gap-7 py-8">
+                  {/* Instrumental Intro / Break Dots */}
+                  {interludeProgress !== null && (
+                    <div className="flex items-center gap-3 pl-4">
+                      {[0, 1, 2].map((dot) => {
+                        const active = interludeProgress >= dot / 3
+                        return (
+                          <span
+                            key={dot}
+                            className={`h-3.5 w-3.5 rounded-full transition-all duration-300 ${
+                              active
+                                ? 'bg-amber-300 scale-110'
+                                : 'bg-white/20 scale-90'
+                            }`}
+                          />
+                        )
+                      })}
+                    </div>
+                  )}
 
-                  if (!line.text) {
-                    return <div key={`${idx}-${line.time}`} className="h-4" />
-                  }
-
-                  return (
-                    <button
-                      key={`${idx}-${line.time}`}
-                      ref={(el) => {
-                        lineRefs.current[idx] = el
-                      }}
-                      type="button"
-                      onClick={() => onSeek(Math.max(0, line.time - syncOffset))}
-                      className={`group relative block w-full text-left rounded-2xl px-3 py-2 transition-all duration-500 ease-out cursor-pointer ${
-                        isActive
-                          ? 'text-white scale-[1.03] origin-left'
-                          : isNext
-                            ? 'text-white/65 hover:text-white/90'
-                            : isPast
-                              ? 'text-white/28 hover:text-white/60'
-                              : 'text-white/42 hover:text-white/75'
-                      }`}
-                    >
-                      {/* Follow-the-Bouncing-Star indicator */}
-                      {isActive && bouncingStar && (
-                        <div className="pointer-events-none relative mb-1.5 h-6 w-full max-w-[92%]">
-                          <div
-                            className="absolute top-0 -ml-3 transition-[left] duration-100 ease-linear"
-                            style={{ left: `${Math.round(activeLineProgress * 100)}%` }}
-                          >
-                            <span
-                              className="inline-flex items-center justify-center text-amber-300 drop-shadow-[0_0_10px_rgba(252,211,77,0.95)]"
-                              style={{
-                                animation: 'flStarHop 0.58s ease-in-out infinite',
-                                animationPlayState: animState,
-                              }}
-                            >
-                              <Icon name="star" className="text-2xl" />
-                            </span>
-                          </div>
-                        </div>
-                      )}
-
-                      <span
-                        className={`block font-bold leading-snug tracking-tight transition-opacity duration-300 ${
-                          isActive
-                            ? 'text-2xl sm:text-4xl lg:text-5xl'
-                            : 'text-xl sm:text-3xl lg:text-4xl'
-                        }`}
+                  {/* Previous Line (heavily greyed out) */}
+                  <div className="min-h-[2.25rem]">
+                    {prevLine && (
+                      <button
+                        type="button"
+                        onClick={() => onSeek(Math.max(0, prevLine.time - syncOffset))}
+                        className="block w-full text-left px-4 text-lg sm:text-2xl font-semibold text-white/18 hover:text-white/45 transition-colors cursor-pointer"
                       >
-                        {line.text}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            ) : lyricsData?.plain ? (
+                        {prevLine.text}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Current Active Line (steady subtle highlight box — zero blinking; only text cross-fades gently) */}
+                  <div className="relative rounded-2xl border-l-4 border-amber-300/75 bg-white/[0.06] px-5 py-4 sm:py-5">
+                    {currLine && bouncingStar && (
+                      <div className="pointer-events-none absolute -top-5 left-5 right-5 h-5">
+                        <div
+                          className="absolute top-0 -ml-2.5 transition-[left] duration-100 ease-linear"
+                          style={{ left: `${Math.round(activeLineProgress * 100)}%` }}
+                        >
+                          <span
+                            className="inline-flex items-center justify-center text-amber-300"
+                            style={{
+                              animation: 'flStarHop 0.58s ease-in-out infinite',
+                              animationPlayState: animState,
+                            }}
+                          >
+                            <Icon name="star" className="text-xl" />
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    <p
+                      key={currLine ? `curr-${currLine.origIdx}` : 'curr-intro'}
+                      style={{ animation: 'flLineFadeIn 240ms ease-out both' }}
+                      className="text-2xl sm:text-4xl lg:text-5xl font-bold leading-snug tracking-tight text-white"
+                    >
+                      {currLine ? currLine.text : nextLine ? `Up next: ${nextLine.text}` : '♪ ♪ ♪'}
+                    </p>
+                  </div>
+
+                  {/* Upcoming Line 1 (dimmed grey so it never competes with active line) */}
+                  <div className="min-h-[2.5rem]">
+                    {nextLine && currLine && (
+                      <button
+                        key={`next-${nextLine.origIdx}`}
+                        type="button"
+                        onClick={() => onSeek(Math.max(0, nextLine.time - syncOffset))}
+                        style={{ animation: 'flLineFadeIn 320ms ease-out both' }}
+                        className="block w-full text-left px-4 text-xl sm:text-2xl lg:text-3xl font-semibold text-white/30 hover:text-white/60 transition-colors cursor-pointer"
+                      >
+                        {nextLine.text}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Upcoming Line 2 (very faint preview) */}
+                  <div className="min-h-[2rem]">
+                    {next2Line && currLine && (
+                      <button
+                        key={`next2-${next2Line.origIdx}`}
+                        type="button"
+                        onClick={() => onSeek(Math.max(0, next2Line.time - syncOffset))}
+                        className="block w-full text-left px-4 text-base sm:text-xl font-medium text-white/14 hover:text-white/40 transition-colors cursor-pointer"
+                      >
+                        {next2Line.text}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )
+            })()
+          ) : lyricsData?.plain ? (
+            <div
+              ref={scrollContainerRef}
+              onWheel={() => {
+                userScrollingUntilRef.current = Date.now() + 4500
+              }}
+              onTouchMove={() => {
+                userScrollingUntilRef.current = Date.now() + 4500
+              }}
+              className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-20 sm:px-6"
+              style={{
+                maskImage:
+                  'linear-gradient(to bottom, transparent 0%, black 13%, black 85%, transparent 100%)',
+                WebkitMaskImage:
+                  'linear-gradient(to bottom, transparent 0%, black 13%, black 85%, transparent 100%)',
+              }}
+            >
               <div className="mx-auto max-w-3xl space-y-4">
                 <p className="whitespace-pre-line text-xl sm:text-2xl lg:text-3xl font-semibold leading-relaxed text-white/90">
                   {lyricsData.plain}
                 </p>
               </div>
-            ) : (
-              <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-white/65">
-                <Icon name="lyrics" className="text-5xl text-white/30" />
-                <p className="text-xl font-semibold text-white/80">Lyrics aren't available for this song</p>
-                <p className="text-sm text-white/50">
-                  Enjoy the visuals, or tap Refresh to try searching again.
-                </p>
-              </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-white/65">
+              <Icon name="lyrics" className="text-5xl text-white/30" />
+              <p className="text-xl font-semibold text-white/80">Lyrics aren't available for this song</p>
+              <p className="text-sm text-white/50">
+                Enjoy the visuals, or tap Refresh to try searching again.
+              </p>
+            </div>
+          )}
         </section>
       </div>
     </div>

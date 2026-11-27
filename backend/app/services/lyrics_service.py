@@ -440,45 +440,53 @@ class LyricsService:
         return ""
 
     @staticmethod
-    def _compute_spectrum_bytes(audio_path: str, fps: int = 12) -> bytes:
-        """Decode audio to 8kHz mono PCM via ffmpeg and extract 16 log-spaced Goertzel bands (uint8)."""
+    def _compute_spectrum_bytes(audio_path: str, fps: int = 20) -> bytes:
+        """Extract exact 20fps 100%-coverage Hann-windowed STFT spectrum (200Hz-8000Hz, 16 log bands) via ffmpeg C showfreqs."""
+        w, h = 24, 64
+        # 20480 Hz / 1024-pt window with overlap=0 produces EXACTLY 20.000 fps with zero drift!
+        sample_rate = fps * 1024
         proc = subprocess.run(
-            ["ffmpeg", "-v", "error", "-i", audio_path, "-vn", "-ac", "1", "-ar", "8000", "-f", "s16le", "pipe:1"],
+            [
+                "ffmpeg", "-v", "error", "-i", audio_path,
+                "-filter_complex",
+                f"[0:a]aformat=channel_layouts=mono,aresample={sample_rate},highpass=f=200,lowpass=f=8000,volume=16dB,"
+                f"asetpts=N/SR/TB,showfreqs=s={w}x{h}:mode=bar:ascale=sqrt:fscale=log:win_func=hann:win_size=1024:overlap=0,"
+                f"format=gray[v]",
+                "-map", "[v]", "-fps_mode", "passthrough",
+                "-f", "rawvideo", "pipe:1",
+            ],
             capture_output=True,
             check=True,
             timeout=25,
         )
         raw = proc.stdout
-        n_samples = len(raw) // 2
-        win = 128
-        hop = max(1, 8000 // fps)
-        if n_samples < win:
+        fsize = w * h
+        nframes = len(raw) // fsize
+        if nframes <= 0:
             return b""
-        # 16 log-spaced bins from 62.5Hz (bin 1) to 3875Hz (bin 62)
-        bins = (1, 2, 3, 4, 5, 6, 8, 10, 13, 16, 20, 25, 32, 40, 50, 62)
-        cos_t = tuple(2.0 * math.cos(2.0 * math.pi * k / win) for k in bins)
-        # Gentle perceptual weighting: boost highs slightly so treble bands stay lively
-        gains = (1.0, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.35, 1.45, 1.6, 1.75, 1.9, 2.1, 2.3, 2.5, 2.7)
-        inv_norm = 1.0 / (win * 16384.0)
-        log_denom = math.log1p(45.0)
 
-        out = bytearray()
-        for start in range(0, n_samples - win, hop):
-            chunk = struct.unpack_from(f"<{win}h", raw, start * 2)
-            for idx, c in enumerate(cos_t):
-                s1 = 0.0
-                s2 = 0.0
-                for x in chunk:
-                    s0 = x + c * s1 - s2
-                    s2 = s1
-                    s1 = s0
-                mag = math.sqrt(max(0.0, s1 * s1 + s2 * s2 - c * s1 * s2)) * inv_norm * gains[idx]
-                v = int(min(255, max(0, (math.log1p(mag * 45.0) / log_denom) * 255.0)))
-                out.append(v)
-        return bytes(out)
+        # Columns 7..22 of 24-col log-frequency 20.48kHz/1024-pt STFT span ~200Hz..8000Hz (16 bands)
+        raw_heights: List[int] = []
+        for f in range(nframes):
+            base = f * fsize
+            for col in range(7, 23):
+                bh = 0
+                for row in range(h):
+                    if raw[base + row * w + col] > 40:
+                        bh = h - row
+                        break
+                raw_heights.append(max(0, bh - 1))
+
+        # Normalize once across the whole song (99th percentile) to preserve true quiet-vs-loud dynamics
+        non_zero = sorted(v for v in raw_heights if v > 0)
+        if not non_zero:
+            return bytes(len(raw_heights))
+        p99 = max(4, non_zero[int(len(non_zero) * 0.99)])
+        scale = 255.0 / p99
+        return bytes(min(255, int(v * scale)) for v in raw_heights)
 
     def get_spectrum(self, video_id: str) -> Dict[str, Any]:
-        fps = 12
+        fps = 20
         bands = 16
         try:
             with self._get_conn() as conn:
